@@ -1,12 +1,12 @@
 # Block: <block>
 
-- Issue: `<issue id>`
+- Issue: `<id>`
 - Specification: `docs/specs/<slug>.md#<section>`
-- Depends on: <!-- blocks, or "none" -->
+- Depends on: <!-- blocks, or `none` -->
 - Plans: <!-- agent (model) or operator -->
 - Implements: <!-- agent (model) or operator -->
 - Reviews: <!-- list of reviewers -->
-- More reviewers: <!-- "no", or what to review and why -->
+- More reviewers: <!-- `no`, or what to review and why -->
 
 ## Task
 
@@ -18,4 +18,4 @@
 
 ## Implementation plan
 
-<!-- Write at implementation step 2. Update after gate 1. -->
+<!-- Write at step 2 of `docs/dev-flow/stage-implementation.md`. Update after gate 1. -->

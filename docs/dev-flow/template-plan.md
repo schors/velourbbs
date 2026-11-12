@@ -1,10 +1,10 @@
-# Plan: <issue id>
+# Plan: <id>
 
 <!-- Optional note about priorities. -->
 
 <!-- One line for each block, in the order of execution. -->
+<!-- Example: | [x] | [verb-table](verb-table.md) | -->
+<!-- Example: | [ ] | [toml-loader](toml-loader.md) | -->
 
 | Done | Block |
 |---|---|
-| [x] | [verb-table](verb-table.md) |
-| [ ] | [toml-loader](toml-loader.md) |

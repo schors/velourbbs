@@ -10,8 +10,8 @@
 
 ## Differences from the plan
 
-<!-- What changed from <block>.md and why, or "none". -->
+<!-- What changed from `<block>.md` and why, or `none`. -->
 
 ## Open points
 
-<!-- Review findings not fixed, follow-up work, or "none". -->
+<!-- Review findings not fixed, follow-up work, or `none`. -->
