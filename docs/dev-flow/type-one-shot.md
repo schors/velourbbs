@@ -8,10 +8,15 @@ The issue has no stages, no `plan.md` and no block files. `desc.md` holds the pl
 2. Gate 1: interview the operator about open questions. Agree on the reviewers.
    Write them to the `Plan` section.
 3. Implement the task and its tests.
+   If the change has code, run the tests and the linter.
+   If they fail, fix the cause and run them again.
 4. Run the reviewers from gate 1 as subagents.
-5. Gate 2: the operator selects one of these:
+5. Gate 2: show the operator the findings, the fixes and the results
+   of the tests and the linter.
+   The operator selects one of these:
    - Go back to step 1.
-   - Fix the findings in this session.
+   - Fix the findings in this session. If the change has code, run the tests and the linter.
+     Run the reviewers again only if the operator asks. Then do this gate again.
    - Accept the result.
-6. Commit. Write the `Result` section of `desc.md`.
+6. When the operator accepts the result, commit. Write the `Result` section of `desc.md`.
 7. Archive the issue with `/ticket-cleanup <id>`.
