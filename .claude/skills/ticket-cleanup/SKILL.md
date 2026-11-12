@@ -6,14 +6,21 @@ argument-hint: "[issue id] | drop <issue id>"
 
 # Archive complete issues
 
-Read `docs/dev-flow/flow.md`, sections 2 and 3. They define the paths, a complete issue
-and the git rules.
+Read `docs/dev-flow/flow.md`, sections 2 and 3.
 
 Run the skill in the main checkout (`flow.md`, section 3).
 If the current directory is a worktree, go to the main checkout first.
 
 1. Select the issues. Use the issue from the arguments, or all issues in `.ai/issues/`.
-2. Check each issue against the definition of a complete issue.
+2. Check that each issue is complete:
+
+   | Type | Complete when |
+   |---|---|
+   | `idea` | `desc.md` lists one or more ideas. All of them are in `docs/ideas/` on the branch of the issue. |
+   | `dev` | The stage is `implementation`. `plan.md` has one or more blocks. All blocks are done. Each block has `<block>.done.md`. |
+   | `one-shot` | `desc.md` has a filled `Result` section. |
+
+   The worktree of a complete issue has no uncommitted changes.
 3. Show the operator the complete issues and the incomplete issues with the reason.
    If the operator named an incomplete issue, continue with it only after the operator confirms.
 4. Make sure that the main checkout is on `main` and has no uncommitted changes.

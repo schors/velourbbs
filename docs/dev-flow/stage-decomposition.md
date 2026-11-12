@@ -8,5 +8,3 @@
    If `plan.md` exists, update the blocks that are not done. Keep the done blocks.
 5. Write `plan.md` from [template-plan.md](template-plan.md).
    Put the blocks in the order of execution.
-
-Result: `plan.md` and the block files.

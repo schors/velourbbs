@@ -13,5 +13,3 @@ An `idea` issue develops an idea with the operator.
    the goal, the scope, the decisions of the operator and the open questions.
    List the idea files in the `Ideas` line of `desc.md`. Commit.
 6. Archive the issue with `/ticket-cleanup <id>`.
-
-Result: one or more ideas in the backlog, ready for design.

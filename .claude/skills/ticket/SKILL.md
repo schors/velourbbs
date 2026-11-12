@@ -6,8 +6,7 @@ argument-hint: "<id> | new <idea|dev|one-shot> [slug] [description | idea files]
 
 # Create or open an issue
 
-Read `docs/dev-flow/flow.md`. It defines the issue types, the stages, the paths,
-the issue id, the git rules and the gates.
+Read `docs/dev-flow/flow.md`.
 
 Run the skill in the main checkout (`flow.md`, section 3).
 
@@ -20,13 +19,14 @@ or its 5 letters: open the issue.
    For a `dev` issue, the description can be the paths of idea files in `docs/ideas/`.
    If there is no type or no description, ask the operator.
    If there is no slug, make one from the description or from the names of the idea files.
-2. Make the 5 letters with the command in `flow.md`, section 2.
+2. Make the 5 letters with `LC_ALL=C tr -dc 'a-hjkmnp-z' </dev/urandom | head -c5`.
    If an issue in `.ai/issues/` or `.ai/archive/` has these 5 letters, make new letters.
 3. Create `.ai/issues/<id>/artifacts/`.
 4. Write `artifacts/desc.md` from `docs/dev-flow/template-desc.md`.
    Fill it from the idea files or the description. Leave unknown fields as placeholders.
 5. If `.ai/issues.md` does not exist, create it from `docs/dev-flow/template-issues.md`.
-6. Add a line for the issue to `.ai/issues.md`. Set the stage as `flow.md`, section 2, tells.
+6. Add a line for the issue to `.ai/issues.md`. Set the stage: `design` for a `dev` issue,
+   `-` for the other types.
 7. Run `git worktree add .ai/worktrees/<id> -b <id> main`.
 8. Go to the worktree. Tell the operator the issue id and the worktree path.
 9. Read the file of the type, or of the `design` stage, from `flow.md`, section 1.
