@@ -13,7 +13,7 @@ For other English text, the style is a guideline.
 | Clarity | A reader without the session context understands each sentence in one reading. |
 
 Use these techniques. The files in `docs/dev-flow/` are examples.
-Only the Sentences and Lists techniques can yield to a quality.
+Only the Sentences and Lists techniques can yield to a quality, and only where they break it.
 
 - Wording (ASD-STE100): use the active voice. Write instructions in the imperative.
   Do not use phrasal verbs.

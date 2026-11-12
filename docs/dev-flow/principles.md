@@ -26,8 +26,8 @@ For a document for AI, Clear means Clarity and Compact means Compactness ([style
 
 - Priority: if two principle qualities conflict, Fit has priority, then Clear.
   The Technology and Libraries rules have priority over the Typical solutions rule.
-  For any other conflict, select one option, write a reason and show the conflict
-  to the operator at the next gate (`flow.md`, section 4).
+  For any other conflict between the principles, select one option. Write a reason.
+  Show the conflict to the operator at the next gate (`flow.md`, section 4).
 - Effort: the work to get the principle qualities can be large. It can include research,
   a comparison of options and a second version. It stays inside the steps of the type
   or stage file. The scope of the issue limits the change, not the work.
@@ -49,14 +49,15 @@ For a document for AI, Clear means Clarity and Compact means Compactness ([style
   Its "standard" is the set of documents that define it, update it or state requirements for it.
   In the specification, name its "target implementations": the programs that this project
   must work with. Example: a list of telnet clients with their versions.
-  If only this project reads the format, the target implementation is its parser.
+  If only this project reads a format that it does not define, the target implementation
+  is the parser of this project.
   If the specification names none, ask the operator.
   Send or write a form that the standard defines and the target implementations accept.
   If there is no such form, use the form of the target implementations.
+  Write a reason that names them.
   Accept each form that the target implementations send or write.
   Use a feature that a target implementation does not support only with a fallback
   for that implementation.
-  If you deviate from the standard, write a reason that names the target implementations.
 - Libraries: use the standard library of the language first.
   Example: in Go, `golang.org/x/` is not in the standard library.
   If its documentation recommends another library for the task, use that library.
