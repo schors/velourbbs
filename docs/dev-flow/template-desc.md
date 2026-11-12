@@ -12,3 +12,13 @@
 ## Scope
 
 <!-- What is in the issue. What is not in the issue. -->
+
+<!-- One-shot issues only: the two sections below. -->
+
+## Plan
+
+<!-- The implementation plan. Reviewers. -->
+
+## Result
+
+<!-- Commit hash. What changed. Review findings not fixed, or "none". -->

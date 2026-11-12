@@ -1,7 +1,7 @@
 ---
 name: ticket-cleanup
 description: Merge completed issues into main, remove their worktrees and branches, and move them to .ai/archive/.
-argument-hint: "[issue id]"
+argument-hint: "[issue id] | drop <issue id>"
 ---
 
 # Archive completed issues
@@ -19,11 +19,19 @@ If the current directory is a worktree, go to the main checkout first.
 4. Make sure that the main checkout is on `main` and has no uncommitted changes.
    If not, stop and tell the operator.
 5. For each issue:
-   1. Run `git merge --no-ff <id> -m "Merge issue <id>"`.
-      If there is a conflict, run `git merge --abort` and skip the issue.
-      Tell the operator the next steps: in the worktree, run `git merge main`, resolve
-      the conflict, commit with `<id>: merge main`, then run `/ticket-cleanup <id>` again.
+   1. Merge the branch into `main` as `flow.md`, section 3, says.
+      If there is a conflict, skip the issue. Tell the operator the steps from section 3.
    2. Run `git worktree remove .ai/worktrees/<id>` and `git branch -d <id>`.
    3. Move the issue directory to `.ai/archive/`.
    4. In `.ai/issues.md`, set the stage of the issue to `archived`.
 6. Tell the operator what merged and moved. Show `git log --oneline -n 5`.
+
+## Drop
+
+If the arguments are `drop <id>`, stop the issue without a merge:
+
+1. Show the operator the commits of the branch that are not in `main`
+   and the uncommitted changes in the worktree. Continue only after the operator confirms.
+2. Run `git worktree remove --force .ai/worktrees/<id>` and `git branch -D <id>`.
+3. Move the issue directory to `.ai/archive/`.
+4. In `.ai/issues.md`, set the stage of the issue to `dropped`.

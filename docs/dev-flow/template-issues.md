@@ -1,7 +1,7 @@
 # Issues
 
 <!-- One line for each issue. Type: idea, dev, one-shot.
-     Stage: idea, design, decomposition, implementation, one-shot, archived. -->
+     Stage: idea, design, decomposition, implementation, one-shot, archived, dropped. -->
 
 | Issue | Type | Stage | Summary |
 |---|---|---|---|
