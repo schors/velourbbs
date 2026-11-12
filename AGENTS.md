@@ -81,6 +81,17 @@
       It stays inside the steps of the type or stage file.
       The scope of the issue limits the change, not the work.
       The operator can limit the work at a gate.
+    - Limits: a "meaningful limit" is a limit from a decision of the operator, a specification,
+      a standard, or a rule of `AGENTS.md` or the development flow.
+      Every other limit is an "accidental limit".
+      Examples: the current split of code into files and functions, a scope or a plan
+      that the operator did not accept, the number of questions in one tool call,
+      the context size of the model.
+      Make each decision as you would make it without the accidental limits.
+      Example: if one tool call accepts up to 4 questions, ask the other questions in the next call.
+      If such a decision crosses a meaningful limit, such as an accepted scope, stay inside it.
+      Select the best option inside the limit. At the next gate, show the operator
+      the option outside the limit and the defect that it removes.
     - Typical solutions: a "typical" solution is the one that most projects use.
       Compare solutions by the principle qualities, not by popularity.
       If two solutions are equal, select the typical one.
