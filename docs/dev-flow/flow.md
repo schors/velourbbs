@@ -147,12 +147,16 @@ in its steps.
 - Review: if a change affects security, changes a decision or has a large effect on the design,
   propose more than one reviewer.
 - Reviewer brief: give each reviewer a "position": what to check and from which view.
-  Give the absolute paths of the files to review, the specification and `<block>.md`.
-  For code, also give the worktree path and the command `git diff main...<id>`.
+  Give the absolute paths of the files to review, the specification, `desc.md` and `<block>.md`.
+  For a change in tracked files, also give the worktree path.
+  Run `git add -N <path>` for each new file of the change.
+  Then give the command `git diff --merge-base main`.
   Do not give your own conclusions. Ask the reviewer to give its model name in the report.
 - Style: if a change affects a tracked document for AI, propose the reviewer position `style`.
   `AGENTS.md` defines a document for AI and the style.
   Check the style of the files in `.ai/` yourself.
+- Principles: for each design and each change with code, propose the reviewer position
+  `principles`. `AGENTS.md` defines the principles.
 - Write the findings of each review to `artifacts/<name>-review.md`.
 - Specification: if the code differs from the specification, update the specification
   in the same commit.
