@@ -1,6 +1,6 @@
 # Idea: menu and navigation
 
-MVP part 2 of 3. The other parts are [screen-format](screen-format.md) and
+MVP part 2 of 3. The other parts are [screen-format](../specs/screen-format.md) and
 [telnet-term](telnet-term.md).
 
 ## Goal
@@ -79,7 +79,7 @@ In:
 Out (backlog):
 - `gosub`, `back`, `top` and a navigation stack.
 - `require` (access checks). It needs users.
-- Arrow-key selection and marks (see screen-format).
+- Arrow-key selection and marks (see [menu-actions](menu-actions.md)).
 - Typed command input.
 - `args`, `ask` and `{arg.*}`.
 - The actions `page`, `run` and `call`. They need lists, Lua or built-ins.
@@ -87,7 +87,7 @@ Out (backlog):
 
 ## Dependencies
 
-- Screens and conditions come from [screen-format](screen-format.md).
+- Screens and conditions come from [screen-format](../specs/screen-format.md).
 - Key decoding (ESC, named keys) comes from [telnet-term](telnet-term.md).
 
 ## Open questions

@@ -1,6 +1,6 @@
 # Idea: telnet and terminal detection
 
-MVP part 3 of 3. The other parts are [screen-format](screen-format.md) and
+MVP part 3 of 3. The other parts are [screen-format](../specs/screen-format.md) and
 [menu-nav](menu-nav.md).
 
 ## Goal
@@ -79,7 +79,8 @@ All values are in `bbs.toml`.
 ## MVP scope
 
 Out (backlog):
-- SSH.
+- SSH. The size and the terminal type come from `pty-req` and `window-change`.
+- Web client.
 - Charset negotiation (telnet CHARSET, RFC 2066).
 - 8-bit charset output. CP437 is the first encoder, for SyncTERM and NetRunner.
 - Terminals without ANSI and monochrome output.
@@ -88,7 +89,7 @@ Out (backlog):
 
 ## Dependencies
 
-- [screen-format](screen-format.md) uses `term.*` and the colour model.
+- [screen-format](../specs/screen-format.md) uses `term.*` and the colour model.
 - [menu-nav](menu-nav.md) uses the key names from the key decoder.
 
 ## Open questions
