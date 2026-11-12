@@ -10,5 +10,3 @@
 5. Run the reviewers from gate 1 as subagents.
 6. Do gate 2 (`flow.md`, section 4). The return step is step 3.
 7. Commit.
-
-Result: an issue with a design and specifications, ready for decomposition.
