@@ -1,7 +1,6 @@
 # Issues
 
-<!-- One line for each issue. Type: idea, dev, one-shot.
-     Stage: idea, design, decomposition, implementation, one-shot, archived, dropped. -->
+<!-- One line for each issue. Types and stages: docs/dev-flow/flow.md, sections 1 and 2. -->
 
 | Issue | Type | Stage | Summary |
 |---|---|---|---|

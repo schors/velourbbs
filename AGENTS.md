@@ -18,5 +18,4 @@
 - Keep one definition for each rule. Retain only current rules and necessary usage
   instructions; remove research and review drafts after use.
 - Keep it simple: add no checks, options or documentation beyond what a change needs.
-- Follow the development flow in `docs/dev-flow/flow.md`. Read only the file of the current
-  stage.
+- Follow the development flow in `docs/dev-flow/flow.md`.

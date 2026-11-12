@@ -6,6 +6,9 @@
 - Specification: `docs/specs/<slug>.md`
 - AI: <!-- Co-authors. Replace this comment. See flow.md, section 3.1. -->
 
+<!-- Ideas: the ideas that an idea issue writes, or that a dev issue takes.
+     Specification: not for an idea issue. -->
+
 ## Goal
 
 <!-- What the issue gives, in 1–3 sentences. -->

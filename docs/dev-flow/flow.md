@@ -1,23 +1,28 @@
 # Development flow
 
-This document defines the files and the stages of development.
-Read this file first. Then read only the file of the current stage.
+This document defines the issue types, the stages and the files of development.
+Read this file first. Then read only one more file: the file of the issue type,
+or the file of the current stage for a `dev` issue.
 
-## 1. Stages
+## 1. Issue types and stages
 
-| Stage | File | Result |
-|---|---|---|
-| Idea | [stage-idea.md](stage-idea.md) | Ideas in `docs/ideas/`. An archived issue. |
-| Design | [stage-design.md](stage-design.md) | An issue and specifications in `docs/specs/`. |
-| Decomposition | [stage-decomposition.md](stage-decomposition.md) | `plan.md` and block files. |
-| Implementation | [stage-implementation.md](stage-implementation.md) | One block, implemented and reviewed. |
-| One-shot | [stage-one-shot.md](stage-one-shot.md) | A small task, from idea to result. |
+| Type | Stage | File | Result |
+|---|---|---|---|
+| `idea` | `-` | [type-idea.md](type-idea.md) | Ideas in `docs/ideas/`. |
+| `dev` | `design` | [stage-design.md](stage-design.md) | Specifications in `docs/specs/`. |
+| `dev` | `decomposition` | [stage-decomposition.md](stage-decomposition.md) | `plan.md` and block files. |
+| `dev` | `implementation` | [stage-implementation.md](stage-implementation.md) | One block, implemented and reviewed. |
+| `one-shot` | `-` | [type-one-shot.md](type-one-shot.md) | A small task, from description to result. |
 
-Start each stage in a new session.
-To continue an issue in a new session, run `/ticket <id>`. The 5 letters of the id are sufficient.
-When `/ticket <id>` opens an issue, skip the stage step that creates the issue.
-"Operator" is the human who controls the work.
-A "gate" is a stop where the operator must reply before the work continues.
+- Only a `dev` issue has stages. The stages go in the order of the table.
+- `docs/ideas/` is the backlog. An `idea` issue writes ideas to it. A `dev` issue takes
+  one or more ideas from it.
+- Start an issue with `/ticket new <type>`. In the same session, do the type file,
+  or the design stage of a `dev` issue.
+- Do each next stage of a `dev` issue in a new session. Start it with `/ticket <id>`.
+  The 5 letters of the id are sufficient.
+- "Operator" is the human who controls the work.
+- A "gate" is a stop where the operator must reply before the work continues.
 
 ## 2. Files
 
@@ -30,7 +35,7 @@ A "gate" is a stop where the operator must reply before the work continues.
 | `.ai/issues/<id>/` | no | One issue. |
 | `.ai/issues/<id>/artifacts/` | no | Artifacts for this issue only. |
 | `.ai/issues/<id>/artifacts/desc.md` | no | What the issue is. Template: [template-desc.md](template-desc.md). |
-| `.ai/issues/<id>/artifacts/<name>-review.md` | no | Review findings. `<name>` is the stage or the block. |
+| `.ai/issues/<id>/artifacts/<name>-review.md` | no | Review findings. `<name>` is the type, the stage or the block. |
 | `.ai/issues/<id>/plan.md` | no | Index of blocks. Template: [template-plan.md](template-plan.md). |
 | `.ai/issues/<id>/<block>.md` | no | Block description. Template: [template-block.md](template-block.md). |
 | `.ai/issues/<id>/<block>.done.md` | no | Block result. Template: [template-block.done.md](template-block.done.md). |
@@ -42,22 +47,23 @@ A "gate" is a stop where the operator must reply before the work continues.
 - Make the 5 characters with `LC_ALL=C tr -dc 'a-hjkmnp-z' </dev/urandom | head -c5`.
 - A `<block>` name is a slug. Example: `toml-loader`.
 - Each issue with `plan.md` has a `<block>.md` file for each block.
-- `/ticket new` sets the first stage of the issue in `.ai/issues.md`.
-  At the end of a stage, set the next stage of the type (section 2.1) in `.ai/issues.md`.
+- `/ticket new` sets the stage in `.ai/issues.md`: `design` for a `dev` issue,
+  `-` for the other types.
+- At the end of a `dev` stage, set the next stage in `.ai/issues.md`.
+  Then stop and tell the operator to run `/ticket <id>`.
+- The stage `archived` or `dropped` is for all types. Only `/ticket-cleanup` sets it.
 - Move a complete issue directory to `.ai/archive/` with `/ticket-cleanup <id>`.
   To stop an incomplete issue, run `/ticket-cleanup drop <id>`.
 
-### 2.1. Issue types
+### 2.1. Complete issue
 
-| Type | Created at | Stages | Complete when |
-|---|---|---|---|
-| `idea` | [stage-idea.md](stage-idea.md) | idea | `desc.md` lists one or more ideas. All of them are in `docs/ideas/`. |
-| `dev` | [stage-design.md](stage-design.md) | design, decomposition, implementation | `plan.md` has one or more blocks. All blocks are done. Each block has `<block>.done.md`. |
-| `one-shot` | [stage-one-shot.md](stage-one-shot.md) | one-shot | The `Result` section of `desc.md` is filled. |
+| Type | Complete when |
+|---|---|
+| `idea` | `desc.md` lists one or more ideas. All of them are in `docs/ideas/` on the branch of the issue. |
+| `dev` | The stage is `implementation`. `plan.md` has one or more blocks. All blocks are done. Each block has `<block>.done.md`. |
+| `one-shot` | The `Result` section of `desc.md` is filled. |
 
-An issue is complete only if it is in the last stage of its type and the condition above is true.
-Also, its worktree must have no uncommitted changes.
-After the last stage, the stage of each type is `archived`. The stage of a stopped issue is `dropped`.
+Also, the worktree of a complete issue has no uncommitted changes.
 
 ## 3. Git
 
@@ -67,8 +73,8 @@ After the last stage, the stage of each type is `archived`. The stage of a stopp
 - Change this flow (`docs/dev-flow/`, `.claude/skills/`) and `AGENTS.md` only in a one-shot issue.
   Section 3.1 has one exception.
 - The `.ai/` files are only in the main checkout. In the worktree, use their absolute path.
-- At the end of a stage, commit the changes in the worktree. In the implementation stage,
-  make one commit for each block. Write the commit message as section 3.1 tells.
+- Commit in the worktree at the "Commit" steps of the type and stage files.
+  Write each commit message as section 3.1 tells.
 - Merge the branch into `main` after each block commit. `/ticket-cleanup` merges the rest
   of the branch, removes the worktree and deletes the branch.
 - To merge, use the main checkout. It must be on `main` and have no uncommitted changes.

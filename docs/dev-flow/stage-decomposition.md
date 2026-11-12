@@ -4,7 +4,7 @@
 2. Divide the design into blocks.
 3. Gate: show the operator the blocks. Go back to step 2 until the operator confirms.
 4. Write a `<block>.md` file for each block from [template-block.md](template-block.md).
-   If `plan.md` exists, update the blocks that are not done.
+   If `plan.md` exists, update the blocks that are not done. Keep the done blocks.
 5. Write `plan.md` from [template-plan.md](template-plan.md).
    Put the blocks in the order of execution.
 
