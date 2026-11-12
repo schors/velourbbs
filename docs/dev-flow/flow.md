@@ -65,10 +65,10 @@ After the last stage, the stage of each type is `archived`. The stage of a stopp
   `/ticket new` creates them.
 - Change tracked files only in the worktree of the issue. Do not change them in the main checkout.
 - Change this flow (`docs/dev-flow/`, `.claude/skills/`) and `AGENTS.md` only in a one-shot issue.
+  Section 3.1 has one exception.
 - The `.ai/` files are only in the main checkout. In the worktree, use their absolute path.
 - At the end of a stage, commit the changes in the worktree. In the implementation stage,
-  make one commit for each block.
-- Start the commit message with `<id>: `.
+  make one commit for each block. Write the commit message as section 3.1 tells.
 - Merge the branch into `main` after each block commit. `/ticket-cleanup` merges the rest
   of the branch, removes the worktree and deletes the branch.
 - To merge, use the main checkout. It must be on `main` and have no uncommitted changes.
@@ -77,6 +77,44 @@ After the last stage, the stage of each type is `archived`. The stage of a stopp
   Resolve the conflict with the operator, commit with `<id>: merge main`, then merge again.
 - Do not push.
 
+### 3.1. Commit message
+
+- Write the subject as `<id>: <summary>`. Write the summary in English, in the imperative.
+  Do not put a period at the end. The subject has 72 characters or fewer.
+- Put a blank line after the subject. Then write the body: what changed and why.
+  A list is permitted. A small change can have no body. Wrap the body at 72 characters.
+- The operator is the git author. Each AI model of the issue is a co-author.
+  The models of all sessions, subagents and reviewers are co-authors, from all vendors.
+- The `AI` line of `desc.md` has the list of co-authors. Separate the items with `; `.
+  Example: `- AI: Claude Opus 5.5 <noreply@anthropic.com>`.
+  If `desc.md` has no `AI` line, add it.
+- At the end of each session and before each commit, add to the `AI` line
+  the model of the session and the models of its subagents that are not in the list.
+- Use the model name as the model gives it, for example `Claude Opus 5.5`.
+  Use the email of the vendor from the table below.
+  If the vendor is not in the table, ask the operator for the email.
+  Add a row to the table in the current issue. This is an exception to section 3.
+- At the end of the message, put a blank line. Then put one line
+  `Co-Authored-By: <model> <email>` for each item of the `AI` line.
+  Do not wrap these lines. They replace the default attribution of the tool.
+- A `<id>: merge main` commit has the subject and the `Co-Authored-By` lines.
+- Exception: a `Merge issue <id>` commit has the subject only.
+
+| Vendor | Email |
+|---|---|
+| Anthropic | `noreply@anthropic.com` |
+
+Example of a commit message:
+
+```
+kqtxw-menu-parser: parse menu TOML files
+
+- Add the menu loader and its tests.
+- Reject a menu item with no action.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+```
+
 ## 4. Rules
 
 - Review: if a change affects security, changes a decision or has a large effect on the design,
@@ -84,7 +122,7 @@ After the last stage, the stage of each type is `archived`. The stage of a stopp
 - Reviewer brief: give each reviewer a position, that is, what to check and from which view.
   Give the absolute paths of the files to review, the specification and `<block>.md`.
   For code, also give the worktree path and the command `git diff main...<id>`.
-  Do not give your own conclusions.
+  Do not give your own conclusions. Ask the reviewer to give its model name in the report.
 - Write the findings of each review to `artifacts/<name>-review.md`.
 - Specification: if the code differs from the specification, update the specification
   in the same commit.

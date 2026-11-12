@@ -4,6 +4,7 @@
 
 - Ideas: `docs/ideas/<slug>.md`
 - Specification: `docs/specs/<slug>.md`
+- AI: <!-- Co-authors. Replace this comment. See flow.md, section 3.1. -->
 
 ## Goal
 
