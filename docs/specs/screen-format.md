@@ -31,8 +31,10 @@ The limits of section 10 bound the memory and the time for each file and each re
 
 - A "grapheme" is an extended grapheme cluster (Unicode UAX #29).
   A grapheme of more than 32 bytes is an error in a file.
-- The width of a grapheme is 1 or 2 cells, by Unicode 17. East Asian Ambiguous characters
+- The width of a grapheme is 0, 1 or 2 cells, by Unicode 17. East Asian Ambiguous characters
   have the width 1. Terminals that show them as wide are not in the MVP (telnet-term).
+- A grapheme of width 0 is an error in a file. Examples: U+200B, a combining mark
+  at the start of a line.
 - The "control characters" are U+0000–U+001F, U+007F–U+009F, U+202A–U+202E
   and U+2066–U+2069.
 
@@ -143,7 +145,7 @@ Section 8.4 has the rule for art.
 ### 4.3. Values
 
 - The host inserts a value after the parse, so a value cannot make a token.
-- The host removes the control characters from a value.
+- The host removes the control characters and the graphemes of width 0 from a value.
   It replaces a grapheme of more than 32 bytes with U+FFFD.
 - A fixed-width field pads its value with spaces or cuts it at a grapheme boundary.
   A wide grapheme that does not fit becomes a space.
@@ -414,6 +416,7 @@ styles
   and takes 2 columns.
 - Each line of `styles` gives the row number and the runs of equal styles,
   in the syntax of section 7.2 with 1-based columns.
+  A run has the form `<first>-<last> <style>`, also for one column. Example: `5-5 7/0`.
 - The dump has the colours of the model, before the reduction to `term.colors`.
 - A page with a More row includes it as its last row.
 
@@ -440,17 +443,21 @@ styles
 | `internal/art` | The `.ans` loader and SAUCE. |
 | `internal/screen` | Cells, colours, styles, the token scanner, the registry, conditions, layout, render, cell dump. |
 | `internal/config` | `bbs.toml`. |
+| `internal/tomlpos` | The TOML adapter: the values and the key positions. |
 
 - The host language is Go. The Go module is `newbbs`.
 - Imports go one way: `cmd/bbs`, then `internal/bbt`, then `internal/art`,
-  then `internal/screen`. `internal/config` imports only `internal/screen`.
+  then `internal/screen`. `internal/config` imports only `internal/screen`
+  and `internal/tomlpos`. `internal/bbt` also imports `internal/tomlpos`.
 - The model is immutable after the load. Sessions read it at the same time without locks.
+- The checks are `go vet ./...`, `go test ./...` and `golangci-lint run ./...`
+  (golangci-lint 2.15.0, configuration in `.golangci.yml`).
 
 ## 12. Libraries
 
 | Task | Choice | Compared with | Reason |
 |---|---|---|---|
-| TOML | `github.com/pelletier/go-toml/v2` | `github.com/BurntSushi/toml` | `BurntSushi/toml` gives positions only for syntax errors. `go-toml/v2` also gives positions for type errors and unknown keys, and its `unstable` parser gives the position of each key. |
+| TOML | `github.com/pelletier/go-toml/v2` | `github.com/BurntSushi/toml` | `BurntSushi/toml` gives positions only for syntax errors. The `unstable` parser of `go-toml/v2` gives the position of each key. |
 | Graphemes and width | `github.com/clipperhouse/displaywidth` | `github.com/rivo/uniseg`, `github.com/mattn/go-runewidth` | One iterator gives each grapheme with its width, the cell model. The release has Unicode 17; `uniseg` has Unicode 15. `go-runewidth` measures runes. |
 | ANSI art and SAUCE | Own parser | `github.com/charmbracelet/x/ansi` | The loader needs about 12 sequences and the editor rules of section 8. A terminal parser adds a large dependency. |
 | Conditions | Own parser | `github.com/expr-lang/expr` | The grammar has 7 rules and static types from the registry. `expr` adds arithmetic and functions that the format excludes. |
@@ -459,7 +466,7 @@ styles
 - The Go standard library and `golang.org/x/text` have no grapheme segmentation.
 - The `unstable` package of `go-toml/v2` has no compatibility guarantee. This deviates
   from the Libraries rule (`docs/dev-flow/principles.md`, section 2). The operator accepted it.
-  `go.mod` pins the version. One adapter in `internal/bbt` uses the package, and tests cover it.
+  `go.mod` pins the version. Only `internal/tomlpos` uses the package, and tests cover it.
 
 ## 13. Not in the MVP
 
