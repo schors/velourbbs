@@ -1,6 +1,6 @@
 # Working instructions
 
-- Speak briefly in Russian; write code comments and repository documentation in English.
+- Speak briefly in Russian. Write code comments and repository documentation in English.
 - A "document for AI" is a file in one of these paths: `AGENTS.md`, `docs/dev-flow/`,
   `.claude/skills/`, `docs/specs/`, `docs/ideas/`, `.ai/issues.md`, `.ai/artifacts/`
   and `.ai/issues/<id>/`.
@@ -40,9 +40,9 @@
     ("проверил", not "была произведена проверка").
   - Do not use filler, bureaucratic phrases or evaluations without facts.
   - Use one term for each thing. Keep established English terms and identifiers as they are.
-- Keep changes scoped and run relevant checks.
+- Keep changes in scope. Run the relevant checks.
 - Never weaken or bypass a check, precondition or its test to make a change pass.
-- Keep one definition for each rule. Retain only current rules and necessary usage
-  instructions; remove research and review drafts after use.
+- Keep one definition for each rule. Keep only current rules and necessary usage instructions.
+  Remove research and review drafts after use.
 - Keep it simple: add no checks, options or documentation beyond what a change needs.
 - Follow the development flow in `docs/dev-flow/flow.md`.
