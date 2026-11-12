@@ -4,10 +4,10 @@
 
 - Ideas: `docs/ideas/<slug>.md`
 - Specification: `docs/specs/<slug>.md`
-- AI: <!-- Co-authors. Replace this comment. See flow.md, section 3.1. -->
+- AI: <!-- Co-authors. Replace this comment. See `docs/dev-flow/flow.md`, section 3.1. -->
 
-<!-- Ideas: the ideas that an idea issue writes, or that a dev issue takes.
-     Specification: not for an idea issue. -->
+<!-- Ideas: list the ideas that an `idea` issue writes or that a `dev` issue takes.
+     Remove the `Specification` line for an `idea` issue. -->
 
 ## Goal
 
@@ -17,7 +17,7 @@
 
 <!-- What is in the issue. What is not in the issue. -->
 
-<!-- One-shot issues only: the two sections below. -->
+<!-- Keep the two sections below only for a `one-shot` issue. -->
 
 ## Plan
 
@@ -25,4 +25,4 @@
 
 ## Result
 
-<!-- Commit hash. What changed. Review findings not fixed, or "none". -->
+<!-- Commit hash. What changed. Review findings not fixed, or `none`. -->
