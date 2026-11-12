@@ -129,6 +129,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
   Give the absolute paths of the files to review, the specification and `<block>.md`.
   For code, also give the worktree path and the command `git diff main...<id>`.
   Do not give your own conclusions. Ask the reviewer to give its model name in the report.
+- Style: if a change affects a tracked document for AI, propose the reviewer position `style`.
+  `AGENTS.md` defines a document for AI and the style. Check the files in `.ai/` yourself.
 - Write the findings of each review to `artifacts/<name>-review.md`.
 - Specification: if the code differs from the specification, update the specification
   in the same commit.
