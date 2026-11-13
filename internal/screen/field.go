@@ -112,12 +112,19 @@ func LookupField(path string, fields Fields) (Ref, error) {
 	return r, err
 }
 
+// IsPath reports whether s matches the path syntax of section 4.1:
+// [a-z][a-z0-9_]*(\.[A-Za-z0-9_]+)?
+func IsPath(s string) bool {
+	head, tail, dot := strings.Cut(s, ".")
+	return IsIdent(head) && (!dot || isKey(tail))
+}
+
 // resolve checks the path syntax of section 4.1 and resolves an alias with fields.
 func resolve(path string, fields Fields) (Ref, error) {
-	head, tail, dot := strings.Cut(path, ".")
-	if !IsIdent(head) || dot && !isKey(tail) {
+	if !IsPath(path) {
 		return Ref{}, fmt.Errorf("invalid field path %q", path)
 	}
+	head, tail, dot := strings.Cut(path, ".")
 	if !dot {
 		if r, ok := fields[path]; ok {
 			return r, nil
