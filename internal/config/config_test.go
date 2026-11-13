@@ -37,6 +37,9 @@ func TestDefaults(t *testing.T) {
 	if len(cfg.Theme) != 2 || cfg.Theme["normal"] != style(t, "7/0") || cfg.Theme["more"] != style(t, "15/0") {
 		t.Errorf("theme = %v", cfg.Theme)
 	}
+	if cfg.Start != "main" || cfg.StartPos != (screen.Pos{File: "bbs.toml", Line: 1, Col: 1}) {
+		t.Errorf("start %q at %v", cfg.Start, cfg.StartPos)
+	}
 }
 
 func TestParse(t *testing.T) {
@@ -50,6 +53,9 @@ normal = "14"
 title  = "15/4 bold"
 prompt = "/1"
 more = "-/-"
+
+[menu]
+  start = "welcome"
 `
 	cfg, ds := Parse("bbs.toml", []byte(data))
 	if len(ds) != 0 {
@@ -57,6 +63,9 @@ more = "-/-"
 	}
 	if cfg.Width != (screen.WidthLimits{Min: 64, Max: 132}) || cfg.More != "[ ещё ]" {
 		t.Errorf("cfg = %+v", cfg)
+	}
+	if cfg.Start != "welcome" || cfg.StartPos != (screen.Pos{File: "bbs.toml", Line: 13, Col: 3}) {
+		t.Errorf("start %q at %v", cfg.Start, cfg.StartPos)
 	}
 	want := map[string]string{
 		"normal": "14/0",      // the background from the default normal
@@ -126,6 +135,9 @@ func TestTypeErrors(t *testing.T) {
 	}{
 		{"screen = 1", `bbs.toml:1:1: screen: must be a table`},
 		{"theme = []", `bbs.toml:1:1: theme: must be a table`},
+		{"menu = \"main\"", `bbs.toml:1:1: menu: must be a table`},
+		{"[menu]\nstart = 1", `bbs.toml:2:1: menu: start: must be a string`},
+		{"[menu]\nfirst = \"main\"", `bbs.toml:2:1: unknown key "menu.first"`},
 		{"[screen]\nwidth = [1]", `bbs.toml:2:1: screen.width: must be an array of 2 integers`},
 		{"[screen]\nwidth = [1, \"2\"]", `bbs.toml:2:1: screen.width: must be an array of 2 integers`},
 		{"[screen]\nmore = 1", `bbs.toml:2:1: screen.more: must be a string`},

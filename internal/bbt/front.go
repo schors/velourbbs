@@ -151,6 +151,7 @@ func (fr *front) parseItems(v any, errorf errorFunc) {
 					errorf(path, "%s: do: %v", label, err)
 				}
 				item.Do = act
+				item.DoPos = fr.pos(path...)
 			case "when":
 				c, err := screen.ParseCond(s, fr.fields, false)
 				if err != nil {

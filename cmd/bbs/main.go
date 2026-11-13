@@ -10,6 +10,7 @@ import (
 
 	"newbbs/internal/bbt"
 	"newbbs/internal/config"
+	"newbbs/internal/menu"
 	"newbbs/internal/screen"
 )
 
@@ -44,7 +45,8 @@ func run(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	return exitUsage
 }
 
-// load reads bbs.toml and the screens of fsys. A missing bbs.toml is an error.
+// load reads bbs.toml and the screens of fsys and does the menu checks.
+// A missing bbs.toml is an error.
 // The screens are nil when the diagnostics have an error.
 func load(fsys fs.FS) (config.Config, map[string]*screen.Screen, screen.Diags) {
 	const name = "bbs.toml"
@@ -59,6 +61,11 @@ func load(fsys fs.FS) (config.Config, map[string]*screen.Screen, screen.Diags) {
 	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Width)
 	ds = append(ds, sds...)
 	ds.Sort()
+	if ds.HasErrors() {
+		return cfg, nil, ds
+	}
+	// The menu checks between files need all screens (menu-nav, section 7).
+	ds = menu.Check(cfg, screens, ds)
 	if ds.HasErrors() {
 		screens = nil
 	}

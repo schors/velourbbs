@@ -131,7 +131,9 @@ do = "goto about"
 	if s.Width != (screen.WidthLimits{Min: 64, Max: 100}) || s.Narrow != screens["main_small"] {
 		t.Errorf("width %v, narrow %v", s.Width, s.Narrow)
 	}
-	if !slices.Equal(s.Items, []screen.Item{{Key: "A", Do: screen.Action{Op: screen.Goto, Screen: "about"}}}) {
+	if !slices.Equal(s.Items, []screen.Item{{
+		Key: "A", Do: screen.Action{Op: screen.Goto, Screen: "about"}, DoPos: screen.Pos{File: "screens/main.bbt", Line: 8, Col: 1},
+	}}) {
 		t.Errorf("items %+v", s.Items)
 	}
 	want := `if(/b art100[])else(/b art64[term.cols]) /b !15/4 bold "Welcome! Your terminal has " {term.cols} " columns." / !14/0 "[A]bout [G]oodbye" /`
@@ -261,10 +263,13 @@ when = "term.cols > 80"
 	if len(items) != 2 || items[1].When == nil {
 		t.Fatalf("items %+v", items)
 	}
-	got := []screen.Item{{Key: items[0].Key, Do: items[0].Do}, {Key: items[1].Key, Do: items[1].Do}}
+	got := []screen.Item{
+		{Key: items[0].Key, Do: items[0].Do, DoPos: items[0].DoPos},
+		{Key: items[1].Key, Do: items[1].Do, DoPos: items[1].DoPos},
+	}
 	want := []screen.Item{
-		{Key: "ESC", Do: screen.Action{Op: screen.Goto, Screen: "main"}},
-		{Key: "ANY", Do: screen.Action{Op: screen.Logoff}},
+		{Key: "ESC", Do: screen.Action{Op: screen.Goto, Screen: "main"}, DoPos: screen.Pos{File: "screens/s.bbt", Line: 4, Col: 1}},
+		{Key: "ANY", Do: screen.Action{Op: screen.Logoff}, DoPos: screen.Pos{File: "screens/s.bbt", Line: 7, Col: 1}},
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("items %+v, want %+v", got, want)
@@ -525,6 +530,8 @@ func TestNarrow(t *testing.T) {
 				`screens/small.bbt:3:3: a narrow screen cannot have items (screen "main" names it)`,
 			}},
 		{map[string]string{"main.bbt": "+++\nnarrow = \"none\"\n+++\n"}, []string{`screens/main.bbt:2:1: narrow: no screen "none"`}},
+		{map[string]string{"goodbye.bbt": "+++\nwidth = [40, 80]\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n"},
+			[]string{`screens/goodbye.bbt:3:3: the goodbye screen cannot have items`}},
 		{map[string]string{
 			"main.bbt": "+++\nnarrow = \"small\"\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n", "small.bbt": "{#if item.A and item.B}a{/if}\n{>_f}",
 			"_f.bbt": "{#if item.C}a{/if}",

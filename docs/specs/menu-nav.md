@@ -166,6 +166,8 @@ start = "welcome"
   An error of a screen without items has the position 1:1.
 - An error of the start screen has the position of `start`.
   When `bbs.toml` has no `start`, the position is 1:1.
+- The checks of a `goto`, of a screen without items and of the start screen use all screens.
+  `bbs check` does them only when the files have no other errors.
 
 Examples:
 

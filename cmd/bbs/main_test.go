@@ -29,6 +29,25 @@ screens/main.bbt:9:1: item "S": when: unknown field "term.colours"
 	}
 }
 
+// The menu checks run after a load without errors. So TestCheck does not report
+// the goto to "setup" and the screen "about" without items.
+func TestCheckMenu(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml":          {Data: []byte("")},
+		"screens/start.bbt": {Data: []byte("+++\n[[item]]\nkey = \"s\"\ndo = \"goto sysinf\"\n+++\n")},
+		"screens/about.bbt": {Data: []byte("About\n")},
+	}
+	want := `bbs.toml:1:1: menu: start: unknown screen "main"
+screens/about.bbt:1:1: screen has no items
+screens/start.bbt:4:1: item "S": do: unknown screen "sysinf"
+`
+	var out, errOut bytes.Buffer
+	status := run([]string{"check"}, fsys, &out, &errOut)
+	if out.String() != "" || errOut.String() != want || status != exitError {
+		t.Errorf("stdout %q, stderr:\n%s\nstatus %d; want stderr:\n%s\nstatus 1", out.String(), errOut.String(), status, want)
+	}
+}
+
 func TestCheckValid(t *testing.T) {
 	out, errOut, status := runIn(t, "preview", "check")
 	if out != "" || errOut != "" || status != 0 {
@@ -53,7 +72,7 @@ func TestPreview(t *testing.T) {
 	}{{
 		// The dump of section 9.3.
 		name: "spec dump",
-		args: []string{"goodbye"},
+		args: []string{"main"},
 		want: `page 1/1 80x25
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
@@ -116,22 +135,22 @@ func TestPreviewErrors(t *testing.T) {
 		msg    string // the first line of stderr
 		status int
 	}{
-		{"preview", []string{"goodbye", "--size", "19x25"}, "bbs preview: term.cols is 19, must be from 20 to 255", exitUsage},
-		{"preview", []string{"goodbye", "--size", "256x25"}, "bbs preview: term.cols is 256, must be from 20 to 255", exitUsage},
-		{"preview", []string{"goodbye", "--size", "80x9"}, "bbs preview: term.rows is 9, must be from 10 to 100", exitUsage},
-		{"preview", []string{"goodbye", "--size", "80x101"}, "bbs preview: term.rows is 101, must be from 10 to 100", exitUsage},
-		{"preview", []string{"goodbye", "--size", "+80x25"}, `invalid value "+80x25" for flag -size: cols: "+80" is not a decimal number`, exitUsage},
-		{"preview", []string{"goodbye", "--size", "80"}, `invalid value "80" for flag -size: rows: "" is not a decimal number`, exitUsage},
-		{"preview", []string{"goodbye", "--set", "term.cols=100"}, `invalid value "term.cols=100" for flag -set: cannot set "term.cols": only term.type and term.colors`, exitUsage},
-		{"preview", []string{"goodbye", "--set", "term.charset=koi8-r"}, `invalid value "term.charset=koi8-r" for flag -set: cannot set "term.charset": only term.type and term.colors`, exitUsage},
-		{"preview", []string{"goodbye", "--set", "term.colors=17"}, "bbs preview: term.colors is 17, must be 16, 256 or 16777216", exitUsage},
-		{"preview", []string{"goodbye", "--set", "term.type"}, `invalid value "term.type" for flag -set: expected <path>=<value>`, exitUsage},
+		{"preview", []string{"main", "--size", "19x25"}, "bbs preview: term.cols is 19, must be from 20 to 255", exitUsage},
+		{"preview", []string{"main", "--size", "256x25"}, "bbs preview: term.cols is 256, must be from 20 to 255", exitUsage},
+		{"preview", []string{"main", "--size", "80x9"}, "bbs preview: term.rows is 9, must be from 10 to 100", exitUsage},
+		{"preview", []string{"main", "--size", "80x101"}, "bbs preview: term.rows is 101, must be from 10 to 100", exitUsage},
+		{"preview", []string{"main", "--size", "+80x25"}, `invalid value "+80x25" for flag -size: cols: "+80" is not a decimal number`, exitUsage},
+		{"preview", []string{"main", "--size", "80"}, `invalid value "80" for flag -size: rows: "" is not a decimal number`, exitUsage},
+		{"preview", []string{"main", "--set", "term.cols=100"}, `invalid value "term.cols=100" for flag -set: cannot set "term.cols": only term.type and term.colors`, exitUsage},
+		{"preview", []string{"main", "--set", "term.charset=koi8-r"}, `invalid value "term.charset=koi8-r" for flag -set: cannot set "term.charset": only term.type and term.colors`, exitUsage},
+		{"preview", []string{"main", "--set", "term.colors=17"}, "bbs preview: term.colors is 17, must be 16, 256 or 16777216", exitUsage},
+		{"preview", []string{"main", "--set", "term.type"}, `invalid value "term.type" for flag -set: expected <path>=<value>`, exitUsage},
 		{"preview", []string{"nope"}, `bbs preview: unknown screen "nope"`, exitUsage},
 		{"preview", []string{}, "bbs preview: expected one screen name", exitUsage},
-		{"preview", []string{"goodbye", "term"}, "bbs preview: expected one screen name", exitUsage},
-		{"preview", []string{"goodbye", "--size", "20x10", "term"}, "bbs preview: expected one screen name", exitUsage},
-		{"preview", []string{"", "goodbye"}, "bbs preview: expected one screen name", exitUsage},
-		{"preview", []string{"goodbye", "-h"}, "usage:", exitUsage},
+		{"preview", []string{"main", "term"}, "bbs preview: expected one screen name", exitUsage},
+		{"preview", []string{"main", "--size", "20x10", "term"}, "bbs preview: expected one screen name", exitUsage},
+		{"preview", []string{"", "main"}, "bbs preview: expected one screen name", exitUsage},
+		{"preview", []string{"main", "-h"}, "usage:", exitUsage},
 		{"check", []string{"main"}, `screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100`, exitError},
 	}
 	for _, tt := range tests {
