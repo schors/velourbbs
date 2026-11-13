@@ -173,6 +173,13 @@ const (
 	MaxRows = 100
 )
 
+// The values of term.colors (section 4.1).
+const (
+	Colors16   = 16
+	Colors256  = 256
+	ColorsTrue = 16777216
+)
+
 // Check reports an error when term.cols, term.rows or term.colors
 // is outside the values of section 4.1.
 func (t Term) Check() error {
@@ -181,7 +188,7 @@ func (t Term) Check() error {
 		return fmt.Errorf("term.cols is %d, must be from %d to %d", t.Cols, MinCols, MaxCols)
 	case t.Rows < MinRows || t.Rows > MaxRows:
 		return fmt.Errorf("term.rows is %d, must be from %d to %d", t.Rows, MinRows, MaxRows)
-	case t.Colors != 16 && t.Colors != 256 && t.Colors != 1<<24:
+	case t.Colors != Colors16 && t.Colors != Colors256 && t.Colors != ColorsTrue:
 		return fmt.Errorf("term.colors is %d, must be 16, 256 or 16777216", t.Colors)
 	}
 	return nil

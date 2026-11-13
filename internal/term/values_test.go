@@ -1,64 +1,12 @@
 package term
 
 import (
-	"slices"
 	"strings"
 	"testing"
 
 	"newbbs/internal/screen"
 	"newbbs/internal/telnet"
 )
-
-func TestTTYPELoop(t *testing.T) {
-	// Section 5.3: the end after 4 names, or at a repeat of the first or the previous name.
-	tests := []struct {
-		in    []string
-		names []string
-		sends int // the number of names after which the host sends SEND again
-	}{
-		{[]string{"XTERM", "XTERM"}, []string{"XTERM"}, 1},
-		{[]string{"A", "B", "B"}, []string{"A", "B"}, 2},
-		{[]string{"A", "B", "C", "A"}, []string{"A", "B", "C"}, 3},
-		{[]string{"A", "B", "C", "D"}, []string{"A", "B", "C", "D"}, 3},
-		// After the end, the names are ignored.
-		{[]string{"A", "B", "C", "D", "E"}, []string{"A", "B", "C", "D"}, 3},
-		{[]string{"A", "A", "B"}, []string{"A"}, 1},
-		// A name that repeats an older name in the middle does not end TTYPE.
-		{[]string{"A", "B", "C", "B", "B"}, []string{"A", "B", "C", "B"}, 3},
-	}
-	for _, tt := range tests {
-		var l ttypeLoop
-		sends := 0
-		for _, n := range tt.in {
-			if l.add(n) {
-				sends++
-			}
-		}
-		if !slices.Equal(l.names, tt.names) || !l.ended || sends != tt.sends {
-			t.Errorf("%q: names %q, ended %v, sends %d; want %q, true, %d",
-				tt.in, l.names, l.ended, sends, tt.names, tt.sends)
-		}
-	}
-}
-
-func TestParseMTTS(t *testing.T) {
-	ok := map[string]int{
-		"MTTS 4": 4, "mtts 269": 269, "Mtts 0": 0, "MTTS 123456789": 123456789,
-	}
-	for in, want := range ok {
-		if bits, ok := parseMTTS(in); !ok || bits != want {
-			t.Errorf("parseMTTS(%q) = %d, %v; want %d, true", in, bits, ok, want)
-		}
-	}
-	for _, in := range []string{
-		"MTTS", "MTTS ", "MTTS 1234567890", "MTTS  4", "MTTS 4 ", "MTTS -4", "MTTS x",
-		"MTTS4", "XTERM", "MTTſ 4", "MTTS\u00a04", "mtts\t4",
-	} {
-		if _, ok := parseMTTS(in); ok {
-			t.Errorf("parseMTTS(%q) is ok, want not an MTTS name", in)
-		}
-	}
-}
 
 func TestCleanName(t *testing.T) {
 	long := strings.Repeat("ы", 50)
@@ -78,84 +26,53 @@ func TestCleanName(t *testing.T) {
 }
 
 func TestColorDepth(t *testing.T) {
-	tests := []struct {
-		names   []string
-		mtts    int
-		hasMTTS bool
-		want    int
-	}{
-		// With MTTS.
-		{nil, 4 | 256, true, ColorsTrue},
-		{nil, 8 | 256, true, ColorsTrue},
-		{nil, 8, true, Colors256},
-		{nil, 4, true, Colors16},
-		// MTTS wins over the names.
-		{[]string{"xterm-direct"}, 4, true, Colors16},
-		// Without MTTS: the largest depth of the names.
-		{nil, 0, false, Colors16},
-		{[]string{"xterm"}, 0, false, Colors16},
-		{[]string{"xterm-256color"}, 0, false, Colors256},
-		{[]string{"xterm", "xterm-256color"}, 0, false, Colors256},
-		{[]string{"xterm-direct"}, 0, false, ColorsTrue},
-		{[]string{"xterm-256color", "konsole-direct"}, 0, false, ColorsTrue},
-		{[]string{"x-truecolor"}, 0, false, ColorsTrue},
-		{[]string{"x24bit"}, 0, false, ColorsTrue},
-		{[]string{"xterm-direct2"}, 0, false, Colors16},
+	// Section 6: the first rule that matches term.type.
+	tests := map[string]int{
+		// Rule 1.
+		"xterm-direct": screen.ColorsTrue, "konsole-truecolor": screen.ColorsTrue,
+		"x24bit": screen.ColorsTrue, "xterm-direct-256color": screen.Colors256,
+		// Rule 2.
+		"xterm-256color": screen.Colors256, "screen-256color-bce": screen.Colors256,
+		// Rule 3.
+		"ansi": screen.Colors16, "dumb": screen.Colors16, "vt52": screen.Colors16,
+		"vt100": screen.Colors16, "vt102": screen.Colors16, "vt220": screen.Colors16,
+		"vt320": screen.Colors16, "rxvt": screen.Colors16, "xterm-color": screen.Colors16,
+		"eterm-color": screen.Colors16, "cygwin": screen.Colors16,
+		"xterm-16color": screen.Colors16, "rxvt-8color": screen.Colors16,
+		// Rule 4.
+		"xterm": screen.Colors256, "linux": screen.Colors256, "syncterm": screen.Colors256,
+		"mtts 13": screen.Colors256, "vt100-am": screen.Colors256, "xterm-direct2": screen.Colors256,
 	}
-	for _, tt := range tests {
-		if got := colorDepth(tt.names, tt.mtts, tt.hasMTTS); got != tt.want {
-			t.Errorf("colorDepth(%q, %d, %v) = %d, want %d", tt.names, tt.mtts, tt.hasMTTS, got, tt.want)
+	for typ, want := range tests {
+		if got := colorDepth(typ); got != want {
+			t.Errorf("colorDepth(%q) = %d, want %d", typ, got, want)
 		}
 	}
 }
 
 func TestValues(t *testing.T) {
+	term := func(typ string, cols, rows, colors int) screen.Term {
+		return screen.Term{Type: typ, Cols: cols, Rows: rows, Charset: "utf-8", Colors: colors}
+	}
 	tests := []struct {
 		name string
 		r    replies
 		want screen.Term
 		utf8 bool
 	}{
-		{"no replies", replies{},
-			screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16}, true},
-		{"first terminal name in lower case",
-			replies{ttype: ttypeLoop{names: []string{"MTTS 8", "\x01", "XTerm-256Color", "VT100"}}},
-			screen.Term{Type: "xterm-256color", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 256}, true},
-		// The colour check uses the whole name, not the name cut to 40 graphemes.
-		{"long name", replies{ttype: ttypeLoop{names: []string{strings.Repeat("x", 50) + "-DIRECT"}}},
-			screen.Term{Type: strings.Repeat("x", 40), Cols: 80, Rows: 25, Charset: "utf-8", Colors: ColorsTrue}, true},
-		{"colours from names without case",
-			replies{ttype: ttypeLoop{names: []string{"XTERM", "XTERM-DIRECT"}}},
-			screen.Term{Type: "xterm", Cols: 80, Rows: 25, Charset: "utf-8", Colors: ColorsTrue}, true},
-		{"first MTTS name",
-			replies{ttype: ttypeLoop{names: []string{"MTTS 256", "MTTS 8"}}},
-			screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: ColorsTrue}, true},
-		{"NAWS size", replies{naws: telnet.NAWS{Cols: 132, Rows: 50}},
-			screen.Term{Type: "ansi", Cols: 132, Rows: 50, Charset: "utf-8", Colors: 16}, true},
-		{"NAWS wins over CPR",
-			replies{naws: telnet.NAWS{Cols: 100, Rows: 30}, sizeProbe: true, cprs: []CPR{{40, 120}}},
-			screen.Term{Type: "ansi", Cols: 100, Rows: 30, Charset: "utf-8", Colors: 16}, true},
-		{"CPR size", replies{sizeProbe: true, cprs: []CPR{{40, 120}}},
-			screen.Term{Type: "ansi", Cols: 120, Rows: 40, Charset: "utf-8", Colors: 16}, true},
-		{"CPR size with a 0", replies{sizeProbe: true, cprs: []CPR{{0, 120}}},
-			screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16}, true},
-		{"clamp low", replies{naws: telnet.NAWS{Cols: 5, Rows: 3}},
-			screen.Term{Type: "ansi", Cols: 20, Rows: 10, Charset: "utf-8", Colors: 16}, true},
-		{"clamp high", replies{sizeProbe: true, cprs: []CPR{{999, 999}}},
-			screen.Term{Type: "ansi", Cols: 255, Rows: 100, Charset: "utf-8", Colors: 16}, true},
-		{"charset column 2", replies{charset: true, cprs: []CPR{{1, 2}}},
-			screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16}, true},
-		{"charset column 3", replies{charset: true, cprs: []CPR{{1, 3}}},
-			screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16}, false},
-		{"charset no reply", replies{charset: true},
-			screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16}, true},
-		{"charset other column", replies{charset: true, cprs: []CPR{{1, 4}}},
-			screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16}, true},
-		{"charset and size", replies{charset: true, sizeProbe: true, cprs: []CPR{{5, 3}, {30, 90}}},
-			screen.Term{Type: "ansi", Cols: 90, Rows: 30, Charset: "utf-8", Colors: 16}, false},
-		// The first reply belongs to the first probe.
-		{"one reply for two probes", replies{charset: true, sizeProbe: true, cprs: []CPR{{30, 90}}},
-			screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16}, true},
+		{"no replies", replies{}, term("ansi", 80, 25, 16), true},
+		{"name in lower case", replies{ttype: "XTERM", ttypeGot: true}, term("xterm", 80, 25, 256), true},
+		{"name in upper case for 16", replies{ttype: "VT100", ttypeGot: true}, term("vt100", 80, 25, 16), true},
+		{"empty name", replies{ttype: "\x01", ttypeGot: true}, term("ansi", 80, 25, 16), true},
+		// The colour rules apply to term.type: the name after the cut to 40 graphemes.
+		{"long name", replies{ttype: strings.Repeat("x", 50) + "-DIRECT", ttypeGot: true},
+			term(strings.Repeat("x", 40), 80, 25, 256), true},
+		{"NAWS size", replies{naws: telnet.NAWS{Cols: 132, Rows: 50}}, term("ansi", 132, 50, 16), true},
+		{"clamp low", replies{naws: telnet.NAWS{Cols: 5, Rows: 3}}, term("ansi", 20, 10, 16), true},
+		{"clamp high", replies{naws: telnet.NAWS{Cols: 999, Rows: 999}}, term("ansi", 255, 100, 16), true},
+		{"charset column 2", replies{cpr: CPR{1, 2}, cprGot: true}, term("ansi", 80, 25, 16), true},
+		{"charset column 3", replies{cpr: CPR{1, 3}, cprGot: true}, term("ansi", 80, 25, 16), false},
+		{"charset other column", replies{cpr: CPR{1, 4}, cprGot: true}, term("ansi", 80, 25, 16), true},
 	}
 	for _, tt := range tests {
 		got, utf8 := tt.r.values()

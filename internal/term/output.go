@@ -10,16 +10,9 @@ import (
 	"newbbs/internal/screen"
 )
 
-// The colour depths of term.colors (section 6).
-const (
-	Colors16   = 16
-	Colors256  = 256
-	ColorsTrue = 16777216
-)
-
 // AppendPage appends the output of page p (section 7.1) to dst for a terminal
-// with term.colors = colors. ColorsTrue gives no reduction, Colors256 gives
-// the 256-colour rule and each other value gives the 16-colour rule (section 7.3).
+// with term.colors = colors. screen.ColorsTrue gives no reduction, screen.Colors256
+// gives the 256-colour rule and each other value gives the 16-colour rule (section 7.3).
 // The caller doubles IAC after it (section 4.3).
 func AppendPage(dst []byte, p screen.Page, colors int) []byte {
 	dst = append(dst, "\x1b[0m\x1b[2J"...)
@@ -105,9 +98,9 @@ func reduceStyle(s screen.Style, colors int) screen.Style {
 // reduce reduces colour c to colors (section 7.3).
 func reduce(c screen.Colour, colors int) screen.Colour {
 	switch {
-	case colors == ColorsTrue || c.Kind == screen.Default:
+	case colors == screen.ColorsTrue || c.Kind == screen.Default:
 		return c
-	case colors == Colors256:
+	case colors == screen.Colors256:
 		if c.Kind == screen.RGB {
 			return screen.Colour{Kind: screen.Index, Value: nearest(c.Value, 16, 255)}
 		}

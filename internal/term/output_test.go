@@ -52,22 +52,22 @@ func TestReduce(t *testing.T) {
 		colors int
 		want   screen.Colour
 	}{
-		{"truecolor rgb", rgb(1, 2, 3), ColorsTrue, rgb(1, 2, 3)},
-		{"truecolor index", idx(200), ColorsTrue, idx(200)},
-		{"truecolor default", def, ColorsTrue, def},
-		{"256 rgb in the cube", rgb(255, 135, 0), Colors256, idx(208)},
-		{"256 rgb near a grey", rgb(128, 129, 127), Colors256, idx(244)},
-		{"256 rgb black", rgb(0, 0, 0), Colors256, idx(16)},
-		{"256 tie", rgb(115, 0, 0), Colors256, idx(52)}, // 52 and 88 have the distance 400
-		{"256 index 0-15", idx(9), Colors256, idx(9)},
-		{"256 index 16-255", idx(200), Colors256, idx(200)},
-		{"256 default", def, Colors256, def},
-		{"16 index 16-255", idx(196), Colors16, idx(1)},
-		{"16 grey", idx(240), Colors16, idx(8)},
-		{"16 rgb", rgb(250, 250, 250), Colors16, idx(15)},
-		{"16 rgb dark", rgb(0, 0, 0x99), Colors16, idx(4)},
-		{"16 index 0-15", idx(12), Colors16, idx(12)},
-		{"16 default", def, Colors16, def},
+		{"truecolor rgb", rgb(1, 2, 3), screen.ColorsTrue, rgb(1, 2, 3)},
+		{"truecolor index", idx(200), screen.ColorsTrue, idx(200)},
+		{"truecolor default", def, screen.ColorsTrue, def},
+		{"256 rgb in the cube", rgb(255, 135, 0), screen.Colors256, idx(208)},
+		{"256 rgb near a grey", rgb(128, 129, 127), screen.Colors256, idx(244)},
+		{"256 rgb black", rgb(0, 0, 0), screen.Colors256, idx(16)},
+		{"256 tie", rgb(115, 0, 0), screen.Colors256, idx(52)}, // 52 and 88 have the distance 400
+		{"256 index 0-15", idx(9), screen.Colors256, idx(9)},
+		{"256 index 16-255", idx(200), screen.Colors256, idx(200)},
+		{"256 default", def, screen.Colors256, def},
+		{"16 index 16-255", idx(196), screen.Colors16, idx(1)},
+		{"16 grey", idx(240), screen.Colors16, idx(8)},
+		{"16 rgb", rgb(250, 250, 250), screen.Colors16, idx(15)},
+		{"16 rgb dark", rgb(0, 0, 0x99), screen.Colors16, idx(4)},
+		{"16 index 0-15", idx(12), screen.Colors16, idx(12)},
+		{"16 default", def, screen.Colors16, def},
 	}
 	for _, tt := range tests {
 		if got := reduce(tt.c, tt.colors); got != tt.want {
@@ -97,7 +97,7 @@ func TestAppendPage(t *testing.T) {
 		"\x1b[1;1H\x1b[0;37;40mab\x1b[0;1;97;44mc" +
 		"\x1b[2;1H\x1b[0;37;40m \x1b[0mé" + "d" +
 		"\x1b[0m"
-	if got := string(AppendPage(nil, page, Colors16)); got != want {
+	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
 		t.Errorf("AppendPage =\n%q\nwant\n%q", got, want)
 	}
 }
@@ -106,7 +106,7 @@ func TestAppendPage(t *testing.T) {
 func TestAppendPageDefaultStart(t *testing.T) {
 	page := screen.Page{{cell("x", def, def, 0)}}
 	want := "\x1b[0m\x1b[2J\x1b[1;1Hx\x1b[0m"
-	if got := string(AppendPage(nil, page, Colors16)); got != want {
+	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
 	}
 }
@@ -114,7 +114,7 @@ func TestAppendPageDefaultStart(t *testing.T) {
 func TestAppendPageWide(t *testing.T) {
 	s := screen.Style{Fg: idx(7), Bg: idx(0)}
 	page := screen.Page{{{Grapheme: "中", Style: s}, {Grapheme: "", Style: s}, {Grapheme: "a", Style: s}}}
-	got := string(AppendPage(nil, page, Colors16))
+	got := string(AppendPage(nil, page, screen.Colors16))
 	if n := strings.Count(got, "中"); n != 1 {
 		t.Errorf("AppendPage gives %q %d times, want 1: %q", "中", n, got)
 	}
@@ -130,8 +130,8 @@ func TestAppendPageReducedEqual(t *testing.T) {
 		colors int
 		want   string
 	}{
-		{Colors16, "\x1b[0;97mab"},
-		{ColorsTrue, "\x1b[0;38;2;250;250;250ma\x1b[0;38;2;255;255;255mb"},
+		{screen.Colors16, "\x1b[0;97mab"},
+		{screen.ColorsTrue, "\x1b[0;38;2;250;250;250ma\x1b[0;38;2;255;255;255mb"},
 	}
 	for _, tt := range tests {
 		want := "\x1b[0m\x1b[2J\x1b[1;1H" + tt.want + "\x1b[0m"
@@ -142,7 +142,7 @@ func TestAppendPageReducedEqual(t *testing.T) {
 }
 
 func TestAppendPageAppends(t *testing.T) {
-	got := string(AppendPage([]byte("x"), nil, Colors16))
+	got := string(AppendPage([]byte("x"), nil, screen.Colors16))
 	if want := "x\x1b[0m\x1b[2J\x1b[0m"; got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
 	}
