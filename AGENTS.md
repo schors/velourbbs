@@ -6,6 +6,10 @@
     ("проверил", not "была произведена проверка").
   - Do not use filler, bureaucratic phrases or evaluations without facts.
   - Use one term for each thing. Keep established English terms and identifiers as they are.
+- In a message to the operator, refer to an item, such as a question, an option, a finding,
+  a decision or a step, with its content. A number or a label alone is not enough
+  if the message does not show the item.
+  Example: "вариант 2 (merge main в worktree)", not "вариант 2".
 - A "document for AI" is a file in one of these paths: `AGENTS.md`, `docs/dev-flow/`,
   `.claude/skills/`, `docs/specs/`, `docs/ideas/`, `.ai/issues.md`, `.ai/artifacts/`
   and `.ai/issues/<id>/`. Before you write or change one, read `docs/dev-flow/style.md`.
