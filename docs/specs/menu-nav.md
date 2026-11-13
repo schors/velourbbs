@@ -2,7 +2,7 @@
 
 This specification defines the menu items, the keys, the navigation of a session,
 the menu checks of `bbs check` and the key sequences of `bbs preview`.
-Related parts: [screen-format](screen-format.md) and [telnet-term](../ideas/telnet-term.md).
+Related parts: [screen-format](screen-format.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
@@ -63,8 +63,8 @@ Other characters are keys too, but an item cannot have them. They match only `AN
 
 - Case does not matter in `key`, in `item.<KEY>` and in `--keys`. `s`, `S` and `esc`, `ESC`
   are the same keys.
-- [telnet-term](../ideas/telnet-term.md) decodes the input bytes to these names
-  and to characters. Both 0x08 and 0x7F give `BS`.
+- [telnet-term](telnet-term.md), section 8, decodes the input bytes to these names
+  and to characters.
 
 ### 3.2. Russian layout
 
@@ -135,7 +135,7 @@ ESC has no implicit action.
 - Keys that arrive during a render stay in the input queue. A More row uses the next key
   of the queue.
 - A screen whose items are all disabled and that has no `ANY` item ignores all keys.
-  The idle timeout of [telnet-term](../ideas/telnet-term.md) ends such a session.
+  The idle timeout of [telnet-term](telnet-term.md) ends such a session.
 - A hangup or the idle timeout ends the session at once, without `goodbye`.
 
 `bbs.toml` example:
