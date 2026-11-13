@@ -69,3 +69,14 @@ func TestLatin(t *testing.T) {
 		}
 	}
 }
+
+func TestMap(t *testing.T) {
+	for in, want := range map[string]string{
+		"s": "S", "S": "S", "ы": "S", "Ы": "S", "й": "Q", "ж": "ж", "Ж": "Ж",
+		"1": "1", "?": "?", "ї": "ї", "ESC": "ESC", "esc": "ESC", "F1": "F1",
+	} {
+		if got := Map(in); got != want {
+			t.Errorf("Map(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

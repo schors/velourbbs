@@ -1,0 +1,10 @@
++++
+[[item]]
+key = "S"
+do = "goto sysinfo"
+when = "term.cols >= 80"
+[[item]]
+key = "G"
+do = "logoff"
++++
+{#if item.S}[S]ystem info  {/if}[G]oodbye

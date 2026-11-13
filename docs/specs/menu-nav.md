@@ -199,7 +199,8 @@ It is the test harness for the navigation.
 - The output gives a key after the map of section 3.2. A letter, a digit or a key name
   is in upper case. Each other character is as it is. Example: `ы` gives `key S`.
 - When the list ends, `bbs preview` stops after the current page and exits with status 0.
-- A key after the last page of `goodbye` is an error. `bbs preview` exits with status 1.
+- A key after the end of the session at `logoff` (section 5) is an error.
+  `bbs preview` exits with status 1.
 
 Example: `bbs preview main --keys S,X,G --size 80x25`:
 

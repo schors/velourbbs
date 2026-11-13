@@ -22,7 +22,7 @@ const (
 
 const usage = `usage:
   bbs check
-  bbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]...
+  bbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]... [--keys <keys>]
 `
 
 func main() {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -151,6 +152,12 @@ func TestPreviewErrors(t *testing.T) {
 		{"preview", []string{"main", "--size", "20x10", "term"}, "bbs preview: expected one screen name", exitUsage},
 		{"preview", []string{"", "main"}, "bbs preview: expected one screen name", exitUsage},
 		{"preview", []string{"main", "-h"}, "usage:", exitUsage},
+		{"keys", []string{"main", "--keys", "S,,G"}, `invalid value "S,,G" for flag -keys: invalid key ""`, exitUsage},
+		{"keys", []string{"main", "--keys", "ANY"}, `invalid value "ANY" for flag -keys: invalid key "ANY"`, exitUsage},
+		{"keys", []string{"main", "--keys", "S, G"}, `invalid value "S, G" for flag -keys: invalid key " G"`, exitUsage},
+		{"keys", []string{"main", "--keys", "AB"}, `invalid value "AB" for flag -keys: invalid key "AB"`, exitUsage},
+		{"keys", []string{"goodbye", "--keys", "S"}, `bbs preview: screen "goodbye" has no items`, exitUsage},
+		{"keys", []string{"nope", "--keys", ""}, `bbs preview: unknown screen "nope"`, exitUsage},
 		{"check", []string{"main"}, `screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100`, exitError},
 	}
 	for _, tt := range tests {
@@ -161,6 +168,73 @@ func TestPreviewErrors(t *testing.T) {
 				t.Errorf("stdout %q, stderr %q, status %d; want stderr %q, status %d", out, errOut, status, tt.msg, tt.status)
 			}
 		})
+	}
+}
+
+// page gives the dump of a page of one row with the style 7/0.
+func page(cols, rows int, text string) string {
+	return fmt.Sprintf("page 1/1 %dx%d\n|%-*s|\nstyles\n1: 1-%d 7/0\n", cols, rows, cols, text, cols)
+}
+
+func TestPreviewKeys(t *testing.T) {
+	main80 := "screen main\n" + page(80, 25, "[S]ystem info  [G]oodbye")
+	main40 := "screen main\n" + page(40, 10, "[G]oodbye")
+	sysinfo := "screen sysinfo\n" + page(80, 25, "Terminal: 80x25. Press any key.")
+	goodbye40 := "screen goodbye\n" + page(40, 10, "Goodbye!")
+	tests := []struct {
+		name   string
+		args   []string
+		want   string
+		errOut string
+		status int
+	}{{
+		name: "spec example",
+		args: []string{"main", "--keys", "S,X,G", "--size", "80x25"},
+		want: main80 + "key S\n" + sysinfo + "key X\n" + main80 +
+			"key G\nlogoff\nscreen goodbye\n" + page(80, 25, "Goodbye!"),
+	}, {
+		name: "empty list",
+		args: []string{"main", "--size", "40x10", "--keys", ""},
+		want: main40,
+	}, {
+		name: "Russian layout",
+		args: []string{"--keys", "ы", "main"},
+		want: main80 + "key S\n" + sysinfo,
+	}, {
+		// S is disabled at 40 columns. main has no ANY item.
+		name: "ignored keys",
+		args: []string{"main", "--keys", "s,?,esc,ж", "--size", "40x10"},
+		want: main40 + "key S ignored\nkey ? ignored\nkey ESC ignored\nkey ж ignored\n",
+	}, {
+		name:   "key after goodbye",
+		args:   []string{"main", "--keys", "G,ы", "--size", "40x10"},
+		want:   main40 + "key G\nlogoff\n" + goodbye40,
+		errOut: "bbs preview: key \"S\" after logoff\n",
+		status: exitError,
+	}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, errOut, status := runIn(t, "keys", append([]string{"preview"}, tt.args...)...)
+			if out != tt.want || errOut != tt.errOut || status != tt.status {
+				t.Errorf("stdout:\n%s\nstderr %q, status %d; want stdout:\n%s\nstderr %q, status %d",
+					out, errOut, status, tt.want, tt.errOut, tt.status)
+			}
+		})
+	}
+}
+
+func TestPreviewKeysNoGoodbye(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml":         {Data: []byte("")},
+		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\nBye\n")},
+	}
+	want := "screen main\n" + page(40, 10, "Bye") + "key G\nlogoff\n"
+	wantErr := "bbs preview: key \"X\" after logoff\n"
+	var out, errOut bytes.Buffer
+	status := run([]string{"preview", "main", "--size", "40x10", "--keys", "G,x"}, fsys, &out, &errOut)
+	if out.String() != want || errOut.String() != wantErr || status != exitError {
+		t.Errorf("stdout:\n%s\nstderr %q, status %d; want stdout:\n%s\nstderr %q, status 1",
+			out.String(), errOut.String(), status, want, wantErr)
 	}
 }
 

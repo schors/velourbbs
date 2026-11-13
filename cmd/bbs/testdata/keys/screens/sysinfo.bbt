@@ -1,0 +1,6 @@
++++
+[[item]]
+key = "ANY"
+do = "goto main"
++++
+Terminal: {term.cols}x{term.rows}. Press any key.
