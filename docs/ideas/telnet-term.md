@@ -1,7 +1,7 @@
 # Idea: telnet and terminal detection
 
 MVP part 3 of 3. The other parts are [screen-format](../specs/screen-format.md) and
-[menu-nav](menu-nav.md).
+[menu-nav](../specs/menu-nav.md).
 
 ## Goal
 
@@ -61,7 +61,7 @@ the colour depth. Then it starts the session at the first screen.
 - A CPR reply after the probe is dropped.
 - The ESC timeout is 150 ms.
 - The key queue is bounded.
-- The Russian layout map (menu-nav) applies after UTF-8 decoding.
+- The decoder gives the key names of [menu-nav](../specs/menu-nav.md), section 3.1.
 
 ## Limits
 
@@ -90,11 +90,9 @@ Out (backlog):
 ## Dependencies
 
 - [screen-format](../specs/screen-format.md) uses `term.*` and the colour model.
-- [menu-nav](menu-nav.md) uses the key names from the key decoder.
+- [menu-nav](../specs/menu-nav.md) defines the key names and uses the key decoder.
 
 ## Open questions
 
-1. The list of named keys: proposal `ESC ENTER TAB BS DEL UP DOWN LEFT RIGHT HOME END PGUP PGDN
-   F1-F12`. 0x08 and 0x7F both give `BS`.
-2. ESC followed by a letter (Alt+letter): one key or two.
-3. The text of the "not UTF-8" message.
+1. ESC followed by a letter (Alt+letter): one key or two.
+2. The text of the "not UTF-8" message.

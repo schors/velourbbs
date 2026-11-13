@@ -131,7 +131,7 @@ do = "goto about"
 	if s.Width != (screen.WidthLimits{Min: 64, Max: 100}) || s.Narrow != screens["main_small"] {
 		t.Errorf("width %v, narrow %v", s.Width, s.Narrow)
 	}
-	if !slices.Equal(s.Items, []screen.Item{{Key: "A", Do: "goto about"}}) {
+	if !slices.Equal(s.Items, []screen.Item{{Key: "A", Do: screen.Action{Op: screen.Goto, Screen: "about"}}}) {
 		t.Errorf("items %+v", s.Items)
 	}
 	want := `if(/b art100[])else(/b art64[term.cols]) /b !15/4 bold "Welcome! Your terminal has " {term.cols} " columns." / !14/0 "[A]bout [G]oodbye" /`
@@ -211,7 +211,7 @@ func TestFrontMatter(t *testing.T) {
 		files map[string]string
 		want  []string
 	}{
-		{map[string]string{"main.bbt": "+++\n[fields]\nw = \"term.cols\"\n\n\n[[item]]\nkey = \"S\"\ndo = \"x\"\nwhen = \"term.colours == 1\"\n+++\n"},
+		{map[string]string{"main.bbt": "+++\n[fields]\nw = \"term.cols\"\n\n\n[[item]]\nkey = \"S\"\ndo = \"logoff\"\nwhen = \"term.colours == 1\"\n+++\n"},
 			[]string{`screens/main.bbt:9:1: item "S": when: unknown field "term.colours"`}},
 		{map[string]string{"s.bbt": "+++\nwidth = 5\ncolor = 1\n+++\n"},
 			[]string{`screens/s.bbt:2:1: width: must be an array of 2 integers`, `screens/s.bbt:3:1: unknown key "color"`}},
@@ -220,7 +220,7 @@ func TestFrontMatter(t *testing.T) {
 		{map[string]string{"s.bbt": "+++\nfields = { \"яя\" = \"term.cols\", and = \"term.rows\" }\n+++\n"},
 			[]string{`screens/s.bbt:2:12: fields: invalid alias "яя"`, `screens/s.bbt:2:32: fields: alias "and" is a reserved word`}},
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ndo = 1\nx = \"y\"\n+++\n"},
-			[]string{`screens/s.bbt:3:1: fields: alias "k": "item.A" is valid only in {#if}`, `screens/s.bbt:4:3: item 1: key is missing`, `screens/s.bbt:5:1: item 1: do: must be a string`, `screens/s.bbt:6:1: unknown key "item.x"`}},
+			[]string{`screens/s.bbt:3:1: fields: alias "k": "item.A" is valid only in {#if}`, `screens/s.bbt:4:3: item 1: key is missing`, `screens/s.bbt:5:1: item 1: do: must be a string`, `screens/s.bbt:6:1: item 1: unknown key "x"`}},
 		{map[string]string{"s.bbt": "+++\nwidth = [\n+++\n"}, []string{`screens/s.bbt:2:9: array is incomplete`}},
 		{map[string]string{"s.bbt": "+++\nwidth = [1, 2]\n"}, []string{`screens/s.bbt:1:1: front matter has no closing "+++"`}},
 		{map[string]string{"s.bbt": "{>_f}", "_f.bbt": "+++\n+++\nx"}, []string{`screens/_f.bbt:1:1: a fragment cannot have front matter`}},
@@ -234,8 +234,8 @@ func TestFrontMatter(t *testing.T) {
 			`screens/s.bbt:4:1: fields: alias "a": unknown field "term.y"`,
 			`screens/s.bbt:5:3: item 1: key is missing`,
 			`screens/s.bbt:5:3: item 1: do is missing`,
-			`screens/s.bbt:6:1: unknown key "item.y"`,
-			`screens/s.bbt:7:1: unknown key "item.x"`,
+			`screens/s.bbt:6:1: item 1: unknown key "y"`,
+			`screens/s.bbt:7:1: item 1: unknown key "x"`,
 		}},
 	}
 	for _, tt := range tests {
@@ -243,6 +243,102 @@ func TestFrontMatter(t *testing.T) {
 		if !slices.Equal(msgs, tt.want) {
 			t.Errorf("%q:\n got %q\nwant %q", tt.files, msgs, tt.want)
 		}
+	}
+}
+
+func TestItems(t *testing.T) {
+	screens := mustLoad(t, map[string]string{"s.bbt": `+++
+[[item]]
+key = "esc"
+do = "goto main"
+[[item]]
+key = "any"
+do = "logoff"
+when = "term.cols > 80"
++++
+`})
+	items := screens["s"].Items
+	if len(items) != 2 || items[1].When == nil {
+		t.Fatalf("items %+v", items)
+	}
+	got := []screen.Item{{Key: items[0].Key, Do: items[0].Do}, {Key: items[1].Key, Do: items[1].Do}}
+	want := []screen.Item{
+		{Key: "ESC", Do: screen.Action{Op: screen.Goto, Screen: "main"}},
+		{Key: "ANY", Do: screen.Action{Op: screen.Logoff}},
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("items %+v, want %+v", got, want)
+	}
+}
+
+func TestItemErrors(t *testing.T) {
+	// Each case is one [[item]] table; the front matter starts on line 2 of the file.
+	tests := []struct {
+		items []string // the lines of each [[item]] table
+		want  []string
+	}{
+		{[]string{`key = "?"`, `do = "logoff"`}, []string{`screens/s.bbt:3:1: item 1: key: invalid key "?"`}},
+		{[]string{`key = "ы"`, `do = "logoff"`}, []string{`screens/s.bbt:3:1: item 1: key: invalid key "ы"`}},
+		{[]string{`key = "F13"`, `do = "x"`}, []string{
+			`screens/s.bbt:3:1: item 1: key: invalid key "F13"`,
+			`screens/s.bbt:4:1: item 1: do: unknown action "x"`,
+		}},
+		{[]string{`do = "x"`, `key = 1`}, []string{
+			`screens/s.bbt:3:1: item 1: do: unknown action "x"`,
+			`screens/s.bbt:4:1: item 1: key: must be a string`,
+		}},
+		{[]string{`key = "esc"`, `do = "Goto main"`}, []string{`screens/s.bbt:4:1: item "ESC": do: unknown action "Goto"`}},
+		{[]string{`key = "A"`, `do = ""`}, []string{`screens/s.bbt:4:1: item "A": do: unknown action ""`}},
+		{[]string{`key = "A"`, `do = "goto"`}, []string{`screens/s.bbt:4:1: item "A": do: goto needs a screen name`}},
+		{[]string{`key = "A"`, `do = "goto  main"`}, []string{`screens/s.bbt:4:1: item "A": do: invalid screen name " main"`}},
+		{[]string{`key = "A"`, `do = "goto Main"`}, []string{`screens/s.bbt:4:1: item "A": do: invalid screen name "Main"`}},
+		{[]string{`key = "A"`, `do = "goto _f"`}, []string{`screens/s.bbt:4:1: item "A": do: invalid screen name "_f"`}},
+		{[]string{`key = "A"`, `do = "logoff now"`}, []string{`screens/s.bbt:4:1: item "A": do: logoff takes no argument`}},
+		{[]string{`key = "A"`, `do = "logoff "`}, []string{`screens/s.bbt:4:1: item "A": do: logoff takes no argument`}},
+		{[]string{`key = "a"`, `do = 1`, `when = "item.A"`, `x = 1`}, []string{
+			`screens/s.bbt:4:1: item "A": do: must be a string`,
+			`screens/s.bbt:5:1: item "A": when: field "item.A" is valid only in {#if}`,
+			`screens/s.bbt:6:1: item "A": unknown key "x"`,
+		}},
+	}
+	for _, tt := range tests {
+		data := "+++\n[[item]]\n" + strings.Join(tt.items, "\n") + "\n+++\n"
+		_, msgs := load(map[string]string{"s.bbt": data})
+		if !slices.Equal(msgs, tt.want) {
+			t.Errorf("%q:\n got %q\nwant %q", tt.items, msgs, tt.want)
+		}
+	}
+
+	// Duplicate keys after the case rule, also ANY: the error is at the second key.
+	data := `+++
+[[item]]
+key = "s"
+do = "logoff"
+[[item]]
+key = "any"
+do = "logoff"
+[[item]]
+key = "S"
+do = "logoff"
+[[item]]
+key = "?"
+do = "logoff"
+[[item]]
+key = "ANY"
+do = "logoff"
+[[item]]
+key = "?"
+do = "logoff"
++++
+`
+	want := []string{
+		`screens/s.bbt:9:1: item "S": key: duplicate key`,
+		`screens/s.bbt:12:1: item 4: key: invalid key "?"`,
+		`screens/s.bbt:15:1: item "ANY": key: duplicate key`,
+		`screens/s.bbt:18:1: item 6: key: invalid key "?"`,
+	}
+	if _, msgs := load(map[string]string{"s.bbt": data}); !slices.Equal(msgs, want) {
+		t.Errorf("duplicates:\n got %q\nwant %q", msgs, want)
 	}
 }
 
@@ -410,8 +506,8 @@ func TestWidth(t *testing.T) {
 
 func TestNarrow(t *testing.T) {
 	screens := mustLoad(t, map[string]string{
-		"main.bbt":  "+++\nnarrow = \"small\"\n[[item]]\nkey = \"A\"\ndo = \"x\"\n+++\n{#if item.A}a{/if}",
-		"other.bbt": "+++\nnarrow = \"small\"\n[[item]]\nkey = \"A\"\ndo = \"y\"\n+++\n",
+		"main.bbt":  "+++\nnarrow = \"small\"\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{#if item.A}a{/if}",
+		"other.bbt": "+++\nnarrow = \"small\"\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n",
 		"small.bbt": "{#if item.A}a{/if}",
 	})
 	if screens["main"].Narrow != screens["small"] || screens["other"].Narrow != screens["small"] {
@@ -422,7 +518,7 @@ func TestNarrow(t *testing.T) {
 		files map[string]string
 		want  []string
 	}{
-		{map[string]string{"main.bbt": "+++\nnarrow = \"small\"\n+++\n", "small.bbt": "+++\nnarrow = \"main\"\n[[item]]\nkey = \"A\"\ndo = \"x\"\n+++\n"},
+		{map[string]string{"main.bbt": "+++\nnarrow = \"small\"\n+++\n", "small.bbt": "+++\nnarrow = \"main\"\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n"},
 			[]string{
 				`screens/main.bbt:2:1: a narrow screen cannot have narrow (screen "small" names it)`,
 				`screens/small.bbt:2:1: a narrow screen cannot have narrow (screen "main" names it)`,
@@ -430,11 +526,11 @@ func TestNarrow(t *testing.T) {
 			}},
 		{map[string]string{"main.bbt": "+++\nnarrow = \"none\"\n+++\n"}, []string{`screens/main.bbt:2:1: narrow: no screen "none"`}},
 		{map[string]string{
-			"main.bbt": "+++\nnarrow = \"small\"\n[[item]]\nkey = \"A\"\ndo = \"x\"\n+++\n", "small.bbt": "{#if item.A and item.B}a{/if}\n{>_f}",
+			"main.bbt": "+++\nnarrow = \"small\"\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n", "small.bbt": "{#if item.A and item.B}a{/if}\n{>_f}",
 			"_f.bbt": "{#if item.C}a{/if}",
 		}, []string{`screens/_f.bbt:1:1: screen "main": unknown field "item.C"`, `screens/small.bbt:1:1: screen "main": unknown field "item.B"`}},
-		{map[string]string{"s.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"x\"\n+++\n{#if item.a}a{/if}"},
-			[]string{`screens/s.bbt:6:1: unknown field "item.a"`}},
+		{map[string]string{"s.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{#if item.a or item.b}a{/if}"},
+			[]string{`screens/s.bbt:6:1: unknown field "item.B"`}}, // the case rule: item.a is item.A
 	}
 	for _, tt := range tests {
 		_, msgs := load(tt.files)

@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"newbbs/internal/key"
 )
 
 // Type is the type of a field (section 4.1).
@@ -55,7 +57,7 @@ var termFields = [...]struct {
 // Ref is a resolved field path: a term.* field or item.<KEY>.
 type Ref struct {
 	term termField
-	key  string // the <KEY> of item.<KEY>
+	key  string // the <KEY> of item.<KEY>, in upper case
 }
 
 // Type gives the type of the field.
@@ -130,7 +132,7 @@ func resolve(path string, fields Fields) (Ref, error) {
 			return r, nil
 		}
 	} else if head == "item" {
-		return Ref{key: tail}, nil
+		return Ref{key: key.Upper(tail)}, nil
 	}
 	for i, f := range termFields {
 		if i > 0 && f.path == path {

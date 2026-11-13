@@ -20,9 +20,25 @@ type Screen struct {
 
 // Item is a menu item of the front matter. When is nil when the item has no when.
 type Item struct {
-	Key, Do string
-	When    *Cond
+	Key  string // a key name of menu-nav, section 3.1, in upper case
+	Do   Action
+	When *Cond
 }
+
+// Action is the parsed do of an item (menu-nav, section 5).
+type Action struct {
+	Op     Op
+	Screen string // the screen name of Goto
+}
+
+// Op is an action word of do.
+type Op uint8
+
+// The actions of menu-nav, section 5.
+const (
+	Goto Op = iota + 1
+	Logoff
+)
 
 // Seg is one segment of a body: Text, Field, SetStyle, If, Include, ArtInsert or LineEnd.
 // Blocks can start and end inside a line, so If holds segments, not lines.

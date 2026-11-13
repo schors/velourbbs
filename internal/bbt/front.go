@@ -9,6 +9,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"newbbs/internal/key"
 	"newbbs/internal/screen"
 	"newbbs/internal/tomlpos"
 )
@@ -108,6 +109,7 @@ func (fr *front) parseItems(v any, errorf errorFunc) {
 		errorf([]string{"item"}, "item: must be an array of tables")
 		return
 	}
+	seen := map[string]bool{}
 	for i, el := range a {
 		idx := fmt.Sprint(i)
 		t, ok := el.(map[string]any)
@@ -115,40 +117,76 @@ func (fr *front) parseItems(v any, errorf errorFunc) {
 			errorf([]string{"item", idx}, "item: must be an array of tables")
 			continue
 		}
-		text := map[string]string{}
-		for _, key := range fr.keys(t, "item", idx) {
-			v := t[key]
-			if key != "key" && key != "do" && key != "when" {
-				errorf([]string{"item", idx, key}, "unknown key \"item.%s\"", key)
+		// The label of menu-nav, section 7: the key when it is valid, else the number.
+		raw, _ := t["key"].(string)
+		k, valid := key.Parse(raw)
+		label := fmt.Sprintf("item %d", i+1)
+		if valid {
+			label = fmt.Sprintf("item %q", k)
+		}
+		item := screen.Item{Key: k}
+		for _, name := range fr.keys(t, "item", idx) {
+			path := []string{"item", idx, name}
+			if name != "key" && name != "do" && name != "when" {
+				errorf(path, "%s: unknown key %q", label, name)
 				continue
 			}
-			s, ok := v.(string)
+			s, ok := t[name].(string)
 			if !ok {
-				errorf([]string{"item", idx, key}, "item %d: %s: must be a string", i+1, key)
+				errorf(path, "%s: %s: must be a string", label, name)
 				continue
 			}
-			text[key] = s
-		}
-		key := text["key"]
-		label := fmt.Sprintf("item %q", key)
-		if _, ok := text["key"]; !ok {
-			label = fmt.Sprintf("item %d", i+1)
-		}
-		for _, k := range []string{"key", "do"} {
-			if _, ok := t[k]; !ok {
-				errorf([]string{"item", idx}, "%s: %s is missing", label, k)
+			switch name {
+			case "key":
+				switch {
+				case !valid:
+					errorf(path, "%s: key: invalid key %q", label, s)
+				case seen[k]:
+					errorf(path, "%s: key: duplicate key", label)
+				}
+				seen[k] = valid
+			case "do":
+				act, err := parseAction(s)
+				if err != nil {
+					errorf(path, "%s: do: %v", label, err)
+				}
+				item.Do = act
+			case "when":
+				c, err := screen.ParseCond(s, fr.fields, false)
+				if err != nil {
+					errorf(path, "%s: when: %v", label, err)
+				}
+				item.When = c
 			}
 		}
-		item := screen.Item{Key: key, Do: text["do"]}
-		if when, ok := text["when"]; ok {
-			c, err := screen.ParseCond(when, fr.fields, false)
-			if err != nil {
-				errorf([]string{"item", idx, "when"}, "%s: when: %v", label, err)
+		for _, name := range []string{"key", "do"} {
+			if _, ok := t[name]; !ok {
+				errorf([]string{"item", idx}, "%s: %s is missing", label, name)
 			}
-			item.When = c
 		}
 		fr.items = append(fr.items, item)
 	}
+}
+
+// parseAction parses the do of an item (menu-nav, section 5).
+func parseAction(do string) (screen.Action, error) {
+	word, arg, hasArg := strings.Cut(do, " ")
+	switch word {
+	case "goto":
+		if !hasArg {
+			return screen.Action{}, errors.New("goto needs a screen name")
+		}
+		if !isName(arg) {
+			return screen.Action{}, fmt.Errorf("invalid screen name %q", arg)
+		}
+		return screen.Action{Op: screen.Goto, Screen: arg}, nil
+	case "logoff":
+		if hasArg {
+			return screen.Action{}, errors.New("logoff takes no argument")
+		}
+		return screen.Action{Op: screen.Logoff}, nil
+	}
+	return screen.Action{}, fmt.Errorf("unknown action %q", word)
 }
 
 // keys gives the keys of the table t at the path in file order,

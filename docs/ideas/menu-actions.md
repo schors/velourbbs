@@ -1,6 +1,6 @@
 # Idea: menu actions beyond goto
 
-Backlog. It extends [menu-nav](menu-nav.md).
+Backlog. It extends [menu-nav](../specs/menu-nav.md).
 
 ## Goal
 
@@ -57,4 +57,4 @@ args = { area = "{arg.area}", n = "{in}" }
 ## Dependencies
 
 - Users and login give the data for `require`. There is no idea for them yet.
-- Typed command input is in the backlog of [menu-nav](menu-nav.md).
+- Typed command input is in the backlog of [menu-nav](../specs/menu-nav.md).
