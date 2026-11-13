@@ -2,7 +2,6 @@ package art
 
 import (
 	"fmt"
-	"unicode/utf8"
 
 	"newbbs/internal/screen"
 )
@@ -136,7 +135,7 @@ func (p *player) stop(format string, args ...any) {
 
 // text plays a run of bytes without C0 controls.
 func (p *player) text(run []byte) {
-	valid := run[:validUTF8(run)]
+	valid := run[:screen.ValidPrefix(run)]
 	for g, w := range screen.Graphemes(string(valid)) {
 		if p.done() {
 			return
@@ -150,18 +149,6 @@ func (p *player) text(run []byte) {
 	if len(valid) < len(run) && !p.done() {
 		p.stop("invalid UTF-8: art must be UTF-8, CP437 art needs a conversion")
 	}
-}
-
-// validUTF8 gives the length of the valid UTF-8 prefix of b.
-func validUTF8(b []byte) int {
-	for i := 0; i < len(b); {
-		r, n := utf8.DecodeRune(b[i:])
-		if r == utf8.RuneError && n == 1 {
-			return i
-		}
-		i += n
-	}
-	return len(b)
 }
 
 // put writes the grapheme g of the width w at the cursor.

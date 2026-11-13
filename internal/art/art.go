@@ -15,8 +15,6 @@ const MaxRows = 1000
 // defaultWidth is the art width without a SAUCE width (section 8.2).
 const defaultWidth = 80
 
-var bom = []byte("\xef\xbb\xbf")
-
 // Load reads the file name of fsys and parses it. name is also the file in the diagnostics.
 // The art is nil when the diagnostics have an error.
 func Load(fsys fs.FS, name string) (*screen.Art, screen.Diags) {
@@ -38,8 +36,8 @@ func Parse(name string, file []byte) (*screen.Art, screen.Diags) {
 		return nil, d.Diags
 	}
 	data, rec := splitSauce(file)
-	hasBOM := bytes.HasPrefix(data, bom)
-	data = bytes.TrimPrefix(data, bom)
+	hasBOM := bytes.HasPrefix(data, screen.BOM)
+	data = bytes.TrimPrefix(data, screen.BOM)
 
 	width, minHeight, ice := defaultWidth, 0, false
 	if rec != nil && rec.dataType == 1 && rec.fileType == 1 { // a character SAUCE
