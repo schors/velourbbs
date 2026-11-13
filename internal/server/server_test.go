@@ -25,11 +25,11 @@ const (
 	goodbyeScreen = "Goodbye!\n"
 )
 
-// The client replies of the tests: WONT NAWS and WONT TTYPE, then the CPR replies
-// of the charset probe (UTF-8) and of the size probe.
+// The client replies of the tests: WONT NAWS and WONT TTYPE, then the CPR reply
+// of the charset probe (UTF-8).
 const (
 	wontReplies = "\xff\xfc\x1f\xff\xfc\x18"
-	cprReplies  = "\x1b[1;2R\x1b[25;80R"
+	cprReply    = "\x1b[1;2R"
 )
 
 // moreInput is client input that the host does not read before the close:
@@ -142,13 +142,13 @@ func readUntil(t *testing.T, c net.Conn, s string, n int) string {
 	return string(out)
 }
 
-// probe sends first (the replies of the probe without the CPR replies)
-// and answers both CPR probes. Then it waits for the first screen.
+// probe sends first (the replies of the probe without the CPR reply)
+// and answers the charset probe. Then it waits for the first screen.
 func probe(t *testing.T, c net.Conn, first string) {
 	t.Helper()
 	write(t, c, first)
-	readUntil(t, c, "\x1b[6n", 2)
-	write(t, c, cprReplies)
+	readUntil(t, c, "\x1b[6n", 1)
+	write(t, c, cprReply)
 	readUntil(t, c, "Hello from main", 1)
 }
 
@@ -208,8 +208,8 @@ func TestServeNotUTF8(t *testing.T) {
 	ts := start(t, nil)
 	c := ts.dial(t)
 	write(t, c, wontReplies)
-	readUntil(t, c, "\x1b[6n", 2)
-	write(t, c, "\x1b[1;3R\x1b[25;80R"+moreInput)
+	readUntil(t, c, "\x1b[6n", 1)
+	write(t, c, "\x1b[1;3R"+moreInput)
 	const end = "Use PuTTY, Tera Term or telnet in a UTF-8 terminal.\r\n"
 	if got := readAll(t, c); !strings.HasSuffix(got, end) {
 		t.Errorf("output %q, want the text of section 5.5", got)
@@ -261,8 +261,7 @@ func TestServeProxy(t *testing.T) {
 		proxyLocal(c)
 		c.MaxConnsPerAddr = 1
 	})
-	// WILL NAWS with the size 80x25 and WONT TTYPE after the header:
-	// the host sends only the charset probe.
+	// WILL NAWS with the size 80x25 and WONT TTYPE after the header.
 	c1 := ts.dial(t)
 	write(t, c1, header("192.0.2.1")+"\xff\xfb\x1f\xff\xfa\x1f\x00\x50\x00\x19\xff\xf0\xff\xfc\x18")
 	out := readUntil(t, c1, "\x1b[6n", 1)

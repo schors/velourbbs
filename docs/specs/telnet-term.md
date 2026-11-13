@@ -93,15 +93,14 @@ The host keeps the state of each option for each side, as in RFC 1143:
 
 1. Check `max_conns`. Read the PROXY protocol header (section 9.3). Check the address limits.
    If a limit is reached, send an ASCII line and close (section 9.2).
-2. Send the requests of section 4.1. Answer the TTYPE subnegotiations (section 5.3).
+2. Send the requests of section 4.1. After `WILL TTYPE`, send TTYPE `SEND` (section 5.3).
 3. Wait for the replies (below).
-4. Send the CPR probes (section 5.4) when MTTS does not give UTF-8 or NAWS gives no size.
-   Wait for their replies (below).
+4. Send the charset probe (section 5.4). Wait for its reply (below).
 5. Decide the terminal values (section 6). Show the first screen. It clears the probe output.
 
 - In step 3, the host waits for an answer to `DO NAWS` and `DO TTYPE`, for the first NAWS
-  after `WILL NAWS` and for the end of TTYPE (section 5.3) after `WILL TTYPE`.
-  In step 4, the host waits for a reply to each CPR probe.
+  after `WILL NAWS` and for the first TTYPE name after `WILL TTYPE`.
+  In step 4, the host waits for the reply to the charset probe.
 - A wait ends when all these replies arrive, or when no reply arrives for 1 s.
 - The PROXY protocol header and the probe end within `probe_timeout` (section 9.1)
   from accept. Then the host decides with the replies that it has.
@@ -110,8 +109,7 @@ The host keeps the state of each option for each side, as in RFC 1143:
 ### 5.2. Size
 
 - NAWS gives the size. A value with 0 in a dimension gives no size.
-- Without a NAWS size, the CPR size probe gives the size (section 5.4).
-- Without both, the size is 80x25.
+- Without a NAWS size, the size is 80x25.
 - The host clamps the size to 20–255 columns and 10–100 rows.
 - A NAWS update after the probe changes `term.cols` and `term.rows`.
   An update with 0 in a dimension does not change them.
@@ -119,30 +117,20 @@ The host keeps the state of each option for each side, as in RFC 1143:
 
 ### 5.3. Type
 
-- TTYPE gives a name. The host sends `SEND` again after each name.
-  TTYPE ends after 4 names, or when a name repeats the first name or the previous name.
-- After the end of TTYPE, the host ignores TTYPE subnegotiations.
-- A name of `MTTS` in any case, a space and 1–9 decimal digits is not a terminal name.
-  Its number gives the MTTS bits: 4 is UTF-8, 8 is 256 colours, 256 is truecolor.
-- Each other name is a terminal name. Some clients send their own name first.
+- The host sends `SEND` once. The first TTYPE name is the terminal name.
+- The host ignores each later TTYPE subnegotiation.
 
-### 5.4. CPR probes
+### 5.4. Charset probe
 
-The host sends the CPR probes in one write, in this order:
+The charset probe is `CR`, U+00E2 (`â`, bytes `C3 A2`), `ESC[6n`. Then `CR ESC[K` erases the probe.
+The reply is a CPR: `ESC[<row>;<col>R`.
 
-1. Charset probe: `CR`, U+00E2 (`â`, bytes `C3 A2`), `ESC[6n`. Then `CR ESC[K` erases the probe.
-2. Size probe, only without a NAWS size: `ESC[999C ESC[999B ESC[6n`.
-
-A CPR reply is `ESC[<row>;<col>R`. The first reply belongs to the first probe.
-
-- A number of a reply has 1–5 digits. Else the host drops the reply.
+- A number of the reply has 1–5 digits. Else the host drops the reply.
 - Charset: the reply column 2 means UTF-8. The column 3 means "not UTF-8":
   the cursor moved by the byte count of `â`. Each other reply, or no reply, means UTF-8.
 - U+00E2 has the East Asian Width N, so a CJK terminal also shows it in one cell. Both
   of its bytes are printable characters in ISO-8859-1, CP437, CP866 and KOI8-R. A byte from
   0x80 to 0x9F is a C1 control in some 8-bit terminals, so the probe does not use one.
-- Size: the reply row and column are the rows and the columns. A 0 gives no size.
-- When MTTS gives UTF-8, the host does not send the charset probe.
 
 ### 5.5. Not UTF-8
 
@@ -158,16 +146,16 @@ Each line ends with CR LF. The text starts with `CR LF`.
 
 ### 5.6. Log
 
-At the end of the probe, the host logs one line: the address, the TTYPE names,
-the MTTS bits, the NAWS size, the CPR replies, the terminal values of section 6
+At the end of the probe, the host logs one line: the address, the TTYPE name,
+the NAWS size, the CPR reply, the terminal values of section 6
 and the probe time. So the TTYPE colour rules can be tuned.
-Each TTYPE name in the log is filtered and cut as `term.type` (section 6).
+The TTYPE name in the log is filtered and cut as `term.type` (section 6).
 
 ## 6. Terminal values
 
 | Field | Value |
 |---|---|
-| `term.type` | The first terminal name of TTYPE in lower case. Without a name, `ansi`. |
+| `term.type` | The TTYPE name in lower case. Without a name, `ansi`. |
 | `term.cols`, `term.rows` | Section 5.2. |
 | `term.charset` | `utf-8`. |
 | `term.colors` | `16`, `256` or `16777216`. |
@@ -175,12 +163,17 @@ Each TTYPE name in the log is filtered and cut as `term.type` (section 6).
 - `term.type` is untrusted client input. The host removes the control characters and cuts
   the name to 40 graphemes. A name that is empty after this counts as no name.
   The value rules of [screen-format](screen-format.md), section 4.3, also apply.
-- Colour depth with MTTS: bit 256 gives 16777216, else bit 8 gives 256, else 16.
-- Colour depth without MTTS: the host checks each terminal name, without case,
-  and takes the largest depth:
-  - a name that ends with `-direct`, or that has `truecolor` or `24bit`, gives 16777216;
-  - a name that has `256color` gives 256;
-  - each other name gives 16.
+- Colour depth: the first rule that matches `term.type` gives it:
+  1. a name that ends with `-direct`, or that has `truecolor` or `24bit`: 16777216;
+  2. a name that has `256color`: 256;
+  3. a name that ends with `-16color` or `-8color`, or that is `ansi`, `dumb`, `vt52`,
+     `vt100`, `vt102`, `vt220`, `vt320`, `rxvt`, `xterm-color`, `eterm-color` or `cygwin`: 16;
+  4. each other name: 256.
+- Rule 3 has only names where 16 colours are certain. A terminal without `38;5` reads
+  `38;5;n` as other SGR parameters, for example `5` as blink. Without a name, `term.type`
+  is `ansi`, so the depth is 16.
+- PuTTY (`xterm`) and Tera Term (`xterm`) get 256. They show 256 colours.
+  Truecolor art is reduced to 256 for them.
 
 ## 7. Output
 
@@ -368,6 +361,8 @@ output_timeout = 60
   the probe line (section 5.6) and a `close` line for each connection.
   The `close` line has the client address, the reason of the end and the time.
 - After an accept error, it logs the error and accepts again after 1 s.
+- A panic in a session ends only this session. The host logs it with the stack
+  and closes the connection.
 - After output that ends a connection (section 5.5, section 9.2, `logoff`), the host
   ends its write side and discards the input until EOF, for 1 s at most. Then it closes
   the connection. A close with unread input sends a TCP reset, and the client can lose
@@ -388,8 +383,6 @@ output_timeout = 60
 | `internal/config` | `[telnet]` in `bbs.toml`. |
 
 - `cmd/bbs` loads the screens and gives them to `internal/server`.
-- The terminal of `internal/term` ignores the events of the session: the key events and `logoff`.
-- The import order is in [screen-format](screen-format.md), section 11.
 
 ## 12. Libraries
 

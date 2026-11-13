@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"newbbs/internal/screen"
@@ -26,7 +27,7 @@ const (
 	dont = 254
 )
 
-// dsr is the cursor position request of the CPR probes.
+// dsr is the cursor position request of the charset probe.
 var dsr = []byte("\x1b[6n")
 
 // client is the script of a fake telnet client.
@@ -34,14 +35,16 @@ type client struct {
 	will  []byte   // the options of the client side that it enables: DO gives WILL
 	do    []byte   // the options of the host side that it accepts: WILL gives DO
 	naws  []byte   // the NAWS data after WILL NAWS, 4 bytes; nil sends no NAWS
-	ttype []string // the name for each SEND; the last name repeats
-	cpr   []string // the reply to each ESC[6n, for example "1;2"; "" gives no reply
+	ttype []string // the names that the client sends for each SEND, each in its own subnegotiation
+	cpr   string   // the reply to each ESC[6n, for example "1;2"; "" gives no reply
 	early string   // data that the client sends with its first reply
 	quiet bool     // the client sends nothing
 }
 
 // fake runs a client on the client end of net.Pipe. A reader goroutine answers
 // the host and a writer goroutine sends the answers, so the pipe cannot block both sides.
+// The tests run in a synctest bubble: synctest.Wait returns when the reader
+// has handled all output of the host.
 type fake struct {
 	cl     client
 	c      net.Conn
@@ -50,7 +53,6 @@ type fake struct {
 	out    []byte // all bytes from the host
 	pos    int    // the parsed bytes of out
 	nsend  int    // the SEND requests
-	ncpr   int    // the ESC[6n requests
 	first  bool   // the first reply was sent
 	paused bool   // the reader stops
 }
@@ -114,12 +116,13 @@ func (f *fake) parse() []byte {
 			if end < 0 {
 				return reply
 			}
-			if bytes.Equal(rest[2:end], []byte{telnet.OptTTYPE, 1}) && len(f.cl.ttype) > 0 {
-				name := f.cl.ttype[min(f.nsend, len(f.cl.ttype)-1)]
+			if bytes.Equal(rest[2:end], []byte{telnet.OptTTYPE, 1}) {
 				f.nsend++
-				reply = append(reply, iac, sb, telnet.OptTTYPE, 0)
-				reply = append(reply, name...)
-				reply = append(reply, iac, se)
+				for _, name := range f.cl.ttype {
+					reply = append(reply, iac, sb, telnet.OptTTYPE, 0)
+					reply = append(reply, name...)
+					reply = append(reply, iac, se)
+				}
 			}
 			f.pos += end + 2
 		case rest[0] == iac && len(rest) >= 2 && rest[1] == iac:
@@ -130,10 +133,9 @@ func (f *fake) parse() []byte {
 			}
 			f.pos += 2 // another command
 		case bytes.HasPrefix(rest, dsr):
-			if f.ncpr < len(f.cl.cpr) && f.cl.cpr[f.ncpr] != "" {
-				reply = append(reply, "\x1b["+f.cl.cpr[f.ncpr]+"R"...)
+			if f.cl.cpr != "" {
+				reply = append(reply, "\x1b["+f.cl.cpr+"R"...)
 			}
-			f.ncpr++
 			f.pos += len(dsr)
 		case bytes.HasPrefix(dsr, rest):
 			return reply // an incomplete request
@@ -169,23 +171,12 @@ func (f *fake) write(b string) {
 	f.send <- []byte(b)
 }
 
-// output gives all bytes from the host.
+// output gives all bytes from the host after the reader handled them.
 func (f *fake) output() string {
+	synctest.Wait()
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return string(f.out)
-}
-
-// waitOutput waits until the output from the host ends with suffix.
-// The reader appends the bytes of a host write after the write returns.
-func (f *fake) waitOutput(t *testing.T, suffix string) {
-	t.Helper()
-	for end := time.Now().Add(time.Second); !strings.HasSuffix(f.output(), suffix); time.Sleep(time.Millisecond) {
-		if time.Now().After(end) {
-			t.Errorf("output %q does not end with %q", f.output(), suffix)
-			return
-		}
-	}
 }
 
 // pause stops the reader after its current read. The client then does not read.
@@ -202,13 +193,14 @@ func naws(cols, rows int) []byte {
 
 var testTimeouts = Timeouts{Probe: 5 * time.Second, Idle: time.Minute, Output: time.Second}
 
-// probeLog runs the probe and gives its result and the log.
-func probeLog(t *testing.T, cl client, to Timeouts) (*Terminal, *fake, string, error) {
+// probeLog runs the probe and gives its result, the log and the probe time.
+func probeLog(t *testing.T, cl client, to Timeouts) (*Terminal, *fake, string, time.Duration, error) {
 	t.Helper()
 	host, f := start(t, cl)
 	var log bytes.Buffer
-	term, err := Probe(host, time.Now(), to, slog.New(slog.NewTextHandler(&log, nil)).With("addr", "192.0.2.1"))
-	return term, f, log.String(), err
+	start := time.Now()
+	term, err := Probe(host, start, to, slog.New(slog.NewTextHandler(&log, nil)).With("addr", "192.0.2.1"))
+	return term, f, log.String(), time.Since(start), err
 }
 
 // The options that the clients of section 3 accept.
@@ -218,88 +210,70 @@ var (
 )
 
 func TestProbeClients(t *testing.T) {
+	term := func(typ string, cols, rows, colors int) screen.Term {
+		return screen.Term{Type: typ, Cols: cols, Rows: rows, Charset: "utf-8", Colors: colors}
+	}
 	tests := []struct {
-		name  string
-		cl    client
-		want  screen.Term
-		cprs  int // the ESC[6n requests
-		probe string
+		name string
+		cl   client
+		want screen.Term
 	}{
 		{"PuTTY",
-			client{will: allOpts, do: hostOpts, naws: naws(120, 40), ttype: []string{"XTERM"}, cpr: []string{"1;2"}},
-			screen.Term{Type: "xterm", Cols: 120, Rows: 40, Charset: "utf-8", Colors: 16}, 1, charsetProbe},
+			client{will: allOpts, do: hostOpts, naws: naws(120, 40), ttype: []string{"XTERM"}, cpr: "1;2"},
+			term("xterm", 120, 40, 256)},
 		{"Tera Term in line mode",
 			client{
 				will: []byte{telnet.OptNAWS, telnet.OptTTYPE, telnet.OptBinary},
 				do:   []byte{telnet.OptEcho, telnet.OptBinary},
-				naws: naws(80, 24), ttype: []string{"xterm"}, cpr: []string{"1;2"},
+				naws: naws(80, 24), ttype: []string{"xterm"}, cpr: "1;2",
 			},
-			screen.Term{Type: "xterm", Cols: 80, Rows: 24, Charset: "utf-8", Colors: 16}, 1, charsetProbe},
+			term("xterm", 80, 24, 256)},
+		// The host takes the first name and ignores the later names.
 		{"inetutils telnet",
 			client{
 				will: allOpts, do: hostOpts, naws: naws(200, 60),
-				ttype: []string{"XTERM-256COLOR", "XTERM", "XTERM"}, cpr: []string{"3;2"},
+				ttype: []string{"XTERM-256COLOR", "XTERM-DIRECT"}, cpr: "3;2",
 			},
-			screen.Term{Type: "xterm-256color", Cols: 200, Rows: 60, Charset: "utf-8", Colors: 256}, 1, charsetProbe},
-		// MTTS gives UTF-8 and NAWS gives the size: no CPR probe.
-		{"MTTS",
-			client{
-				will: allOpts, do: hostOpts, naws: naws(100, 30),
-				ttype: []string{"MUDLET", "ANSI-TRUECOLOR", "MTTS 269"},
-			},
-			screen.Term{Type: "mudlet", Cols: 100, Rows: 30, Charset: "utf-8", Colors: ColorsTrue}, 0, ""},
-		// MTTS with UTF-8 and no NAWS: only the size probe.
-		{"MTTS without NAWS",
-			client{will: []byte{telnet.OptTTYPE}, ttype: []string{"MTTS 4"}, cpr: []string{"40;120"}},
-			screen.Term{Type: "ansi", Cols: 120, Rows: 40, Charset: "utf-8", Colors: 16}, 1, sizeProbe},
-		// MTTS without the UTF-8 bit and no NAWS: both probes.
-		{"MTTS without UTF-8",
-			client{
-				will: []byte{telnet.OptTTYPE}, ttype: []string{"MTTS 8"}, cpr: []string{"1;2", "50;132"},
-			},
-			screen.Term{Type: "ansi", Cols: 132, Rows: 50, Charset: "utf-8", Colors: 256}, 2, charsetProbe + sizeProbe},
-		// A NAWS with 0 gives no size, so the size probe gives it.
-		{"NAWS with 0",
-			client{will: allOpts, naws: naws(0, 24), ttype: []string{"VT100"}, cpr: []string{"1;2", "30;100"}},
-			screen.Term{Type: "vt100", Cols: 100, Rows: 30, Charset: "utf-8", Colors: 16}, 2, charsetProbe + sizeProbe},
-		// The fourth name ends TTYPE. A key and a CPR reply arrive before step 4:
-		// the key goes to the queue and the reply is dropped.
-		{"four names and early input",
-			client{
-				will: allOpts, naws: naws(90, 30), ttype: []string{"A", "B", "C", "D-256color", "E-direct"},
-				cpr: []string{"1;2"}, early: "x\x1b[1;3R",
-			},
-			screen.Term{Type: "a", Cols: 90, Rows: 30, Charset: "utf-8", Colors: 256}, 1, charsetProbe},
+			term("xterm-256color", 200, 60, 256)},
+		{"direct colour", client{will: allOpts, naws: naws(80, 25), ttype: []string{"xterm-direct"}, cpr: "1;2"},
+			term("xterm-direct", 80, 25, screen.ColorsTrue)},
+		// MTTS is a plain name.
+		{"MTTS", client{will: allOpts, naws: naws(100, 30), ttype: []string{"MTTS 13"}, cpr: "1;2"},
+			term("mtts 13", 100, 30, 256)},
+		// A NAWS with 0 gives no size.
+		{"NAWS with 0", client{will: allOpts, naws: naws(0, 24), ttype: []string{"VT100"}, cpr: "1;2"},
+			term("vt100", 80, 25, 16)},
+		{"no TTYPE", client{will: []byte{telnet.OptNAWS}, naws: naws(90, 30), cpr: "1;2"},
+			term("ansi", 90, 30, 16)},
+		// A key and a CPR reply arrive before step 4: the key goes to the queue
+		// and the reply is dropped.
+		{"early input",
+			client{will: allOpts, naws: naws(90, 30), ttype: []string{"A"}, cpr: "1;2", early: "x\x1b[1;3R"},
+			term("a", 90, 30, 256)},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			start := time.Now()
-			term, f, log, err := probeLog(t, tt.cl, testTimeouts)
+		synctest.Test(t, func(t *testing.T) {
+			term, f, _, d, err := probeLog(t, tt.cl, testTimeouts)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("%s: %v", tt.name, err)
 			}
-			if d := time.Since(start); d > replyWait/2 {
-				t.Errorf("the probe took %v; want no wait", d)
+			if d != 0 {
+				t.Errorf("%s: the probe took %v; want no wait", tt.name, d)
 			}
 			if got := term.Term(); got != tt.want {
-				t.Errorf("Term() = %+v, want %+v", got, tt.want)
+				t.Errorf("%s: Term() = %+v, want %+v", tt.name, got, tt.want)
 			}
+			// One SEND after WILL TTYPE, and one charset probe.
 			out := f.output()
-			if n := strings.Count(out, string(dsr)); n != tt.cprs {
-				t.Errorf("%d CPR probes, want %d: %q", n, tt.cprs, out)
+			if n, want := f.nsend, min(len(tt.cl.ttype), 1); n != want {
+				t.Errorf("%s: %d SEND requests, want %d", tt.name, n, want)
 			}
-			if tt.probe != "" && !strings.Contains(out, tt.probe) {
-				t.Errorf("output %q has no %q", out, tt.probe)
-			}
-			if strings.Contains(out, charsetProbe) != strings.Contains(tt.probe, charsetProbe) {
-				t.Errorf("output %q: charset probe %v, want %v", out, !strings.Contains(tt.probe, charsetProbe), strings.Contains(tt.probe, charsetProbe))
-			}
-			if !strings.Contains(log, "type="+tt.want.Type) {
-				t.Errorf("log %q", log)
+			if n := strings.Count(out, string(dsr)); n != 1 || !strings.Contains(out, charsetProbe) {
+				t.Errorf("%s: output %q, want one charset probe", tt.name, out)
 			}
 			if tt.cl.early != "" {
 				if k, err := term.Key(); k != "x" || err != nil {
-					t.Errorf("Key() = %q, %v; want x", k, err)
+					t.Errorf("%s: Key() = %q, %v; want x", tt.name, k, err)
 				}
 			}
 		})
@@ -307,114 +281,136 @@ func TestProbeClients(t *testing.T) {
 }
 
 func TestProbeStart(t *testing.T) {
-	// Step 2: the requests of section 4.1 in one write, then TTYPE SEND after WILL TTYPE
-	// and after each name until the end of TTYPE.
-	_, f, _, err := probeLog(t, client{will: allOpts, naws: naws(80, 24), ttype: []string{"A", "B", "B"}, cpr: []string{"1;2"}}, testTimeouts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	out := f.output()
-	p := telnet.New()
-	if !strings.HasPrefix(out, string(p.Start())) {
-		t.Errorf("output %q does not start with the requests", out)
-	}
-	// SEND after WILL TTYPE, after A and after B. The second B ends TTYPE.
-	if n := strings.Count(out, string(telnet.SendTTYPE())); n != 3 {
-		t.Errorf("%d SEND requests, want 3", n)
-	}
+	// Step 2: the requests of section 4.1 in one write, then TTYPE SEND after WILL TTYPE.
+	synctest.Test(t, func(t *testing.T) {
+		_, f, _, _, err := probeLog(t, client{will: allOpts, naws: naws(80, 24), ttype: []string{"A"}, cpr: "1;2"}, testTimeouts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out := f.output(); !strings.HasPrefix(out, string(telnet.New().Start())) {
+			t.Errorf("output %q does not start with the requests", out)
+		}
+	})
+}
+
+func TestProbeSendOnce(t *testing.T) {
+	// The client enables TTYPE, disables it and enables it again. The host sends SEND once.
+	synctest.Test(t, func(t *testing.T) {
+		cl := client{
+			will: allOpts, naws: naws(80, 24), ttype: []string{"A"}, cpr: "1;2",
+			early: "\xff\xfb\x18\xff\xfc\x18\xff\xfb\x18",
+		}
+		term, f, _, _, err := probeLog(t, cl, testTimeouts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		f.output()
+		if f.nsend != 1 || term.Term().Type != "a" {
+			t.Errorf("%d SEND requests, type %q; want 1, a", f.nsend, term.Term().Type)
+		}
+	})
 }
 
 func TestProbeLog(t *testing.T) {
-	cl := client{
-		will: allOpts, naws: naws(100, 30), ttype: []string{"X\x1bTERM-256color", "MTTS 13"},
-	}
-	_, _, log, err := probeLog(t, cl, testTimeouts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, s := range []string{
-		"msg=probe", "addr=192.0.2.1", `ttype="[XTERM-256color MTTS 13]"`, "mtts=13", "naws=100x30",
-		"cpr=[]", "type=xterm-256color", "cols=100", "rows=30", "charset=utf-8", "colors=256", "time=",
-	} {
-		if !strings.Contains(log, s) {
-			t.Errorf("log %q has no %q", log, s)
+	synctest.Test(t, func(t *testing.T) {
+		cl := client{will: allOpts, naws: naws(100, 30), ttype: []string{"X\x1bTERM-256color", "VT100"}, cpr: "1;2"}
+		_, _, log, _, err := probeLog(t, cl, testTimeouts)
+		if err != nil {
+			t.Fatal(err)
 		}
-	}
-	if strings.Count(log, "\n") != 1 {
-		t.Errorf("log %q is not one line", log)
-	}
+		want := "level=INFO msg=probe addr=192.0.2.1 ttype=XTERM-256color naws=100x30 cpr=1;2 " +
+			"type=xterm-256color cols=100 rows=30 charset=utf-8 colors=256 time=0s\n"
+		if _, line, _ := strings.Cut(log, " "); line != want {
+			t.Errorf("log %q, want %q after the time", log, want)
+		}
+	})
 }
 
 func TestProbeNotUTF8(t *testing.T) {
-	cl := client{will: []byte{telnet.OptTTYPE}, ttype: []string{"SYNCTERM"}, cpr: []string{"1;3", "25;80"}}
-	term, f, log, err := probeLog(t, cl, testTimeouts)
-	if term != nil || !errors.Is(err, ErrNotUTF8) {
-		t.Fatalf("Probe() = %v, %v; want ErrNotUTF8", term, err)
-	}
-	f.waitOutput(t, notUTF8Text)
-	for _, s := range []string{`charset="not utf-8"`, "cpr=\"[1;3 25;80]\"", "naws=-", "mtts=-"} {
-		if !strings.Contains(log, s) {
-			t.Errorf("log %q has no %q", log, s)
+	synctest.Test(t, func(t *testing.T) {
+		cl := client{will: []byte{telnet.OptTTYPE}, ttype: []string{"SYNCTERM"}, cpr: "1;3"}
+		term, f, log, _, err := probeLog(t, cl, testTimeouts)
+		if term != nil || !errors.Is(err, ErrNotUTF8) {
+			t.Fatalf("Probe() = %v, %v; want ErrNotUTF8", term, err)
 		}
-	}
+		if out := f.output(); !strings.HasSuffix(out, notUTF8Text) {
+			t.Errorf("output %q does not end with the text of section 5.5", out)
+		}
+		for _, s := range []string{"ttype=SYNCTERM", `charset="not utf-8"`, "cpr=1;3", "naws=-"} {
+			if !strings.Contains(log, s) {
+				t.Errorf("log %q has no %q", log, s)
+			}
+		}
+	})
 }
 
 func TestProbeNoReplies(t *testing.T) {
 	// probe_timeout ends the wait before the 1 s.
-	to := testTimeouts
-	to.Probe = 300 * time.Millisecond
-	start := time.Now()
-	term, f, _, err := probeLog(t, client{quiet: true}, to)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if d := time.Since(start); d < to.Probe || d > replyWait {
-		t.Errorf("the probe took %v; want %v", d, to.Probe)
-	}
-	want := screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16}
-	if got := term.Term(); got != want {
-		t.Errorf("Term() = %+v, want %+v", got, want)
-	}
-	// After probe_timeout, the host sends no CPR probe.
-	if strings.Contains(f.output(), string(dsr)) {
-		t.Errorf("output %q has a CPR probe", f.output())
-	}
+	synctest.Test(t, func(t *testing.T) {
+		to := testTimeouts
+		to.Probe = 300 * time.Millisecond
+		term, f, log, d, err := probeLog(t, client{quiet: true}, to)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if d != to.Probe {
+			t.Errorf("the probe took %v; want %v", d, to.Probe)
+		}
+		want := screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16}
+		if got := term.Term(); got != want {
+			t.Errorf("Term() = %+v, want %+v", got, want)
+		}
+		// After probe_timeout, the host sends no CPR probe.
+		if out := f.output(); strings.Contains(out, string(dsr)) {
+			t.Errorf("output %q has a CPR probe", out)
+		}
+		if !strings.Contains(log, "ttype=- naws=- cpr=-") {
+			t.Errorf("log %q has no empty replies", log)
+		}
+	})
 }
 
 func TestProbeReplyWait(t *testing.T) {
-	// WILL NAWS without a NAWS: step 3 waits 1 s for the NAWS. Then the size probe.
-	start := time.Now()
-	cl := client{will: []byte{telnet.OptNAWS}, cpr: []string{"1;2", "24;80"}}
-	term, _, _, err := probeLog(t, cl, testTimeouts)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if d := time.Since(start); d < replyWait || d > 2*replyWait {
-		t.Errorf("the probe took %v; want %v", d, replyWait)
-	}
-	if got := term.Term(); got.Cols != 80 || got.Rows != 24 {
-		t.Errorf("Term() = %+v, want 80x24", got)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		// WILL NAWS without a NAWS: step 3 waits 1 s for the NAWS.
+		// No reply to the charset probe: step 4 waits 1 s more.
+		term, _, _, d, err := probeLog(t, client{will: []byte{telnet.OptNAWS}}, testTimeouts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if d != 2*replyWait {
+			t.Errorf("the probe took %v; want %v", d, 2*replyWait)
+		}
+		if got := term.Term(); got.Cols != 80 || got.Rows != 25 {
+			t.Errorf("Term() = %+v, want 80x25", got)
+		}
+	})
 }
 
 func TestProbeHangup(t *testing.T) {
-	host, f := start(t, client{quiet: true})
-	go func() { _ = f.c.Close() }()
-	if _, err := Probe(host, time.Now(), testTimeouts, slog.New(slog.DiscardHandler)); !errors.Is(err, io.ErrClosedPipe) && !errors.Is(err, io.EOF) {
-		t.Errorf("Probe() error = %v, want a closed connection", err)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		host, f := start(t, client{quiet: true})
+		go func() { _ = f.c.Close() }()
+		if _, err := Probe(host, time.Now(), testTimeouts, slog.New(slog.DiscardHandler)); !errors.Is(err, io.ErrClosedPipe) && !errors.Is(err, io.EOF) {
+			t.Errorf("Probe() error = %v, want a closed connection", err)
+		}
+	})
 }
 
 func TestProbeLate(t *testing.T) {
 	// probe_timeout passed before the probe (the PROXY header took the time).
 	// The requests go out before Probe returns, so before the first screen.
-	host, f := start(t, client{quiet: true})
-	term, err := Probe(host, time.Now().Add(-testTimeouts.Probe), testTimeouts, slog.New(slog.DiscardHandler))
-	if err != nil {
-		t.Fatal(err)
-	}
-	f.waitOutput(t, string(telnet.New().Start()))
-	if got := term.Term(); got.Cols != 80 || got.Rows != 25 {
-		t.Errorf("Term() = %+v, want 80x25", got)
-	}
+	synctest.Test(t, func(t *testing.T) {
+		host, f := start(t, client{quiet: true})
+		term, err := Probe(host, time.Now().Add(-testTimeouts.Probe), testTimeouts, slog.New(slog.DiscardHandler))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if out := f.output(); out != string(telnet.New().Start()) {
+			t.Errorf("output %q, want only the requests", out)
+		}
+		if got := term.Term(); got.Cols != 80 || got.Rows != 25 {
+			t.Errorf("Term() = %+v, want 80x25", got)
+		}
+	})
 }

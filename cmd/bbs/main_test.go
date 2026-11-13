@@ -98,10 +98,20 @@ styles
 2: 1-9 14/0, 10-80 7/0
 `,
 	}, {
-		name: "set and item enabled",
-		args: []string{"term", "--size", "30x10", "--set", "term.type=vt100", "--set", "term.colors=256"},
+		name: "default type and colours",
+		args: []string{"term", "--size", "30x10"},
 		want: `page 1/1 30x10
-|vt100 256                     |
+|xterm 256                     |
+|[W]ide                        |
+styles
+1: 1-30 7/0
+2: 1-30 7/0
+`,
+	}, {
+		name: "set and item enabled",
+		args: []string{"term", "--size", "30x10", "--set", "term.type=vt100", "--set", "term.colors=16"},
+		want: `page 1/1 30x10
+|vt100 16                      |
 |[W]ide                        |
 styles
 1: 1-30 7/0
@@ -128,7 +138,7 @@ styles
 		name: "flags on both sides",
 		args: []string{"--set", "term.type=vt100", "term", "--size", "30x10"},
 		want: `page 1/1 30x10
-|vt100 16                      |
+|vt100 256                     |
 |[W]ide                        |
 styles
 1: 1-30 7/0

@@ -20,7 +20,7 @@ import (
 // to stdout. With --keys, it runs a session (menu-nav, section 8).
 // The flags can come before and after the name.
 func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
-	term := screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16}
+	term := screen.Term{Type: "xterm", Cols: 80, Rows: 25, Charset: "utf-8", Colors: screen.Colors256}
 	fl := flag.NewFlagSet("bbs preview", flag.ContinueOnError)
 	fl.SetOutput(stderr)
 	fl.Usage = func() { _, _ = io.WriteString(stderr, usage) }
