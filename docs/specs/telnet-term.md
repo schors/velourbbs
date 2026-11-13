@@ -288,7 +288,9 @@ The key decoder gives:
 ### 8.3. Key queue
 
 - The key queue holds at most 64 keys. The host drops a key when the queue is full.
-- Keys reset the idle timeout. NOP, NAWS and dropped input do not reset it.
+- The idle timeout starts at the end of the probe.
+- Keys reset the idle timeout, also a key that the full queue drops.
+  NOP, NAWS and dropped input do not reset it.
 
 ## 9. Limits
 

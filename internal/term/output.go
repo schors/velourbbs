@@ -1,5 +1,6 @@
-// Package term holds the terminal of the telnet-term specification: the page output,
-// the colour reduction and the encoder (section 7), and the key decoder (section 8).
+// Package term holds the terminal of the telnet-term specification: the probe and
+// the terminal values (sections 5 and 6), the page output, the colour reduction
+// and the encoder (section 7), the key decoder and the key queue (section 8).
 // Specification: docs/specs/telnet-term.md.
 package term
 
