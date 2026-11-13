@@ -15,6 +15,8 @@ or of the current stage for a `dev` issue.
 
 - "Operator" is the human who controls the work.
 - A "gate" is a stop where the operator must reply before the work continues.
+  Before the question, show in the chat, in Russian, the content that the operator
+  decides on. A file name or an id is not content.
 - `/ticket new <type>` starts an issue. `/ticket <id>` continues it.
   The 5 letters of the id are sufficient.
 - Only a `dev` issue has stages, in the order of the table. Do each next stage in a new session.
@@ -89,7 +91,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 
 ## 4. Gates
 
-- Gate 1: interview the operator about the open questions of the plan or the design.
+- Gate 1: show the plan or the researched solutions.
+  Interview the operator about the open questions.
   Agree on the reviewers.
 - Gate 2: show the operator the findings and the fixes. If the change has code,
   also show the results of the tests and the linter. The operator selects one option:
