@@ -1,6 +1,6 @@
 # Idea: Lua mods
 
-Backlog. It extends [menu-nav](menu-nav.md) with the action `run`.
+Backlog. It extends [menu-nav](../specs/menu-nav.md) with the action `run`.
 
 ## Goal
 

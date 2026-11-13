@@ -2,7 +2,7 @@
 
 This specification defines the screen files, the screen model, the layout
 and the commands `bbs check` and `bbs preview`.
-Related parts: [menu-nav](../ideas/menu-nav.md) and [telnet-term](../ideas/telnet-term.md).
+Related parts: [menu-nav](menu-nav.md) and [telnet-term](../ideas/telnet-term.md).
 
 ## 1. Goal
 
@@ -82,8 +82,8 @@ do = "goto about"
 {!prompt}[A]bout [G]oodbye
 ```
 
-[menu-nav](../ideas/menu-nav.md) defines `key` and `do`, and the checks for them.
-This specification parses `when` as a condition (section 5) and keeps `key` and `do` as strings.
+[menu-nav](menu-nav.md) defines `key` and `do`, and the checks for them.
+This specification parses `when` as a condition (section 5).
 
 ### 3.3. Tokens
 
@@ -132,7 +132,7 @@ Section 8.4 has the rule for art.
 - A path matches `[a-z][a-z0-9_]*(\.[A-Za-z0-9_]+)?`. A path without a dot is an alias.
 - [telnet-term](../ideas/telnet-term.md) gives the `term.*` values.
   `term.cols` is from 20 to 255. `term.rows` is from 10 to 100.
-- `item.<KEY>` is valid only in `{#if}`. [menu-nav](../ideas/menu-nav.md) defines `<KEY>`.
+- `item.<KEY>` is valid only in `{#if}`. [menu-nav](menu-nav.md) defines `<KEY>`.
 - An unknown path is an error.
 - A field token shows an integer in decimal and a string as it is.
 
@@ -425,6 +425,7 @@ and writes its cell dump to the standard output.
 - `item.<KEY>` comes from the items of the screen and their `when`.
   For the narrow screen, the items are the items of the screen.
 - A size outside the ranges of section 4.1 and an unknown screen are invalid arguments.
+- `--keys` runs a session: [menu-nav](menu-nav.md), section 8.
 
 ### 9.3. Cell dump
 
@@ -481,9 +482,11 @@ styles
 | `internal/tomlpos` | The TOML adapter: the values and the key positions. |
 
 - The host language is Go. The Go module is `newbbs`.
-- Imports go one way: `cmd/bbs`, then `internal/bbt`, then `internal/art`,
-  then `internal/screen`. `internal/config` imports only `internal/screen`
+- Imports go one way: `cmd/bbs`, then `internal/menu`, then `internal/bbt`, then `internal/art`,
+  then `internal/screen`, then `internal/key`. `internal/config` imports only `internal/screen`
   and `internal/tomlpos`. `internal/bbt` also imports `internal/tomlpos`.
+  `internal/menu` also imports `internal/config`. [menu-nav](menu-nav.md), section 9,
+  has the packages `internal/menu` and `internal/key`.
 - The model is immutable after the load. Sessions read it at the same time without locks.
 - The checks are `go vet ./...`, `go test ./...` and `golangci-lint run ./...`
   (golangci-lint 2.15.0, configuration in `.golangci.yml`).

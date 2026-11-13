@@ -1,7 +1,7 @@
 # Idea: lists and data providers
 
 Backlog. It extends [screen-format](../specs/screen-format.md) and
-[menu-nav](menu-nav.md).
+[menu-nav](../specs/menu-nav.md).
 
 ## Goal
 
