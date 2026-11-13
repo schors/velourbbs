@@ -131,6 +131,7 @@ Section 8.4 has the rule for art.
 
 - A path matches `[a-z][a-z0-9_]*(\.[A-Za-z0-9_]+)?`. A path without a dot is an alias.
 - [telnet-term](../ideas/telnet-term.md) gives the `term.*` values.
+  `term.cols` is from 20 to 255. `term.rows` is from 10 to 100.
 - `item.<KEY>` is valid only in `{#if}`. [menu-nav](../ideas/menu-nav.md) defines `<KEY>`.
 - An unknown path is an error.
 - A field token shows an integer in decimal and a string as it is.
@@ -202,16 +203,19 @@ The body gives rows in source order:
 - A source line with a block token gives no row when it has only spaces after the evaluation.
 - An art insert gives the rows of the art. Each row starts at the left edge of the screen area.
   The host cuts the art at W. `bbs check` warns when the art is wider than `max`.
+- A cut of a row at W or at `term.cols` through a wide grapheme leaves a space in its style.
 - Each other source line gives one or more rows (section 6.3). An empty line gives an empty row.
 - Each cell that the screen does not draw is a space in the theme style `normal`.
 
 ### 6.3. Text wrap
 
 - A row has W cells. A text line breaks at a space. The spaces at a break are removed.
-  The spaces at the start of the source line stay.
-- A word that is wider than W breaks at a grapheme boundary.
+- The spaces at the start of the source line stay up to W. They join the first word.
+- The spaces at the end of the source line stay up to W.
+- A word that is wider than W starts on a new row and breaks at a grapheme boundary.
 - A wide grapheme that does not fit at the end of a row goes to the next row.
-- A fixed-width field is one word. If it is wider than W, the host cuts it at W.
+  When W is 1, a wide grapheme becomes a space.
+- A fixed-width field is one word. If it is wider than W, it has the width W.
 - The style continues on the next row.
 
 ### 6.4. Height
@@ -220,7 +224,8 @@ The body gives rows in source order:
 - When a screen has more rows than `term.rows`, the host shows it in pages of `term.rows - 1` rows.
   After each page except the last, the host shows the "More row" and waits for any key.
 - The More row is `[screen] more` in `bbs.toml`, in the theme style `more`,
-  at the left edge of the screen area. The default text is `-- More --`.
+  at the left edge of the screen area. The host cuts it at the screen area.
+  The default text is `-- More --`.
 - The host sends no line end after the last row of a page, so the terminal does not scroll.
 - The model keeps the file, the line and the column of each field, style, `{#if}`, include
   and art insert token. `bbs check` uses them.
