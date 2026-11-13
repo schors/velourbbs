@@ -8,7 +8,7 @@ Related parts: [menu-nav](menu-nav.md) and [telnet-term](telnet-term.md).
 
 The host loads the screen files into an in-memory screen model at start.
 It renders a screen for one terminal of any size. 80x25 is not a limit.
-`bbs check` finds each error in the files. `bbs preview` renders a screen to a "cell dump".
+`bbs check` finds the errors in the files. `bbs preview` renders a screen to a "cell dump".
 
 The host parses the screen files at load. There is no compile step and no cache.
 Screen files are untrusted data: a sysop can install them from other authors without a review.
@@ -24,9 +24,9 @@ The limits of section 10 bound the memory and the time for each file and each re
 | `bbs.toml` | Host settings. This specification defines its tables `[screen]` and `[theme]`. |
 
 - `<name>` matches `[a-z0-9][a-z0-9_-]*`. Example: `main_wide`.
-- A "narrow screen" is a screen that the `narrow` key of another screen names (section 6.1).
 - An `.ans` file is art only. Only an art insert in a BBS template shows it.
 - A `.bbt` or `.ans` file that is not a regular file is an error.
+- `bbs.toml` is UTF-8. The loader removes a BOM.
 
 ### 2.1. Characters
 
@@ -57,7 +57,6 @@ The front matter is TOML 1.1. An unknown key is an error.
 | Key | Type | Meaning |
 |---|---|---|
 | `width` | array of 2 integers | `[min, max]`, with 1 <= `min` <= `max` <= 255. Section 6.1. |
-| `narrow` | string | The narrow screen. Section 6.1. |
 | `[fields]` | table of strings | Aliases. Section 4.2. |
 | `[[item]]` | array of tables | Menu items with `key`, `do` and an optional `when`. |
 
@@ -66,7 +65,6 @@ Example:
 ```
 +++
 width = [64, 100]
-narrow = "main_small"
 [fields]
 w = "term.cols"
 [[item]]
@@ -181,19 +179,20 @@ string  = '"' { any character except '"' and '}' } '"' ;
 ### 6.1. Width
 
 - The "render width" W is `term.cols`, clamped to the "width limits" `[min, max]`.
-- The width limits come from the first source of this list:
-  1. `width` in the front matter;
-  2. `[a, a]`, when each art that the screen can insert has the width `a`;
-  3. `[screen] width` in `bbs.toml`. Its default is `[40, 80]`.
-- A screen with art of different widths and without `width` is an error.
+- The width limits are `width` in the front matter, else `[screen] width` in `bbs.toml`.
+  Its default is `[40, 80]`.
 - When `term.cols` > W, the "screen area" has a left margin of `(term.cols - W) / 2` cells,
   rounded down.
-- When `term.cols` < `min` and `narrow` is set, the host shows the narrow screen instead.
-  It renders the narrow screen with its own width limits.
-- When `term.cols` < `min` and `narrow` is not set, the host renders at W = `min`
-  and cuts each row at `term.cols`.
-- A narrow screen with items or with `narrow` is an error. `bbs check` checks
-  its `item.<KEY>` paths against the items of each screen that names it.
+- When `term.cols` < `min`, the host renders at W = `min` and cuts each row at `term.cols`.
+- A screen with art of width `a` for smaller terminals has `width = [40, a]` and this body:
+
+```
+{#if term.cols < a}
+{>_main_small}
+{#else}
+{>main.ans}
+{/if}
+```
 
 ### 6.2. Rows
 
@@ -227,8 +226,7 @@ The body gives rows in source order:
   at the left edge of the screen area. The host cuts it at the screen area.
   The default text is `-- More --`.
 - The host sends no line end after the last row of a page, so the terminal does not scroll.
-- The model keeps the file, the line and the column of each field, style, `{#if}`, include
-  and art insert token. `bbs check` uses them.
+- The host renders a screen page by page. A session holds one page in memory.
 
 ## 7. Colours and styles
 
@@ -392,14 +390,24 @@ The style of a written cell, in this order:
   It checks each screen with the fragments and the art that the screen uses.
 - It warns about a fragment or an art file that no screen uses.
 - It reports all errors and warnings, not only the first, up to the limit of section 10.
+  A TOML document is an exception (below).
   It writes them to the standard error. It exits with status 1 after an error.
+- A TOML document (`bbs.toml` or a front matter) gives the first of these:
+  a syntax error; else the first value error; else all unknown keys.
+  Each has the position of its key or value.
+- A "value error" is a type error or an invalid string value: a style, a condition syntax,
+  a key, a `do`, a screen name, an address.
+- Each other error of a TOML document has the position of the first line of the document:
+  1:1 in `bbs.toml`, 2:1 in a front matter. The message names the key. Examples: an invalid
+  `width`, an integer out of its range, an invalid alias or style name, an error between keys,
+  or between a key and another file or screen.
 - An error has the form `<file>:<row>:<col>: <message>`, with 1-based numbers.
   In a `.bbt` file, the column counts code points.
   For art, the row and the column are grid positions, as the art editor shows them.
   A warning has `warning: ` before the message.
 - A diagnostic escapes each invalid UTF-8 byte and each rune that is not printable,
   as a Go quoted string does. Example: a file name with ESC gives `\x1b`.
-- A check of a fragment, an art file or a narrow screen can depend on the screen that uses it:
+- A check of a fragment or an art file can depend on the screen that uses it:
   on its aliases, its items or its width limits. Such an error starts with `screen "<name>": `.
 - `bbs.toml` must exist.
 - The host runs the same checks at start. An error stops the start.
@@ -407,7 +415,7 @@ The style of a written cell, in this order:
 Examples:
 
 ```
-screens/main.bbt:9:1: item "S": when: unknown field "term.colours"
+screens/main.bbt:2:1: item "S": when: unknown field "term.colours"
 screens/main.ans:4:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16
 screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100
 ```
@@ -421,9 +429,8 @@ and writes its cell dump to the standard output.
   and exits with status 1.
 - The default size is 80x25. `--size` is the only way to set the size.
 - `--set` sets `term.type` or `term.colors`. Example: `--set term.colors=256`.
-  The defaults are `ansi` and 16. `term.charset` is `utf-8`.
+  The defaults are `xterm` and 256. `term.charset` is `utf-8`.
 - `item.<KEY>` comes from the items of the screen and their `when`.
-  For the narrow screen, the items are the items of the screen.
 - A size outside the ranges of section 4.1 and an unknown screen are invalid arguments.
 - `--keys` runs a session: [menu-nav](menu-nav.md), section 8.
 
@@ -434,7 +441,7 @@ This dump shows the screen `+++` `[[item]]` `key = "G"` `do = "logoff"` `+++`
 with the body `{!title}Welcome!{!}` and `{!14}[G]oodbye`, and the theme of section 7.3:
 
 ```
-page 1/1 80x25
+page 1 80x25
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
 styles
@@ -442,7 +449,7 @@ styles
 2: 1-9 14/0, 10-80 7/0
 ```
 
-- The first line gives the page number, the page count and the terminal size.
+- The first line gives the page number and the terminal size.
 - Each rendered row of the page is between two `|`. A wide grapheme appears once
   and takes 2 columns.
 - Each line of `styles` gives the row number and the runs of equal styles,
@@ -456,12 +463,10 @@ styles
 | Item | Limit |
 |---|---|
 | `.bbt`, `.ans` or `bbs.toml` file | 1 MB. |
-| TOML document: `bbs.toml` or a front matter | 1000 keys. Each part of a dotted key and of a table header counts. Then the parse of the document stops. |
 | Art grid | 255 columns, 1000 rows. |
 | Body of a screen after includes | 10000 lines and 1 MB. An include or an art insert counts its own line, and the lines of the fragment or the rows of the art. |
 | All screens after includes | 160000 lines and 16 MB. |
 | Nesting of blocks in a file | 100 levels. Then the load of the file stops. |
-| Nesting of includes | 100 levels. |
 | Rendered screen | 10000 rows. |
 | Grapheme | 32 bytes. |
 | Errors and warnings of one file | 100. Then one error `too many diagnostics`, and the load of the file stops. |
@@ -479,18 +484,10 @@ styles
 | `internal/art` | The `.ans` loader and SAUCE. |
 | `internal/screen` | Cells, colours, styles, the screen model, the registry, conditions, layout, render, cell dump. |
 | `internal/config` | `bbs.toml`. |
-| `internal/tomlpos` | The TOML adapter: the values and the key positions. |
 
 - The host language is Go. The Go module is `newbbs`.
-- Imports go one way: `cmd/bbs`, then `internal/server`, then `internal/menu`, then `internal/bbt`,
-  then `internal/art`, then `internal/screen`, then `internal/key`.
-  `internal/config` imports only `internal/screen` and `internal/tomlpos`.
-  `internal/bbt` also imports `internal/tomlpos`. `internal/menu` also imports `internal/config`.
-  `internal/server` also imports `internal/term` and `internal/config`.
-  `internal/term` imports only `internal/telnet` and `internal/screen`.
-  [menu-nav](menu-nav.md), section 9, has the packages `internal/menu` and `internal/key`.
-  [telnet-term](telnet-term.md), section 11, has the packages `internal/server`,
-  `internal/term` and `internal/telnet`.
+- [menu-nav](menu-nav.md), section 9, and [telnet-term](telnet-term.md), section 11,
+  have the other packages.
 - The model is immutable after the load. Sessions read it at the same time without locks.
 - The checks are `go vet ./...`, `go test ./...` and `golangci-lint run ./...`
   (golangci-lint 2.15.0, configuration in `.golangci.yml`).
@@ -499,16 +496,13 @@ styles
 
 | Task | Choice | Compared with | Reason |
 |---|---|---|---|
-| TOML | `github.com/pelletier/go-toml/v2` | `github.com/BurntSushi/toml` | `bbs check` reports all errors of a file, each with a position (section 9.1). `BurntSushi/toml` exports no key positions. The `unstable` parser of `go-toml/v2` gives the position of each key. |
+| TOML | `github.com/pelletier/go-toml/v2` | `github.com/BurntSushi/toml` | The decode into structs with `DisallowUnknownFields` gives the position of each unknown key and of a type or value error (section 9.1). Value checks run in `UnmarshalText`. `BurntSushi/toml` gives no positions of unknown keys. |
 | Graphemes and width | `github.com/clipperhouse/displaywidth` | `github.com/rivo/uniseg`, `github.com/mattn/go-runewidth` | One iterator gives each grapheme with its width, the cell model. The release has Unicode 17; `uniseg` has Unicode 15. `go-runewidth` measures runes. |
 | ANSI art and SAUCE | Own parser | `github.com/charmbracelet/x/ansi` | The loader needs about 12 sequences and the editor rules of section 8. A terminal parser adds a large dependency. |
 | Conditions | Own parser | `github.com/expr-lang/expr` | The grammar has 7 rules and static types from the registry. `expr` adds arithmetic and functions that the format excludes. |
 | Command line | `flag` | `github.com/spf13/cobra` | The standard library is sufficient for two commands. |
 
 - The Go standard library and `golang.org/x/text` have no grapheme segmentation.
-- The `unstable` package of `go-toml/v2` has no compatibility guarantee. This deviates
-  from the Libraries rule (`docs/dev-flow/stage-design.md`). The operator accepted it.
-  `go.mod` pins the version. Only `internal/tomlpos` uses the package, and tests cover it.
 
 ## 13. Not in the MVP
 

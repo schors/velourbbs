@@ -126,8 +126,7 @@ ESC has no implicit action.
 - The host shows a screen in these steps:
   1. Read `term.cols` and `term.rows`. A resize takes effect at the next screen.
   2. Evaluate the `when` of each item.
-  3. Render the screen ([screen-format](screen-format.md), section 6),
-     or its narrow screen (section 6.1 there).
+  3. Render the screen ([screen-format](screen-format.md), section 6).
   4. Clear the terminal screen and show the first page.
   5. After each page with a More row, wait for any key. Then clear the terminal screen
      and show the next page. Items do not work on a More row.
@@ -149,35 +148,36 @@ start = "welcome"
 
 `bbs check` ([screen-format](screen-format.md), section 9.1) also finds these errors:
 
+- an item without `key` or without `do`;
 - an invalid key;
 - a duplicate key in a menu, also `ANY`;
 - an invalid `do`: an unknown action, or a wrong argument of the action;
-- an `item.<KEY>` path without an item in the screen
-  ([screen-format](screen-format.md), section 6.1, has the rule for a narrow screen);
+- an `item.<KEY>` path without an item in the screen;
 - a `goto` to a screen that does not exist;
-- a `goto` to a screen without items, for example a narrow screen or `goodbye`;
-- a screen without items, except `goodbye` and the narrow screens;
+- a `goto` to a screen without items, for example `goodbye`;
+- a screen without items, except `goodbye`;
 - items in `goodbye`;
 - a start screen that does not exist or has no items.
 
-- An error of an item starts with `item "<KEY>"` when its key is valid, with the key
-  in upper case. Else it starts with `item <n>`, the 1-based number of the item.
-- An error of an item has the position of the key with the error.
-  An error of a screen without items has the position 1:1.
-- An error of the start screen has the position of `start`.
-  When `bbs.toml` has no `start`, the position is 1:1.
+- An invalid key, an invalid `do` and a syntax error of `when` are value errors
+  ([screen-format](screen-format.md), section 9.1). They have the position of the value.
+- Each other error of an item has the position 2:1. It starts with `item "<KEY>"`,
+  with the key in upper case. An item without a key gives `item <n>`,
+  the 1-based number of the item.
+- An error of a screen without items has the position 1:1.
+- An error of the start screen has the position 1:1 in `bbs.toml`.
 - The checks of a `goto`, of a screen without items and of the start screen use all screens.
   `bbs check` does them only when the files have no other errors.
 
 Examples:
 
 ```
-screens/main.bbt:4:1: item "S": do: unknown screen "sysinf"
-screens/main.bbt:7:1: item 2: key: invalid key "?"
-screens/main.bbt:7:1: item "S": key: duplicate key
+screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"
+screens/main.bbt:7:7: key: invalid key "?"
+screens/main.bbt:2:1: item "S": key: duplicate key
+screens/main.bbt:2:1: item 3: key is missing
 screens/about.bbt:1:1: screen has no items
-bbs.toml:2:1: menu: start: unknown screen "mian"
-bbs.toml:1:1: menu: start: unknown screen "main"
+bbs.toml:1:1: menu: start: unknown screen "mian"
 ```
 
 ## 8. `bbs preview --keys`
@@ -191,8 +191,7 @@ It is the test harness for the navigation.
 - `<name>` must be a valid start screen (section 7). Else it is an invalid argument.
 - The other arguments of `bbs preview` ([screen-format](screen-format.md), section 9.2) apply.
 - The output has one part for each event:
-  - `screen <name>` and the cell dump of the first page, when the host shows a screen.
-    `<name>` is the rendered screen: the narrow screen, when the host shows it;
+  - `screen <name>` and the cell dump of the first page, when the host shows a screen;
   - the cell dump of the next page, after a key on a More row;
   - `key <key>` before each key. `key <key> ignored` for an ignored key;
   - `logoff` when an item runs `logoff`. The pages of `goodbye` follow it.
@@ -206,20 +205,20 @@ Example: `bbs preview main --keys S,X,G --size 80x25`:
 
 ```
 screen main
-page 1/1 80x25
+page 1 80x25
 ...
 key S
 screen sysinfo
-page 1/1 80x25
+page 1 80x25
 ...
 key X
 screen main
-page 1/1 80x25
+page 1 80x25
 ...
 key G
 logoff
 screen goodbye
-page 1/1 80x25
+page 1 80x25
 ...
 ```
 
@@ -232,12 +231,13 @@ page 1/1 80x25
 | `internal/bbt` | The parse of `key` and `do` and the checks of one file. |
 | `internal/menu` | The checks of section 7 between files, and the session of section 6 with a terminal interface. |
 
-- The import order is in [screen-format](screen-format.md), section 11.
 - The model (`screen.Item`) holds the key in upper case and the parsed action.
   `internal/screen` uses `internal/key` for the case rule of `item.<KEY>`.
-- The terminal interface gives the size and the keys. The session tells it each event
-  of section 8: a page with the name of the rendered screen, a key, an ignored key and `logoff`.
+- The terminal interface gives the size and the keys and shows a page.
   `bbs preview` and telnet-term give its implementations.
+- A terminal can also take the other events of section 8: the screen name, a key,
+  an ignored key and `logoff`. The session sends them only to a terminal that implements
+  this second interface. `bbs preview` implements it.
 
 ## 10. Not in the MVP
 
