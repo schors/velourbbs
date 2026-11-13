@@ -1,7 +1,6 @@
 # Type: One-shot
 
-Use this type for a small task that one session can complete.
-The issue has no stages, no `plan.md` and no block files. `desc.md` holds the plan and the result.
+A small task that one session can complete. `desc.md` holds the plan and the result.
 
 1. Write the plan to the `Plan` section of `desc.md`.
    If the task changes behavior, update the specification in `docs/specs/`.
@@ -9,5 +8,5 @@ The issue has no stages, no `plan.md` and no block files. `desc.md` holds the pl
 3. Implement the task and its tests.
 4. Run the reviewers from gate 1 as subagents.
 5. Do gate 2 (`flow.md`, section 4). The return step is step 1.
-6. When the operator accepts the result, commit. Write the `Result` section of `desc.md`.
+6. Commit. Write the `Result` section of `desc.md`.
 7. Archive the issue with `/ticket-cleanup <id>`.

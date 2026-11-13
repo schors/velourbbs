@@ -1,8 +1,6 @@
 # Done: <block>
 
 - Commits: <!-- hashes -->
-- Implemented: <!-- agents (model) or operator -->
-- Reviewed: <!-- reviewers -->
 
 ## Result
 

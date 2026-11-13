@@ -26,8 +26,8 @@ If the current directory is a worktree, go to the main checkout first.
 4. Make sure that the main checkout is on `main` and has no uncommitted changes.
    If not, stop. Tell the operator.
 5. For each issue:
-   1. Merge the branch into `main` as `flow.md`, section 3, tells.
-      If there is a conflict, skip the issue. Tell the operator the steps from section 3.
+   1. Do the merge (`flow.md`, section 3).
+      If the sync stops, skip the issue. Tell the operator.
    2. Run `git worktree remove .ai/worktrees/<id>` and `git branch -d <id>`.
    3. Move the issue directory to `.ai/archive/`.
    4. In `.ai/issues.md`, set the stage of the issue to `archived`.
