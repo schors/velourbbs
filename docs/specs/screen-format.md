@@ -465,7 +465,7 @@ styles
 
 - The Go standard library and `golang.org/x/text` have no grapheme segmentation.
 - The `unstable` package of `go-toml/v2` has no compatibility guarantee. This deviates
-  from the Libraries rule (`docs/dev-flow/principles.md`, section 2). The operator accepted it.
+  from the Libraries rule (`docs/dev-flow/stage-design.md`). The operator accepted it.
   `go.mod` pins the version. Only `internal/tomlpos` uses the package, and tests cover it.
 
 ## 13. Not in the MVP

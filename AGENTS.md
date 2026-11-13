@@ -6,16 +6,17 @@
     ("проверил", not "была произведена проверка").
   - Do not use filler, bureaucratic phrases or evaluations without facts.
   - Use one term for each thing. Keep established English terms and identifiers as they are.
-- In a message to the operator, refer to an item, such as a question, an option, a finding,
-  a decision or a step, with its content. A number or a label alone is not enough
-  if the message does not show the item.
-  Example: "вариант 2 (merge main в worktree)", not "вариант 2".
-- A "document for AI" is a file in one of these paths: `AGENTS.md`, `docs/dev-flow/`,
-  `.claude/skills/`, `docs/specs/`, `docs/ideas/`, `.ai/issues.md`, `.ai/artifacts/`
-  and `.ai/issues/<id>/`. Before you write or change one, read `docs/dev-flow/style.md`.
-- Before you design, plan, or write code or a document, read `docs/dev-flow/principles.md`.
+  - Name an item by its content, not only by its number:
+    "вариант 2 (merge main в worktree)", not "вариант 2".
+- Write English documents in plain style (ASD-STE100 as a guideline): short sentences
+  with one fact in each, active voice, imperative instructions, one term for each thing.
+  This is not a review check. Do not rewrite other text only for style.
 - Keep changes in scope. Run the relevant checks.
 - Never weaken or bypass a check, precondition or its test to make a change pass.
+- Keep it simple: add no check, option or documentation that the change does not need.
+- Do not shape a decision by an accidental limit: the current code layout,
+  a plan that the operator did not accept or a limit of a tool.
+  If the better option is outside the accepted scope, show it at the next gate.
 - Keep one definition for each rule. Keep only current rules and necessary usage instructions.
   Remove research and review drafts after use.
 - Follow the development flow in `docs/dev-flow/flow.md`.
