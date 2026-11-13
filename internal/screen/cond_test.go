@@ -37,6 +37,7 @@ func TestCondEval(t *testing.T) {
 		{`t=="ansi"and w==80`, true},
 		{`term.charset == ""`, false},
 		{"item.A", true},
+		{"item.a", true}, // the case rule
 		{"item.C", false},
 		{"not item.A", false},
 		{"not item.C", true},
@@ -125,9 +126,10 @@ func TestCondItems(t *testing.T) {
 		keys map[string]bool
 		want []string
 	}{
-		{"all keys", map[string]bool{"A": true, "s": true}, nil},
-		{"key case", map[string]bool{"A": true, "S": true}, []string{`unknown field "item.s"`}},
-		{"no items", nil, []string{`unknown field "item.A"`, `unknown field "item.s"`}},
+		// The case rule: item.s is item.S.
+		{"all keys", map[string]bool{"A": true, "S": true}, nil},
+		{"one key", map[string]bool{"A": true}, []string{`unknown field "item.S"`}},
+		{"no items", nil, []string{`unknown field "item.A"`, `unknown field "item.S"`}},
 	}
 	for _, tt := range tests {
 		var got []string

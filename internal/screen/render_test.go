@@ -145,7 +145,7 @@ func TestRender(t *testing.T) {
 		}, 20, 10, nil},
 		// Block lines with only spaces give no row; a false block gives nothing.
 		{"blocks", map[string]string{
-			"main.bbt": "+++\nwidth = [10, 10]\n[[item]]\nkey = \"A\"\ndo = \"x\"\n[[item]]\nkey = \"B\"\ndo = \"x\"\n+++\n" +
+			"main.bbt": "+++\nwidth = [10, 10]\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n[[item]]\nkey = \"B\"\ndo = \"logoff\"\n+++\n" +
 				"{#if item.A}\nyes {term.cols}\n{#else}\nno\n{/if}\n" +
 				"a{#if not item.A}b\nc{/if}d\n  {#if item.B}x{/if}  \n\n{!title}\n",
 		}, 20, 10, []string{"A"}},
