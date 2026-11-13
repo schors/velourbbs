@@ -1,5 +1,6 @@
-// Command bbs checks and previews the screens of a BBS directory: the current directory.
-// Specification: docs/specs/screen-format.md, section 9.
+// Command bbs checks and previews the screens of a BBS directory, the current directory,
+// and serves them over telnet.
+// Specification: docs/specs/screen-format.md, section 9, and docs/specs/telnet-term.md, section 10.
 package main
 
 import (
@@ -14,7 +15,7 @@ import (
 	"newbbs/internal/screen"
 )
 
-// The exit statuses: an error in the files (section 9.1) and a usage error.
+// The exit statuses: an error in the files (section 9.1) or of listen, and a usage error.
 const (
 	exitError = 1
 	exitUsage = 2
@@ -23,6 +24,7 @@ const (
 const usage = `usage:
   bbs check
   bbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]... [--keys <keys>]
+  bbs serve
 `
 
 func main() {
@@ -40,6 +42,8 @@ func run(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		return check(args[1:], fsys, stderr)
 	case "preview":
 		return preview(args[1:], fsys, stdout, stderr)
+	case "serve":
+		return serve(args[1:], fsys, stderr)
 	}
 	_, _ = fmt.Fprintf(stderr, "bbs: unknown command %q\n%s", args[0], usage)
 	return exitUsage
