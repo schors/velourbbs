@@ -2,7 +2,7 @@
 
 This specification defines the screen files, the screen model, the layout
 and the commands `bbs check` and `bbs preview`.
-Related parts: [menu-nav](menu-nav.md) and [telnet-term](../ideas/telnet-term.md).
+Related parts: [menu-nav](menu-nav.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
@@ -130,7 +130,7 @@ Section 8.4 has the rule for art.
 | `item.<KEY>` | boolean | True when the item with the key `<KEY>` exists and is enabled. |
 
 - A path matches `[a-z][a-z0-9_]*(\.[A-Za-z0-9_]+)?`. A path without a dot is an alias.
-- [telnet-term](../ideas/telnet-term.md) gives the `term.*` values.
+- [telnet-term](telnet-term.md) gives the `term.*` values.
   `term.cols` is from 20 to 255. `term.rows` is from 10 to 100.
 - `item.<KEY>` is valid only in `{#if}`. [menu-nav](menu-nav.md) defines `<KEY>`.
 - An unknown path is an error.
@@ -240,7 +240,7 @@ The body gives rows in source order:
   16–255 the xterm 256-colour palette.
 - A "style" is a foreground colour, a background colour and the attributes
   `bold`, `underline` and `blink`.
-- [telnet-term](../ideas/telnet-term.md) reduces each colour to the colour depth of the terminal.
+- [telnet-term](telnet-term.md) reduces each colour to the colour depth of the terminal.
 
 ### 7.2. Style syntax
 
@@ -474,7 +474,7 @@ styles
 
 | Package | Content |
 |---|---|
-| `cmd/bbs` | The commands `check` and `preview`. |
+| `cmd/bbs` | The commands `check`, `preview` and `serve`. |
 | `internal/bbt` | The BBS template parser, the token scanner, the front matter and the includes. |
 | `internal/art` | The `.ans` loader and SAUCE. |
 | `internal/screen` | Cells, colours, styles, the screen model, the registry, conditions, layout, render, cell dump. |
@@ -482,11 +482,15 @@ styles
 | `internal/tomlpos` | The TOML adapter: the values and the key positions. |
 
 - The host language is Go. The Go module is `newbbs`.
-- Imports go one way: `cmd/bbs`, then `internal/menu`, then `internal/bbt`, then `internal/art`,
-  then `internal/screen`, then `internal/key`. `internal/config` imports only `internal/screen`
-  and `internal/tomlpos`. `internal/bbt` also imports `internal/tomlpos`.
-  `internal/menu` also imports `internal/config`. [menu-nav](menu-nav.md), section 9,
-  has the packages `internal/menu` and `internal/key`.
+- Imports go one way: `cmd/bbs`, then `internal/server`, then `internal/menu`, then `internal/bbt`,
+  then `internal/art`, then `internal/screen`, then `internal/key`.
+  `internal/config` imports only `internal/screen` and `internal/tomlpos`.
+  `internal/bbt` also imports `internal/tomlpos`. `internal/menu` also imports `internal/config`.
+  `internal/server` also imports `internal/term` and `internal/config`.
+  `internal/term` imports only `internal/telnet` and `internal/screen`.
+  [menu-nav](menu-nav.md), section 9, has the packages `internal/menu` and `internal/key`.
+  [telnet-term](telnet-term.md), section 11, has the packages `internal/server`,
+  `internal/term` and `internal/telnet`.
 - The model is immutable after the load. Sessions read it at the same time without locks.
 - The checks are `go vet ./...`, `go test ./...` and `golangci-lint run ./...`
   (golangci-lint 2.15.0, configuration in `.golangci.yml`).
