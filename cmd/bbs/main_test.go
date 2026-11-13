@@ -56,6 +56,22 @@ func TestCheckValid(t *testing.T) {
 	}
 }
 
+// bbs check reports the errors of [telnet] (telnet-term, section 9.1).
+func TestCheckTelnet(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml":         {Data: []byte("[telnet]\nmax_conns = 0\nallow = [\"x\"]\n")},
+		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"g\"\ndo = \"logoff\"\n+++\n")},
+	}
+	want := `bbs.toml:2:1: telnet.max_conns: 0 is not from 1 to 1000000
+bbs.toml:3:1: telnet.allow: invalid address or prefix "x"
+`
+	var out, errOut bytes.Buffer
+	status := run([]string{"check"}, fsys, &out, &errOut)
+	if out.String() != "" || errOut.String() != want || status != exitError {
+		t.Errorf("stdout %q, stderr:\n%s\nstatus %d; want stderr:\n%s\nstatus 1", out.String(), errOut.String(), status, want)
+	}
+}
+
 func TestCheckNoConfig(t *testing.T) {
 	fsys := fstest.MapFS{"screens/main.bbt": {Data: []byte("Hello\n")}}
 	var out, errOut bytes.Buffer
