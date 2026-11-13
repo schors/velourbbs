@@ -18,18 +18,15 @@ Only the Sentences and Lists techniques can yield to a quality, and only where t
 - Wording (ASD-STE100): use the active voice. Write instructions in the imperative.
   Do not use phrasal verbs.
 - Sentences: put one instruction or one fact in each sentence. Use up to 20 words
-  for an instruction and 25 for a description. Count a literal in backticks as one word.
+  for an instruction and 25 for a description.
+  Count a literal, such as a path or a command, as one word.
   Headings, labels and table cells can be fragments.
 - Lists: use a numbered list for steps in sequence, a bullet list for rules,
   a table for a mapping and a paragraph for a description.
-- Terms: define a term in quotation marks.
 - References: refer to a rule by its file and section.
   Number the sections that other files refer to.
-- Literals: put paths, commands and literal values in backticks.
-  Write a variable part as `<name>`.
+- Literals: write a variable part as `<name>`.
 - Templates: write each fill instruction as an HTML comment.
-- Markup: do not use bold, italics or emoji. Keep each line at 100 characters or fewer.
-  Table rows, front matter lines and URLs can be longer.
 
 Apply the style to text that you write or change. Do not rewrite other text only for style.
 Do not change code, identifiers, commands, grammars or quoted output to fit the style.

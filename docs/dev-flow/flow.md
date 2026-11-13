@@ -64,9 +64,14 @@ for a `dev` issue.
 - Merge the branch into `main` after each block commit.
   `/ticket-cleanup` merges the rest of the branch.
 - To merge, use the main checkout. It must be on `main` and have no uncommitted changes.
-  Run `git merge --no-ff <id> -m "Merge issue <id>"`. Then run the tests in the main checkout.
+  Run `git merge --no-ff <id> -m "Merge issue <id>"`.
+  Run the tests in the main checkout only if the branch has a code change
+  and `main` had commits outside the branch.
+  A "code change" changes a file that the build or the tests read.
 - If the merge has a conflict, run `git merge --abort`. In the worktree, run `git merge main`.
-  Resolve the conflict with the operator. Commit with `<id>: merge main`. Then merge again.
+  Resolve the conflict with the operator.
+  If the branch has a code change, run the tests in the worktree.
+  Commit with `<id>: merge main`. Then merge again.
 - Do not push.
 
 ### 3.1. Commit message
