@@ -145,10 +145,11 @@ Section 8.4 has the rule for art.
 ### 4.3. Values
 
 - The host inserts a value after the parse, so a value cannot make a token.
+- The host replaces each invalid UTF-8 byte of a value with U+FFFD.
 - The host removes the control characters and the graphemes of width 0 from a value.
   It replaces a grapheme of more than 32 bytes with U+FFFD.
-- A fixed-width field pads its value with spaces or cuts it at a grapheme boundary.
-  A wide grapheme that does not fit becomes a space.
+- A fixed-width field pads its value with spaces or cuts the end of the value
+  at a grapheme boundary. A wide grapheme that does not fit becomes a space.
 
 ## 5. Conditions
 
@@ -165,6 +166,7 @@ string  = '"' { any character except '"' and '}' } '"' ;
 ```
 
 - Spaces between the parts are optional. Example: `term.cols>=100`.
+- An integer literal must fit in a 64-bit signed integer.
 - `and` binds tighter than `or`. There are no parentheses.
 - A path without an operator and a path after `not` must be boolean.
 - An integer field takes an integer literal and each operator.
