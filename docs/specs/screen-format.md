@@ -492,7 +492,7 @@ styles
 
 | Task | Choice | Compared with | Reason |
 |---|---|---|---|
-| TOML | `github.com/pelletier/go-toml/v2` | `github.com/BurntSushi/toml` | `BurntSushi/toml` gives positions only for syntax errors. The `unstable` parser of `go-toml/v2` gives the position of each key. |
+| TOML | `github.com/pelletier/go-toml/v2` | `github.com/BurntSushi/toml` | `bbs check` reports all errors of a file, each with a position (section 9.1). `BurntSushi/toml` exports no key positions. The `unstable` parser of `go-toml/v2` gives the position of each key. |
 | Graphemes and width | `github.com/clipperhouse/displaywidth` | `github.com/rivo/uniseg`, `github.com/mattn/go-runewidth` | One iterator gives each grapheme with its width, the cell model. The release has Unicode 17; `uniseg` has Unicode 15. `go-runewidth` measures runes. |
 | ANSI art and SAUCE | Own parser | `github.com/charmbracelet/x/ansi` | The loader needs about 12 sequences and the editor rules of section 8. A terminal parser adds a large dependency. |
 | Conditions | Own parser | `github.com/expr-lang/expr` | The grammar has 7 rules and static types from the registry. `expr` adds arithmetic and functions that the format excludes. |
