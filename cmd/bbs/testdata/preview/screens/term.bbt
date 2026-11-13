@@ -3,7 +3,7 @@ width = [30, 40]
 narrow = "term_small"
 [[item]]
 key = "W"
-do = "goto wide"
+do = "goto main"
 when = "term.cols >= 25"
 +++
 {term.type} {term.colors}

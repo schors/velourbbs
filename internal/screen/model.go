@@ -20,9 +20,10 @@ type Screen struct {
 
 // Item is a menu item of the front matter. When is nil when the item has no when.
 type Item struct {
-	Key  string // a key name of menu-nav, section 3.1, in upper case
-	Do   Action
-	When *Cond
+	Key   string // a key name of menu-nav, section 3.1, in upper case
+	Do    Action
+	DoPos Pos // the position of do, for the menu checks
+	When  *Cond
 }
 
 // Action is the parsed do of an item (menu-nav, section 5).

@@ -1,5 +1,5 @@
 // Package config reads the host settings of bbs.toml: the tables [screen] and [theme]
-// of docs/specs/screen-format.md.
+// of docs/specs/screen-format.md and [menu] of docs/specs/menu-nav.md.
 package config
 
 import (
@@ -17,6 +17,10 @@ type Config struct {
 	More string
 	// Theme maps a style name to a style (section 7.3). It always has normal and more.
 	Theme map[string]screen.Style
+	// Start is the name of the first screen of a session (menu-nav, section 6).
+	// StartPos is the position of start, or 1:1 when bbs.toml has no start.
+	Start    string
+	StartPos screen.Pos
 }
 
 // The defaults of sections 6.1, 6.4 and 7.3.
@@ -34,7 +38,10 @@ var (
 // It gives at most screen.MaxFileDiags diagnostics (section 10).
 // Parse returns the defaults for each value with an error.
 func Parse(file string, data []byte) (Config, screen.Diags) {
-	p := parser{file: file, cfg: Config{Width: defaultWidth, More: defaultMore}}
+	p := parser{file: file, cfg: Config{
+		Width: defaultWidth, More: defaultMore,
+		Start: "main", StartPos: screen.Pos{File: file, Line: 1, Col: 1},
+	}}
 	theme := map[string]any{}
 	doc, err := tomlpos.Parse(data)
 	if err != nil {
@@ -48,6 +55,8 @@ func Parse(file string, data []byte) (Config, screen.Diags) {
 		switch key {
 		case "screen":
 			p.screen(v)
+		case "menu":
+			p.menu(v)
 		case "theme":
 			if t, ok := p.table(v, key); ok {
 				theme = t
@@ -119,6 +128,29 @@ func (p *parser) screen(v any) {
 		default:
 			p.errorf(path, "unknown key \"screen.%s\"", key)
 		}
+	}
+}
+
+// menu parses [menu]. The menu check of internal/menu checks the name of start.
+func (p *parser) menu(v any) {
+	t, ok := p.table(v, "menu")
+	if !ok {
+		return
+	}
+	for key, v := range t {
+		path := []string{"menu", key}
+		if key != "start" {
+			p.errorf(path, "unknown key \"menu.%s\"", key)
+			continue
+		}
+		s, ok := v.(string)
+		if !ok {
+			p.errorf(path, "menu: start: must be a string")
+			continue
+		}
+		pos := p.doc.Pos(path...)
+		p.cfg.Start = s
+		p.cfg.StartPos = screen.Pos{File: p.file, Line: pos.Line, Col: pos.Col}
 	}
 }
 

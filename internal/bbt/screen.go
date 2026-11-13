@@ -198,7 +198,8 @@ func (l *loader) artFields(u *unit, fr *front, n artInsert, a *screen.Art) []scr
 }
 
 // narrow links each screen to its narrow screen and checks the narrow screens
-// and the item.<KEY> paths (section 6.1).
+// and the item.<KEY> paths (section 6.1). It also checks that goodbye has no items
+// (menu-nav, section 7).
 func (l *loader) narrow(units []*unit) {
 	byName := map[string]*unit{}
 	for _, u := range units {
@@ -220,6 +221,9 @@ func (l *loader) narrow(units []*unit) {
 	for _, t := range units {
 		if !t.done {
 			continue
+		}
+		if t.s.Name == "goodbye" && len(t.s.Items) > 0 {
+			errorAt(l.fd(t.f.name), t.f.front.pos("item"), "the goodbye screen cannot have items")
 		}
 		if len(t.parents) > 0 && t.f.front != nil {
 			fr := t.f.front
