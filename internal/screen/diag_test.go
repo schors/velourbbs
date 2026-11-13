@@ -30,3 +30,30 @@ func TestDiags(t *testing.T) {
 		t.Error("HasErrors = true for a warning")
 	}
 }
+
+func TestFileDiags(t *testing.T) {
+	f := FileDiags{File: "a.ans"}
+	for i := range MaxFileDiags + 5 {
+		if f.Full() {
+			t.Fatalf("Full after %d diagnostics", i)
+		}
+		if i%2 == 0 {
+			f.Errorf(1, i+1, "error %d", i)
+		} else {
+			f.Warnf(1, i+1, "warning %d", i)
+		}
+		if i == MaxFileDiags {
+			break
+		}
+	}
+	if !f.Full() || len(f.Diags) != MaxFileDiags+1 {
+		t.Fatalf("Full %t, %d diagnostics", f.Full(), len(f.Diags))
+	}
+	if got := f.Diags[MaxFileDiags].String(); got != "a.ans:1:101: too many diagnostics" {
+		t.Errorf("last %q", got)
+	}
+	f.Errorf(2, 1, "dropped")
+	if len(f.Diags) != MaxFileDiags+1 {
+		t.Errorf("%d diagnostics after Full", len(f.Diags))
+	}
+}

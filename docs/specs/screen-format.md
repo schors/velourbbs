@@ -290,10 +290,12 @@ the loader follows them. A CP437 file is an error.
    The COMNT block of `Comments` lines comes before it, when it starts with `COMNT`.
 2. The data is the bytes before the COMNT block or the SAUCE record. The loader removes
    one 0x1A at the end of the data.
-3. The data must be valid UTF-8. The loader removes a BOM.
+3. The data must be valid UTF-8. Invalid UTF-8 is one error, and the load stops.
+   The loader removes a BOM.
 4. LF, CR and ESC are controls. Each other control character is an error.
-5. The art width is `TInfo1` when `DataType` is 1, `FileType` is 1 and `TInfo1` > 0.
-   Else the width is 80. A width over 255 is an error.
+5. A "character SAUCE" has `DataType` 1 and `FileType` 1. The loader uses `TInfo1`,
+   `TInfo2` and `TFlags` only from a character SAUCE.
+   The art width is `TInfo1` when it is > 0. Else the width is 80. A width over 255 is an error.
 6. The Moebius form has no BOM and no SAUCE. For a file without both, an LF before
    the first grapheme does nothing. Its width is the widest row without wrap, at least 80.
 7. iCE colours are on when bit 0 of `TFlags` is 1.
@@ -301,7 +303,6 @@ the loader follows them. A CP437 file is an error.
 ### 8.3. Grid
 
 The loader plays the data into a grid of cells. The grid width is the art width.
-The play time is linear in the file size plus the grid cells.
 
 - The cursor starts at row 1, column 1. The style starts as `7/0`.
   Each cell that the play does not write is a space in `7/0`. Art has no colour `default`.
@@ -309,16 +310,19 @@ The play time is linear in the file size plus the grid cells.
   - LF clears the pending wrap and moves the cursor to column 1 of the next row.
   - A grapheme, CR or a cursor sequence first does the wrap: the cursor goes
     to column 1 of the next row.
-  - SGR and mode sequences keep the wrap pending.
+  - The cursor sequences are `CSI` `A`–`D`, `H`, `f`, `s`, `u`, `ESC 7` and `ESC 8`.
+    `CSI 2 J` clears the pending wrap. Each other sequence keeps it.
 - CR moves the cursor to column 1.
 - A wide grapheme that does not fit before the right edge does the wrap first.
 - When wrap is off, a grapheme at the right edge overwrites the last cell.
+  A wide grapheme overwrites the last two cells.
 - A cursor move stays inside the grid width and the row limit (section 10).
 - The grid height is the last row with a written cell, or `TInfo2` of SAUCE if it is larger.
 
 The loader parses a CSI sequence by ECMA-48, section 5.4: parameter bytes, intermediate bytes,
 a final byte. A missing or 0 parameter is 1 for `A`–`D`, `H`, `f` and `b`.
-A parameter over 9999 counts as 9999.
+A parameter over 9999 counts as 9999. A byte outside these ranges ends the sequence
+with no effect and a warning, and the byte plays.
 
 | Sequence | Effect |
 |---|---|
@@ -336,6 +340,8 @@ A parameter over 9999 counts as 9999.
   `bbs check` warns with its position.
 - ESC followed by a byte other than `[`, `7` or `8`: the loader drops the ESC
   and plays the byte, as Moebius does.
+- `CSI n K` and `CSI 2 J` write spaces with the foreground 7, the background of a written cell
+  and no attributes.
 
 | SGR | Effect |
 |---|---|
@@ -350,6 +356,7 @@ A parameter over 9999 counts as 9999.
 | `38;2;r;g;b`, `48;2;r;g;b` | Foreground, background: RGB. They take 5 parameters. |
 
 Each other SGR parameter does nothing. `bbs check` warns with its position.
+After an invalid `38` or `48`, the rest of the sequence does nothing.
 
 The style of a written cell, in this order:
 
@@ -374,7 +381,8 @@ The style of a written cell, in this order:
 - `bbs check` reads `bbs.toml` and each file in `screens/`.
   It checks each screen with the fragments and the art that the screen uses.
 - It warns about a fragment or an art file that no screen uses.
-- It reports all errors and warnings, not only the first. It exits with status 1 after an error.
+- It reports all errors and warnings, not only the first, up to the limit of section 10.
+  It exits with status 1 after an error.
 - An error has the form `<file>:<row>:<col>: <message>`, with 1-based numbers.
   For art, the row and the column are grid positions, as the art editor shows them.
   A warning has `warning: ` before the message.
@@ -431,6 +439,7 @@ styles
 | Body of a screen after includes | 10000 lines. An art insert counts its rows. |
 | Rendered screen | 10000 rows. |
 | Grapheme | 32 bytes. |
+| Errors and warnings of one file | 100. Then one error `too many diagnostics`, and the load of the file stops. |
 
 - An item of a file over a limit is an error. The loader counts the lines while it expands
   the includes, and stops at the limit.

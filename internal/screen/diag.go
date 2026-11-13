@@ -47,3 +47,43 @@ func (ds Diags) Sort() {
 		return cmp.Or(cmp.Compare(a.File, b.File), cmp.Compare(a.Row, b.Row), cmp.Compare(a.Col, b.Col))
 	})
 }
+
+// MaxFileDiags is the limit of errors and warnings of one file (section 10).
+const MaxFileDiags = 100
+
+// FileDiags collects the diagnostics of one file up to MaxFileDiags.
+// After the limit it adds one error "too many diagnostics" and drops the rest.
+// The loader stops the load of the file when Full is true.
+type FileDiags struct {
+	File  string
+	Diags Diags
+}
+
+// Errorf adds an error.
+func (f *FileDiags) Errorf(row, col int, format string, args ...any) {
+	if f.room(row, col) {
+		f.Diags.Errorf(f.File, row, col, format, args...)
+	}
+}
+
+// Warnf adds a warning.
+func (f *FileDiags) Warnf(row, col int, format string, args ...any) {
+	if f.room(row, col) {
+		f.Diags.Warnf(f.File, row, col, format, args...)
+	}
+}
+
+// Full reports whether the file has too many diagnostics.
+func (f *FileDiags) Full() bool { return len(f.Diags) > MaxFileDiags }
+
+// room reports whether one more diagnostic fits. At the limit it adds the last error.
+func (f *FileDiags) room(row, col int) bool {
+	switch {
+	case f.Full():
+		return false
+	case len(f.Diags) == MaxFileDiags:
+		f.Diags.Errorf(f.File, row, col, "too many diagnostics")
+		return false
+	}
+	return true
+}
