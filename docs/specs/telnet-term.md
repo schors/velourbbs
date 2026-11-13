@@ -321,7 +321,7 @@ output_timeout = 60
 | `probe_timeout` | 5 | Seconds until the probe ends (section 5.1). |
 | `output_timeout` | 60 | Seconds until a write must complete. Else the host disconnects. |
 
-- Each integer is at least 1. The port of `listen` is from 1 to 65535.
+- Each integer is from 1 to 1000000. The port of `listen` is from 1 to 65535.
 - An address is an IPv4 or IPv6 address. A prefix is an address with `/<bits>`.
 - `bbs check` checks `[telnet]` and reports its errors as other errors of `bbs.toml`.
 
@@ -331,7 +331,8 @@ output_timeout = 60
   An IPv4-mapped IPv6 address is the IPv4 address.
 - A connect that `max_conns` refuses does not count for the address limits.
 - Each other connect counts for `max_connects_per_min`, also a refused one.
-  The host keeps at most `max_connects_per_min` connect times for each address.
+  The host counts the connects in steps of 1 s. The 60 s are the second of the connect
+  and the 59 seconds before it.
 - The connect counter holds at most 10000 addresses. When it is full, the host removes
   the address with the oldest connect.
 - A connection over a limit gets one ASCII line and CR LF. Then the host closes it:

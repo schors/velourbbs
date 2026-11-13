@@ -1,5 +1,6 @@
 // Package config reads the host settings of bbs.toml: the tables [screen] and [theme]
-// of docs/specs/screen-format.md and [menu] of docs/specs/menu-nav.md.
+// of docs/specs/screen-format.md, [menu] of docs/specs/menu-nav.md
+// and [telnet] of docs/specs/telnet-term.md.
 package config
 
 import (
@@ -21,6 +22,8 @@ type Config struct {
 	// StartPos is the position of start, or 1:1 when bbs.toml has no start.
 	Start    string
 	StartPos screen.Pos
+	// Telnet is the table [telnet] (telnet-term, section 9.1).
+	Telnet Telnet
 }
 
 // The defaults of sections 6.1, 6.4 and 7.3.
@@ -41,6 +44,7 @@ func Parse(file string, data []byte) (Config, screen.Diags) {
 	p := parser{file: file, cfg: Config{
 		Width: defaultWidth, More: defaultMore,
 		Start: "main", StartPos: screen.Pos{File: file, Line: 1, Col: 1},
+		Telnet: defaultTelnet,
 	}}
 	theme := map[string]any{}
 	doc, err := tomlpos.Parse(data)
@@ -57,6 +61,8 @@ func Parse(file string, data []byte) (Config, screen.Diags) {
 			p.screen(v)
 		case "menu":
 			p.menu(v)
+		case "telnet":
+			p.telnet(v)
 		case "theme":
 			if t, ok := p.table(v, key); ok {
 				theme = t

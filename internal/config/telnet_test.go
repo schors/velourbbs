@@ -1,0 +1,111 @@
+package config
+
+import (
+	"net/netip"
+	"reflect"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestTelnetDefaults(t *testing.T) {
+	cfg, ds := Parse("bbs.toml", []byte("[telnet]\n"))
+	if len(ds) != 0 {
+		t.Fatalf("diags: %q", messages(ds))
+	}
+	want := Telnet{
+		Listen: ":2323", MaxConns: 64, MaxConnsPerAddr: 4, MaxConnectsPerMin: 10,
+		IdleTimeout: 600 * time.Second, ProbeTimeout: 5 * time.Second, OutputTimeout: 60 * time.Second,
+	}
+	if !reflect.DeepEqual(cfg.Telnet, want) {
+		t.Errorf("Telnet = %+v, want %+v", cfg.Telnet, want)
+	}
+}
+
+func TestTelnet(t *testing.T) {
+	// The example of section 9.1 with other numbers, and the entry forms of allow and proxy.
+	data := `
+[telnet]
+listen = "127.0.0.1:23"
+max_conns = 1
+max_conns_per_addr = 2
+max_connects_per_min = 1000000
+allow = ["192.0.2.10", "2001:db8::/48", "198.51.100.7/24", "::ffff:203.0.113.5", "::ffff:203.0.113.0/120", "fe80::1%eth0"]
+proxy = ["127.0.0.1"]
+idle_timeout = 3
+probe_timeout = 4
+output_timeout = 5
+`
+	cfg, ds := Parse("bbs.toml", []byte(data))
+	if len(ds) != 0 {
+		t.Fatalf("diags: %q", messages(ds))
+	}
+	pp := func(s ...string) []netip.Prefix {
+		var ps []netip.Prefix
+		for _, e := range s {
+			ps = append(ps, netip.MustParsePrefix(e))
+		}
+		return ps
+	}
+	want := Telnet{
+		Listen: "127.0.0.1:23", MaxConns: 1, MaxConnsPerAddr: 2, MaxConnectsPerMin: 1000000,
+		Allow:       pp("192.0.2.10/32", "2001:db8::/48", "198.51.100.0/24", "203.0.113.5/32", "203.0.113.0/24", "fe80::1/128"),
+		Proxy:       pp("127.0.0.1/32"),
+		IdleTimeout: 3 * time.Second, ProbeTimeout: 4 * time.Second, OutputTimeout: 5 * time.Second,
+	}
+	if !reflect.DeepEqual(cfg.Telnet, want) {
+		t.Errorf("Telnet =\n%+v\nwant\n%+v", cfg.Telnet, want)
+	}
+}
+
+func TestTelnetListen(t *testing.T) {
+	for _, s := range []string{":1", ":65535", "[::1]:2323", "localhost:2323"} {
+		cfg, ds := Parse("bbs.toml", []byte(`telnet.listen = "`+s+`"`))
+		if len(ds) != 0 || cfg.Telnet.Listen != s {
+			t.Errorf("listen %q: Listen %q, diags %q", s, cfg.Telnet.Listen, messages(ds))
+		}
+	}
+}
+
+func TestTelnetErrors(t *testing.T) {
+	tests := []struct {
+		data string
+		want string
+	}{
+		{"telnet = 1", `telnet: must be a table`},
+		{"[telnet]\nport = 23", `unknown key "telnet.port"`},
+		{"[telnet]\nlisten = 2323", `telnet.listen: must be a string`},
+		{"[telnet]\nlisten = \"2323\"", `telnet.listen: invalid address "2323": must be <host>:<port>`},
+		{"[telnet]\nlisten = \":0\"", `telnet.listen: invalid port "0": must be from 1 to 65535`},
+		{"[telnet]\nlisten = \":65536\"", `telnet.listen: invalid port "65536": must be from 1 to 65535`},
+		{"[telnet]\nlisten = \":telnet\"", `telnet.listen: invalid port "telnet": must be from 1 to 65535`},
+		{"[telnet]\nlisten = \"::1:23\"", `telnet.listen: invalid address "::1:23": must be <host>:<port>`},
+		{"[telnet]\nallow = \"192.0.2.1\"", `telnet.allow: must be an array of strings`},
+		{"[telnet]\nallow = [1]", `telnet.allow: must be an array of strings`},
+		{"[telnet]\nallow = [\"192.0.2.300\"]", `telnet.allow: invalid address or prefix "192.0.2.300"`},
+		{"[telnet]\nproxy = [\"192.0.2.0/33\"]", `telnet.proxy: invalid address or prefix "192.0.2.0/33"`},
+		{"[telnet]\nproxy = [\"host\"]", `telnet.proxy: invalid address or prefix "host"`},
+	}
+	for _, key := range []string{"max_conns", "max_conns_per_addr", "max_connects_per_min",
+		"idle_timeout", "probe_timeout", "output_timeout"} {
+		tests = append(tests,
+			struct{ data, want string }{"[telnet]\n" + key + " = 0", "telnet." + key + ": 0 is not from 1 to 1000000"},
+			struct{ data, want string }{"[telnet]\n" + key + " = 1000001", "telnet." + key + ": 1000001 is not from 1 to 1000000"},
+			struct{ data, want string }{"[telnet]\n" + key + " = 1.5", "telnet." + key + ": must be an integer"},
+			struct{ data, want string }{"[telnet]\n" + key + " = \"5\"", "telnet." + key + ": must be an integer"},
+		)
+	}
+	for _, tt := range tests {
+		cfg, ds := Parse("bbs.toml", []byte(tt.data))
+		line := strings.Count(tt.data, "\n") + 1
+		want := "bbs.toml:" + string(rune('0'+line)) + ":1: " + tt.want
+		if got := messages(ds); !slices.Equal(got, []string{want}) {
+			t.Errorf("Parse(%q) = %q, want %q", tt.data, got, want)
+		}
+		// An invalid value keeps the default.
+		if !reflect.DeepEqual(cfg.Telnet, defaultTelnet) {
+			t.Errorf("Parse(%q): Telnet = %+v", tt.data, cfg.Telnet)
+		}
+	}
+}
