@@ -266,7 +266,8 @@ The key decoder gives:
 - A CSI sequence has parameter bytes 0x30–0x3F, intermediate bytes 0x20–0x2F and one final byte
   0x40–0x7E. An SS3 sequence has one final byte.
 - An invalid byte ends the sequence. The decoder drops the sequence and handles the byte
-  as new input. A sequence longer than 32 bytes is dropped in the same way.
+  as new input.
+- The decoder drops a sequence longer than 32 bytes up to its end, also its final byte.
 - The decoder drops each sequence that is not in the table as a whole.
   It never becomes separate keys. Keys with modifiers, for example `ESC[1;5A`, are dropped.
 - A CPR reply after the probe is dropped.
