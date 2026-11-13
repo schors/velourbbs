@@ -263,6 +263,7 @@ func TestUsage(t *testing.T) {
 		{[]string{"-h"}, `bbs: unknown command "-h"`},
 		{[]string{"frob"}, `bbs: unknown command "frob"`},
 		{[]string{"check", "extra"}, "bbs check: no arguments expected"},
+		{[]string{"serve", "extra"}, "bbs serve: no arguments expected"},
 	}
 	for _, tt := range tests {
 		out, errOut, status := runIn(t, "preview", tt.args...)

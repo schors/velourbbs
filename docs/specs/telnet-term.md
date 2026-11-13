@@ -364,7 +364,16 @@ output_timeout = 60
 
 - It does the checks of [screen-format](screen-format.md), section 9.1, at start.
   It writes the errors and the warnings to the standard error.
-- It writes the log to the standard error.
+- It writes the log to the standard error: a `listen` line with the address,
+  the probe line (section 5.6) and a `close` line for each connection.
+  The `close` line has the client address, the reason of the end and the time.
+- After an accept error, it logs the error and accepts again after 1 s.
+- After output that ends a connection (section 5.5, section 9.2, `logoff`), the host
+  ends its write side and discards the input until EOF, for 1 s at most. Then it closes
+  the connection. A close with unread input sends a TCP reset, and the client can lose
+  the output. The connection does not count for the limits of section 9.2 during this time.
+  At most `max_conns` connections do this at the same time. The host closes each other
+  connection at once.
 - It exits with status 1 after an error of the checks or of `listen`.
 - It runs until SIGINT or SIGTERM. Then it closes the listener and the connections and exits
   with status 0.
