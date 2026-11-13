@@ -89,7 +89,7 @@ func (p *parser) screen(v any) {
 		path := []string{"screen", key}
 		switch key {
 		case "width":
-			w, err := widthLimits(v)
+			w, err := screen.ParseWidth(v)
 			if err != nil {
 				p.errorf(path, "screen.width: %v", err)
 				continue
@@ -110,20 +110,6 @@ func (p *parser) screen(v any) {
 			p.errorf(path, "unknown key \"screen.%s\"", key)
 		}
 	}
-}
-
-func widthLimits(v any) (screen.WidthLimits, error) {
-	a, ok := v.([]any)
-	if !ok || len(a) != 2 {
-		return screen.WidthLimits{}, errors.New("must be an array of 2 integers")
-	}
-	lo, ok1 := a[0].(int64)
-	hi, ok2 := a[1].(int64)
-	if !ok1 || !ok2 {
-		return screen.WidthLimits{}, errors.New("must be an array of 2 integers")
-	}
-	w := screen.WidthLimits{Min: int(lo), Max: int(hi)}
-	return w, w.Check()
 }
 
 func checkText(s string) error {

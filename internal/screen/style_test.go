@@ -46,3 +46,15 @@ func TestStyleString(t *testing.T) {
 		t.Errorf("String = %q, want %q", got, want)
 	}
 }
+
+func TestSetStyleApply(t *testing.T) {
+	cur := Style{Fg: IndexColour(3), Bg: IndexColour(5), Attr: Underline}
+	theme, _ := ParseStyle("15/4 bold")
+	colour, _ := ParseStyle("/1")
+	if got := (SetStyle{Spec: theme, Whole: true}).Apply(cur).String(); got != "15/4 bold" {
+		t.Errorf("theme style: %s", got)
+	}
+	if got := (SetStyle{Spec: colour}).Apply(cur).String(); got != "3/1 underline" {
+		t.Errorf("colour change: %s", got)
+	}
+}

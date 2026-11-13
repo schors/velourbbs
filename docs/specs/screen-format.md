@@ -26,6 +26,7 @@ The limits of section 10 bound the memory and the time for each file and each re
 - `<name>` matches `[a-z0-9][a-z0-9_-]*`. Example: `main_wide`.
 - A "narrow screen" is a screen that the `narrow` key of another screen names (section 6.1).
 - An `.ans` file is art only. Only an art insert in a BBS template shows it.
+- A `.bbt` or `.ans` file that is not a regular file is an error.
 
 ### 2.1. Characters
 
@@ -86,7 +87,7 @@ This specification parses `when` as a condition (section 5) and keeps `key` and 
 
 ### 3.3. Tokens
 
-`{` starts a token when a letter, a space, `#`, `/`, `!`, `>` or `@` follows it.
+`{` starts a token when an ASCII letter, a space, `#`, `/`, `!`, `>` or `@` follows it.
 Each other `{` is a plain character. In the body, `{{` gives a plain `{`.
 A token ends at the first `}` on the same line. A token without `}` is an error.
 Section 8.4 has the rule for art.
@@ -197,7 +198,7 @@ string  = '"' { any character except '"' and '}' } '"' ;
 
 The body gives rows in source order:
 
-- The content of a false block gives nothing: no text, no art and no include.
+- The content of a false block gives nothing: no text, no line end, no art and no include.
 - A source line with a block token gives no row when it has only spaces after the evaluation.
 - An art insert gives the rows of the art. Each row starts at the left edge of the screen area.
   The host cuts the art at W. `bbs check` warns when the art is wider than `max`.
@@ -221,7 +222,8 @@ The body gives rows in source order:
 - The More row is `[screen] more` in `bbs.toml`, in the theme style `more`,
   at the left edge of the screen area. The default text is `-- More --`.
 - The host sends no line end after the last row of a page, so the terminal does not scroll.
-- The model keeps the file, the line and the column of each token. `bbs check` uses them.
+- The model keeps the file, the line and the column of each field, style, `{#if}`, include
+  and art insert token. `bbs check` uses them.
 
 ## 7. Colours and styles
 
@@ -384,8 +386,11 @@ The style of a written cell, in this order:
 - It reports all errors and warnings, not only the first, up to the limit of section 10.
   It exits with status 1 after an error.
 - An error has the form `<file>:<row>:<col>: <message>`, with 1-based numbers.
+  In a `.bbt` file, the column counts code points.
   For art, the row and the column are grid positions, as the art editor shows them.
   A warning has `warning: ` before the message.
+- A check of a fragment, an art file or a narrow screen can depend on the screen that uses it:
+  on its aliases, its items or its width limits. Such an error starts with `screen "<name>": `.
 - The host runs the same checks at start. An error stops the start.
 
 Examples:
@@ -436,7 +441,10 @@ styles
 |---|---|
 | `.bbt` or `.ans` file | 1 MB. |
 | Art grid | 255 columns, 1000 rows. |
-| Body of a screen after includes | 10000 lines. An art insert counts its rows. |
+| Body of a screen after includes | 10000 lines and 1 MB. An include or an art insert counts its own line, and the lines of the fragment or the rows of the art. |
+| All screens after includes | 160000 lines and 16 MB. |
+| Nesting of blocks in a file | 100 levels. Then the load of the file stops. |
+| Nesting of includes | 100 levels. |
 | Rendered screen | 10000 rows. |
 | Grapheme | 32 bytes. |
 | Errors and warnings of one file | 100. Then one error `too many diagnostics`, and the load of the file stops. |
@@ -450,9 +458,9 @@ styles
 | Package | Content |
 |---|---|
 | `cmd/bbs` | The commands `check` and `preview`. |
-| `internal/bbt` | The BBS template parser, the front matter and the includes. |
+| `internal/bbt` | The BBS template parser, the token scanner, the front matter and the includes. |
 | `internal/art` | The `.ans` loader and SAUCE. |
-| `internal/screen` | Cells, colours, styles, the token scanner, the registry, conditions, layout, render, cell dump. |
+| `internal/screen` | Cells, colours, styles, the screen model, the registry, conditions, layout, render, cell dump. |
 | `internal/config` | `bbs.toml`. |
 | `internal/tomlpos` | The TOML adapter: the values and the key positions. |
 

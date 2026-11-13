@@ -2,6 +2,7 @@ package screen
 
 import (
 	"bytes"
+	"io/fs"
 	"testing"
 	"testing/fstest"
 )
@@ -19,5 +20,17 @@ func TestReadFile(t *testing.T) {
 	}
 	if _, err := ReadFile(fsys, "none.bbt"); err == nil {
 		t.Error("missing file: no error")
+	}
+	fsys["fifo.bbt"] = &fstest.MapFile{Mode: fs.ModeNamedPipe}
+	if _, err := ReadFile(fsys, "fifo.bbt"); err == nil || err.Error() != "not a regular file" {
+		t.Errorf("fifo: %v", err)
+	}
+}
+
+func TestValidPrefix(t *testing.T) {
+	for in, want := range map[string]int{"": 0, "aя": 3, "a\xffb": 1, "я\xd1": 2} {
+		if got := ValidPrefix([]byte(in)); got != want {
+			t.Errorf("%q: %d, want %d", in, got, want)
+		}
 	}
 }
