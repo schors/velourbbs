@@ -60,15 +60,23 @@ func Load(fsys fs.FS, theme map[string]screen.Style, width screen.WidthLimits) (
 	l.narrow(units)
 	for _, e := range entries {
 		name := path.Join("screens", e.Name())
-		used := true
+		var used bool
 		switch {
-		case e.IsDir():
 		case strings.HasPrefix(e.Name(), "_") && strings.HasSuffix(e.Name(), ".bbt"):
 			_, used = l.files[name]
 		case strings.HasSuffix(e.Name(), ".ans"):
 			_, used = l.arts[name]
+		case strings.HasSuffix(e.Name(), ".bbt"):
+			used = !e.IsDir() // the screen pass reads each screen file
+		default:
+			continue
 		}
-		if !used {
+		if used {
+			continue // its load reports a file that is not a regular file (section 2)
+		}
+		if info, err := fs.Stat(fsys, name); err == nil && !info.Mode().IsRegular() {
+			l.fd(name).Errorf(1, 1, "not a regular file")
+		} else {
 			l.fd(name).Warnf(1, 1, "no screen uses this file")
 		}
 	}

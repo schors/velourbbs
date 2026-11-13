@@ -77,9 +77,23 @@ func (d *Doc) Pos(path ...string) Pos {
 	return p
 }
 
+// MaxKeys is the key limit of a document (section 10). Each part of a dotted key
+// and of a table header counts. toml.Unmarshal checks the keys for duplicates
+// in a time that grows with the square of the key count.
+const MaxKeys = 1000
+
 // Parse decodes data. The error is an *Error.
+// It counts the keys before toml.Unmarshal and stops after MaxKeys.
 func Parse(data []byte) (*Doc, error) {
 	d := &Doc{}
+	w := walker{root: &d.root, table: &d.root, lines: lineStarts(data)}
+	w.p.Reset(data)
+	for w.over == nil && w.p.NextExpression() {
+		w.expression(w.p.Expression())
+	}
+	if w.over != nil {
+		return nil, &Error{*w.over, fmt.Sprintf("too many keys: the limit is %d", MaxKeys)}
+	}
 	if err := toml.Unmarshal(data, &d.Values); err != nil {
 		var de *toml.DecodeError
 		if errors.As(err, &de) {
@@ -88,17 +102,12 @@ func Parse(data []byte) (*Doc, error) {
 		}
 		return nil, &Error{Pos{1, 1}, err.Error()}
 	}
-	if d.Values == nil {
-		d.Values = map[string]any{}
-	}
-	w := walker{root: &d.root, table: &d.root, lines: lineStarts(data)}
-	w.p.Reset(data)
-	for w.p.NextExpression() {
-		w.expression(w.p.Expression())
-	}
 	if err := w.p.Error(); err != nil {
 		// toml.Unmarshal accepted the document, so this is a defect of go-toml.
 		return nil, &Error{Pos{1, 1}, err.Error()}
+	}
+	if d.Values == nil {
+		d.Values = map[string]any{}
 	}
 	return d, nil
 }
@@ -108,6 +117,8 @@ type walker struct {
 	root  *node
 	table *node // the current table
 	lines []int // the offset of each line start
+	keys  int   // the count of key parts
+	over  *Pos  // the first key part over MaxKeys
 }
 
 func (w *walker) expression(e *unstable.Node) {
@@ -132,7 +143,11 @@ func (w *walker) expression(e *unstable.Node) {
 func (w *walker) key(n *node, e *unstable.Node, last bool) *node {
 	for it := e.Key(); it.Next(); {
 		k := it.Node()
-		n = n.child(string(k.Data), w.pos(k))
+		pos := w.pos(k)
+		if w.keys++; w.keys > MaxKeys && w.over == nil {
+			w.over = &pos
+		}
+		n = n.child(string(k.Data), pos)
 		if n.tables > 0 && (last || !it.IsLast()) {
 			n = n.kids[strconv.Itoa(n.tables-1)]
 		}

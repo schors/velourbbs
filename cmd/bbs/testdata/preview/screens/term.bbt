@@ -1,0 +1,10 @@
++++
+width = [30, 40]
+narrow = "term_small"
+[[item]]
+key = "W"
+do = "goto wide"
+when = "term.cols >= 25"
++++
+{term.type} {term.colors}
+{#if item.W}[W]ide{#else}narrow{/if}

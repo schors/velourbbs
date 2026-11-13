@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -138,5 +139,18 @@ func TestTypeErrors(t *testing.T) {
 		if got := messages(ds); !slices.Equal(got, []string{tt.want}) {
 			t.Errorf("Parse(%q) = %q, want %q", tt.data, got, tt.want)
 		}
+	}
+}
+
+func TestDiagLimit(t *testing.T) {
+	var b strings.Builder
+	for i := range 2 * screen.MaxFileDiags {
+		fmt.Fprintf(&b, "k%d = 1\n", i)
+	}
+	_, ds := Parse("bbs.toml", []byte(b.String()))
+	got := messages(ds)
+	if len(got) != screen.MaxFileDiags+1 || got[0] != `bbs.toml:1:1: unknown key "k0"` ||
+		got[len(got)-1] != "bbs.toml:101:1: too many diagnostics" {
+		t.Errorf("%d diags, first %q, last %q", len(got), got[0], got[len(got)-1])
 	}
 }

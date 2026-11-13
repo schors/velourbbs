@@ -1,6 +1,7 @@
 package screen
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -102,4 +103,29 @@ func text(gs []Grapheme) string {
 		b.WriteString(g.Text)
 	}
 	return b.String()
+}
+
+func TestTermCheck(t *testing.T) {
+	ok := Term{Cols: 80, Rows: 25, Colors: 16}
+	tests := []struct {
+		change func(*Term)
+		err    string
+	}{
+		{func(*Term) {}, ""},
+		{func(t *Term) { t.Cols, t.Rows, t.Colors = 20, 10, 256 }, ""},
+		{func(t *Term) { t.Cols, t.Rows, t.Colors = 255, 100, 16777216 }, ""},
+		{func(t *Term) { t.Cols = 19 }, "term.cols is 19, must be from 20 to 255"},
+		{func(t *Term) { t.Cols = 256 }, "term.cols is 256, must be from 20 to 255"},
+		{func(t *Term) { t.Rows = 9 }, "term.rows is 9, must be from 10 to 100"},
+		{func(t *Term) { t.Rows = 101 }, "term.rows is 101, must be from 10 to 100"},
+		{func(t *Term) { t.Colors = 8 }, "term.colors is 8, must be 16, 256 or 16777216"},
+	}
+	for _, tt := range tests {
+		term := ok
+		tt.change(&term)
+		err := term.Check()
+		if got := fmt.Sprint(err); err == nil && tt.err != "" || err != nil && got != tt.err {
+			t.Errorf("%+v: error %v, want %q", term, err, tt.err)
+		}
+	}
 }

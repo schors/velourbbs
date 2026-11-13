@@ -8,7 +8,7 @@ import (
 	"unicode/utf8"
 )
 
-// MaxFileBytes is the size limit of a .bbt or an .ans file (section 10).
+// MaxFileBytes is the size limit of a .bbt, an .ans or the bbs.toml file (section 10).
 const MaxFileBytes = 1 << 20
 
 // BOM is the UTF-8 byte order mark. The loaders remove it.

@@ -1,0 +1,7 @@
++++
+[[item]]
+key = "G"
+do = "logoff"
++++
+{!title}Welcome!{!}
+{!14}[G]oodbye

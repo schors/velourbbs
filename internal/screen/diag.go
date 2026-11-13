@@ -4,6 +4,9 @@ import (
 	"cmp"
 	"fmt"
 	"slices"
+	"strconv"
+	"strings"
+	"unicode/utf8"
 )
 
 // Diag is an error or a warning in a file (section 9.1).
@@ -16,11 +19,37 @@ type Diag struct {
 }
 
 // String gives the form "<file>:<row>:<col>: [warning: ]<message>".
+// The file name and the message can hold untrusted data, so String escapes
+// each byte of invalid UTF-8 and each rune that is not printable, as Go does in a quoted string.
+// Then a diagnostic cannot write a control sequence or a second line.
 func (d Diag) String() string {
+	var s string
 	if d.Warning {
-		return fmt.Sprintf("%s:%d:%d: warning: %s", d.File, d.Row, d.Col, d.Msg)
+		s = fmt.Sprintf("%s:%d:%d: warning: %s", d.File, d.Row, d.Col, d.Msg)
+	} else {
+		s = fmt.Sprintf("%s:%d:%d: %s", d.File, d.Row, d.Col, d.Msg)
 	}
-	return fmt.Sprintf("%s:%d:%d: %s", d.File, d.Row, d.Col, d.Msg)
+	return escape(s)
+}
+
+// escape replaces each byte of invalid UTF-8 and each rune that is not printable
+// with its Go escape sequence.
+func escape(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); {
+		r, n := utf8.DecodeRuneInString(s[i:])
+		switch {
+		case r == utf8.RuneError && n == 1:
+			fmt.Fprintf(&b, `\x%02x`, s[i])
+		case !strconv.IsPrint(r):
+			q := strconv.QuoteRune(r)
+			b.WriteString(q[1 : len(q)-1])
+		default:
+			b.WriteString(s[i : i+n])
+		}
+		i += n
+	}
+	return b.String()
 }
 
 // Diags collects the diagnostics of a load.

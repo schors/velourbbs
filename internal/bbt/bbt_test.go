@@ -3,6 +3,7 @@ package bbt_test
 import (
 	"encoding/binary"
 	"fmt"
+	"io/fs"
 	"slices"
 	"strings"
 	"testing"
@@ -440,6 +441,32 @@ func TestNarrow(t *testing.T) {
 		if !slices.Equal(msgs, tt.want) {
 			t.Errorf("%q:\n got %q\nwant %q", tt.files, msgs, tt.want)
 		}
+	}
+}
+
+// An unused .bbt or .ans file that is not a regular file is an error (section 2).
+func TestNotRegular(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml":          {},
+		"screens/s.bbt":     {Data: []byte("x")},
+		"screens/_f.bbt":    {Mode: fs.ModeNamedPipe},
+		"screens/a.ans":     {Mode: fs.ModeNamedPipe},
+		"screens/d.bbt/x":   {},
+		"screens/dir/x.txt": {},
+		"screens/notes.txt": {Mode: fs.ModeNamedPipe},
+	}
+	_, ds := bbt.Load(fsys, theme, defaultWidth)
+	var got []string
+	for _, d := range ds {
+		got = append(got, d.String())
+	}
+	want := []string{
+		"screens/_f.bbt:1:1: not a regular file",
+		"screens/a.ans:1:1: not a regular file",
+		"screens/d.bbt:1:1: not a regular file",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("got %q\nwant %q", got, want)
 	}
 }
 
