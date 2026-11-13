@@ -1,0 +1,13 @@
++++
+[fields]
+w = "term.cols"
+[[item]]
+key = "A"
+do = "goto about"
+[[item]]
+key = "S"
+when = "term.colours >= 256"
+do = "goto setup"
++++
+{>main.ans}
+{!title}[A]bout [S]etup

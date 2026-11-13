@@ -383,19 +383,25 @@ The style of a written cell, in this order:
 
 ## 9. Commands
 
+- A missing or unknown command, or an invalid argument of a command, is a usage error.
+  `bbs` exits with status 2 after a usage error.
+
 ### 9.1. `bbs check`
 
 - `bbs check` reads `bbs.toml` and each file in `screens/`.
   It checks each screen with the fragments and the art that the screen uses.
 - It warns about a fragment or an art file that no screen uses.
 - It reports all errors and warnings, not only the first, up to the limit of section 10.
-  It exits with status 1 after an error.
+  It writes them to the standard error. It exits with status 1 after an error.
 - An error has the form `<file>:<row>:<col>: <message>`, with 1-based numbers.
   In a `.bbt` file, the column counts code points.
   For art, the row and the column are grid positions, as the art editor shows them.
   A warning has `warning: ` before the message.
+- A diagnostic escapes each invalid UTF-8 byte and each rune that is not printable,
+  as a Go quoted string does. Example: a file name with ESC gives `\x1b`.
 - A check of a fragment, an art file or a narrow screen can depend on the screen that uses it:
   on its aliases, its items or its width limits. Such an error starts with `screen "<name>": `.
+- `bbs.toml` must exist.
 - The host runs the same checks at start. An error stops the start.
 
 Examples:
@@ -403,7 +409,7 @@ Examples:
 ```
 screens/main.bbt:9:1: item "S": when: unknown field "term.colours"
 screens/main.ans:4:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16
-screens/about.bbt:3:1: warning: art "logo.ans" is 132 cells wide, max width is 100
+screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100
 ```
 
 ### 9.2. `bbs preview`
@@ -411,10 +417,14 @@ screens/about.bbt:3:1: warning: art "logo.ans" is 132 cells wide, max width is 1
 `bbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]...` renders a screen
 and writes its cell dump to the standard output.
 
+- It does the checks of `bbs check` first. After an error it writes no dump
+  and exits with status 1.
 - The default size is 80x25. `--size` is the only way to set the size.
 - `--set` sets `term.type` or `term.colors`. Example: `--set term.colors=256`.
   The defaults are `ansi` and 16. `term.charset` is `utf-8`.
 - `item.<KEY>` comes from the items of the screen and their `when`.
+  For the narrow screen, the items are the items of the screen.
+- A size outside the ranges of section 4.1 and an unknown screen are invalid arguments.
 
 ### 9.3. Cell dump
 
@@ -444,7 +454,8 @@ styles
 
 | Item | Limit |
 |---|---|
-| `.bbt` or `.ans` file | 1 MB. |
+| `.bbt`, `.ans` or `bbs.toml` file | 1 MB. |
+| TOML document: `bbs.toml` or a front matter | 1000 keys. Each part of a dotted key and of a table header counts. Then the parse of the document stops. |
 | Art grid | 255 columns, 1000 rows. |
 | Body of a screen after includes | 10000 lines and 1 MB. An include or an art insert counts its own line, and the lines of the fragment or the rows of the art. |
 | All screens after includes | 160000 lines and 16 MB. |

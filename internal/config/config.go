@@ -31,6 +31,7 @@ var (
 
 // Parse reads bbs.toml from data. file is the name in the diagnostics.
 // An unknown key is an error, as in the front matter of a screen (section 3.2).
+// It gives at most screen.MaxFileDiags diagnostics (section 10).
 // Parse returns the defaults for each value with an error.
 func Parse(file string, data []byte) (Config, screen.Diags) {
 	p := parser{file: file, cfg: Config{Width: defaultWidth, More: defaultMore}}
@@ -56,8 +57,17 @@ func Parse(file string, data []byte) (Config, screen.Diags) {
 		}
 	}
 	p.theme(theme)
+	// The map order of the keys is random, so the limit of section 10 applies after the sort.
 	p.diags.Sort()
-	return p.cfg, p.diags
+	fd := screen.FileDiags{File: file}
+	for _, d := range p.diags {
+		if d.Warning {
+			fd.Warnf(d.Row, d.Col, "%s", d.Msg)
+		} else {
+			fd.Errorf(d.Row, d.Col, "%s", d.Msg)
+		}
+	}
+	return p.cfg, fd.Diags
 }
 
 type parser struct {

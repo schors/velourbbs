@@ -90,16 +90,20 @@ func TestImplicitTables(t *testing.T) {
 // The memory of Parse grows linearly with the depth of nesting.
 // A quadratic growth gives a ratio near 16 for 4 times the depth.
 func TestDeepNesting(t *testing.T) {
-	docs := map[string]func(int) string{
-		"arrays": func(n int) string {
+	docs := map[string]struct {
+		doc   func(int) string
+		depth int // the small depth; the large depth is 4 times it
+	}{
+		"arrays": {func(n int) string {
 			return "a = " + strings.Repeat("[", n) + strings.Repeat("]", n)
-		},
-		"dotted header": func(n int) string {
+		}, 1000},
+		// The header and the keys stay under MaxKeys.
+		"dotted header": {func(n int) string {
 			return "[" + strings.Repeat("a.", n) + "a]\n" + keys(n)
-		},
+		}, MaxKeys / 10},
 	}
-	for name, doc := range docs {
-		small, large := allocBytes(t, doc(1000)), allocBytes(t, doc(4000))
+	for name, d := range docs {
+		small, large := allocBytes(t, d.doc(d.depth)), allocBytes(t, d.doc(4*d.depth))
 		if ratio := float64(large) / float64(small); ratio > 8 {
 			t.Errorf("%s: 4 times the depth uses %.1f times the memory", name, ratio)
 		}
@@ -152,5 +156,35 @@ func TestEmpty(t *testing.T) {
 	d, err := Parse(nil)
 	if err != nil || d.Values == nil || len(d.Values) != 0 {
 		t.Errorf("Parse(nil) = %v, %v", d, err)
+	}
+}
+
+func TestKeyLimit(t *testing.T) {
+	lines := func(n int, format string) string {
+		var b strings.Builder
+		for i := range n {
+			fmt.Fprintf(&b, format, i)
+		}
+		return b.String()
+	}
+	tests := []struct {
+		name, data string
+		err        Pos // the zero Pos for no error
+	}{
+		{"at the limit", lines(MaxKeys, "k%d = 1\n"), Pos{}},
+		{"over the limit", lines(MaxKeys+1, "k%d = 1\n"), Pos{MaxKeys + 1, 1}},
+		{"dotted keys", lines(MaxKeys/2, "a.k%d = 1\n") + "b = 1\n", Pos{MaxKeys/2 + 1, 1}},
+		{"table headers", lines(MaxKeys/2, "[t%d]\nk = 1\n") + "[u]\n", Pos{MaxKeys + 1, 2}},
+		{"inline table", "t = {" + strings.TrimSuffix(lines(MaxKeys, "k%d = 1, "), ", ") + "}\n", Pos{1, 1 + 5 + len(lines(MaxKeys-1, "k%d = 1, "))}},
+	}
+	for _, tt := range tests {
+		_, err := Parse([]byte(tt.data))
+		var e *Error
+		switch {
+		case tt.err == Pos{} && err != nil:
+			t.Errorf("%s: %v, want no error", tt.name, err)
+		case tt.err != Pos{} && (!errors.As(err, &e) || e.Pos != tt.err || !strings.HasPrefix(e.Msg, "too many keys")):
+			t.Errorf("%s: %v, want too many keys at %v", tt.name, err, tt.err)
+		}
 	}
 }

@@ -57,3 +57,11 @@ func TestFileDiags(t *testing.T) {
 		t.Errorf("%d diagnostics after Full", len(f.Diags))
 	}
 }
+
+func TestDiagEscape(t *testing.T) {
+	d := Diag{File: "screens/\x1b]0;x\a\x1b[2J.ans", Row: 1, Col: 1, Warning: true, Msg: "a\nb\xffc é"}
+	want := `screens/\x1b]0;x\a\x1b[2J.ans:1:1: warning: a\nb\xffc é`
+	if got := d.String(); got != want {
+		t.Errorf("String() = %s, want %s", got, want)
+	}
+}
