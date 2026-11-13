@@ -1,3 +1,3 @@
-// Package screen holds the screen model: cells, colours, styles, the text rules
-// and the diagnostics. Specification: docs/specs/screen-format.md.
+// Package screen holds the screen model: cells, colours, styles, the text rules,
+// the diagnostics and the render. Specification: docs/specs/screen-format.md.
 package screen
