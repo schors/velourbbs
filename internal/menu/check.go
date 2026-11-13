@@ -1,5 +1,5 @@
-// Package menu checks the menus between screens.
-// Specification: docs/specs/menu-nav.md, section 7.
+// Package menu checks the menus between screens and runs the session.
+// Specification: docs/specs/menu-nav.md, sections 6 and 7.
 package menu
 
 import (
@@ -43,12 +43,12 @@ func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags
 			if it.Do.Op != screen.Goto {
 				continue
 			}
-			if err := checkTarget(screens, it.Do.Screen); err != nil {
+			if err := CheckTarget(screens, it.Do.Screen); err != nil {
 				fd(it.DoPos.File).Errorf(it.DoPos.Line, it.DoPos.Col, "item %q: do: %v", it.Key, err)
 			}
 		}
 	}
-	if err := checkTarget(screens, cfg.Start); err != nil {
+	if err := CheckTarget(screens, cfg.Start); err != nil {
 		p := cfg.StartPos
 		fd(p.File).Errorf(p.Line, p.Col, "menu: start: %v", err)
 	}
@@ -60,8 +60,8 @@ func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags
 	return out
 }
 
-// checkTarget checks the screen of a goto or of the start: it must exist and have items.
-func checkTarget(screens map[string]*screen.Screen, name string) error {
+// CheckTarget checks the screen of a goto or of the start: it must exist and have items.
+func CheckTarget(screens map[string]*screen.Screen, name string) error {
 	s, ok := screens[name]
 	switch {
 	case !ok:

@@ -66,3 +66,15 @@ func Latin(r rune) (l rune, ok bool) {
 	l, ok = latin[r]
 	return l, ok
 }
+
+// Map gives the key of the menu match for a key from the terminal (section 3.3, step 1):
+// a Cyrillic letter gives its Latin letter (section 3.2), and the case rule applies.
+// k is a key name of section 3.1 or one character.
+func Map(k string) string {
+	if r := []rune(k); len(r) == 1 {
+		if l, ok := Latin(r[0]); ok {
+			return string(l)
+		}
+	}
+	return Upper(k)
+}
