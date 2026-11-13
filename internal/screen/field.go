@@ -167,20 +167,20 @@ type Term struct {
 
 // The ranges of term.cols and term.rows (section 4.1).
 const (
-	minCols = 20
-	maxCols = MaxWidth
-	minRows = 10
-	maxRows = 100
+	MinCols = 20
+	MaxCols = MaxWidth
+	MinRows = 10
+	MaxRows = 100
 )
 
 // Check reports an error when term.cols, term.rows or term.colors
 // is outside the values of section 4.1.
 func (t Term) Check() error {
 	switch {
-	case t.Cols < minCols || t.Cols > maxCols:
-		return fmt.Errorf("term.cols is %d, must be from %d to %d", t.Cols, minCols, maxCols)
-	case t.Rows < minRows || t.Rows > maxRows:
-		return fmt.Errorf("term.rows is %d, must be from %d to %d", t.Rows, minRows, maxRows)
+	case t.Cols < MinCols || t.Cols > MaxCols:
+		return fmt.Errorf("term.cols is %d, must be from %d to %d", t.Cols, MinCols, MaxCols)
+	case t.Rows < MinRows || t.Rows > MaxRows:
+		return fmt.Errorf("term.rows is %d, must be from %d to %d", t.Rows, MinRows, MaxRows)
 	case t.Colors != 16 && t.Colors != 256 && t.Colors != 1<<24:
 		return fmt.Errorf("term.colors is %d, must be 16, 256 or 16777216", t.Colors)
 	}
