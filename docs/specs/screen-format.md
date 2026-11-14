@@ -394,19 +394,20 @@ The style of a written cell, in this order:
 - It reports all errors and warnings, not only the first, up to the limit of section 10.
   A TOML document is an exception (below).
   It writes them to the standard error. It exits with status 1 after an error.
-- A TOML document (`bbs.toml` or a front matter) gives the first of these:
-  the first syntax or type error; else the first invalid value; else all unknown keys.
-  Only a document without these gives its other errors.
-- An "invalid value" is an invalid style, key, `do` or address.
-- Each of these has the position of its key or value. The message of a type error
-  or an invalid value starts with the dotted key. In an inline table, the key ends at the table.
+- A TOML document (`bbs.toml` or a front matter) gives one syntax or type error;
+  else all unknown keys. Only a document without these gives its other errors.
 - A key that differs from a known key only in case is an unknown key. A table `[item]`
-  in place of `[[item]]` is a type error. These errors and a type error in a nested array
-  have the position of the first line of the document: go-toml gives no position for them.
+  in place of `[[item]]` is a type error.
+- A syntax error has the position that go-toml gives. A type error and an unknown key
+  have the position of the key or value. The message of a type error starts with
+  the dotted key. In an inline table, the key ends at the table.
+- A key that differs only in case, `[item]` and a type error in a nested array
+  have the position of the first line of the document.
 - Each other error of a TOML document has the position of the first line of the document:
   1:1 in `bbs.toml`, 2:1 in a front matter. The message names the key. Examples: an invalid
-  `width`, an integer out of its range, an invalid alias or style name, an error of `when`,
-  an error between keys, or between a key and another file or screen.
+  style, item key, `do`, address or `width`, an integer out of its range, an invalid alias
+  or style name, an error of `when`, an error between keys, or between a key and another
+  file or screen.
 - An error has the form `<file>:<row>:<col>: <message>`, with 1-based numbers.
   In a `.bbt` file, the column counts code points.
   For art, the row and the column are grid positions, as the art editor shows them.
@@ -489,17 +490,7 @@ styles
 
 ## 11. Code
 
-| Package | Content |
-|---|---|
-| `cmd/bbs` | The commands `check`, `preview` and `serve`. |
-| `internal/bbt` | The BBS template parser, the token scanner, the front matter and the includes. |
-| `internal/art` | The `.ans` loader and SAUCE. |
-| `internal/screen` | Cells, colours, styles, the screen model, the registry, conditions, layout, render, cell dump. |
-| `internal/config` | `bbs.toml`. |
-
 - The host language is Go. The Go module is `newbbs`.
-- [menu-nav](menu-nav.md), section 9, and [telnet-term](telnet-term.md), section 11,
-  have the other packages.
 - The model is immutable after the load. Sessions read it at the same time without locks.
 - The checks are `go vet ./...`, `go test ./...` and `golangci-lint run ./...`
   (golangci-lint 2.15.0, configuration in `.golangci.yml`).
@@ -508,7 +499,7 @@ styles
 
 | Task | Choice | Compared with | Reason |
 |---|---|---|---|
-| TOML | `github.com/pelletier/go-toml/v2` | `github.com/BurntSushi/toml` | The decode into structs with `DisallowUnknownFields` gives the position of each unknown key and of a type or value error (section 9.1). Value checks run in `UnmarshalText`. `BurntSushi/toml` gives no positions of unknown keys. |
+| TOML | `github.com/pelletier/go-toml/v2` | `github.com/BurntSushi/toml` | The decode into structs with `DisallowUnknownFields` gives the positions of unknown keys and type errors (section 9.1). `BurntSushi/toml` gives no positions of unknown keys. |
 | Graphemes and width | `github.com/clipperhouse/displaywidth` | `github.com/rivo/uniseg`, `github.com/mattn/go-runewidth` | One iterator gives each grapheme with its width, the cell model. The release has Unicode 17; `uniseg` has Unicode 15. `go-runewidth` measures runes. |
 | ANSI art and SAUCE | Own parser | `github.com/charmbracelet/x/ansi` | The loader needs about 12 sequences and the editor rules of section 8. A terminal parser adds a large dependency. |
 | Conditions | Own parser | `github.com/expr-lang/expr` | The grammar has 7 rules and static types from the registry. `expr` adds arithmetic and functions that the format excludes. |

@@ -159,11 +159,10 @@ start = "welcome"
 - items in `goodbye`;
 - a start screen that does not exist or has no items.
 
-- An invalid key and an invalid `do` are invalid values
-  ([screen-format](screen-format.md), section 9.1). They have the position of the value.
-- Each other error of an item has the position 2:1. It starts with `item "<KEY>"`,
-  with the key in upper case. An item without a key gives `item <n>`,
-  the 1-based number of the item.
+- An error of the list above in an item has the position of the first line
+  of the front matter ([screen-format](screen-format.md), section 9.1).
+  It starts with `item "<KEY>"`, with the key in upper case.
+  An item without a valid key gives `item <n>`, the 1-based number of the item.
 - An error of a screen without items has the position 1:1.
 - An error of the start screen has the position 1:1 in `bbs.toml`.
 - The checks of a `goto`, of a screen without items and of the start screen use all screens.
@@ -173,7 +172,7 @@ Examples:
 
 ```
 screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"
-screens/main.bbt:7:7: item.key: invalid key "?"
+screens/main.bbt:2:1: item 2: key: invalid key "?"
 screens/main.bbt:2:1: item "S": key: duplicate key
 screens/main.bbt:2:1: item 3: key is missing
 screens/about.bbt:1:1: screen has no items
