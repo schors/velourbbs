@@ -1,4 +1,4 @@
-// Package art loads .ans files into the art model of internal/screen.
+// Package art loads .ans files in the flat form into the art model of internal/screen.
 // Specification: docs/specs/screen-format.md, section 8.
 package art
 
@@ -12,12 +12,8 @@ import (
 // MaxRows is the row limit of the art grid (section 10).
 const MaxRows = 1000
 
-// MaxPlayCells is the limit of written and erased cells of the play: 16 grids
-// of 255 columns and 1000 rows (section 10).
-const MaxPlayCells = 16 * screen.MaxWidth * MaxRows
-
-// defaultWidth is the art width without a SAUCE width (section 8.2).
-const defaultWidth = 80
+// errNotFlat is the error of the steps 1, 2 and 4 of section 8.2.
+const errNotFlat = "not in the flat form, convert it with bbs art import"
 
 // Load reads the file name of fsys and parses it. name is also the file in the diagnostics.
 // fields is the aliases of bbs.toml (section 4.2).
@@ -32,54 +28,38 @@ func Load(fsys fs.FS, name string, fields screen.Fields) (*screen.Art, screen.Di
 	return Parse(name, data, fields)
 }
 
-// Parse loads the contents of an .ans file (section 8) and resolves its fields with
-// the aliases fields. The art is nil when the diagnostics have an error.
+// Parse loads the contents of an .ans file in the flat form (section 8) and resolves
+// its fields with the aliases fields. The art is nil when the diagnostics have an error.
 func Parse(name string, file []byte, fields screen.Fields) (*screen.Art, screen.Diags) {
 	d := &screen.FileDiags{File: name}
 	if len(file) > screen.MaxFileBytes {
 		d.Errorf(1, 1, "file is over %d bytes", screen.MaxFileBytes)
 		return nil, d.Diags
 	}
-	data, rec := splitSauce(file)
-	hasBOM := bytes.HasPrefix(data, screen.BOM)
-	data = bytes.TrimPrefix(data, screen.BOM)
-
-	width, minHeight, ice := defaultWidth, 0, false
-	if rec != nil && rec.dataType == 1 && rec.fileType == 1 { // a character SAUCE
-		if rec.tInfo1 > 0 {
-			width = rec.tInfo1
-		}
-		minHeight = rec.tInfo2
-		ice = rec.tFlags&1 != 0
-	}
-	if width > screen.MaxWidth {
-		d.Errorf(1, 1, "SAUCE width %d is over %d", width, screen.MaxWidth)
-	}
-	if minHeight > MaxRows {
-		d.Errorf(1, 1, "SAUCE height %d is over %d rows", minHeight, MaxRows)
-	}
-	if d.Diags.HasErrors() {
+	data, rec := SplitSauce(file)
+	data = bytes.TrimSuffix(data, []byte{0x1a})
+	if !isFlatSauce(rec) || !bytes.HasPrefix(data, screen.BOM) {
+		d.Errorf(1, 1, errNotFlat)
 		return nil, d.Diags
 	}
+	data = data[len(screen.BOM):]
 
-	// The Moebius form (section 8.2, step 6) plays at the largest width
-	// and takes the art width from the rows.
-	moebius := !hasBOM && rec == nil
-	p := newPlayer(d, width, ice, moebius)
-	if moebius {
-		p.width = screen.MaxWidth
-	}
-	if !p.play(data) {
+	r := newReader(d, rec.TInfo1)
+	if !r.read(data) {
 		return nil, d.Diags
 	}
-	if moebius {
-		width = max(defaultWidth, p.maxCol)
-	}
-	art := &screen.Art{Width: width, Height: max(p.height, minHeight)}
-	art.Rows = p.grid(art.Height, width)
+	art := &screen.Art{Width: rec.TInfo1, Height: max(len(r.rows), rec.TInfo2)}
+	art.Rows = r.grid(art.Height)
 	art.Fields = findFields(d, art.Rows, fields)
 	if d.Diags.HasErrors() {
 		return nil, d.Diags
 	}
 	return art, d.Diags
+}
+
+// isFlatSauce checks the SAUCE record by section 8.2, steps 1 and 2.
+func isFlatSauce(rec *Sauce) bool {
+	return rec != nil && rec.DataType == 1 && rec.FileType == 1 &&
+		1 <= rec.TInfo1 && rec.TInfo1 <= screen.MaxWidth &&
+		rec.TInfo2 <= MaxRows && rec.TFlags&1 == 0
 }

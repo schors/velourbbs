@@ -41,13 +41,13 @@ func alias(name, path string) screen.Ref {
 	return r
 }
 
-// sauceArt gives an .ans file with a character SAUCE of the width.
+// sauceArt gives an .ans file in the flat form: a BOM, data, 0x1A and a character SAUCE of the width.
 func sauceArt(data string, width int) string {
 	r := make([]byte, 128)
 	copy(r, "SAUCE00")
 	r[94], r[95] = 1, 1
 	binary.LittleEndian.PutUint16(r[96:], uint16(width))
-	return data + "\x1a" + string(r)
+	return "\xef\xbb\xbf" + data + "\x1a" + string(r)
 }
 
 // dump loads the files of screens/, renders the screen name and gives its cell dump.
@@ -95,12 +95,12 @@ func golden(t *testing.T, name, got string) {
 }
 
 func TestRender(t *testing.T) {
-	logo := sauceArt("\x1b[1;33m{w}\x1b[0m a \x1b[44m{  w}\x1b[0m\r\nline 2", 12)
+	logo := sauceArt("\x1b[93m{w}\x1b[0m a \x1b[44m{  w}\x1b[0m\nline 2", 12)
 	w10 := "+++\nwidth = [10, 10]\n+++\n"
 	recipe := map[string]string{
 		"main.bbt":   "+++\nwidth = [20, 30]\n+++\n{#if term.cols < 30}\n{>_small}\n{#else}\n{>main.ans}\n{/if}\n",
 		"_small.bbt": "{!14}small screen text that wraps\n",
-		"main.ans":   sauceArt("\x1b[1;33mart\x1b[0m", 30),
+		"main.ans":   sauceArt("\x1b[93mart\x1b[0m", 30),
 	}
 	tests := []struct {
 		name       string
