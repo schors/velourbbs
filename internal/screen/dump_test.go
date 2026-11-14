@@ -28,10 +28,10 @@ func TestWriteDump(t *testing.T) {
 	cyan := Style{Fg: IndexColour(14), Bg: IndexColour(0)}
 	page := Page{Rows: []Row{row(80, "Welcome!", title, normal), row(80, "[G]oodbye", cyan, normal)}, Cols: 80}
 	var b strings.Builder
-	if err := WriteDump(&b, 25, slices.Values([]Page{page})); err != nil {
+	if err := WriteDump(&b, 24, slices.Values([]Page{page})); err != nil {
 		t.Fatal(err)
 	}
-	want := `page 1 80x25
+	want := `page 1 80x24
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
 styles

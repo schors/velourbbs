@@ -241,8 +241,8 @@ func TestProbeClients(t *testing.T) {
 		{"MTTS", client{will: allOpts, naws: naws(100, 30), ttype: []string{"MTTS 13"}, cpr: "1;2"},
 			term("mtts 13", 100, 30, 256)},
 		// A NAWS with 0 gives no size.
-		{"NAWS with 0", client{will: allOpts, naws: naws(0, 24), ttype: []string{"VT100"}, cpr: "1;2"},
-			term("vt100", 80, 25, 16)},
+		{"NAWS with 0", client{will: allOpts, naws: naws(0, 30), ttype: []string{"VT100"}, cpr: "1;2"},
+			term("vt100", 80, 24, 16)},
 		{"no TTYPE", client{will: []byte{telnet.OptNAWS}, naws: naws(90, 30), cpr: "1;2"},
 			term("ansi", 90, 30, 16)},
 		// A key and a CPR reply arrive before step 4: the key goes to the queue
@@ -356,7 +356,7 @@ func TestProbeNoReplies(t *testing.T) {
 		if d != to.Probe {
 			t.Errorf("the probe took %v; want %v", d, to.Probe)
 		}
-		want := screen.Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16}
+		want := screen.Term{Type: "ansi", Cols: 80, Rows: 24, Charset: "utf-8", Colors: 16}
 		if got := term.Term(); got != want {
 			t.Errorf("Term() = %+v, want %+v", got, want)
 		}
@@ -381,8 +381,8 @@ func TestProbeReplyWait(t *testing.T) {
 		if d != 2*replyWait {
 			t.Errorf("the probe took %v; want %v", d, 2*replyWait)
 		}
-		if got := term.Term(); got.Cols != 80 || got.Rows != 25 {
-			t.Errorf("Term() = %+v, want 80x25", got)
+		if got := term.Term(); got.Cols != 80 || got.Rows != 24 {
+			t.Errorf("Term() = %+v, want 80x24", got)
 		}
 	})
 }
@@ -409,8 +409,8 @@ func TestProbeLate(t *testing.T) {
 		if out := f.output(); out != string(telnet.New().Start()) {
 			t.Errorf("output %q, want only the requests", out)
 		}
-		if got := term.Term(); got.Cols != 80 || got.Rows != 25 {
-			t.Errorf("Term() = %+v, want 80x25", got)
+		if got := term.Term(); got.Cols != 80 || got.Rows != 24 {
+			t.Errorf("Term() = %+v, want 80x24", got)
 		}
 	})
 }

@@ -50,6 +50,23 @@ func TestColorDepth(t *testing.T) {
 	}
 }
 
+func TestTypeColors(t *testing.T) {
+	tests := []struct {
+		name, typ string
+		colors    int
+	}{
+		{"VT100", "vt100", screen.Colors16},
+		{"XTERM-256COLOR", "xterm-256color", screen.Colors256},
+		{"", "ansi", screen.Colors16},
+		{"\x01\x1b", "ansi", screen.Colors16},
+	}
+	for _, tt := range tests {
+		if typ, colors := TypeColors(tt.name); typ != tt.typ || colors != tt.colors {
+			t.Errorf("TypeColors(%q) = %q, %d; want %q, %d", tt.name, typ, colors, tt.typ, tt.colors)
+		}
+	}
+}
+
 func TestValues(t *testing.T) {
 	term := func(typ string, cols, rows, colors int) screen.Term {
 		return screen.Term{Type: typ, Cols: cols, Rows: rows, Charset: "utf-8", Colors: colors}
@@ -60,19 +77,19 @@ func TestValues(t *testing.T) {
 		want screen.Term
 		utf8 bool
 	}{
-		{"no replies", replies{}, term("ansi", 80, 25, 16), true},
-		{"name in lower case", replies{ttype: "XTERM", ttypeGot: true}, term("xterm", 80, 25, 256), true},
-		{"name in upper case for 16", replies{ttype: "VT100", ttypeGot: true}, term("vt100", 80, 25, 16), true},
-		{"empty name", replies{ttype: "\x01", ttypeGot: true}, term("ansi", 80, 25, 16), true},
+		{"no replies", replies{}, term("ansi", 80, 24, 16), true},
+		{"name in lower case", replies{ttype: "XTERM", ttypeGot: true}, term("xterm", 80, 24, 256), true},
+		{"name in upper case for 16", replies{ttype: "VT100", ttypeGot: true}, term("vt100", 80, 24, 16), true},
+		{"empty name", replies{ttype: "\x01", ttypeGot: true}, term("ansi", 80, 24, 16), true},
 		// The colour rules apply to term.type: the name after the cut to 40 graphemes.
 		{"long name", replies{ttype: strings.Repeat("x", 50) + "-DIRECT", ttypeGot: true},
-			term(strings.Repeat("x", 40), 80, 25, 256), true},
+			term(strings.Repeat("x", 40), 80, 24, 256), true},
 		{"NAWS size", replies{naws: telnet.NAWS{Cols: 132, Rows: 50}}, term("ansi", 132, 50, 16), true},
 		{"clamp low", replies{naws: telnet.NAWS{Cols: 5, Rows: 3}}, term("ansi", 20, 10, 16), true},
 		{"clamp high", replies{naws: telnet.NAWS{Cols: 999, Rows: 999}}, term("ansi", 255, 100, 16), true},
-		{"charset column 2", replies{cpr: CPR{1, 2}, cprGot: true}, term("ansi", 80, 25, 16), true},
-		{"charset column 3", replies{cpr: CPR{1, 3}, cprGot: true}, term("ansi", 80, 25, 16), false},
-		{"charset other column", replies{cpr: CPR{1, 4}, cprGot: true}, term("ansi", 80, 25, 16), true},
+		{"charset column 2", replies{cpr: CPR{1, 2}, cprGot: true}, term("ansi", 80, 24, 16), true},
+		{"charset column 3", replies{cpr: CPR{1, 3}, cprGot: true}, term("ansi", 80, 24, 16), false},
+		{"charset other column", replies{cpr: CPR{1, 4}, cprGot: true}, term("ansi", 80, 24, 16), true},
 	}
 	for _, tt := range tests {
 		got, utf8 := tt.r.values()

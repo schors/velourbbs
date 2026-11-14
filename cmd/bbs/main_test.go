@@ -103,7 +103,7 @@ func TestPreview(t *testing.T) {
 		// The dump of section 9.3.
 		name: "spec dump",
 		args: []string{"main"},
-		want: `page 1 80x25
+		want: `page 1 80x24
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
 styles
@@ -150,6 +150,47 @@ styles
 	}, {
 		name: "flags on both sides",
 		args: []string{"--set", "term.type=vt100", "term", "--size", "30x10"},
+		want: `page 1 30x10
+|vt100 16                      |
+|[W]ide                        |
+styles
+1: 1-30 7/0
+2: 1-30 7/0
+`,
+	}, {
+		// term.type as in a session with this TTYPE name (telnet-term, section 6).
+		name: "type gives colours",
+		args: []string{"term", "--size", "30x10", "--set", "term.type=VT100"},
+		want: `page 1 30x10
+|vt100 16                      |
+|[W]ide                        |
+styles
+1: 1-30 7/0
+2: 1-30 7/0
+`,
+	}, {
+		name: "empty type",
+		args: []string{"term", "--size", "30x10", "--set", "term.type="},
+		want: `page 1 30x10
+|ansi 16                       |
+|[W]ide                        |
+styles
+1: 1-30 7/0
+2: 1-30 7/0
+`,
+	}, {
+		name: "colours before type",
+		args: []string{"term", "--size", "30x10", "--set", "term.colors=256", "--set", "term.type=vt100"},
+		want: `page 1 30x10
+|vt100 256                     |
+|[W]ide                        |
+styles
+1: 1-30 7/0
+2: 1-30 7/0
+`,
+	}, {
+		name: "colours after type",
+		args: []string{"term", "--size", "30x10", "--set", "term.type=vt100", "--set", "term.colors=256"},
 		want: `page 1 30x10
 |vt100 256                     |
 |[W]ide                        |
@@ -219,6 +260,9 @@ func TestPreviewKeys(t *testing.T) {
 	main80 := "screen main\n" + page(80, 25, "[S]ystem info  [G]oodbye")
 	main40 := "screen main\n" + page(40, 10, "[G]oodbye")
 	sysinfo := "screen sysinfo\n" + page(80, 25, "Terminal: 80x25. Press any key.")
+	// Without --size: 80x24.
+	main24 := "screen main\n" + page(80, 24, "[S]ystem info  [G]oodbye")
+	sysinfo24 := "screen sysinfo\n" + page(80, 24, "Terminal: 80x24. Press any key.")
 	goodbye40 := "screen goodbye\n" + page(40, 10, "Goodbye!")
 	tests := []struct {
 		name   string
@@ -238,7 +282,7 @@ func TestPreviewKeys(t *testing.T) {
 	}, {
 		name: "Russian layout",
 		args: []string{"--keys", "ы", "main"},
-		want: main80 + "key S\n" + sysinfo,
+		want: main24 + "key S\n" + sysinfo24,
 	}, {
 		// S is disabled at 40 columns. main has no ANY item.
 		name: "ignored keys",

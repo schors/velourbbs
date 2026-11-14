@@ -61,8 +61,10 @@ The host keeps the state of each option for each side, as in RFC 1143:
 - A request to disable an enabled option: the host disables it and agrees.
 - The host does not answer a request that matches the current state, or that answers
   a request of the host. So the negotiation cannot loop.
-- A client that refuses an option works without it. A client that refuses character mode
-  sends a line on Enter. The host reads the keys of the line. There is no special logic.
+- A client that refuses an option works without it, except character mode.
+  The host does not support a client that refuses character mode. Such a client sends
+  a line on Enter. The host reads the keys of the line, and the Enter of the line is
+  one more key. So the next screen can run its `ANY` or `ENTER` item at once.
 
 ### 4.2. Parser
 
@@ -109,7 +111,7 @@ The host keeps the state of each option for each side, as in RFC 1143:
 ### 5.2. Size
 
 - NAWS gives the size. A value with 0 in a dimension gives no size.
-- Without a NAWS size, the size is 80x25.
+- Without a NAWS size, the size is 80x24.
 - The host clamps the size to 20–255 columns and 10–100 rows.
 - A NAWS update after the probe changes `term.cols` and `term.rows`.
   An update with 0 in a dimension does not change them.
@@ -224,7 +226,6 @@ The host reduces each colour of a cell to `term.colors` before the output:
 ### 7.4. Encoder
 
 The encoder writes each grapheme in UTF-8. 8-bit charsets are later encoders.
-No other part changes for them.
 
 ## 8. Key decoder
 
