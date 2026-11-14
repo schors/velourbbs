@@ -1,6 +1,7 @@
 // Command bbs checks and previews the screens of a BBS directory, the current directory,
-// and serves them over telnet.
-// Specification: docs/specs/screen-format.md, section 9, and docs/specs/telnet-term.md, section 10.
+// and serves them over telnet. It also converts ANSI art to the flat form.
+// Specification: docs/specs/screen-format.md, section 9, docs/specs/art-import.md, section 2,
+// and docs/specs/telnet-term.md, section 10.
 package main
 
 import (
@@ -22,6 +23,7 @@ const (
 )
 
 const usage = `usage:
+  bbs art import <input> <output>
   bbs check
   bbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]... [--keys <keys>]
   bbs serve
@@ -38,6 +40,8 @@ func run(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 	switch args[0] {
+	case "art":
+		return art(args[1:], stderr)
 	case "check":
 		return check(args[1:], fsys, stderr)
 	case "preview":
