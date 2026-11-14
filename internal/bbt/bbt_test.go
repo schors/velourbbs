@@ -10,6 +10,7 @@ import (
 	"testing/fstest"
 
 	"newbbs/internal/bbt"
+	"newbbs/internal/menu"
 	"newbbs/internal/screen"
 )
 
@@ -601,10 +602,13 @@ func TestNotRegular(t *testing.T) {
 	}
 }
 
-// FuzzLoad loads a screen with a fragment and an art file.
+// FuzzLoad loads a screen with a fragment and an art file. It renders a screen
+// without errors on the smallest terminal and reads all pages.
 func FuzzLoad(f *testing.F) {
 	f.Add([]byte("+++\n[fields]\nw = \"term.cols\"\n+++\n{#if w > 1}{>_f}{/if}\n{>_f}\n{w   }"), []byte("{!title}{w}\n{>a.ans}"))
 	f.Add([]byte("{>_f}\n{{{ x}{#else}"), []byte("{>_f}"))
+	f.Add([]byte("+++\n[fields]\nt = \"term.type\"\nw = \"term.cols\"\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\nwhen = \"term.colors == 16\"\n+++\n"+
+		"{#if item.A and t != \"x\"}{      t} {w}{/if}\n{>a.ans}\n"+strings.Repeat("{>_f}\n", 12)), []byte("{!more}line {t}"))
 	f.Fuzz(func(t *testing.T, s, frag []byte) {
 		fsys := fstest.MapFS{
 			"screens/s.bbt":  {Data: s},
@@ -619,6 +623,11 @@ func FuzzLoad(f *testing.F) {
 			t.Fatal("no screen without errors")
 		}
 		checkSegs(t, screens["s"].Body)
+		env, _ := menu.Enabled(screens["s"], screen.Term{
+			Type: "ansi", Cols: screen.MinCols, Rows: screen.MinRows, Charset: "utf-8", Colors: screen.Colors16,
+		})
+		for range screen.Render(screens["s"], env, theme, "more") {
+		}
 	})
 }
 

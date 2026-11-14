@@ -7,6 +7,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"newbbs/internal/key"
 	"newbbs/internal/screen"
 )
 
@@ -116,6 +117,32 @@ func TestEscapeTable(t *testing.T) {
 		for _, s := range seqs {
 			checkKeys(t, s, key)
 			checkKeys(t, "a"+s+"b", "a", key, "b")
+		}
+	}
+}
+
+// TestKeyNames checks that each key name of the decoder is a key name of menu-nav,
+// section 3.1, in upper case: the menu matches the keys by these names.
+func TestKeyNames(t *testing.T) {
+	var names []string
+	for _, k := range csiKeys {
+		names = append(names, k)
+	}
+	for _, k := range ss3Keys {
+		names = append(names, k)
+	}
+	// ESC alone ends at the timeout. ESC before another character ends at this character.
+	for _, in := range []string{"\x1b", "\x1bx", "\r", "\x08", "\x7f", "\t", " ", "\x1b[[A", "\x1b[[B", "\x1b[[C", "\x1b[[D", "\x1b[[E"} {
+		keys, _ := decode(in)
+		if len(keys) == 0 {
+			t.Fatalf("decode(%q) gives no key", in)
+		}
+		names = append(names, keys[0])
+	}
+	// Each name is a named key: key.Parse also accepts one letter or digit.
+	for _, n := range names {
+		if k, ok := key.Parse(n); !ok || k != n || len(n) < 2 {
+			t.Errorf("key.Parse(%q) = %q, %v", n, k, ok)
 		}
 	}
 }
