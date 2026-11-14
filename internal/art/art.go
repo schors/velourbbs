@@ -12,6 +12,10 @@ import (
 // MaxRows is the row limit of the art grid (section 10).
 const MaxRows = 1000
 
+// MaxPlayCells is the limit of written and erased cells of the play: 16 grids
+// of 255 columns and 1000 rows (section 10).
+const MaxPlayCells = 16 * screen.MaxWidth * MaxRows
+
 // defaultWidth is the art width without a SAUCE width (section 8.2).
 const defaultWidth = 80
 

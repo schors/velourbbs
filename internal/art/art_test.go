@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"newbbs/internal/art"
 	"newbbs/internal/screen"
@@ -374,5 +375,81 @@ func TestOtherSauce(t *testing.T) {
 	a := parse(t, data)
 	if a.Width != 80 || a.Height != 1 || cell(a, 1, 1).Style.String() != "7/1 blink" {
 		t.Errorf("size %dx%d, style %s", a.Width, a.Height, cell(a, 1, 1).Style)
+	}
+}
+
+// filler gives a play of n erased cells at the play width 255: CSI 2 K for each 255 cells
+// and one CSI K from the column 256-r for the rest r.
+func filler(n int) string {
+	s := strings.Repeat("\x1b[2K", n/screen.MaxWidth)
+	if r := n % screen.MaxWidth; r > 0 {
+		s += fmt.Sprintf("\x1b[1;%dH\x1b[K", screen.MaxWidth-r+1)
+	}
+	return s
+}
+
+// TestBudget checks each count rule of the art play budget (section 10):
+// the play of the budget gives no diagnostic, and one more cell gives the error at the cursor.
+func TestBudget(t *testing.T) {
+	const w = screen.MaxWidth
+	tests := []struct {
+		name       string
+		sauce      bool // else the Moebius form: the play width is 255, the art width 80
+		prefix, op string
+		cost       int    // the cells of prefix and op
+		at         string // the position of the error
+	}{
+		{"grapheme", true, "", "\x1b[5;2Ha", 1, "5:2"},
+		{"wide grapheme", true, "", "\x1b[5;2H日", 2, "5:2"},
+		{"erase in the Moebius form", false, "", "\x1b[5;2H\x1b[K", w - 1, "5:2"},
+		{"clear", true, "\x1b[7H\x1b[2K", "\x1b[3;3H\x1b[2J", w + 7*w, "3:3"},
+		{"repeat with wrap", true, "", "\x1b[5;250Ha\x1b[9b", 10, "6:4"},
+		{"repeat without wrap", true, "", "\x1b[?7l\x1b[5;250Ha\x1b[9b", 10, "5:255"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			load := func(extra int) screen.Diags {
+				data := []byte(tt.prefix + filler(art.MaxPlayCells-tt.cost+extra) + tt.op)
+				if tt.sauce {
+					data = withSauce(string(data), w, 0, 0)
+				}
+				_, ds := art.Parse("a.ans", data)
+				return ds
+			}
+			if ds := load(0); len(ds) > 0 {
+				t.Errorf("at the budget:\n%s", diagText(ds))
+			}
+			want := "a.ans:" + tt.at + ": art play is over 4080000 written and erased cells"
+			if got := diagText(load(1)); got != want {
+				t.Errorf("over the budget: got %q, want %q", got, want)
+			}
+		})
+	}
+}
+
+// TestBudgetFiles checks that crafted files of 1 MB stop at the budget in less than 1 s.
+func TestBudgetFiles(t *testing.T) {
+	tests := []struct {
+		name, start, unit string
+		width             int
+	}{
+		{"repeat with wrap", "A", "\x1b[H\x1b[9999b", 80},
+		{"repeat without wrap", "\x1b[?7lA", "\x1b[H\x1b[9999b", 80},
+		{"clear", "", "\x1b[1000;255HA\x1b[2J", 255},
+		{"erase", "", "\x1b[2K\x1b[B", 255},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := tt.start + strings.Repeat(tt.unit, (screen.MaxFileBytes-200)/len(tt.unit))
+			data := withSauce(body, tt.width, 0, 0)
+			start := time.Now()
+			_, ds := art.Parse("a.ans", data)
+			if d := time.Since(start); d >= time.Second {
+				t.Errorf("load took %v", d)
+			}
+			if !strings.HasSuffix(diagText(ds), ": art play is over 4080000 written and erased cells") {
+				t.Errorf("diagnostics:\n%s", diagText(ds))
+			}
+		})
 	}
 }
