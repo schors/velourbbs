@@ -30,6 +30,17 @@ var theme = map[string]screen.Style{
 	"normal": style("7/0"), "more": style("15/0"), "title": style("15/4 bold"), "prompt": style("14/0"),
 }
 
+// aliases is the [fields] of bbs.toml in the tests.
+var aliases = screen.Fields{"w": alias("w", "term.cols"), "t": alias("t", "term.type")}
+
+func alias(name, path string) screen.Ref {
+	r, err := screen.NewAlias(name, path)
+	if err != nil {
+		panic(err)
+	}
+	return r
+}
+
 // sauceArt gives an .ans file with a character SAUCE of the width.
 func sauceArt(data string, width int) string {
 	r := make([]byte, 128)
@@ -46,7 +57,7 @@ func dump(t *testing.T, files map[string]string, name string, cols, rows int, it
 	for n, data := range files {
 		fsys["screens/"+n] = &fstest.MapFile{Data: []byte(data)}
 	}
-	screens, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 40, Max: 80})
+	screens, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 40, Max: 80}, aliases)
 	if ds.HasErrors() {
 		t.Fatalf("diags: %v", ds)
 	}
@@ -157,7 +168,7 @@ func TestRender(t *testing.T) {
 		// An art field takes the value; the art and an include do not change the style
 		// of the text after them; the art is cut at W.
 		{"art", map[string]string{
-			"main.bbt":  "+++\nwidth = [10, 10]\n[fields]\nw = \"term.cols\"\n+++\n{!title}A\n{>logo.ans}\nB\n{>_frag}\nC\n",
+			"main.bbt":  "+++\nwidth = [10, 10]\n+++\n{!title}A\n{>logo.ans}\nB\n{>_frag}\nC\n",
 			"logo.ans":  logo,
 			"_frag.bbt": "{!14}frag\n",
 		}, 20, 10, nil},
@@ -190,7 +201,7 @@ styles
 func load(t *testing.T, main string) *screen.Screen {
 	t.Helper()
 	fsys := fstest.MapFS{"screens/main.bbt": {Data: []byte(main)}}
-	screens, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 40, Max: 80})
+	screens, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 40, Max: 80}, aliases)
 	if ds.HasErrors() {
 		t.Fatalf("diags: %v", ds)
 	}
@@ -252,7 +263,7 @@ func TestRenderPageMemory(t *testing.T) {
 // A long source line that gives no row does not grow the memory of the render:
 // the buffers of a line have at most W cells.
 func TestRenderLineMemory(t *testing.T) {
-	s := load(t, "+++\n[fields]\nt = \"term.type\"\n+++\nx"+strings.Repeat("{t}", 300000)+"\n")
+	s := load(t, "x"+strings.Repeat("{t}", 300000)+"\n")
 	env := &screen.Env{Term: screen.Term{Type: strings.Repeat(" ", 40), Cols: 80, Rows: 25}}
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)

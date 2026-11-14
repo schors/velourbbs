@@ -27,7 +27,17 @@ var (
 		"normal": style("7/0"), "more": style("15/0"), "title": style("15/4 bold"), "prompt": style("14/0"),
 	}
 	defaultWidth = screen.WidthLimits{Min: 40, Max: 80}
+	// aliases is the [fields] of bbs.toml in the tests.
+	aliases = screen.Fields{"w": alias("w", "term.cols"), "t": alias("t", "term.type")}
 )
+
+func alias(name, path string) screen.Ref {
+	r, err := screen.NewAlias(name, path)
+	if err != nil {
+		panic(err)
+	}
+	return r
+}
 
 // sauceArt gives an .ans file with a character SAUCE of the width.
 func sauceArt(data string, width int) string {
@@ -44,7 +54,7 @@ func load(files map[string]string) (map[string]*screen.Screen, []string) {
 	for name, data := range files {
 		fsys["screens/"+name] = &fstest.MapFile{Data: []byte(data)}
 	}
-	screens, ds := bbt.Load(fsys, theme, defaultWidth)
+	screens, ds := bbt.Load(fsys, theme, defaultWidth, aliases)
 	var msgs []string
 	for _, d := range ds {
 		msgs = append(msgs, d.String())
@@ -90,8 +100,8 @@ func show(segs []screen.Seg) string {
 			out = append(out, s.File+"("+show(s.Body)+")")
 		case screen.ArtInsert:
 			var refs []string
-			for _, r := range s.Fields {
-				refs = append(refs, r.String())
+			for _, f := range s.Art.Fields {
+				refs = append(refs, f.Ref.String())
 			}
 			out = append(out, fmt.Sprintf("art%d%v", s.Art.Width, refs))
 		case screen.LineEnd:
@@ -109,8 +119,6 @@ func TestExample(t *testing.T) {
 	screens := mustLoad(t, map[string]string{
 		"main.bbt": `+++
 width = [64, 100]
-[fields]
-w = "term.cols"
 [[item]]
 key = "A"
 do = "goto about"
@@ -212,25 +220,27 @@ func TestFrontMatter(t *testing.T) {
 		files map[string]string
 		want  []string
 	}{
-		{map[string]string{"main.bbt": "+++\n[fields]\nw = \"term.cols\"\n\n\n[[item]]\nkey = \"S\"\ndo = \"logoff\"\nwhen = \"term.colours == 1\"\n+++\n"},
+		{map[string]string{"main.bbt": "+++\n\n\n[[item]]\nkey = \"S\"\ndo = \"logoff\"\nwhen = \"term.colours == 1\"\n+++\n"},
 			[]string{`screens/main.bbt:2:1: item "S": when: unknown field "term.colours"`}},
 		{map[string]string{"s.bbt": "+++\nwidth = 5\ncolor = 1\n+++\n"}, []string{`screens/s.bbt:2:9: width: must be an array of integers`}},
 		{map[string]string{"s.bbt": "+++\nwidth = [0, 300]\nnarrow = \"small\"\n+++\n"}, []string{`screens/s.bbt:3:1: unknown key "narrow"`}},
 		{map[string]string{"s.bbt": "+++\nwidth = [0, 300]\n+++\n"},
 			[]string{`screens/s.bbt:2:1: width: width [0, 300] is not in 1 <= min <= max <= 255`}},
 		{map[string]string{"s.bbt": "+++\n\nwidth = [1]\n+++\n"}, []string{`screens/s.bbt:2:1: width: must be an array of 2 integers`}},
-		{map[string]string{"s.bbt": "+++\nfields = { \"яя\" = \"term.cols\", and = \"term.rows\" }\n+++\n"},
-			[]string{`screens/s.bbt:2:1: fields: alias "and" is a reserved word`, `screens/s.bbt:2:1: fields: invalid alias "яя"`}},
 		// The column counts code points.
-		{map[string]string{"s.bbt": "+++\nfields = { \"яя\" = \"term.cols\", w = 5 }\n+++\n"}, []string{`screens/s.bbt:2:36: fields: invalid type`}},
+		{map[string]string{"s.bbt": "+++\nitem = [{ key = \"яя\", do = 1 }]\n+++\n"}, []string{`screens/s.bbt:2:28: item: invalid type`}},
+		// An alias of bbs.toml in when: a type error at 2:1.
+		{map[string]string{"s.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\nwhen = \"t > 1\"\n+++\n"},
+			[]string{`screens/s.bbt:2:1: item "A": when: string field "term.type" takes a string, found an integer`}},
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ndo = 1\nx = \"y\"\n+++\n"}, []string{`screens/s.bbt:5:6: item.do: must be a string`}},
+		// The aliases are in bbs.toml: [fields] in a front matter is an unknown key (section 3.2).
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ny = 1\nx = 2\n+++\n"}, []string{
+			`screens/s.bbt:2:2: unknown key "fields"`,
 			`screens/s.bbt:5:1: unknown key "item.y"`,
 			`screens/s.bbt:6:1: unknown key "item.x"`,
 		}},
-		{map[string]string{"s.bbt": "+++\n[fields]\nb = \"term.x\"\na = \"term.y\"\n[[item]]\n+++\n"}, []string{
-			`screens/s.bbt:2:1: fields: alias "a": unknown field "term.y"`,
-			`screens/s.bbt:2:1: fields: alias "b": unknown field "term.x"`,
+		{map[string]string{"s.bbt": "+++\nwidth = [1, 0]\n[[item]]\n+++\n"}, []string{
+			`screens/s.bbt:2:1: width: width [1, 0] is not in 1 <= min <= max <= 255`,
 			`screens/s.bbt:2:1: item 1: key is missing`,
 			`screens/s.bbt:2:1: item 1: do is missing`,
 		}},
@@ -263,7 +273,7 @@ do = "goto main"
 [[item]]
 key = "any"
 do = "logoff"
-when = "term.cols > 80"
+when = "w > 80"
 +++
 `})
 	items := screens["s"].Items
@@ -355,7 +365,7 @@ do = "logoff"
 
 func TestIncludes(t *testing.T) {
 	screens := mustLoad(t, map[string]string{
-		"main.bbt": "+++\n[fields]\nw = \"term.cols\"\n+++\n{!14}a\n{>_a}\nb\n{>_a}",
+		"main.bbt": "{!14}a\n{>_a}\nb\n{>_a}",
 		"_a.bbt":   "{!title}{w}\n{>_b}\n",
 		"_b.bbt":   "{#if term.cols > 1}\nc\n{/if}\n",
 	})
@@ -364,6 +374,16 @@ func TestIncludes(t *testing.T) {
 	if got := show(body); got != want {
 		t.Errorf("body\n got %s\nwant %s", got, want)
 	}
+	// An alias of bbs.toml means the same in each screen, fragment and art.
+	screens = mustLoad(t, map[string]string{
+		"s.bbt": "{>_f}", "t.bbt": "{>_f}\n{>a.ans}", "_f.bbt": "{w}\n{#if t == \"x\"}{/if}\n{>a.ans}", "a.ans": "{t}",
+	})
+	for _, name := range []string{"s", "t"} {
+		if got := show(screens[name].Body); !strings.HasPrefix(got, `screens/_f.bbt({term.cols} / if()else() /b art80[term.type])`) {
+			t.Errorf("%s: %s", name, got)
+		}
+	}
+
 	// The style after an include: the style token of the fragment is inside the include,
 	// so the render restores the style before it. The two includes share the body.
 	a1, a2 := body[3].(screen.Include), body[6].(screen.Include)
@@ -386,15 +406,15 @@ func TestIncludes(t *testing.T) {
 		// The errors of a fragment that two screens use, once.
 		{map[string]string{"s.bbt": "{>_f}", "t.bbt": "{>_f}", "_f.bbt": "{>_x}\n{>x.ans}\n{>_f}"},
 			[]string{`screens/_f.bbt:1:1: fragment "screens/_x.bbt" does not exist`, `screens/_f.bbt:2:1: art "screens/x.ans" does not exist`, `screens/_f.bbt:3:1: include "screens/_f.bbt" makes a cycle`}},
-		// A front matter error: no alias errors, the include errors stay.
-		{map[string]string{"s.bbt": "+++\nx = 1\n+++\n{w}\n{>_x}"},
-			[]string{`screens/s.bbt:2:1: unknown key "x"`, `screens/s.bbt:5:1: fragment "screens/_x.bbt" does not exist`}},
-		{map[string]string{"s.bbt": "{>_f}", "t.bbt": "{>_f}", "_f.bbt": "{bad}\n{"},
-			[]string{`screens/_f.bbt:1:1: screen "s": unknown field "bad"`, `screens/_f.bbt:1:1: screen "t": unknown field "bad"`}},
-		{map[string]string{"s.bbt": "+++\n[fields]\nw = \"term.cols\"\n+++\n{>_f}", "t.bbt": "{>_f}", "_f.bbt": "{w}"},
-			[]string{`screens/_f.bbt:1:1: screen "t": unknown field "w"`}},
-		{map[string]string{"s.bbt": "{>_f}", "_f.bbt": "{#if x}"},
-			[]string{`screens/_f.bbt:1:1: {#if} has no {/if}`, `screens/_f.bbt:1:1: screen "s": unknown field "x"`}},
+		// A front matter error: the field and include errors stay.
+		{map[string]string{"s.bbt": "+++\nx = 1\n+++\n{w}{nope}\n{>_x}"},
+			[]string{`screens/s.bbt:2:1: unknown key "x"`, `screens/s.bbt:4:4: unknown field "nope"`, `screens/s.bbt:5:1: fragment "screens/_x.bbt" does not exist`}},
+		// A field error in a fragment or in art that two screens use: once, with no screen name.
+		{map[string]string{"s.bbt": "{>_f}", "t.bbt": "{>_f}\n{>a.ans}", "_f.bbt": "{bad}\n{#if x}\n{>a.ans}", "a.ans": "{w} {bad}"},
+			[]string{`screens/_f.bbt:1:1: unknown field "bad"`, `screens/_f.bbt:2:1: unknown field "x"`, `screens/_f.bbt:2:1: {#if} has no {/if}`, `screens/a.ans:1:5: unknown field "bad"`}},
+		// A fragment that cannot be read exists: its error, once.
+		{map[string]string{"s.bbt": "{>_f}", "t.bbt": "{>_f}", "_f.bbt": strings.Repeat("x", screen.MaxFileBytes+1)},
+			[]string{`screens/_f.bbt:1:1: file is over 1048576 bytes`}},
 	}
 	for _, tt := range tests {
 		_, msgs := load(tt.files)
@@ -459,7 +479,7 @@ func TestLimits(t *testing.T) {
 
 	// After 100 diagnostics, the load goes on: the include after them gives the error of the fragment.
 	_, msgs = load(map[string]string{"s.bbt": strings.Repeat("\t", 200) + "\n{>_f}", "_f.bbt": "{nope}"})
-	if len(msgs) != 102 || msgs[0] != `screens/_f.bbt:1:1: screen "s": unknown field "nope"` ||
+	if len(msgs) != 102 || msgs[0] != `screens/_f.bbt:1:1: unknown field "nope"` ||
 		msgs[101] != "screens/s.bbt:1:101: too many diagnostics" {
 		t.Errorf("diags: %d, first %q, last %q", len(msgs), msgs[0], msgs[len(msgs)-1])
 	}
@@ -489,7 +509,7 @@ func TestWidth(t *testing.T) {
 		"screens/x.ans": {Data: []byte(sauceArt("x", 50))},
 		"screens/y.ans": {Data: []byte(sauceArt("y", 132))},
 	}
-	screens, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 20, Max: 60})
+	screens, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 20, Max: 60}, aliases)
 	if w := screens["a"].Width; w != (screen.WidthLimits{Min: 20, Max: 60}) {
 		t.Errorf("[screen] width: %v", w)
 	}
@@ -507,7 +527,7 @@ func TestWidth(t *testing.T) {
 		{map[string]string{"about.bbt": "+++\nwidth = [40, 100]\n+++\n{>logo.ans}\n{>_f}", "_f.bbt": "{>logo.ans}", "logo.ans": sauceArt("x", 132)},
 			[]string{`screens/_f.bbt:1:1: warning: screen "about": art "logo.ans" is 132 cells wide, max width is 100`, `screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100`}},
 		{map[string]string{"s.bbt": "{>a.ans}", "a.ans": "{nope}"},
-			[]string{`screens/a.ans:1:1: screen "s": unknown field "nope"`}},
+			[]string{`screens/a.ans:1:1: unknown field "nope"`}},
 		{map[string]string{"s.bbt": "x", "_f.bbt": "{>a.ans}", "a.ans": "x", "b.ans": "\xff"},
 			[]string{`screens/_f.bbt:1:1: warning: no screen uses this file`, `screens/a.ans:1:1: warning: no screen uses this file`, `screens/b.ans:1:1: warning: no screen uses this file`}},
 		{map[string]string{"s.bbt": "{>a.ans}", "a.ans": "\xff"},
@@ -559,7 +579,7 @@ func TestNotRegular(t *testing.T) {
 		"screens/dir/x.txt": {},
 		"screens/notes.txt": {Mode: fs.ModeNamedPipe},
 	}
-	_, ds := bbt.Load(fsys, theme, defaultWidth)
+	_, ds := bbt.Load(fsys, theme, defaultWidth, aliases)
 	var got []string
 	for _, d := range ds {
 		got = append(got, d.String())
@@ -577,9 +597,9 @@ func TestNotRegular(t *testing.T) {
 // FuzzLoad loads a screen with a fragment and an art file. It renders a screen
 // without errors on the smallest terminal and reads all pages.
 func FuzzLoad(f *testing.F) {
-	f.Add([]byte("+++\n[fields]\nw = \"term.cols\"\n+++\n{#if w > 1}{>_f}{/if}\n{>_f}\n{w   }"), []byte("{!title}{w}\n{>a.ans}"))
+	f.Add([]byte("{#if w > 1}{>_f}{/if}\n{>_f}\n{w   }"), []byte("{!title}{w}\n{>a.ans}"))
 	f.Add([]byte("{>_f}\n{{{ x}{#else}"), []byte("{>_f}"))
-	f.Add([]byte("+++\n[fields]\nt = \"term.type\"\nw = \"term.cols\"\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\nwhen = \"term.colors == 16\"\n+++\n"+
+	f.Add([]byte("+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\nwhen = \"term.colors == 16\"\n+++\n"+
 		"{#if item.A and t != \"x\"}{      t} {w}{/if}\n{>a.ans}\n"+strings.Repeat("{>_f}\n", 12)), []byte("{!more}line {t}"))
 	f.Fuzz(func(t *testing.T, s, frag []byte) {
 		fsys := fstest.MapFS{
@@ -587,7 +607,7 @@ func FuzzLoad(f *testing.F) {
 			"screens/_f.bbt": {Data: frag},
 			"screens/a.ans":  {Data: []byte("{w}")},
 		}
-		screens, ds := bbt.Load(fsys, theme, defaultWidth)
+		screens, ds := bbt.Load(fsys, theme, defaultWidth, aliases)
 		if ds.HasErrors() {
 			return
 		}
@@ -616,8 +636,13 @@ func checkSegs(t *testing.T, segs []screen.Seg) {
 		case screen.Include:
 			checkSegs(t, s.Body)
 		case screen.ArtInsert:
-			if s.Art == nil || len(s.Fields) != len(s.Art.Fields) {
-				t.Fatal("art insert without its fields")
+			if s.Art == nil {
+				t.Fatal("art insert without art")
+			}
+			for _, f := range s.Art.Fields {
+				if f.Ref.Type() == 0 {
+					t.Fatal("art field without a type")
+				}
 			}
 		case screen.Field:
 			if s.Ref.Type() == 0 {

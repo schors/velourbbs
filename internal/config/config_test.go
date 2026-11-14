@@ -56,6 +56,9 @@ more = "-/-"
 
 [menu]
   start = "welcome"
+
+[fields]
+w = "term.cols"
 `
 	cfg, ds := Parse([]byte(data))
 	if len(ds) != 0 {
@@ -66,6 +69,9 @@ more = "-/-"
 	}
 	if cfg.Start != "welcome" {
 		t.Errorf("start %q", cfg.Start)
+	}
+	if len(cfg.Fields) != 1 || cfg.Fields["w"].String() != "term.cols" {
+		t.Errorf("fields %v", cfg.Fields)
 	}
 	want := map[string]string{
 		"normal": "14/0",      // the background from the default normal
@@ -151,6 +157,15 @@ func TestTOMLErrors(t *testing.T) {
 			`bbs.toml:1:1: theme.z: invalid style "bad": invalid colour "bad"`,
 		}},
 		{"a = 1\n[screen]\nb = 2\nwidth = [1, 1]", []string{`bbs.toml:1:1: unknown key "a"`, `bbs.toml:3:1: unknown key "screen.b"`}},
+		{"[fields]\nw = 1", []string{`bbs.toml:2:5: fields.w: must be a string`}},
+		// Each invalid alias is an other error at 1:1 (section 4.2).
+		{"fields = { \"яя\" = \"term.cols\", and = \"term.rows\", k = \"item.A\", u = \"term.x\", v = \"w\" }", []string{
+			`bbs.toml:1:1: fields: alias "and" is a reserved word`,
+			`bbs.toml:1:1: fields: alias "k": "item.A" is valid only in {#if}`,
+			`bbs.toml:1:1: fields: alias "u": unknown field "term.x"`,
+			`bbs.toml:1:1: fields: alias "v": "w" is not a registry path`,
+			`bbs.toml:1:1: fields: invalid alias "яя"`,
+		}},
 	}
 	for _, tt := range tests {
 		_, ds := Parse([]byte(tt.data))

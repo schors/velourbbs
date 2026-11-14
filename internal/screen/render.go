@@ -236,7 +236,7 @@ func (r *renderer) art(a ArtInsert) {
 			for ; fi < len(fields) && fields[fi].Row == i+1; fi++ {
 				f := fields[fi]
 				var value []Cell
-				for _, g := range FitValue(r.value(a.Fields[fi]), f.Width, f.Right) {
+				for _, g := range FitValue(r.value(f.Ref), f.Width, f.Right) {
 					value = appendCell(value, g, f.Style)
 				}
 				copy(cells[f.Col-1:], value)

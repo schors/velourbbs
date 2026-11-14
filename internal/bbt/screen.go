@@ -18,7 +18,6 @@ type unit struct {
 	// resolving marks the fragments in progress.
 	frags     map[*file]fragment
 	resolving map[*file]bool
-	artRefs   map[*screen.Art][]screen.Ref
 	// lines is the lines of the body so far. at is the position in the screen file
 	// of the node in progress, for a limit error. over is true after a limit error.
 	lines int
@@ -39,7 +38,7 @@ type condAt struct {
 
 // errorf reports an error at pos. A position in another file than the screen
 // starts with the screen name (section 9.1). A screen with a front matter error
-// reports nothing: without the aliases, it gives only noise.
+// reports nothing: without its width limits and items, it gives only noise.
 func (l *loader) errorf(u *unit, pos screen.Pos, warning bool, format string, args ...any) {
 	if u.f.skip {
 		return
@@ -56,25 +55,24 @@ func (l *loader) errorf(u *unit, pos screen.Pos, warning bool, format string, ar
 	}
 }
 
-// screen does the screen pass: the limits of section 10, the fields, the conditions,
-// the includes, the art inserts and the width limits.
-// A screen with a front matter error resolves without aliases, for the errors
-// of its includes and art inserts, and gives no model.
+// screen does the screen pass: the limits of section 10, the includes,
+// the art inserts and the width limits. The file pass resolved the fields.
+// A screen with a front matter error resolves for the errors of its includes
+// and art inserts, and gives no model.
 func (l *loader) screen(u *unit) {
 	u.fr = u.f.front
 	if u.fr == nil {
-		u.fr = &front{fields: screen.Fields{}}
+		u.fr = &front{}
 	}
 	u.frags = map[*file]fragment{}
 	u.resolving = map[*file]bool{}
-	u.artRefs = map[*screen.Art][]screen.Ref{}
 	u.s.Width = l.width
 	if u.fr.width != nil {
 		u.s.Width = *u.fr.width
 	}
 	u.s.Body = l.resolve(u, u.f.body, true)
 	if u.over { // the body of a screen over the limit is not kept
-		u.s.Body, u.frags, u.artRefs = nil, nil, nil
+		u.s.Body, u.frags = nil, nil
 		return
 	}
 	u.s.Items = u.fr.items
@@ -91,8 +89,8 @@ func (l *loader) add(u *unit, n int) {
 	}
 }
 
-// resolve gives the segments of nodes with the aliases of the screen and adds
-// their lines. top is true for the nodes of the screen file. It stops at a limit.
+// resolve gives the segments of nodes for the screen and adds their lines.
+// top is true for the nodes of the screen file. It stops at a limit.
 func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 	var segs []screen.Seg
 	for _, n := range nodes {
@@ -104,29 +102,21 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 			segs = append(segs, n)
 		case screen.SetStyle:
 			segs = append(segs, n)
+		case screen.Field:
+			segs = append(segs, n)
 		case lineEnd:
 			if top {
 				u.at = screen.Pos{File: u.f.name, Line: n.row, Col: 1}
 			}
 			l.add(u, 1)
 			segs = append(segs, screen.LineEnd{Block: n.block})
-		case field:
-			ref, err := screen.LookupField(n.path, u.fr.fields)
-			if err != nil {
-				l.errorf(u, n.pos, false, "%v", err)
-				continue
-			}
-			segs = append(segs, screen.Field{Ref: ref, Width: n.width, Right: n.right})
 		case *ifNode:
-			c, err := screen.ParseCond(n.cond, u.fr.fields, true)
-			if err != nil {
-				l.errorf(u, n.pos, false, "%v", err)
-			} else {
-				u.conds = append(u.conds, condAt{c, n.pos})
+			if n.cond != nil {
+				u.conds = append(u.conds, condAt{n.cond, n.pos})
 			}
 			then, els := l.resolve(u, n.then, top), l.resolve(u, n.els, top)
-			if err == nil {
-				segs = append(segs, screen.If{Cond: c, Then: then, Else: els})
+			if n.cond != nil {
+				segs = append(segs, screen.If{Cond: n.cond, Then: then, Else: els})
 			}
 		case include:
 			if body, ok := l.include(u, n, top); ok {
@@ -145,7 +135,10 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 				continue
 			}
 			l.add(u, 1+a.Height)
-			segs = append(segs, screen.ArtInsert{Art: a, Fields: l.artFields(u, n, a)})
+			if a.Width > u.s.Width.Max { // section 6.2
+				l.errorf(u, n.pos, true, "art %q is %d cells wide, max width is %d", path.Base(n.file), a.Width, u.s.Width.Max)
+			}
+			segs = append(segs, screen.ArtInsert{Art: a})
 		}
 	}
 	return segs
@@ -183,27 +176,6 @@ func (l *loader) include(u *unit, n include, top bool) (body []screen.Seg, ok bo
 	delete(u.resolving, frag)
 	u.frags[frag] = fragment{body, u.lines - before}
 	return body, true
-}
-
-// artFields resolves the fields of the art a once for the screen,
-// and warns when the art is wider than the max width of the screen (section 6.2).
-func (l *loader) artFields(u *unit, n artInsert, a *screen.Art) []screen.Ref {
-	if a.Width > u.s.Width.Max {
-		l.errorf(u, n.pos, true, "art %q is %d cells wide, max width is %d", path.Base(n.file), a.Width, u.s.Width.Max)
-	}
-	if refs, ok := u.artRefs[a]; ok {
-		return refs
-	}
-	refs := make([]screen.Ref, len(a.Fields))
-	for i, f := range a.Fields {
-		ref, err := screen.LookupField(f.Path, u.fr.fields)
-		if err != nil {
-			l.errorf(u, screen.Pos{File: n.file, Line: f.Row, Col: f.Col}, false, "%v", err)
-		}
-		refs[i] = ref
-	}
-	u.artRefs[a] = refs
-	return refs
 }
 
 // checkItems checks that goodbye has no items and the item.<KEY> paths of each screen

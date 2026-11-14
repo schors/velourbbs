@@ -138,3 +138,8 @@ Check these with gopher-lua at the chosen version:
 3. The heap guard.
 4. Long calls inside host code.
 5. A hangup and a reload while a script waits for input.
+
+Other:
+
+6. Do the aliases of `bbs.toml` apply in mod screens and in `print`?
+   A field without a dot in mod art then means what the host defines.

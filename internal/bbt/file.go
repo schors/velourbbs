@@ -17,9 +17,9 @@ type file struct {
 	body  []node
 }
 
-// node is a body part after the file pass: screen.Text, screen.SetStyle, lineEnd,
-// field, *ifNode, include or artInsert. Fields and conditions are not resolved:
-// the aliases come from the screen. The screen pass gives screen.Seg.
+// node is a body part after the file pass: screen.Text, screen.SetStyle, screen.Field,
+// lineEnd, *ifNode, include or artInsert. The file pass resolves the fields and
+// the conditions with the aliases of bbs.toml. The screen pass gives screen.Seg.
 type node any
 
 type lineEnd struct {
@@ -27,16 +27,9 @@ type lineEnd struct {
 	block bool
 }
 
-type field struct {
-	pos   screen.Pos
-	path  string
-	width int
-	right bool
-}
-
 type ifNode struct {
 	pos       screen.Pos
-	cond      string
+	cond      *screen.Cond // nil after an error
 	then, els []node
 	inElse    bool // after {#else}
 }
@@ -51,8 +44,9 @@ type artInsert struct {
 	file string // screens/<name>.ans
 }
 
-// parseFile does the file pass (sections 3.1–3.4). d.File is the file name.
-func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, fragment bool) *file {
+// parseFile does the file pass (sections 3.1–3.4, 4 and 5). d.File is the file name.
+// theme and fields come from bbs.toml.
+func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, fields screen.Fields, fragment bool) *file {
 	f := &file{name: d.File}
 	data = bytes.TrimPrefix(data, screen.BOM)
 	if n := screen.ValidPrefix(data); n < len(data) {
@@ -84,12 +78,12 @@ func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, 
 		if fragment {
 			d.Errorf(1, 1, "a fragment cannot have front matter")
 		} else {
-			f.front = parseFront(d, lines[1:end])
+			f.front = parseFront(d, lines[1:end], fields)
 			f.skip = f.front == nil
 		}
 		first = end + 1
 	}
-	s := scanner{d: d, theme: theme}
+	s := scanner{d: d, theme: theme, fields: fields}
 	for i := first; i < len(lines); i++ {
 		s.line(i+1, lines[i])
 	}
@@ -100,10 +94,11 @@ func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, 
 
 // scanner reads the body lines into a tree of nodes and checks the block balance.
 type scanner struct {
-	d     *screen.FileDiags
-	theme map[string]screen.Style
-	root  []node
-	open  []*ifNode
+	d      *screen.FileDiags
+	theme  map[string]screen.Style
+	fields screen.Fields
+	root   []node
+	open   []*ifNode
 }
 
 func (s *scanner) add(n node) {
@@ -233,7 +228,11 @@ func (s *scanner) block(pos screen.Pos, c string) bool {
 	top := len(s.open) - 1
 	switch {
 	case c == "#if" || strings.HasPrefix(c, "#if "):
-		n := &ifNode{pos: pos, cond: c[len("#if"):]}
+		cond, err := screen.ParseCond(c[len("#if"):], s.fields, true)
+		if err != nil {
+			s.d.Errorf(pos.Line, pos.Col, "%v", err)
+		}
+		n := &ifNode{pos: pos, cond: cond}
 		s.add(n)
 		s.open = append(s.open, n)
 		return true
@@ -291,23 +290,24 @@ func (s *scanner) style(pos screen.Pos, text string) {
 	}
 }
 
-// field handles a field token (sections 3.3 and 4.1).
+// field handles a field token (sections 3.3, 4.1 and 4.2).
 func (s *scanner) field(pos screen.Pos, c string) {
-	path := strings.Trim(c, " ")
 	lead := len(c) - len(strings.TrimLeft(c, " "))
 	trail := len(c) - len(strings.TrimRight(c, " "))
-	switch {
-	case lead > 0 && trail > 0:
+	if lead > 0 && trail > 0 {
 		s.d.Errorf(pos.Line, pos.Col, "field token %q has spaces on both sides", "{"+c+"}")
-	case !screen.IsPath(path):
-		s.d.Errorf(pos.Line, pos.Col, "invalid field path %q", path)
-	default:
-		f := field{pos: pos, path: path, right: lead > 0}
-		if lead+trail > 0 {
-			f.width = utf8.RuneCountInString(c) + 2
-		}
-		s.add(f)
+		return
 	}
+	ref, err := screen.LookupField(strings.Trim(c, " "), s.fields)
+	if err != nil {
+		s.d.Errorf(pos.Line, pos.Col, "%v", err)
+		return
+	}
+	f := screen.Field{Ref: ref, Right: lead > 0}
+	if lead+trail > 0 {
+		f.Width = utf8.RuneCountInString(c) + 2
+	}
+	s.add(f)
 }
 
 // insert gives the node of an include or an art insert. c is the token content after "{".

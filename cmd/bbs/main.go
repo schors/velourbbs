@@ -61,7 +61,7 @@ func load(fsys fs.FS) (config.Config, map[string]*screen.Screen, screen.Diags) {
 	// Parse also gives the defaults when the read fails, so the screens load with them.
 	cfg, cds := config.Parse(data)
 	ds = append(ds, cds...)
-	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Width)
+	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Width, cfg.Fields)
 	ds = append(ds, sds...)
 	ds.Sort()
 	if ds.HasErrors() {

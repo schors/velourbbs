@@ -115,7 +115,7 @@ func load(t *testing.T, change map[string]string) map[string]*screen.Screen {
 		}
 	}
 	theme := map[string]screen.Style{"normal": {}, "more": {}}
-	ss, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 20, Max: 80})
+	ss, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 20, Max: 80}, nil)
 	ds = Check(config.Config{Start: "main"}, ss, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)

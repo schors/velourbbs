@@ -84,7 +84,7 @@ func startWith(t *testing.T, set func(*config.Telnet), wrap func(net.Listener) n
 		"screens/main.bbt":    {Data: []byte(mainScreen)},
 		"screens/goodbye.bbt": {Data: []byte(goodbyeScreen)},
 	}
-	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Width)
+	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Width, cfg.Fields)
 	ds = menu.Check(cfg, screens, append(ds, sds...))
 	if ds.HasErrors() {
 		t.Fatalf("load: %v", ds)
