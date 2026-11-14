@@ -7,7 +7,7 @@ Related parts: [menu-nav](menu-nav.md) and [telnet-term](telnet-term.md).
 ## 1. Goal
 
 The host loads the screen files into an in-memory screen model at start.
-It renders a screen for one terminal of any size. 80x25 is not a limit.
+It renders a screen for one terminal of any size. 80x24 is not a limit.
 `bbs check` finds the errors in the files. `bbs preview` renders a screen to a "cell dump".
 
 The host parses the screen files at load. There is no compile step and no cache.
@@ -433,9 +433,12 @@ and writes its cell dump to the standard output.
 
 - It does the checks of `bbs check` first. After an error it writes no dump
   and exits with status 1.
-- The default size is 80x25. `--size` is the only way to set the size.
+- The default size is 80x24. `--size` is the only way to set the size.
 - `--set` sets `term.type` or `term.colors`. Example: `--set term.colors=256`.
   The defaults are `xterm` and 256. `term.charset` is `utf-8`.
+- `--set term.type` applies the rules of [telnet-term](telnet-term.md), section 6:
+  it cleans the name, cuts it and makes it lower case. An empty name gives `ansi`.
+  The name gives `term.colors`. `--set term.colors` overrides it, in each order of the options.
 - `item.<KEY>` comes from the items of the screen and their `when`.
 - A size outside the ranges of section 4.1 and an unknown screen are invalid arguments.
 - `--keys` runs a session: [menu-nav](menu-nav.md), section 8.
@@ -447,7 +450,7 @@ This dump shows the screen `+++` `[[item]]` `key = "G"` `do = "logoff"` `+++`
 with the body `{!title}Welcome!{!}` and `{!14}[G]oodbye`, and the theme of section 7.3:
 
 ```
-page 1 80x25
+page 1 80x24
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
 styles
