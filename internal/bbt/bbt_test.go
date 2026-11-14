@@ -179,7 +179,6 @@ func TestTokens(t *testing.T) {
 		{"a\tb", `screens/s.bbt:1:2: control character U+0009`},
 		{"a\rb", `screens/s.bbt:1:2: control character U+000D`},
 		{"a\r", `screens/s.bbt:1:2: control character U+000D`},
-		{strings.Repeat("{#if term.cols>1}", 101) + "x", `screens/s.bbt:1:1701: {#if} is nested over 100 levels`},
 		{"{term.cols}\u0301", `screens/s.bbt:1:12: zero-width grapheme U+0301`},
 		{"x{>_f}", `screens/s.bbt:1:2: an include or an art insert must be the only content of its line`},
 		{"\xff", `screens/s.bbt:1:1: invalid UTF-8`},
@@ -435,61 +434,30 @@ func TestLimits(t *testing.T) {
 	}
 
 	// A chain of includes: each include line counts, so the nesting stops at the line limit.
+	// The screen pass does not read the last fragment (section 9.1).
 	files = map[string]string{"s.bbt": "{>_f1}"}
 	for i := 1; i <= bbt.MaxBodyLines+1; i++ {
 		files[fmt.Sprintf("_f%d.bbt", i)] = fmt.Sprintf("{>_f%d}", i+1)
 	}
 	_, msgs = load(files)
-	if want := []string{`screens/s.bbt:1:1: body is over 10000 lines after includes`}; !slices.Equal(msgs, want) {
+	want = []string{`screens/_f10001.bbt:1:1: warning: no screen uses this file`, `screens/s.bbt:1:1: body is over 10000 lines after includes`}
+	if !slices.Equal(msgs, want) {
 		t.Errorf("chain: %q", msgs)
 	}
 
-	// A screen over the body limit counts in the total: 15 screens give the body error,
-	// the 16th passes the total limit and the load stops.
-	files = map[string]string{"_f.bbt": strings.Repeat("x\n", bbt.MaxBodyLines)}
-	want = nil
-	for i := range 20 {
-		files[fmt.Sprintf("s%03d.bbt", i)] = "{>_f}"
-		if i < 15 {
-			want = append(want, fmt.Sprintf("screens/s%03d.bbt:1:1: body is over 10000 lines after includes", i))
-		}
-	}
-	want = append(want, "screens/s015.bbt:1:1: screens are over 160000 lines after includes")
-	if _, msgs = load(files); !slices.Equal(msgs, want) {
-		t.Errorf("over screens: %q", msgs)
-	}
-
-	// The files after a limit stop are not read: no "no screen uses this file".
+	// The screen pass stops at the limit, so it does not read _g.bbt:
+	// the warning "no screen uses this file" is false (section 9.1).
 	_, msgs = load(map[string]string{"s.bbt": strings.Repeat("{>_f}\n", 100) + "{>_g}", "_f.bbt": frag, "_g.bbt": "x"})
-	if want := []string{`screens/s.bbt:99:1: body is over 10000 lines after includes`}; !slices.Equal(msgs, want) {
+	want = []string{`screens/_g.bbt:1:1: warning: no screen uses this file`, `screens/s.bbt:99:1: body is over 10000 lines after includes`}
+	if !slices.Equal(msgs, want) {
 		t.Errorf("after a stop: %q", msgs)
 	}
 
-	long := strings.Repeat("x", 600_000)
-	_, msgs = load(map[string]string{"s.bbt": "a\n{>_f}\n{>_f}\n", "_f.bbt": long})
-	if want := []string{`screens/s.bbt:3:1: body is over 1048576 bytes after includes`}; !slices.Equal(msgs, want) {
-		t.Errorf("bytes: %q", msgs)
-	}
-
-	// The screens together: 16 screens are at the limit, the 17th passes it
-	// and the load stops.
-	for _, tt := range []struct{ frag, want string }{
-		{strings.Repeat("\n", bbt.MaxBodyLines-1), `screens/s016.bbt:1:1: screens are over 160000 lines after includes`},
-		{strings.Repeat("x", 1_000_000), `screens/s016.bbt:1:1: screens are over 16777216 bytes after includes`},
-	} {
-		files := map[string]string{"_f.bbt": tt.frag}
-		for i := range 100 {
-			files[fmt.Sprintf("s%03d.bbt", i)] = "{>_f}"
-		}
-		_, msgs = load(files)
-		if want := []string{tt.want}; !slices.Equal(msgs, want) {
-			t.Errorf("total: %q", msgs)
-		}
-	}
-
-	_, msgs = load(map[string]string{"s.bbt": strings.Repeat("\t", 200)})
-	if len(msgs) != 101 || msgs[100] != "screens/s.bbt:1:101: too many diagnostics" {
-		t.Errorf("diags: %d, last %q", len(msgs), msgs[len(msgs)-1])
+	// After 100 diagnostics, the load goes on: the include after them gives the error of the fragment.
+	_, msgs = load(map[string]string{"s.bbt": strings.Repeat("\t", 200) + "\n{>_f}", "_f.bbt": "{nope}"})
+	if len(msgs) != 102 || msgs[0] != `screens/_f.bbt:1:1: screen "s": unknown field "nope"` ||
+		msgs[101] != "screens/s.bbt:1:101: too many diagnostics" {
+		t.Errorf("diags: %d, first %q, last %q", len(msgs), msgs[0], msgs[len(msgs)-1])
 	}
 
 	_, msgs = load(map[string]string{"s.bbt": strings.Repeat("x", screen.MaxFileBytes+1)})

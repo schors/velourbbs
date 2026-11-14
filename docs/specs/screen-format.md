@@ -11,8 +11,8 @@ It renders a screen for one terminal of any size. 80x24 is not a limit.
 `bbs check` finds the errors in the files. `bbs preview` renders a screen to a "cell dump".
 
 The host parses the screen files at load. There is no compile step and no cache.
-Screen files are untrusted data: a sysop can install them from other authors without a review.
-The limits of section 10 bound the memory and the time for each file and each render.
+Screen files are the files of the sysop. The host trusts them.
+The limits of section 10 catch mistakes, for example a file that is too large.
 
 ## 2. Files
 
@@ -389,8 +389,8 @@ The style of a written cell, in this order:
 - `bbs check` reads `bbs.toml` and each file in `screens/`.
   It checks each screen with the fragments and the art that the screen uses.
 - It warns about a fragment or an art file that no screen uses.
-  After the limit error of a body or of all screens after includes (section 10),
-  it does not warn: the load did not read all files.
+  After the limit error of a body (section 10), the warning can be false:
+  the load does not read the rest of the screen.
 - It reports all errors and warnings, not only the first, up to the limit of section 10.
   A TOML document is an exception (below).
   It writes them to the standard error. It exits with status 1 after an error.
@@ -474,16 +474,18 @@ styles
 | `.bbt` or `.ans` file | 1 MB. |
 | TOML document: `bbs.toml` or a front matter | 64 KB. |
 | Art grid | 255 columns, 1000 rows. |
-| Body of a screen after includes | 10000 lines and 1 MB. An include or an art insert counts its own line, and the lines of the fragment or the rows of the art. |
-| All screens after includes | 160000 lines and 16 MB. |
-| Nesting of blocks in a file | 100 levels. Then the load of the file stops. |
+| Art play | 4080000 written and erased cells: 16 grids of 255 columns and 1000 rows. Then one error at the cursor, and the load of the file stops. |
+| Body of a screen after includes | 10000 lines. An include or an art insert counts its own line, and the lines of the fragment or the rows of the art. |
 | Rendered screen | 10000 rows. |
 | Grapheme | 32 bytes. |
-| Errors and warnings of one file | 100. Then one error `too many diagnostics`, and the load of the file stops. |
+| Errors and warnings of one file | 100. Then one error `too many diagnostics`. The loader drops the rest, and the load of the file goes on. |
 
 - An item of a file over a limit is an error. The loader counts the lines while it expands
   the includes, and stops at the limit.
 - The render stops at the row limit.
+- The art play counts the cells at the play width: the art width, or 255 in the Moebius form.
+  A grapheme counts its cells. `CSI n K` counts the erased cells. `CSI 2 J` counts the rows
+  from row 1 to the last written row, times the play width.
 
 ## 11. Code
 

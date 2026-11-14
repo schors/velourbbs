@@ -24,7 +24,6 @@ type node any
 
 type lineEnd struct {
 	row   int
-	bytes int // the bytes of the source line, for the size limit
 	block bool
 }
 
@@ -91,7 +90,7 @@ func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, 
 		first = end + 1
 	}
 	s := scanner{d: d, theme: theme}
-	for i := first; i < len(lines) && !d.Full() && !s.stopped; i++ {
+	for i := first; i < len(lines); i++ {
 		s.line(i+1, lines[i])
 	}
 	s.end()
@@ -105,8 +104,6 @@ type scanner struct {
 	theme map[string]screen.Style
 	root  []node
 	open  []*ifNode
-	// stopped is true after a block over MaxNesting: the load of the file stops.
-	stopped bool
 }
 
 func (s *scanner) add(n node) {
@@ -189,9 +186,6 @@ func (s *scanner) line(row int, line string) {
 	block := false
 	var text []screen.Grapheme
 	for _, p := range ps {
-		if s.stopped {
-			return
-		}
 		if !p.token {
 			text = s.graphemes(row, p.col, p.text, text)
 			continue
@@ -218,7 +212,7 @@ func (s *scanner) line(row int, line string) {
 	if len(text) > 0 {
 		s.add(screen.Text{Graphemes: text})
 	}
-	s.add(lineEnd{row: row, bytes: len(line), block: block})
+	s.add(lineEnd{row: row, block: block})
 }
 
 // graphemes checks the graphemes of text at the column col and appends them to gs.
@@ -239,11 +233,6 @@ func (s *scanner) block(pos screen.Pos, c string) bool {
 	top := len(s.open) - 1
 	switch {
 	case c == "#if" || strings.HasPrefix(c, "#if "):
-		if len(s.open) == MaxNesting {
-			s.d.Errorf(pos.Line, pos.Col, "{#if} is nested over %d levels", MaxNesting)
-			s.stopped, s.open = true, nil
-			return false
-		}
 		n := &ifNode{pos: pos, cond: c[len("#if"):]}
 		s.add(n)
 		s.open = append(s.open, n)

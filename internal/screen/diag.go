@@ -82,7 +82,7 @@ const MaxFileDiags = 100
 
 // FileDiags collects the diagnostics of one file up to MaxFileDiags.
 // After the limit it adds one error "too many diagnostics" and drops the rest.
-// The loader stops the load of the file when Full is true.
+// The art player stops the play when Full is true.
 type FileDiags struct {
 	File  string
 	Diags Diags
