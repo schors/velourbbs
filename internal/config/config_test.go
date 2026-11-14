@@ -100,7 +100,7 @@ func TestNormalAttributes(t *testing.T) {
 	}
 }
 
-// Each other error has the position 1:1 (section 9.1).
+// Each other error has the position 1:1 (screen-render, section 3.1).
 func TestErrors(t *testing.T) {
 	data := strings.Join([]string{
 		`[screen]`,
@@ -128,7 +128,7 @@ func TestErrors(t *testing.T) {
 }
 
 // A TOML document gives a syntax or type error; else all unknown keys;
-// else its other errors (section 9.1).
+// else its other errors (screen-render, section 3.1).
 func TestTOMLErrors(t *testing.T) {
 	tests := []struct {
 		data string

@@ -1,5 +1,5 @@
 // Package config reads the host settings of bbs.toml: the tables [screen], [theme]
-// and [fields] of docs/specs/screen-format.md, [menu] of docs/specs/menu-nav.md
+// and [fields] of docs/specs/bbt-format.md, [menu] of docs/specs/menu-nav.md
 // and [telnet] of docs/specs/telnet-term.md.
 package config
 
@@ -22,7 +22,7 @@ type Config struct {
 	Theme map[string]screen.Style
 	// Fields maps an alias to its field (section 4.2).
 	Fields screen.Fields
-	// Start is the name of the first screen of a session (menu-nav, section 6).
+	// Start is the name of the first screen of a session (menu-nav, section 5).
 	Start string
 	// Telnet is the table [telnet] (telnet-term, section 9.1).
 	Telnet Telnet
@@ -57,7 +57,7 @@ const File = "bbs.toml"
 
 // Parse reads bbs.toml from data.
 // An unknown key is an error, as in the front matter of a screen (section 3.2).
-// It gives at most screen.MaxFileDiags diagnostics (section 10).
+// It gives at most screen.MaxFileDiags diagnostics (screen-render, section 3.1).
 // Parse returns the defaults for each value with an error.
 func Parse(data []byte) (Config, screen.Diags) {
 	cfg := Config{
@@ -73,7 +73,7 @@ func Parse(data []byte) (Config, screen.Diags) {
 		cfg.Theme = theme(nil)
 		return cfg, fd.Diags
 	}
-	// Each other error has the position 1:1 (screen-format, section 9.1).
+	// Each other error has the position 1:1 (screen-render, section 3.1).
 	errorf := func(format string, args ...any) { fd.Errorf(1, 1, format, args...) }
 	if p := d.Screen.Width; p != nil {
 		w, err := screen.NewWidth(*p)

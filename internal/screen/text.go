@@ -9,7 +9,7 @@ import (
 	"github.com/clipperhouse/displaywidth"
 )
 
-// MaxGraphemeBytes is the size limit of a grapheme (sections 2.1 and 10).
+// MaxGraphemeBytes is the size limit of a grapheme (sections 2.1 and 9).
 const MaxGraphemeBytes = 32
 
 // The errors of CheckGrapheme. A file reports each of them as an error.

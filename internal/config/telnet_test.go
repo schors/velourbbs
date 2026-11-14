@@ -24,7 +24,7 @@ func TestTelnetDefaults(t *testing.T) {
 }
 
 func TestTelnet(t *testing.T) {
-	// The example of section 9.1 with other numbers, and the entry forms of allow and proxy.
+	// The example of telnet-term, section 9.1, with other numbers, and the entry forms of allow and proxy.
 	data := `
 [telnet]
 listen = "127.0.0.1:23"

@@ -29,7 +29,7 @@ type Telnet struct {
 	OutputTimeout time.Duration
 }
 
-// The defaults of section 9.1.
+// The defaults of telnet-term, section 9.1.
 var defaultTelnet = Telnet{
 	Listen:            ":2323",
 	MaxConns:          64,
@@ -151,7 +151,7 @@ func checkListen(s string) error {
 
 // parsePrefix parses an address or a prefix.
 // An address is a prefix of its full length. An IPv4-mapped IPv6 entry of at least /96
-// becomes IPv4, as the address of a client (section 9.2).
+// becomes IPv4, as the address of a client (telnet-term, section 9.2).
 func parsePrefix(s string) (netip.Prefix, error) {
 	if !strings.Contains(s, "/") {
 		a, err := netip.ParseAddr(s)

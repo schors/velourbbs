@@ -35,7 +35,7 @@ func TestKeyTable(t *testing.T) {
 	checkKeys(t, "\t", "TAB")
 	checkKeys(t, " ", "SPACE")
 	checkKeys(t, "\x1b", "ESC")
-	// Other control characters (screen-format, section 2.1) are dropped.
+	// Other control characters (bbt-format, section 2.1) are dropped.
 	for _, c := range []string{"\x00", "\x01", "\x07", "\x1f", "\u0080", "\u009f", "\u202a", "\u202e", "\u2066", "\u2069"} {
 		checkKeys(t, c)
 	}
@@ -121,8 +121,8 @@ func TestEscapeTable(t *testing.T) {
 	}
 }
 
-// TestKeyNames checks that each key name of the decoder is a key name of menu-nav,
-// section 3.1, in upper case: the menu matches the keys by these names.
+// TestKeyNames checks that each key name of the decoder is a key name of bbt-format,
+// section 8.1, in upper case: the menu matches the keys by these names.
 func TestKeyNames(t *testing.T) {
 	var names []string
 	for _, k := range csiKeys {

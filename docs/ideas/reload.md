@@ -1,6 +1,6 @@
 # Idea: reload
 
-Backlog. It extends [screen-format](../specs/screen-format.md).
+Backlog. It extends [screen-render](../specs/screen-render.md).
 
 ## Goal
 

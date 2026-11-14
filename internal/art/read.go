@@ -6,13 +6,13 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// The start style and the cell that the data does not write (section 8.3).
+// The start style and the cell that the data does not write (section 3).
 var (
 	startStyle = screen.Style{Fg: screen.IndexColour(7), Bg: screen.IndexColour(0)}
 	blankCell  = screen.Cell{Grapheme: " ", Style: startStyle}
 )
 
-// reader reads the data of an .ans file in the flat form into a grid (section 8.3).
+// reader reads the data of an .ans file in the flat form into a grid (section 3).
 type reader struct {
 	d     *screen.FileDiags
 	width int
@@ -90,7 +90,7 @@ func (r *reader) text(run []byte) {
 		r.put(g, w)
 	}
 	if len(valid) < len(run) {
-		r.d.Diags = nil // invalid UTF-8 is the only error of the file (section 8.2, step 5)
+		r.d.Diags = nil // invalid UTF-8 is the only error of the file (section 2, step 5)
 		r.stop("invalid UTF-8")
 	}
 }
@@ -163,7 +163,7 @@ func (r *reader) escape(data []byte, i int) int {
 	return next
 }
 
-// sgr does the SGR parameters ps (section 8.3). raw holds the digits of each parameter
+// sgr does the SGR parameters ps (section 3). raw holds the digits of each parameter
 // for the messages. After an error, the rest of the sequence does nothing.
 func (r *reader) sgr(ps []int, raw [][]byte, text string) {
 	s := &r.style

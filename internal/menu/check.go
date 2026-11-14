@@ -1,5 +1,5 @@
 // Package menu checks the menus between screens and runs the session.
-// Specification: docs/specs/menu-nav.md, sections 6 and 7.
+// Specification: docs/specs/menu-nav.md, sections 5 and 6.
 package menu
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// Check does the checks of section 7 between files: the goto actions, the screens
+// Check does the checks of section 6 between files: the goto actions, the screens
 // without items and the start screen. screens is the result of a load without errors.
 // Check adds the errors to ds with the limit of screen.MaxFileDiags for each file
 // and gives the sorted diagnostics.

@@ -1,5 +1,5 @@
 // Package tomlcheck decodes a TOML document of the host: bbs.toml or a front matter.
-// It gives the errors of docs/specs/screen-format.md, section 9.1.
+// It gives the errors of docs/specs/screen-render.md, section 3.1.
 //
 // go-toml v2 has two gaps that Decode closes:
 //   - A key matches a field also without case, and DisallowUnknownFields does not stop it.
@@ -22,7 +22,7 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-// MaxBytes is the size limit of a TOML document (section 10). The time of a decode
+// MaxBytes is the size limit of a TOML document (bbt-format, section 9). The time of a decode
 // grows with the square of the size: each unknown key error scans the document.
 const MaxBytes = 64 << 10
 

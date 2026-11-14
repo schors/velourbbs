@@ -29,8 +29,8 @@ func outRecord(t *testing.T, out []byte) []byte {
 	return out[len(out)-128:]
 }
 
-// TestImportForms imports each form of section 3 and reads the output by screen-format,
-// sections 8.2 and 8.3: the grid is the grid of the play.
+// TestImportForms imports each form of section 3 and reads the output by art-format,
+// sections 2 and 3: the grid is the grid of the play.
 func TestImportForms(t *testing.T) {
 	for _, f := range forms {
 		t.Run(f.name, func(t *testing.T) {

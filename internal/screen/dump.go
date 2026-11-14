@@ -7,7 +7,7 @@ import (
 	"iter"
 )
 
-// WriteDump writes the cell dump of section 9.3 of pages for a terminal of term.rows = rows.
+// WriteDump writes the cell dump of screen-render, section 3.3, of pages for a terminal of term.rows = rows.
 func WriteDump(w io.Writer, rows int, pages iter.Seq[Page]) error {
 	n := 0
 	for p := range pages {
@@ -20,7 +20,7 @@ func WriteDump(w io.Writer, rows int, pages iter.Seq[Page]) error {
 }
 
 // WritePage writes the part of the cell dump for page n, 1-based, of a terminal
-// of term.rows = rows (section 9.3).
+// of term.rows = rows (screen-render, section 3.3).
 func WritePage(w io.Writer, rows, n int, p Page) error {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "page %d %dx%d\n", n, p.Cols, rows)

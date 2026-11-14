@@ -19,7 +19,7 @@ func runIn(t *testing.T, dir string, args ...string) (stdout, stderr string, sta
 }
 
 func TestCheck(t *testing.T) {
-	// The three examples of section 9.1. The warning is on line 4:
+	// The three examples of screen-render, section 3.1. The warning is on line 4:
 	// a width in the front matter puts the art insert after line 3.
 	want := `screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100
 screens/main.ans:4:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16
@@ -31,7 +31,7 @@ screens/main.bbt:2:1: item "S": when: unknown field "term.colours"
 	}
 }
 
-// The examples of menu-nav, section 7. The menu checks run after a load without errors,
+// The examples of menu-nav, section 6. The menu checks run after a load without errors,
 // so each case is one run. So TestCheck does not report the goto to "setup"
 // and the screen "about" without items.
 func TestCheckMenu(t *testing.T) {
@@ -87,7 +87,7 @@ bbs.toml:1:1: telnet.allow: invalid address or prefix "x"
 }
 
 // The aliases of bbs.toml are valid in each screen. After a TOML error in bbs.toml,
-// each use of a lost alias gives an unknown field (section 4.2).
+// each use of a lost alias gives an unknown field (bbt-format, section 4.2).
 func TestCheckAliases(t *testing.T) {
 	tests := []struct{ config, want string }{
 		{"[fields]\nw = \"term.cols\"\nr = \"term.rows\"\n", ""},
@@ -132,7 +132,7 @@ func TestPreview(t *testing.T) {
 		args []string
 		want string
 	}{{
-		// The dump of section 9.3.
+		// The dump of screen-render, section 3.3.
 		name: "spec dump",
 		args: []string{"main"},
 		want: `page 1 80x24

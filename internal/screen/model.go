@@ -1,7 +1,7 @@
 package screen
 
 // Pos is the position of a token in a file. Line and Col are 1-based.
-// Col counts code points (section 9.1).
+// Col counts code points (screen-render, section 3.1).
 type Pos struct {
 	File      string
 	Line, Col int
@@ -19,12 +19,12 @@ type Screen struct {
 
 // Item is a menu item of the front matter. When is nil when the item has no when.
 type Item struct {
-	Key  string // a key name of menu-nav, section 3.1, in upper case
+	Key  string // a key name of section 8.1, in upper case
 	Do   Action
 	When *Cond
 }
 
-// Action is the parsed do of an item (menu-nav, section 5).
+// Action is the parsed do of an item (section 8.3).
 type Action struct {
 	Op     Op
 	Screen string // the screen name of Goto
@@ -33,7 +33,7 @@ type Action struct {
 // Op is an action word of do.
 type Op uint8
 
-// The actions of menu-nav, section 5.
+// The actions of section 8.3.
 const (
 	Goto Op = iota + 1
 	Logoff

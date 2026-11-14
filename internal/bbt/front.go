@@ -44,7 +44,7 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 	if len(errs) > 0 {
 		return nil
 	}
-	// Each other error has the position 2:1 (section 9.1).
+	// Each other error has the position 2:1 (screen-render, section 3.1).
 	ok := true
 	errorf := func(format string, args ...any) {
 		d.Errorf(2, 1, format, args...)
@@ -61,7 +61,7 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 	}
 	seen := map[string]bool{}
 	for i, it := range doc.Item {
-		// The label of menu-nav, section 7: the valid key, else the number.
+		// The label of menu-nav, section 6: the valid key, else the number.
 		label := fmt.Sprintf("item %d", i+1)
 		var item screen.Item
 		if it.Key == nil {
@@ -98,7 +98,7 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 	return fr
 }
 
-// parseAction parses the do of an item (menu-nav, section 5).
+// parseAction parses the do of an item (section 8.3).
 func parseAction(do string) (screen.Action, error) {
 	word, arg, hasArg := strings.Cut(do, " ")
 	switch word {
