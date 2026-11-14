@@ -26,6 +26,7 @@ arrow-key selection.
 - The host puts the value into its argument slot as one opaque string.
   It never parses a string after substitution.
 - `ask = "Message number: "` asks for a line before the action. `{in}` is the answer.
+  `in` has no dot, so it shares the names of the aliases in `bbs.toml`.
 - `{arg.*}` gives the arguments of the current screen.
 - The loader checks actions, targets and argument names.
 

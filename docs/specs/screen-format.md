@@ -21,7 +21,7 @@ The limits of section 10 catch mistakes, for example a file that is too large.
 | `screens/<name>.bbt` | A "screen": a "BBS template" that the host shows. Section 3. |
 | `screens/_<name>.bbt` | A "fragment": a BBS template that an include inserts. Section 3.4. |
 | `screens/<name>.ans` | ANSI art. Section 8. |
-| `bbs.toml` | Host settings. This specification defines its tables `[screen]` and `[theme]`. |
+| `bbs.toml` | Host settings. This specification defines its tables `[screen]`, `[theme]` and `[fields]`. |
 
 - `<name>` matches `[a-z0-9][a-z0-9_-]*`. Example: `main_wide`.
 - An `.ans` file is art only. Only an art insert in a BBS template shows it.
@@ -57,7 +57,6 @@ The front matter is TOML 1.1. An unknown key is an error.
 | Key | Type | Meaning |
 |---|---|---|
 | `width` | array of 2 integers | `[min, max]`, with 1 <= `min` <= `max` <= 255. Section 6.1. |
-| `[fields]` | table of strings | Aliases. Section 4.2. |
 | `[[item]]` | array of tables | Menu items with `key`, `do` and an optional `when`. |
 
 Example:
@@ -65,8 +64,6 @@ Example:
 ```
 +++
 width = [64, 100]
-[fields]
-w = "term.cols"
 [[item]]
 key = "A"
 do = "goto about"
@@ -76,7 +73,7 @@ do = "goto about"
 {#else}
 {>main.ans}
 {/if}
-{!title}Welcome! Your terminal has {w} columns.
+{!title}Welcome! Your terminal has {term.cols} columns.
 {!prompt}[A]bout [G]oodbye
 ```
 
@@ -136,11 +133,17 @@ Section 8.4 has the rule for art.
 
 ### 4.2. Aliases
 
-- `[fields]` maps an alias to a registry path. Example: `w = "term.cols"`.
+- `[fields]` in `bbs.toml` maps an alias to a registry path. An alias matches `[a-z][a-z0-9_]*`.
 - An alias cannot be `term`, `item`, `and`, `or` or `not`.
 - The path of an alias cannot be `item.<KEY>`.
-- An alias is valid in the screen, in its fragments and in its art.
-  Short aliases let art have short fields.
+- An alias is valid in each screen, fragment and art. Short aliases let art have short fields.
+
+Example `bbs.toml`:
+
+```toml
+[fields]
+w = "term.cols"
+```
 
 ### 4.3. Values
 
@@ -417,7 +420,7 @@ The style of a written cell, in this order:
 - A diagnostic escapes each invalid UTF-8 byte and each rune that is not printable,
   as a Go quoted string does. Example: a file name with ESC gives `\x1b`.
 - A check of a fragment or an art file can depend on the screen that uses it:
-  on its aliases, its items or its width limits. Such an error starts with `screen "<name>": `.
+  on its items or its width limits. Such an error starts with `screen "<name>": `.
 - `bbs.toml` must exist.
 - The host runs the same checks at start. An error stops the start.
 

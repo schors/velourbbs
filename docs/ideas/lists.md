@@ -46,7 +46,7 @@ The user pages through the list and selects a row.
 
 ## Example
 
-`screens/msglist.ans` (the frame continues for 15 rows), with `[fields]` `n = "page.n"`,
+`screens/msglist.ans` (the frame continues for 15 rows), with `[fields]` of `bbs.toml` `n = "page.n"`,
 `c = "page.count"` and `m = "row.mark"`:
 
 ```
@@ -68,6 +68,7 @@ A `.bbt` text list:
 ## Open questions
 
 1. How `<list>` in `{#each <list>}` names the `data` of the screen.
+   A name without a dot shares the names of the aliases in `bbs.toml`.
 
 ## Dependencies
 
