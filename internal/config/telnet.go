@@ -56,38 +56,16 @@ type telnetDoc struct {
 	OutputTimeout     *int64    `toml:"output_timeout"`
 }
 
-// telnetValues is the decode of the values of [telnet] with a check.
-type telnetValues struct {
-	Listen address  `toml:"listen"`
-	Allow  []prefix `toml:"allow"`
-	Proxy  []prefix `toml:"proxy"`
-}
-
-type address struct{}
-
-func (address) UnmarshalText(text []byte) error { return checkListen(string(text)) }
-
-type prefix struct{ p netip.Prefix }
-
-func (p *prefix) UnmarshalText(text []byte) error {
-	var err error
-	if p.p, err = parsePrefix(string(text)); err != nil {
-		return fmt.Errorf("invalid address or prefix %q", text)
-	}
-	return nil
-}
-
 // telnet gives the settings of [telnet]. An integer out of its range keeps its default.
-func telnet(d telnetDoc, v telnetValues, errorf func(format string, args ...any)) Telnet {
+// An invalid listen, allow or proxy keeps its default.
+func telnet(d telnetDoc, errorf func(format string, args ...any)) Telnet {
 	c := defaultTelnet
 	if d.Listen != nil {
-		c.Listen = *d.Listen
-	}
-	if d.Allow != nil {
-		c.Allow = prefixes(v.Allow)
-	}
-	if d.Proxy != nil {
-		c.Proxy = prefixes(v.Proxy)
+		if err := checkListen(*d.Listen); err != nil {
+			errorf("telnet.listen: %v", err)
+		} else {
+			c.Listen = *d.Listen
+		}
 	}
 	ints := []struct {
 		key string
@@ -119,6 +97,21 @@ func telnet(d telnetDoc, v telnetValues, errorf func(format string, args ...any)
 			*e.dst = int(*e.src)
 		}
 	}
+	lists := []struct {
+		key string
+		src *[]string
+		dst *[]netip.Prefix
+	}{
+		{"allow", d.Allow, &c.Allow},
+		{"proxy", d.Proxy, &c.Proxy},
+	}
+	for _, e := range lists {
+		if e.src != nil {
+			if ps, ok := prefixes(e.key, *e.src, errorf); ok {
+				*e.dst = ps
+			}
+		}
+	}
 	for _, e := range timeouts {
 		if e.src != nil && check(e.key, *e.src) {
 			*e.dst = time.Duration(*e.src) * time.Second
@@ -127,12 +120,20 @@ func telnet(d telnetDoc, v telnetValues, errorf func(format string, args ...any)
 	return c
 }
 
-func prefixes(a []prefix) []netip.Prefix {
-	ps := make([]netip.Prefix, len(a))
-	for i, p := range a {
-		ps[i] = p.p
+// prefixes parses the entries of the list key. ok is false after an error.
+func prefixes(key string, entries []string, errorf func(format string, args ...any)) (ps []netip.Prefix, ok bool) {
+	ok = true
+	ps = make([]netip.Prefix, 0, len(entries))
+	for _, s := range entries {
+		p, err := parsePrefix(s)
+		if err != nil {
+			errorf("telnet.%s: invalid address or prefix %q", key, s)
+			ok = false
+			continue
+		}
+		ps = append(ps, p)
 	}
-	return ps
+	return ps, ok
 }
 
 // checkListen checks <host>:<port>. The host can be empty; listen checks it.

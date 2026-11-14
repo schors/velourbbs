@@ -121,8 +121,8 @@ func TestErrors(t *testing.T) {
 	}
 }
 
-// A TOML error gives the first of: a syntax or type error, the first invalid value,
-// all unknown keys (section 9.1).
+// A TOML document gives a syntax or type error; else all unknown keys;
+// else its other errors (section 9.1).
 func TestTOMLErrors(t *testing.T) {
 	tests := []struct {
 		data string
@@ -137,15 +137,19 @@ func TestTOMLErrors(t *testing.T) {
 		{"[screen]\nmore = 1", []string{`bbs.toml:2:8: screen.more: must be a string`}},
 		{"[screen]\nmore = \"\t\"", []string{`bbs.toml:1:1: screen.more: control character U+0009`}},
 		{"[screen]\nwidth = ", []string{`bbs.toml:2:8: expected value, not end of input`}},
-		{"[theme]\nprompt = \"14 bolt\"", []string{`bbs.toml:2:10: theme.prompt: invalid style "14 bolt": unknown attribute "bolt"`}},
+		{"[theme]\nprompt = \"14 bolt\"", []string{`bbs.toml:1:1: theme.prompt: invalid style "14 bolt": unknown attribute "bolt"`}},
 		{"[theme]\nprompt = 14", []string{`bbs.toml:2:10: theme.prompt: must be a string`}},
 		{"a.b = 1", []string{`bbs.toml:1:1: unknown key "a.b"`}},
 		{"[TELNET]\nlisten = \":1\"", []string{`bbs.toml:1:1: unknown key "TELNET"`}},
 		{"[telnet]\nlisten = \":1\"\nLISTEN = \":2\"", []string{`bbs.toml:1:1: unknown key "telnet.LISTEN"`}},
 		{"\n[foo.bar]\nx = 1", []string{`bbs.toml:2:2: unknown key "foo.bar"`}},
-		// A type error comes before an invalid value, an invalid value before an unknown key.
+		// A type error comes before an unknown key, an unknown key before an other error.
 		{"[theme]\nx = \"bad\"\ny = 1\nz = \"bad\"", []string{`bbs.toml:3:5: theme.y: must be a string`}},
-		{"a = 1\n[theme]\nx = \"bad\"\nz = \"bad\"", []string{`bbs.toml:3:5: theme.x: invalid style "bad": invalid colour "bad"`}},
+		{"a = 1\n[theme]\nx = \"bad\"\nz = \"bad\"", []string{`bbs.toml:1:1: unknown key "a"`}},
+		{"[theme]\nx = \"bad\"\nz = \"bad\"", []string{
+			`bbs.toml:1:1: theme.x: invalid style "bad": invalid colour "bad"`,
+			`bbs.toml:1:1: theme.z: invalid style "bad": invalid colour "bad"`,
+		}},
 		{"a = 1\n[screen]\nb = 2\nwidth = [1, 1]", []string{`bbs.toml:1:1: unknown key "a"`, `bbs.toml:3:1: unknown key "screen.b"`}},
 	}
 	for _, tt := range tests {

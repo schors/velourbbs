@@ -318,7 +318,6 @@ output_timeout = 60
 - Each integer is from 1 to 1000000. The port of `listen` is from 1 to 65535.
 - An address is an IPv4 or IPv6 address. A prefix is an address with `/<bits>`.
 - `bbs check` checks `[telnet]` with the rules of [screen-format](screen-format.md), section 9.1.
-  An invalid entry of `listen`, `allow` or `proxy` is an invalid value.
 
 ### 9.2. Connection limits
 

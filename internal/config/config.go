@@ -5,7 +5,6 @@ package config
 
 import (
 	"bytes"
-	"fmt"
 	"maps"
 	"slices"
 
@@ -50,24 +49,6 @@ type doc struct {
 	Telnet telnetDoc `toml:"telnet"`
 }
 
-// values is the decode of the values with a check (screen-format, section 9.1).
-type values struct {
-	Theme  map[string]themeStyle `toml:"theme"`
-	Telnet telnetValues          `toml:"telnet"`
-}
-
-// themeStyle is a style of [theme] (section 7.2).
-type themeStyle struct{ spec screen.StyleSpec }
-
-func (s *themeStyle) UnmarshalText(text []byte) error {
-	spec, err := screen.ParseStyle(string(text))
-	if err != nil {
-		return fmt.Errorf("invalid style %q: %v", text, err)
-	}
-	s.spec = spec
-	return nil
-}
-
 // File is the name of the host settings file in the BBS directory and in the diagnostics.
 const File = "bbs.toml"
 
@@ -81,8 +62,7 @@ func Parse(data []byte) (Config, screen.Diags) {
 	}
 	fd := screen.FileDiags{File: File}
 	var d doc
-	var v values
-	errs := tomlcheck.Decode(bytes.TrimPrefix(data, screen.BOM), &d, &v)
+	errs := tomlcheck.Decode(bytes.TrimPrefix(data, screen.BOM), &d)
 	for _, e := range errs {
 		fd.Errorf(e.Line, e.Col, "%s", e.Msg)
 	}
@@ -110,14 +90,22 @@ func Parse(data []byte) (Config, screen.Diags) {
 	if p := d.Menu.Start; p != nil {
 		cfg.Start = *p
 	}
-	cfg.Telnet = telnet(d.Telnet, v.Telnet, errorf)
-	for _, name := range slices.Sorted(maps.Keys(v.Theme)) {
+	cfg.Telnet = telnet(d.Telnet, errorf)
+	specs := map[string]screen.StyleSpec{}
+	for _, name := range slices.Sorted(maps.Keys(d.Theme)) {
 		if !screen.IsIdent(name) {
 			errorf("theme: invalid style name %q", name)
-			delete(v.Theme, name)
+			continue
 		}
+		s := d.Theme[name]
+		spec, err := screen.ParseStyle(s)
+		if err != nil {
+			errorf("theme.%s: invalid style %q: %v", name, s, err)
+			continue
+		}
+		specs[name] = spec
 	}
-	cfg.Theme = theme(v.Theme)
+	cfg.Theme = theme(specs)
 	return cfg, fd.Diags
 }
 
@@ -132,11 +120,9 @@ func checkText(s string) error {
 
 // theme gives the theme of the styles t. A style without a colour takes it from normal;
 // normal takes it from its default (section 7.3).
-func theme(t map[string]themeStyle) map[string]screen.Style {
+func theme(t map[string]screen.StyleSpec) map[string]screen.Style {
 	specs := map[string]screen.StyleSpec{"normal": {}, "more": defaultMoreStyle}
-	for name, s := range t {
-		specs[name] = s.spec
-	}
+	maps.Copy(specs, t)
 	normal := specs["normal"].Over(defaultNormal)
 	base := screen.Style{Fg: normal.Fg, Bg: normal.Bg}
 	th := make(map[string]screen.Style, len(specs))
