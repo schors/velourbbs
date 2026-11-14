@@ -193,18 +193,13 @@ func TestTerminalReply(t *testing.T) {
 func TestTerminalPage(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		term, f := connect(t, testTimeouts)
-		page := screen.Page{{
-			{Grapheme: "ÿ", Style: screen.Style{Fg: screen.RGBColour(1, 2, 3)}},
-		}}
-		if err := term.Page("main", []screen.Page{page}, 0); err != nil {
+		page := rows(screen.Row{{Grapheme: "ÿ", Style: screen.Style{Fg: screen.RGBColour(1, 2, 3)}}})
+		if err := term.Page(page); err != nil {
 			t.Fatal(err)
 		}
 		// XTERM gives 256 colours, so the RGB colour becomes an index.
 		if out := f.output(); !strings.HasSuffix(out, string(AppendPage(nil, page, screen.Colors256))) {
 			t.Errorf("output %q does not end with the page", out)
-		}
-		if term.KeyEvent("a", false) != nil || term.Logoff() != nil {
-			t.Error("KeyEvent or Logoff gives an error")
 		}
 	})
 }
@@ -216,11 +211,11 @@ func TestTerminalOutputTimeout(t *testing.T) {
 		to.Output = 200 * time.Millisecond
 		term, f := connect(t, to)
 		f.pause()
-		page := []screen.Page{{{{Grapheme: "a"}}}}
+		page := rows(screen.Row{{Grapheme: "a"}})
 		start := time.Now()
 		var err error
 		for range 3 {
-			if err = term.Page("main", page, 0); err != nil {
+			if err = term.Page(page); err != nil {
 				break
 			}
 		}

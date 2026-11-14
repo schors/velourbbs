@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"strings"
 	"testing"
@@ -57,7 +58,7 @@ func dump(t *testing.T, files map[string]string, name string, cols, rows int, it
 		env.Items[k] = true
 	}
 	var b strings.Builder
-	if err := screen.WriteDump(&b, cols, rows, screen.Render(screens[name], env, theme, "-- More --")); err != nil {
+	if err := screen.WriteDump(&b, rows, screen.Render(screens[name], env, theme, "-- More --")); err != nil {
 		t.Fatal(err)
 	}
 	return b.String()
@@ -170,7 +171,7 @@ func TestRender(t *testing.T) {
 
 // The golden dump of the example equals the dump of section 9.3.
 func TestRenderExampleDump(t *testing.T) {
-	want := `page 1/1 80x25
+	want := `page 1 80x25
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
 styles
@@ -200,13 +201,43 @@ func load(t *testing.T, main string) *screen.Screen {
 func TestRenderRowLimit(t *testing.T) {
 	s := load(t, "+++\nwidth = [1, 1]\n+++\n"+strings.Repeat("x", screen.MaxRenderRows+10)+"\n")
 	env := &screen.Env{Term: screen.Term{Cols: 20, Rows: 100}}
-	pages := screen.Render(s, env, theme, "")
-	rows := 0
-	for _, p := range pages {
-		rows += len(p)
-	}
-	if rows -= len(pages) - 1; rows != screen.MaxRenderRows { // without the More rows
+	if rows := countRows(s, env); rows != screen.MaxRenderRows {
 		t.Errorf("got %d rows, want %d", rows, screen.MaxRenderRows)
+	}
+}
+
+// countRows renders s and gives the count of its rows without the More rows.
+func countRows(s *screen.Screen, env *screen.Env) int {
+	rows, pages := 0, 0
+	for p := range screen.Render(s, env, theme, "") {
+		rows += len(p.Rows)
+		pages++
+	}
+	return rows - (pages - 1)
+}
+
+// A session holds one page (section 6.4): the render of MaxRenderRows rows
+// at 255 columns allocates less than 3 pages of cells. A row has the cells
+// of the screen area only: at W = 20, the render allocates less than 3 pages of 20 cells.
+func TestRenderPageMemory(t *testing.T) {
+	cell := reflect.TypeFor[screen.Cell]().Size()
+	for _, tt := range []struct {
+		width string
+		w     int
+	}{{"[255, 255]", 255}, {"[20, 20]", 20}} {
+		s := load(t, "+++\nwidth = "+tt.width+"\n+++\n"+strings.Repeat("x\n", screen.MaxRenderRows))
+		env := &screen.Env{Term: screen.Term{Cols: 255, Rows: 25}}
+		var before, after runtime.MemStats
+		runtime.ReadMemStats(&before)
+		rows := countRows(s, env)
+		runtime.ReadMemStats(&after)
+		if rows != screen.MaxRenderRows {
+			t.Errorf("width %s: got %d rows, want %d", tt.width, rows, screen.MaxRenderRows)
+		}
+		limit := 3 * uint64(env.Term.Rows*tt.w) * uint64(cell)
+		if n := after.TotalAlloc - before.TotalAlloc; n > limit {
+			t.Errorf("width %s: render allocated %d bytes, want at most %d", tt.width, n, limit)
+		}
 	}
 }
 
@@ -217,7 +248,7 @@ func TestRenderLineMemory(t *testing.T) {
 	env := &screen.Env{Term: screen.Term{Type: strings.Repeat(" ", 40), Cols: 80, Rows: 25}}
 	var before, after runtime.MemStats
 	runtime.ReadMemStats(&before)
-	screen.Render(s, env, theme, "")
+	countRows(s, env)
 	runtime.ReadMemStats(&after)
 	if n := after.TotalAlloc - before.TotalAlloc; n > 1<<20 {
 		t.Errorf("render allocated %d bytes, want at most 1 MB", n)

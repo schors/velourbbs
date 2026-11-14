@@ -1,42 +1,34 @@
 package screen
 
+import "iter"
+
 // MaxRenderRows is the row limit of a rendered screen (section 10).
 const MaxRenderRows = 10000
 
-// Render renders the screen s for the terminal of env into pages (section 6).
+// Render renders the screen s for the terminal of env and gives its pages (section 6).
 // env.Term is in the ranges of section 4.1. env.Items holds the enabled items.
 // theme has the styles normal and more. more is the text of the More row.
-// Each row of a page has env.Term.Cols cells.
-func Render(s *Screen, env *Env, theme map[string]Style, more string) []Page {
-	cols := env.Term.Cols
-	w := min(max(cols, s.Width.Min), s.Width.Max)
-	r := &renderer{
-		env: env, normal: theme["normal"], w: w, cols: cols,
-		area: min(w, cols), margin: max(cols-w, 0) / 2,
-		values: map[Ref][]Grapheme{}, lead: true,
+// The render holds one page: it renders the next rows after the consumer takes a page,
+// and it reuses the rows of the page. So the rows of a page are valid until the next page.
+func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[Page] {
+	return func(yield func(Page) bool) {
+		cols := env.Term.Cols
+		w := min(max(cols, s.Width.Min), s.Width.Max)
+		r := &renderer{
+			env: env, normal: theme["normal"], w: w, cols: cols,
+			area: min(w, cols), margin: max(cols-w, 0) / 2, height: env.Term.Rows,
+			values: map[Ref][]Grapheme{}, lead: true, yield: yield,
+		}
+		var moreCells []Cell
+		for g, gw := range Graphemes(more) {
+			moreCells = appendCell(moreCells, Grapheme{g, gw}, theme["more"])
+		}
+		r.more = r.row(moreCells)
+		r.walk(s.Body, r.normal)
+		if !r.stopped {
+			yield(r.page(r.rows))
+		}
 	}
-	r.walk(s.Body, r.normal)
-
-	var moreCells []Cell
-	for g, gw := range Graphemes(more) {
-		moreCells = appendCell(moreCells, Grapheme{g, gw}, theme["more"])
-	}
-	return paginate(r.rows, env.Term.Rows, r.row(moreCells))
-}
-
-// paginate splits rows into pages for a terminal of height rows (section 6.4).
-// Each page except the last ends with the More row.
-func paginate(rows []Row, height int, more Row) []Page {
-	if len(rows) <= height {
-		return []Page{rows}
-	}
-	h := height - 1
-	var pages []Page
-	for len(rows) > h {
-		pages = append(pages, append(rows[:h:h], more))
-		rows = rows[h:]
-	}
-	return append(pages, rows)
 }
 
 // renderer holds the state of one render. It lays out each source line as it comes
@@ -49,8 +41,18 @@ type renderer struct {
 	area   int // the cells of the screen area: W, or term.cols when it is smaller
 	margin int // the left margin of the screen area
 	values map[Ref][]Grapheme
-	rows   []Row
-	full   bool // the rows are at MaxRenderRows
+
+	// The pages (section 6.4).
+	height  int // term.rows
+	more    Row // the More row
+	rows    []Row
+	out     []Row // the rows of a page with the More row
+	free    []Row // the rows of the pages that the consumer took, for reuse
+	shown   bool  // a page with a More row is shown
+	count   int   // the rendered rows
+	yield   func(Page) bool
+	stopped bool // the consumer stopped the render
+	done    bool // the render stops: the rows are at MaxRenderRows, or the consumer stopped
 
 	// The current source line.
 	cells  []Cell     // the cells of the current row
@@ -72,7 +74,7 @@ type lineCell struct {
 // walk renders segs with the style cur and gives the style after them.
 func (r *renderer) walk(segs []Seg, cur Style) Style {
 	for _, seg := range segs {
-		if r.full {
+		if r.done {
 			break
 		}
 		switch seg := seg.(type) {
@@ -132,7 +134,7 @@ func (r *renderer) field(f Field, style Style) {
 // add adds one grapheme to the line (section 6.3).
 func (r *renderer) add(c lineCell) {
 	switch {
-	case r.full:
+	case r.done:
 	case r.lead && c.g.Text == " ":
 		// The spaces at the start of the line stay up to W and join the first word.
 		if r.ww < r.w {
@@ -248,25 +250,50 @@ func (r *renderer) art(a ArtInsert) {
 }
 
 // addRow adds a row from the cells of the screen area. The render stops at MaxRenderRows.
+// The first page shows up to term.rows rows. When more rows follow, each page has
+// term.rows - 1 rows and the More row, and the last page has the rest (section 6.4).
 func (r *renderer) addRow(cells []Cell) {
-	if r.full {
+	if r.done {
 		return
 	}
 	r.rows = append(r.rows, r.row(cells))
-	r.full = len(r.rows) == MaxRenderRows
+	r.count++
+	r.done = r.count == MaxRenderRows
+	h := r.height - 1
+	if len(r.rows) <= h || !r.shown && len(r.rows) <= r.height {
+		return
+	}
+	r.shown = true
+	r.out = append(append(r.out[:0], r.rows[:h]...), r.more)
+	if !r.yield(r.page(r.out)) {
+		r.stopped, r.done = true, true
+		return
+	}
+	r.free = append(r.free, r.rows[:h]...)
+	r.rows = r.rows[:copy(r.rows, r.rows[h:])]
 }
 
-// row gives a row of term.cols cells with cells in the screen area.
+// page gives a page of rows.
+func (r *renderer) page(rows []Row) Page {
+	return Page{Rows: rows, Cols: r.cols, Margin: r.margin, Fill: r.normal}
+}
+
+// row gives a row of the screen area with cells. It reuses a row of r.free.
 // It cuts cells at the screen area; a cut through a wide grapheme leaves a space in its style.
 // Each other cell is a space in normal (section 6.2).
 func (r *renderer) row(cells []Cell) Row {
-	row := make(Row, r.cols)
+	var row Row
+	if n := len(r.free); n > 0 {
+		row, r.free = r.free[n-1], r.free[:n-1]
+	} else {
+		row = make(Row, r.area)
+	}
 	for i := range row {
 		row[i] = Cell{" ", r.normal}
 	}
-	n := copy(row[r.margin:r.margin+r.area], cells)
+	n := copy(row, cells)
 	if n < len(cells) && n > 0 && cells[n].Grapheme == "" {
-		row[r.margin+n-1].Grapheme = " "
+		row[n-1].Grapheme = " "
 	}
 	return row
 }

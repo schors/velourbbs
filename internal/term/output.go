@@ -17,10 +17,12 @@ import (
 func AppendPage(dst []byte, p screen.Page, colors int) []byte {
 	dst = append(dst, "\x1b[0m\x1b[2J"...)
 	var model, out screen.Style // the model style and the output style of the previous cell
-	for i, row := range p {
+	var row screen.Row
+	for i := range p.Rows {
 		dst = append(dst, "\x1b["...)
 		dst = strconv.AppendInt(dst, int64(i+1), 10)
 		dst = append(dst, ";1H"...)
+		row = p.Line(i, row)
 		for _, c := range row {
 			if c.Grapheme == "" {
 				continue // the second cell of a wide grapheme

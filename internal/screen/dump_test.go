@@ -1,6 +1,7 @@
 package screen
 
 import (
+	"slices"
 	"strings"
 	"testing"
 )
@@ -25,12 +26,12 @@ func TestWriteDump(t *testing.T) {
 	normal := Style{Fg: IndexColour(7), Bg: IndexColour(0)}
 	title := Style{Fg: IndexColour(15), Bg: IndexColour(4), Attr: Bold}
 	cyan := Style{Fg: IndexColour(14), Bg: IndexColour(0)}
-	page := Page{row(80, "Welcome!", title, normal), row(80, "[G]oodbye", cyan, normal)}
+	page := Page{Rows: []Row{row(80, "Welcome!", title, normal), row(80, "[G]oodbye", cyan, normal)}, Cols: 80}
 	var b strings.Builder
-	if err := WriteDump(&b, 80, 25, []Page{page}); err != nil {
+	if err := WriteDump(&b, 25, slices.Values([]Page{page})); err != nil {
 		t.Fatal(err)
 	}
-	want := `page 1/1 80x25
+	want := `page 1 80x25
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
 styles
@@ -42,27 +43,29 @@ styles
 	}
 }
 
+// The second page has a screen area of 2 cells with a margin of 1:
+// the cells outside it are spaces in Fill.
 func TestWriteDumpPages(t *testing.T) {
 	normal := Style{Fg: IndexColour(7), Bg: IndexColour(0)}
 	wide := Style{Fg: IndexColour(11), Bg: IndexColour(0)}
 	pages := []Page{
-		{row(5, "中a", wide, normal), row(5, "", normal, normal)},
-		{row(5, "b", rgbStyle(), normal)},
+		{Rows: []Row{row(5, "中a", wide, normal), row(5, "", normal, normal)}, Cols: 5},
+		{Rows: []Row{row(2, "b", rgbStyle(), normal)}, Cols: 5, Margin: 1, Fill: normal},
 	}
 	var b strings.Builder
-	if err := WriteDump(&b, 5, 3, pages); err != nil {
+	if err := WriteDump(&b, 3, slices.Values(pages)); err != nil {
 		t.Fatal(err)
 	}
-	want := `page 1/2 5x3
+	want := `page 1 5x3
 |中a  |
 |     |
 styles
 1: 1-3 11/0, 4-5 7/0
 2: 1-5 7/0
-page 2/2 5x3
-|b    |
+page 2 5x3
+| b   |
 styles
-1: 1-1 #102030/-, 2-5 7/0
+1: 1-1 7/0, 2-2 #102030/-, 3-5 7/0
 `
 	if b.String() != want {
 		t.Errorf("got\n%s\nwant\n%s", b.String(), want)

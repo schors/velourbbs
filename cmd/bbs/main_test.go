@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -90,7 +91,7 @@ func TestPreview(t *testing.T) {
 		// The dump of section 9.3.
 		name: "spec dump",
 		args: []string{"main"},
-		want: `page 1/1 80x25
+		want: `page 1 80x25
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
 styles
@@ -100,7 +101,7 @@ styles
 	}, {
 		name: "default type and colours",
 		args: []string{"term", "--size", "30x10"},
-		want: `page 1/1 30x10
+		want: `page 1 30x10
 |xterm 256                     |
 |[W]ide                        |
 styles
@@ -110,7 +111,7 @@ styles
 	}, {
 		name: "set and item enabled",
 		args: []string{"term", "--size", "30x10", "--set", "term.type=vt100", "--set", "term.colors=16"},
-		want: `page 1/1 30x10
+		want: `page 1 30x10
 |vt100 16                      |
 |[W]ide                        |
 styles
@@ -121,7 +122,7 @@ styles
 		// The flags before the name. Below 30 columns, term.bbt shows its small fragment.
 		name: "small with item",
 		args: []string{"--size", "25x10", "term"},
-		want: `page 1/1 25x10
+		want: `page 1 25x10
 |small [W]ide             |
 styles
 1: 1-25 7/0
@@ -129,7 +130,7 @@ styles
 	}, {
 		name: "small without item",
 		args: []string{"term", "--size", "20x10"},
-		want: `page 1/1 20x10
+		want: `page 1 20x10
 |small narrow        |
 styles
 1: 1-20 7/0
@@ -137,7 +138,7 @@ styles
 	}, {
 		name: "flags on both sides",
 		args: []string{"--set", "term.type=vt100", "term", "--size", "30x10"},
-		want: `page 1/1 30x10
+		want: `page 1 30x10
 |vt100 256                     |
 |[W]ide                        |
 styles
@@ -199,7 +200,7 @@ func TestPreviewErrors(t *testing.T) {
 
 // page gives the dump of a page of one row with the style 7/0.
 func page(cols, rows int, text string) string {
-	return fmt.Sprintf("page 1/1 %dx%d\n|%-*s|\nstyles\n1: 1-%d 7/0\n", cols, rows, cols, text, cols)
+	return fmt.Sprintf("page 1 %dx%d\n|%-*s|\nstyles\n1: 1-%d 7/0\n", cols, rows, cols, text, cols)
 }
 
 func TestPreviewKeys(t *testing.T) {
@@ -261,6 +262,31 @@ func TestPreviewKeysNoGoodbye(t *testing.T) {
 	if out.String() != want || errOut.String() != wantErr || status != exitError {
 		t.Errorf("stdout:\n%s\nstderr %q, status %d; want stdout:\n%s\nstderr %q, status 1",
 			out.String(), errOut.String(), status, want, wantErr)
+	}
+}
+
+// A key on a More row gives the next page. A new screen starts at page 1.
+func TestPreviewKeysPages(t *testing.T) {
+	var body strings.Builder
+	for i := 1; i <= 12; i++ {
+		fmt.Fprintf(&body, "%d\n", i)
+	}
+	fsys := fstest.MapFS{
+		"bbs.toml": {Data: []byte("")},
+		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n" +
+			"[[item]]\nkey = \"ANY\"\ndo = \"goto main\"\n+++\n" + body.String())},
+	}
+	var out, errOut bytes.Buffer
+	status := run([]string{"preview", "main", "--size", "40x10", "--keys", "X,Y"}, fsys, &out, &errOut)
+	var events []string
+	for line := range strings.Lines(out.String()) {
+		if !strings.HasPrefix(line, "|") && !strings.HasPrefix(line, "styles") && !strings.Contains(line, ": ") {
+			events = append(events, strings.TrimSuffix(line, "\n"))
+		}
+	}
+	want := []string{"screen main", "page 1 40x10", "key X", "page 2 40x10", "key Y", "screen main", "page 1 40x10"}
+	if !slices.Equal(events, want) || errOut.String() != "" || status != 0 {
+		t.Errorf("events %q, stderr %q, status %d; want %q, no stderr, status 0", events, errOut.String(), status, want)
 	}
 }
 
