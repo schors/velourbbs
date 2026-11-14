@@ -14,6 +14,15 @@ import (
 	"newbbs/internal/screen"
 )
 
+// aliases is the [fields] of bbs.toml in the tests: w is term.cols.
+var aliases = func() screen.Fields {
+	r, err := screen.NewAlias("w", "term.cols")
+	if err != nil {
+		panic(err)
+	}
+	return screen.Fields{"w": r}
+}()
+
 // withSauce adds a SAUCE record with the width, the height and the TFlags to data.
 func withSauce(data string, width, height int, flags byte) []byte {
 	r := make([]byte, 128)
@@ -45,7 +54,7 @@ func diagText(ds screen.Diags) string {
 
 func parse(t *testing.T, data []byte) *screen.Art {
 	t.Helper()
-	a, ds := art.Parse("a.ans", data)
+	a, ds := art.Parse("a.ans", data, aliases)
 	if ds.HasErrors() || a == nil {
 		t.Fatalf("errors:\n%s", diagText(ds))
 	}
@@ -59,7 +68,7 @@ func TestMoebius(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	a, ds := art.Parse("moebius.ans", data)
+	a, ds := art.Parse("moebius.ans", data, aliases)
 	if len(ds) > 0 || a == nil {
 		t.Fatalf("diagnostics:\n%s", diagText(ds))
 	}
@@ -72,14 +81,14 @@ func TestMoebius(t *testing.T) {
 	if c := cell(a, 3, 3); c.Grapheme != "日" || c.Style.String() != "196/0" || cell(a, 3, 4).Grapheme != "" {
 		t.Errorf("3:3 = %q %s", c.Grapheme, c.Style)
 	}
-	want := []screen.ArtField{{Row: 2, Col: 128, Width: 4, Path: "w", Right: true, Style: cell(a, 2, 1).Style}}
+	want := []screen.ArtField{{Row: 2, Col: 128, Width: 4, Ref: aliases["w"], Right: true, Style: cell(a, 2, 1).Style}}
 	if fmt.Sprint(a.Fields) != fmt.Sprint(want) {
 		t.Errorf("fields %v, want %v", a.Fields, want)
 	}
 }
 
 func TestIcyDraw(t *testing.T) {
-	a, ds := art.Load(os.DirFS("testdata"), "icydraw.ans")
+	a, ds := art.Load(os.DirFS("testdata"), "icydraw.ans", aliases)
 	if a == nil {
 		t.Fatalf("errors:\n%s", diagText(ds))
 	}
@@ -96,7 +105,7 @@ func TestIcyDraw(t *testing.T) {
 	if c := cell(a, 2, 1); c.Grapheme != "X" || c.Style.String() != "7/12" {
 		t.Errorf("2:1 = %q %s", c.Grapheme, c.Style)
 	}
-	if len(a.Fields) != 1 || a.Fields[0].Path != "term.cols" || a.Fields[0].Right || a.Fields[0].Width != 12 {
+	if len(a.Fields) != 1 || a.Fields[0].Ref.String() != "term.cols" || a.Fields[0].Right || a.Fields[0].Width != 12 {
 		t.Errorf("fields %v", a.Fields)
 	}
 }
@@ -186,7 +195,7 @@ func TestMoebiusForm(t *testing.T) {
 	if a.Width != 80 || a.Height != 2 || cell(a, 1, 1).Grapheme != "a" {
 		t.Errorf("size %dx%d, 1:1 %q", a.Width, a.Height, cell(a, 1, 1).Grapheme)
 	}
-	_, ds := art.Parse("a.ans", []byte(strings.Repeat("x", 256)))
+	_, ds := art.Parse("a.ans", []byte(strings.Repeat("x", 256)), aliases)
 	if got, want := diagText(ds), "a.ans:1:255: row is over 255 columns"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
@@ -198,27 +207,32 @@ func TestFields(t *testing.T) {
 		fields     string
 		diags      string
 	}{
-		{"left", "{w  }", "[{1 1 5 w false 7/0}]", ""},
-		{"right", "{  w}", "[{1 1 5 w true 7/0}]", ""},
+		{"left", "{w  }", "[{1 1 5 term.cols false 7/0}]", ""},
+		{"right", "{  w}", "[{1 1 5 term.cols true 7/0}]", ""},
 		{"spaces on both sides", "{ term.cols }", "[{1 1 13 term.cols true 7/0}]", ""},
-		{"plain", "{ BBS } {a {} {!x} {{w}", "[{1 21 3 w false 7/0}]", ""},
-		{"style of the first cell", "\x1b[33;44m{w}", "[{1 1 3 w false 3/4}]", ""},
-		{"space with another foreground", "\x1b[31m{\x1b[32m \x1b[31mw}", "[{1 1 4 w true 1/0}]", ""},
+		{"plain", "{ BBS } {a {} {!x} {{w}", "[{1 21 3 term.cols false 7/0}]", ""},
+		{"style of the first cell", "\x1b[33;44m{w}", "[{1 1 3 term.cols false 3/4}]", ""},
+		{"space with another foreground", "\x1b[31m{\x1b[32m \x1b[31mw}", "[{1 1 4 term.cols true 1/0}]", ""},
 		{"two foregrounds", "\x1b[3;15H\x1b[93m{\x1b[97mw}", "[]",
 			`a.ans:3:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16`},
 		{"two backgrounds", "{\x1b[41m w}", "[]",
 			`a.ans:1:1: token "{ w}" changes the background: 0 at col 1, 1 at col 2`},
+		// The aliases of bbs.toml resolve the path once, at the load.
+		{"unknown field", "{x} {item.A} {term.rows}", "[]",
+			"a.ans:1:1: unknown field \"x\"\na.ans:1:5: field \"item.A\" is valid only in {#if}"},
+		{"unknown field and two backgrounds", "{\x1b[41m x}", "[]",
+			"a.ans:1:1: token \"{ x}\" changes the background: 0 at col 1, 1 at col 2\na.ans:1:1: unknown field \"x\""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a, ds := art.Parse("a.ans", withSauce(tt.data, 30, 0, 0))
+			a, ds := art.Parse("a.ans", withSauce(tt.data, 30, 0, 0), aliases)
 			if got := diagText(ds); got != tt.diags {
 				t.Errorf("diagnostics %q, want %q", got, tt.diags)
 			}
 			var fields []string
 			if a != nil {
 				for _, f := range a.Fields {
-					fields = append(fields, fmt.Sprintf("{%d %d %d %s %t %s}", f.Row, f.Col, f.Width, f.Path, f.Right, f.Style))
+					fields = append(fields, fmt.Sprintf("{%d %d %d %s %t %s}", f.Row, f.Col, f.Width, f.Ref, f.Right, f.Style))
 				}
 			}
 			if got := "[" + strings.Join(fields, " ") + "]"; got != tt.fields {
@@ -257,7 +271,7 @@ func TestErrors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, ds := art.Parse("a.ans", tt.data)
+			_, ds := art.Parse("a.ans", tt.data, aliases)
 			if got := diagText(ds); got != tt.diags {
 				t.Errorf("got\n%s\nwant\n%s", got, tt.diags)
 			}
@@ -276,14 +290,14 @@ func TestLimits(t *testing.T) {
 		t.Errorf("height %d, want 125", a.Height)
 	}
 	// A long sequence is cut in the message.
-	_, ds := art.Parse("a.ans", withSauce("\x1b["+strings.Repeat("1;", 1000)+"z", 4, 0, 0))
+	_, ds := art.Parse("a.ans", withSauce("\x1b["+strings.Repeat("1;", 1000)+"z", 4, 0, 0), aliases)
 	if got := diagText(ds); len(got) > 80 || !strings.Contains(got, `..."`) {
 		t.Errorf("message %q", got)
 	}
 }
 
 func TestTooManyDiagnostics(t *testing.T) {
-	_, ds := art.Parse("a.ans", withSauce(strings.Repeat("\t", 200), 4, 0, 0))
+	_, ds := art.Parse("a.ans", withSauce(strings.Repeat("\t", 200), 4, 0, 0), aliases)
 	if len(ds) != screen.MaxFileDiags+1 || ds[len(ds)-1].Msg != "too many diagnostics" {
 		t.Errorf("%d diagnostics, last %q", len(ds), ds[len(ds)-1].Msg)
 	}
@@ -294,13 +308,13 @@ func TestLoad(t *testing.T) {
 		"big.ans": {Data: bytes.Repeat([]byte("a"), screen.MaxFileBytes+1)},
 		"ok.ans":  {Data: []byte("ab")},
 	}
-	if _, ds := art.Load(fsys, "big.ans"); diagText(ds) != "big.ans:1:1: file is over 1048576 bytes" {
+	if _, ds := art.Load(fsys, "big.ans", aliases); diagText(ds) != "big.ans:1:1: file is over 1048576 bytes" {
 		t.Errorf("big: %s", diagText(ds))
 	}
-	if _, ds := art.Load(fsys, "none.ans"); !ds.HasErrors() {
+	if _, ds := art.Load(fsys, "none.ans", aliases); !ds.HasErrors() {
 		t.Error("missing file: no error")
 	}
-	if a, ds := art.Load(fsys, "ok.ans"); a == nil || len(ds) > 0 {
+	if a, ds := art.Load(fsys, "ok.ans", aliases); a == nil || len(ds) > 0 {
 		t.Errorf("ok: %s", diagText(ds))
 	}
 }
@@ -315,7 +329,7 @@ func FuzzParse(f *testing.F) {
 	}
 	f.Add(withSauce("日\x1b[?7l\x1b[5b\x1b[2J{w}\x1b[1;5;7m\x1b[K", 3, 2, 1))
 	f.Fuzz(func(t *testing.T, data []byte) {
-		a, ds := art.Parse("f.ans", data)
+		a, ds := art.Parse("f.ans", data, aliases)
 		if a == nil {
 			if !ds.HasErrors() {
 				t.Fatal("no art and no error")
@@ -351,8 +365,8 @@ func TestRepeat(t *testing.T) {
 	}
 	for _, tt := range tests {
 		for _, width := range []int{1, 2, 3, 5} {
-			got, gds := art.Parse("a.ans", withSauce(tt.rep, width, 0, 0))
-			want, wds := art.Parse("a.ans", withSauce(tt.plain, width, 0, 0))
+			got, gds := art.Parse("a.ans", withSauce(tt.rep, width, 0, 0), aliases)
+			want, wds := art.Parse("a.ans", withSauce(tt.plain, width, 0, 0), aliases)
 			if gds.HasErrors() != wds.HasErrors() || got != nil && dump(t, got) != dump(t, want) {
 				t.Errorf("%q, width %d: differs from %q", tt.rep, width, tt.plain)
 			}
@@ -413,7 +427,7 @@ func TestBudget(t *testing.T) {
 				if tt.sauce {
 					data = withSauce(string(data), w, 0, 0)
 				}
-				_, ds := art.Parse("a.ans", data)
+				_, ds := art.Parse("a.ans", data, aliases)
 				return ds
 			}
 			if ds := load(0); len(ds) > 0 {
@@ -443,7 +457,7 @@ func TestBudgetFiles(t *testing.T) {
 			body := tt.start + strings.Repeat(tt.unit, (screen.MaxFileBytes-200)/len(tt.unit))
 			data := withSauce(body, tt.width, 0, 0)
 			start := time.Now()
-			_, ds := art.Parse("a.ans", data)
+			_, ds := art.Parse("a.ans", data, aliases)
 			if d := time.Since(start); d >= time.Second {
 				t.Errorf("load took %v", d)
 			}

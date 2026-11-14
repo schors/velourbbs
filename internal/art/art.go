@@ -20,20 +20,21 @@ const MaxPlayCells = 16 * screen.MaxWidth * MaxRows
 const defaultWidth = 80
 
 // Load reads the file name of fsys and parses it. name is also the file in the diagnostics.
+// fields is the aliases of bbs.toml (section 4.2).
 // The art is nil when the diagnostics have an error.
-func Load(fsys fs.FS, name string) (*screen.Art, screen.Diags) {
+func Load(fsys fs.FS, name string, fields screen.Fields) (*screen.Art, screen.Diags) {
 	data, err := screen.ReadFile(fsys, name)
 	if err != nil {
 		var ds screen.Diags
 		ds.Errorf(name, 1, 1, "%v", err)
 		return nil, ds
 	}
-	return Parse(name, data)
+	return Parse(name, data, fields)
 }
 
-// Parse loads the contents of an .ans file (section 8).
-// The art is nil when the diagnostics have an error.
-func Parse(name string, file []byte) (*screen.Art, screen.Diags) {
+// Parse loads the contents of an .ans file (section 8) and resolves its fields with
+// the aliases fields. The art is nil when the diagnostics have an error.
+func Parse(name string, file []byte, fields screen.Fields) (*screen.Art, screen.Diags) {
 	d := &screen.FileDiags{File: name}
 	if len(file) > screen.MaxFileBytes {
 		d.Errorf(1, 1, "file is over %d bytes", screen.MaxFileBytes)
@@ -76,7 +77,7 @@ func Parse(name string, file []byte) (*screen.Art, screen.Diags) {
 	}
 	art := &screen.Art{Width: width, Height: max(p.height, minHeight)}
 	art.Rows = p.grid(art.Height, width)
-	art.Fields = findFields(d, art.Rows)
+	art.Fields = findFields(d, art.Rows, fields)
 	if d.Diags.HasErrors() {
 		return nil, d.Diags
 	}

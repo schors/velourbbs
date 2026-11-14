@@ -6,11 +6,12 @@ import (
 	"newbbs/internal/screen"
 )
 
-// findFields finds the field tokens in the rows of the art (section 8.4).
+// findFields finds the field tokens in the rows of the art (section 8.4)
+// and resolves their paths with the aliases fields.
 // A token is "{", optional spaces, a path, optional spaces and "}" on one row.
 // Each other "{" is a plain character.
-func findFields(d *screen.FileDiags, rows []screen.Row) []screen.ArtField {
-	var fields []screen.ArtField
+func findFields(d *screen.FileDiags, rows []screen.Row, fields screen.Fields) []screen.ArtField {
+	var found []screen.ArtField
 	for i, row := range rows {
 		for c := 0; c < len(row); c++ {
 			if row[c].Grapheme != "{" {
@@ -20,16 +21,22 @@ func findFields(d *screen.FileDiags, rows []screen.Row) []screen.ArtField {
 			if !ok {
 				continue
 			}
-			if checkToken(d, i+1, row[c:end+1], c+1) {
-				fields = append(fields, screen.ArtField{
-					Row: i + 1, Col: c + 1, Width: end - c + 1, Path: path,
+			valid := checkToken(d, i+1, row[c:end+1], c+1)
+			ref, err := screen.LookupField(path, fields)
+			if err != nil {
+				d.Errorf(i+1, c+1, "%v", err)
+				valid = false
+			}
+			if valid {
+				found = append(found, screen.ArtField{
+					Row: i + 1, Col: c + 1, Width: end - c + 1, Ref: ref,
 					Right: start > c+1, Style: row[c].Style,
 				})
 			}
 			c = end
 		}
 	}
-	return fields
+	return found
 }
 
 // scanToken scans the token at row[c] == "{". It gives the path, the index of its

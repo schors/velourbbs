@@ -8,11 +8,10 @@ type Art struct {
 }
 
 // ArtField is a field token in art (section 8.4).
-// Path is not resolved: the aliases come from the screen that inserts the art.
 type ArtField struct {
 	Row, Col int // the 1-based position of "{"
 	Width    int // the cells of the token
-	Path     string
+	Ref      Ref
 	Right    bool // the path follows spaces
 	Style    Style
 }

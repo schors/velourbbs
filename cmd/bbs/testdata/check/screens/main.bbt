@@ -1,6 +1,4 @@
 +++
-[fields]
-w = "term.cols"
 [[item]]
 key = "A"
 do = "goto about"

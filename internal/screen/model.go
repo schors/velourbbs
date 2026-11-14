@@ -82,10 +82,9 @@ type Include struct {
 	Body []Seg
 }
 
-// ArtInsert is an art insert. Fields resolves the paths of Art.Fields with the aliases of the screen.
+// ArtInsert is an art insert.
 type ArtInsert struct {
-	Art    *Art
-	Fields []Ref
+	Art *Art
 }
 
 // LineEnd ends a source line. Block is true when the line has a block token:

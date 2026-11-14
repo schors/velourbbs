@@ -1,5 +1,5 @@
-// Package config reads the host settings of bbs.toml: the tables [screen] and [theme]
-// of docs/specs/screen-format.md, [menu] of docs/specs/menu-nav.md
+// Package config reads the host settings of bbs.toml: the tables [screen], [theme]
+// and [fields] of docs/specs/screen-format.md, [menu] of docs/specs/menu-nav.md
 // and [telnet] of docs/specs/telnet-term.md.
 package config
 
@@ -20,6 +20,8 @@ type Config struct {
 	More string
 	// Theme maps a style name to a style (section 7.3). It always has normal and more.
 	Theme map[string]screen.Style
+	// Fields maps an alias to its field (section 4.2).
+	Fields screen.Fields
 	// Start is the name of the first screen of a session (menu-nav, section 6).
 	Start string
 	// Telnet is the table [telnet] (telnet-term, section 9.1).
@@ -42,8 +44,9 @@ type doc struct {
 		Width *[]int64 `toml:"width"`
 		More  *string  `toml:"more"`
 	} `toml:"screen"`
-	Theme map[string]string `toml:"theme"`
-	Menu  struct {
+	Theme  map[string]string `toml:"theme"`
+	Fields map[string]string `toml:"fields"`
+	Menu   struct {
 		Start *string `toml:"start"`
 	} `toml:"menu"`
 	Telnet telnetDoc `toml:"telnet"`
@@ -58,7 +61,7 @@ const File = "bbs.toml"
 // Parse returns the defaults for each value with an error.
 func Parse(data []byte) (Config, screen.Diags) {
 	cfg := Config{
-		Width: defaultWidth, More: defaultMore, Start: "main", Telnet: defaultTelnet,
+		Width: defaultWidth, More: defaultMore, Fields: screen.Fields{}, Start: "main", Telnet: defaultTelnet,
 	}
 	fd := screen.FileDiags{File: File}
 	var d doc
@@ -106,6 +109,14 @@ func Parse(data []byte) (Config, screen.Diags) {
 		specs[name] = spec
 	}
 	cfg.Theme = theme(specs)
+	for _, name := range slices.Sorted(maps.Keys(d.Fields)) {
+		ref, err := screen.NewAlias(name, d.Fields[name])
+		if err != nil {
+			errorf("fields: %v", err)
+			continue
+		}
+		cfg.Fields[name] = ref
+	}
 	return cfg, fd.Diags
 }
 

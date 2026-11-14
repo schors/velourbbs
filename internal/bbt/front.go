@@ -3,8 +3,6 @@ package bbt
 import (
 	"errors"
 	"fmt"
-	"maps"
-	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -15,16 +13,14 @@ import (
 
 // front is the front matter of a screen (section 3.2).
 type front struct {
-	width  *screen.WidthLimits // nil when width is not set
-	fields screen.Fields
-	items  []screen.Item
+	width *screen.WidthLimits // nil when width is not set
+	items []screen.Item
 }
 
 // frontDoc is the plain decode of a front matter. A nil pointer is a key that is not set.
 type frontDoc struct {
-	Width  *[]int64          `toml:"width"`
-	Fields map[string]string `toml:"fields"`
-	Item   []struct {
+	Width *[]int64 `toml:"width"`
+	Item  []struct {
 		Key  *string `toml:"key"`
 		Do   *string `toml:"do"`
 		When *string `toml:"when"`
@@ -32,8 +28,8 @@ type frontDoc struct {
 }
 
 // parseFront parses the front matter lines. The first line of lines is line 2 of the file.
-// The result is nil when the front matter has an error.
-func parseFront(d *screen.FileDiags, lines []string) *front {
+// fields is the aliases of bbs.toml. The result is nil when the front matter has an error.
+func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *front {
 	var doc frontDoc
 	errs := tomlcheck.Decode([]byte(strings.Join(lines, "\n")), &doc)
 	for _, e := range errs {
@@ -54,7 +50,7 @@ func parseFront(d *screen.FileDiags, lines []string) *front {
 		d.Errorf(2, 1, format, args...)
 		ok = false
 	}
-	fr := &front{fields: screen.Fields{}}
+	fr := &front{}
 	if doc.Width != nil {
 		w, err := screen.NewWidth(*doc.Width)
 		if err != nil {
@@ -62,14 +58,6 @@ func parseFront(d *screen.FileDiags, lines []string) *front {
 		} else {
 			fr.width = &w
 		}
-	}
-	for _, name := range slices.Sorted(maps.Keys(doc.Fields)) {
-		ref, err := screen.NewAlias(name, doc.Fields[name])
-		if err != nil {
-			errorf("fields: %v", err)
-			continue
-		}
-		fr.fields[name] = ref
 	}
 	seen := map[string]bool{}
 	for i, it := range doc.Item {
@@ -96,7 +84,7 @@ func parseFront(d *screen.FileDiags, lines []string) *front {
 			item.Do = a
 		}
 		if it.When != nil {
-			c, err := screen.ParseCond(*it.When, fr.fields, false)
+			c, err := screen.ParseCond(*it.When, fields, false)
 			if err != nil {
 				errorf("%s: when: %v", label, err)
 			}

@@ -86,6 +86,37 @@ bbs.toml:1:1: telnet.allow: invalid address or prefix "x"
 	}
 }
 
+// The aliases of bbs.toml are valid in each screen. After a TOML error in bbs.toml,
+// each use of a lost alias gives an unknown field (section 4.2).
+func TestCheckAliases(t *testing.T) {
+	tests := []struct{ config, want string }{
+		{"[fields]\nw = \"term.cols\"\nr = \"term.rows\"\n", ""},
+		{"[fields]\nw = \"term.cols\"\nr = \"item.A\"\n", `bbs.toml:1:1: fields: alias "r": "item.A" is valid only in {#if}
+screens/_f.bbt:1:5: unknown field "r"
+`},
+		{"[fields]\nw = \"term.cols\"\nr = 1\n", `bbs.toml:3:5: fields.r: must be a string
+screens/_f.bbt:1:1: unknown field "w"
+screens/_f.bbt:1:5: unknown field "r"
+`},
+	}
+	for _, tt := range tests {
+		fsys := fstest.MapFS{
+			"bbs.toml":         {Data: []byte(tt.config)},
+			"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"g\"\ndo = \"logoff\"\n+++\n{>_f}\n")},
+			"screens/_f.bbt":   {Data: []byte("{w} {r}\n")},
+		}
+		var out, errOut bytes.Buffer
+		status := run([]string{"check"}, fsys, &out, &errOut)
+		wantStatus := 0
+		if tt.want != "" {
+			wantStatus = exitError
+		}
+		if errOut.String() != tt.want || status != wantStatus {
+			t.Errorf("%q: stderr:\n%s\nstatus %d; want stderr:\n%s\nstatus %d", tt.config, errOut.String(), status, tt.want, wantStatus)
+		}
+	}
+}
+
 func TestCheckNoConfig(t *testing.T) {
 	fsys := fstest.MapFS{"screens/main.bbt": {Data: []byte("Hello\n")}}
 	var out, errOut bytes.Buffer
