@@ -14,7 +14,7 @@ import (
 )
 
 // The limits of section 10: the body of a screen and of all screens after includes,
-// and the nesting of blocks in a file and of includes.
+// and the nesting of blocks in a file.
 const (
 	MaxBodyLines  = 10000
 	MaxBodyBytes  = 1 << 20
@@ -30,7 +30,7 @@ func Load(fsys fs.FS, theme map[string]screen.Style, width screen.WidthLimits) (
 	l := &loader{
 		fsys: fsys, theme: theme, width: width,
 		diags: map[string]*screen.FileDiags{}, files: map[string]*file{}, arts: map[string]*screen.Art{},
-		sizes: map[*file]size{}, sizing: map[*file]bool{},
+		reported: map[screen.Pos]bool{},
 	}
 	entries, err := fs.ReadDir(fsys, "screens")
 	if err != nil {
@@ -50,9 +50,6 @@ func Load(fsys fs.FS, theme map[string]screen.Style, width screen.WidthLimits) (
 		if f, _ := l.file(name, false); f != nil {
 			units = append(units, &unit{s: &screen.Screen{Name: base, File: name}, f: f})
 		}
-	}
-	for _, u := range units {
-		l.size(u.f)
 	}
 	for _, u := range units {
 		l.screen(u)
@@ -76,7 +73,7 @@ func Load(fsys fs.FS, theme map[string]screen.Style, width screen.WidthLimits) (
 		}
 		if info, err := fs.Stat(fsys, name); err == nil && !info.Mode().IsRegular() {
 			l.fd(name).Errorf(1, 1, "not a regular file")
-		} else {
+		} else if !l.cut {
 			l.fd(name).Warnf(1, 1, "no screen uses this file")
 		}
 	}
@@ -103,12 +100,15 @@ type loader struct {
 	diags map[string]*screen.FileDiags
 	files map[string]*file       // nil for a file that cannot be read
 	arts  map[string]*screen.Art // nil for art that cannot be loaded
-	// sizes holds the size of each file after includes; sizing marks the files in progress.
-	sizes  map[*file]size
-	sizing map[*file]bool
+	// reported holds the include and art insert positions with an error:
+	// the screens that use a fragment report its errors once.
+	reported map[screen.Pos]bool
 	// total is the size of the screens after includes; the screen pass stops over its limits.
-	total     size
+	total     count
 	totalOver bool
+	// cut is true after a stop at a limit: some files are not read,
+	// so "no screen uses this file" can be false.
+	cut bool
 }
 
 // fd gives the diagnostics of the file name.
@@ -157,85 +157,12 @@ func (l *loader) art(name string) (a *screen.Art, missing bool) {
 	return a, false
 }
 
-// size is the lines and the bytes of a body after includes, up to one over the limits,
-// and the depth of its includes.
-type size struct {
-	lines, bytes, depth int
-}
-
-func (s size) add(o size) size {
-	return size{min(s.lines+o.lines, MaxBodyLines+1), min(s.bytes+o.bytes, MaxBodyBytes+1), max(s.depth, o.depth)}
-}
-
-func (s size) over() bool {
-	return s.lines > MaxBodyLines || s.bytes > MaxBodyBytes || s.depth > MaxNesting
-}
-
-// size gives the size of f after includes. It runs once for each file, so it reports
-// a missing fragment, missing art and an include cycle once.
-func (l *loader) size(f *file) size {
-	if sz, ok := l.sizes[f]; ok {
-		return sz
+// errorOnce reports an error at pos once for all screens.
+func (l *loader) errorOnce(pos screen.Pos, format string, args ...any) {
+	if !l.reported[pos] {
+		l.reported[pos] = true
+		errorAt(l.fd(pos.File), pos, format, args...)
 	}
-	l.sizing[f] = true
-	var sz size
-	l.walkSizes(f, f.body, func(_ node, n size) bool {
-		sz = sz.add(n)
-		return true
-	})
-	delete(l.sizing, f)
-	l.sizes[f] = sz
-	return sz
-}
-
-// walkSizes calls fn with each node of nodes that has a size: a line end, an include
-// or an art insert. It stops when fn returns false. It reports the errors of includes
-// and art inserts when f is in progress in size.
-func (l *loader) walkSizes(f *file, nodes []node, fn func(node, size) bool) bool {
-	report := l.sizing[f]
-	for _, n := range nodes {
-		var sz size
-		switch n := n.(type) {
-		case lineEnd:
-			sz = size{lines: 1, bytes: n.bytes}
-		case *ifNode:
-			if !l.walkSizes(f, n.then, fn) || !l.walkSizes(f, n.els, fn) {
-				return false
-			}
-			continue
-		case include:
-			sz = size{lines: 1} // the line of the include, so an empty fragment counts
-			frag, missing := l.file(n.file, true)
-			switch {
-			case frag == nil:
-				if missing && report {
-					errorAt(l.fd(f.name), n.pos, "fragment %q does not exist", n.file)
-				}
-			case l.sizing[frag]:
-				if report {
-					errorAt(l.fd(f.name), n.pos, "include %q makes a cycle", n.file)
-				}
-			default:
-				fsz := l.size(frag)
-				sz = sz.add(fsz)
-				sz.depth = fsz.depth + 1
-			}
-		case artInsert:
-			sz = size{lines: 1}
-			a, missing := l.art(n.file)
-			if a != nil {
-				sz.lines += a.Height
-			} else if missing && report {
-				errorAt(l.fd(f.name), n.pos, "art %q does not exist", n.file)
-			}
-		default:
-			continue
-		}
-		if !fn(n, sz) {
-			return false
-		}
-	}
-	return true
 }
 
 func errorAt(d *screen.FileDiags, pos screen.Pos, format string, args ...any) {

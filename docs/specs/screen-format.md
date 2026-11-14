@@ -389,6 +389,8 @@ The style of a written cell, in this order:
 - `bbs check` reads `bbs.toml` and each file in `screens/`.
   It checks each screen with the fragments and the art that the screen uses.
 - It warns about a fragment or an art file that no screen uses.
+  After the limit error of a body or of all screens after includes (section 10),
+  it does not warn: the load did not read all files.
 - It reports all errors and warnings, not only the first, up to the limit of section 10.
   A TOML document is an exception (below).
   It writes them to the standard error. It exits with status 1 after an error.

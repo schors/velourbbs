@@ -277,7 +277,7 @@ func (s *scanner) block(pos screen.Pos, c string) bool {
 func (s *scanner) style(pos screen.Pos, text string) {
 	whole := func(st screen.Style) {
 		spec := screen.StyleSpec{Fg: st.Fg, Bg: st.Bg, HasFg: true, HasBg: true, Attr: st.Attr}
-		s.add(screen.SetStyle{Pos: pos, Spec: spec, Whole: true})
+		s.add(screen.SetStyle{Spec: spec, Whole: true})
 	}
 	switch {
 	case text == "":
@@ -297,7 +297,7 @@ func (s *scanner) style(pos screen.Pos, text string) {
 		case spec.Attr != 0:
 			s.d.Errorf(pos.Line, pos.Col, "style token %q has attributes", "{!"+text+"}")
 		default:
-			s.add(screen.SetStyle{Pos: pos, Spec: spec})
+			s.add(screen.SetStyle{Spec: spec})
 		}
 	}
 }
