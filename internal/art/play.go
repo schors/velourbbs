@@ -51,13 +51,10 @@ type player struct {
 	moebius bool // the Moebius form: a row over the width is an error
 	skipLF  bool // the Moebius form before the first grapheme: LF does nothing
 
-	rows        []screen.Row // a nil row has no writes
-	gens        []int        // the clear count at the last write of each row
-	clears      int          // the count of CSI 2 J
-	height      int          // the last written row
-	clearHeight int          // CSI 2 J erased the rows up to it in clearStyle
-	clearStyle  screen.Style
-	maxCol      int // the last column of a written grapheme
+	rows   []screen.Row // a nil row has no writes
+	height int          // the last written row
+	maxCol int          // the last column of a written grapheme
+	cells  int          // the written and erased cells (section 10)
 
 	row, col           int // 1-based; LF can move row past MaxRows
 	pending            bool
@@ -79,7 +76,7 @@ func newPlayer(d *screen.FileDiags, width int, ice, moebius bool) *player {
 
 // play plays data. It returns false when the play stopped at an error.
 func (p *player) play(data []byte) bool {
-	for i := 0; i < len(data) && !p.done(); {
+	for i := 0; i < len(data) && !p.stopped; {
 		switch c := data[i]; {
 		case c == '\n':
 			p.lf()
@@ -102,12 +99,10 @@ func (p *player) play(data []byte) bool {
 			i = j
 		}
 	}
-	return !p.done()
+	return !p.stopped
 }
 
 func isC0(c byte) bool { return c < 0x20 || c == 0x7f }
-
-func (p *player) done() bool { return p.stopped || p.d.Full() }
 
 // pos gives the grid position of the next grapheme.
 func (p *player) pos() (int, int) {
@@ -133,11 +128,21 @@ func (p *player) stop(format string, args ...any) {
 	p.stopped = true
 }
 
+// spend counts n written or erased cells. Over MaxPlayCells it stops the play.
+func (p *player) spend(n int) bool {
+	p.cells += n
+	if p.cells > MaxPlayCells {
+		p.stop("art play is over %d written and erased cells", MaxPlayCells)
+		return false
+	}
+	return true
+}
+
 // text plays a run of bytes without C0 controls.
 func (p *player) text(run []byte) {
 	valid := run[:screen.ValidPrefix(run)]
 	for g, w := range screen.Graphemes(string(valid)) {
-		if p.done() {
+		if p.stopped {
 			return
 		}
 		if err := screen.CheckGrapheme(g, w); err != nil {
@@ -146,7 +151,7 @@ func (p *player) text(run []byte) {
 		}
 		p.put(g, w)
 	}
-	if len(valid) < len(run) && !p.done() {
+	if len(valid) < len(run) && !p.stopped {
 		p.stop("invalid UTF-8: art must be UTF-8, CP437 art needs a conversion")
 	}
 }
@@ -171,6 +176,9 @@ func (p *player) put(g string, w int) {
 	}
 	if p.row > MaxRows {
 		p.stop("art is over %d rows", MaxRows)
+		return
+	}
+	if !p.spend(w) {
 		return
 	}
 	style := p.pen.style(p.ice)
@@ -206,63 +214,38 @@ func (p *player) open(a, b int) screen.Row {
 func (p *player) rowAt(n int) screen.Row {
 	for len(p.rows) < n {
 		p.rows = append(p.rows, nil)
-		p.gens = append(p.gens, 0)
 	}
-	r := p.rows[n-1]
-	switch {
-	case r == nil:
-		r = newRow(p.width, p.blank(n))
-		p.rows[n-1] = r
-	case p.gens[n-1] != p.clears: // a CSI 2 J after the last write: refill the row in place
-		r[0] = p.blank(n)
-		copyHead(r, 1)
+	if p.rows[n-1] == nil {
+		p.rows[n-1] = newRow(p.width, blankCell)
 	}
-	p.gens[n-1] = p.clears
-	return r
-}
-
-// blank gives the cell of the row n before a write.
-func (p *player) blank(n int) screen.Cell {
-	if n <= p.clearHeight {
-		return screen.Cell{Grapheme: " ", Style: p.clearStyle}
-	}
-	return blankCell
+	return p.rows[n-1]
 }
 
 func newRow(width int, c screen.Cell) screen.Row {
 	r := make(screen.Row, width)
-	r[0] = c
-	copyHead(r, 1)
+	fillCells(r, c)
 	return r
 }
 
-// copyHead fills r with copies of its first n cells.
-// A bulk copy is much faster than one write for each cell.
-func copyHead(r screen.Row, n int) {
-	for ; n < len(r); n *= 2 {
-		copy(r[n:], r[:n])
+func fillCells(r screen.Row, c screen.Cell) {
+	for i := range r {
+		r[i] = c
 	}
 }
 
-// grid gives the rows of the art. The rows without writes share one row for each blank cell.
+// grid gives the rows of the art. The rows without writes share one blank row.
 func (p *player) grid(height, width int) []screen.Row {
 	rows := make([]screen.Row, height)
-	var clearRow, blankRow screen.Row
+	var blankRow screen.Row
 	for i := range rows {
-		switch {
-		case i < len(p.rows) && p.rows[i] != nil && p.gens[i] == p.clears:
+		if i < len(p.rows) && p.rows[i] != nil {
 			rows[i] = p.rows[i][:width:width]
-		case i < p.clearHeight:
-			if clearRow == nil {
-				clearRow = newRow(width, p.blank(i+1))
-			}
-			rows[i] = clearRow
-		default:
-			if blankRow == nil {
-				blankRow = newRow(width, blankCell)
-			}
-			rows[i] = blankRow
+			continue
 		}
+		if blankRow == nil {
+			blankRow = newRow(width, blankCell)
+		}
+		rows[i] = blankRow
 	}
 	return rows
 }
@@ -371,9 +354,7 @@ func (p *player) control(params, inter []byte, final byte, text string) {
 			p.warnf("unknown sequence %s", text)
 			return
 		}
-		p.clearHeight, p.clearStyle = p.height, p.eraseStyle()
-		p.clears++ // the rows stay allocated: rowAt refills them at the next write
-		p.row, p.col, p.pending = 1, 1, false
+		p.clear()
 	case 'K':
 		if len(ps) != 1 || ps[0] > 2 {
 			p.warnf("unknown sequence %s", text)
@@ -453,9 +434,22 @@ func (p *player) erase(mode int) {
 	case 1:
 		b = p.col
 	}
-	seg := p.open(a, b)[a-1 : b]
-	seg[0] = screen.Cell{Grapheme: " ", Style: p.eraseStyle()}
-	copyHead(seg, 1)
+	if !p.spend(b - a + 1) {
+		return
+	}
+	fillCells(p.open(a, b)[a-1:b], screen.Cell{Grapheme: " ", Style: p.eraseStyle()})
+}
+
+// clear does CSI 2 J: it erases the rows 1 to the height and moves the cursor to row 1, column 1.
+func (p *player) clear() {
+	if !p.spend(p.height * p.width) {
+		return
+	}
+	c := screen.Cell{Grapheme: " ", Style: p.eraseStyle()}
+	for n := 1; n <= p.height; n++ {
+		fillCells(p.rowAt(n), c)
+	}
+	p.row, p.col, p.pending = 1, 1, false
 }
 
 // repeat does CSI n b. It stops at the row limit.
@@ -463,10 +457,7 @@ func (p *player) repeat(n int) {
 	if p.last == "" {
 		return
 	}
-	if !p.wrap {
-		n = min(n, p.width) // after width writes, each write repeats the last one
-	}
-	for n > 0 && !p.done() {
+	for ; n > 0 && !p.stopped; n-- {
 		next := p.row
 		if p.pending || p.lastWidth == 2 && p.col == p.width && p.wrap {
 			next++
@@ -474,34 +465,7 @@ func (p *player) repeat(n int) {
 		if next > MaxRows {
 			return
 		}
-		p.put(p.last, p.lastWidth) // the first copy in a row does the wrap and the edge rules
-		n--
-		if k := min(n, (p.width-p.col+1)/p.lastWidth); k > 0 && !p.pending && !p.done() {
-			p.fill(k)
-			n -= k
-		}
-	}
-}
-
-// fill writes k copies of the last grapheme at the cursor, as k calls of put do.
-// The copies fit before the right edge. A loop of put costs too much time
-// for a file with many CSI 9999 b.
-func (p *player) fill(k int) {
-	w := p.lastWidth
-	a, b := p.col, p.col+k*w-1
-	r := p.open(a, b)
-	style := p.pen.style(p.ice)
-	seg := r[a-1 : b]
-	seg[0] = screen.Cell{Grapheme: p.last, Style: style}
-	if w == 2 {
-		seg[1] = screen.Cell{Style: style}
-	}
-	copyHead(seg, w)
-	p.maxCol = max(p.maxCol, b)
-	if b == p.width {
-		p.col, p.pending = p.width, p.wrap
-	} else {
-		p.col = b + 1
+		p.put(p.last, p.lastWidth)
 	}
 }
 

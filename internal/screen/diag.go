@@ -82,7 +82,6 @@ const MaxFileDiags = 100
 
 // FileDiags collects the diagnostics of one file up to MaxFileDiags.
 // After the limit it adds one error "too many diagnostics" and drops the rest.
-// The art player stops the play when Full is true.
 type FileDiags struct {
 	File  string
 	Diags Diags
@@ -102,13 +101,13 @@ func (f *FileDiags) Warnf(row, col int, format string, args ...any) {
 	}
 }
 
-// Full reports whether the file has too many diagnostics.
-func (f *FileDiags) Full() bool { return len(f.Diags) > MaxFileDiags }
+// full reports whether the file has too many diagnostics.
+func (f *FileDiags) full() bool { return len(f.Diags) > MaxFileDiags }
 
 // room reports whether one more diagnostic fits. At the limit it adds the last error.
 func (f *FileDiags) room(row, col int) bool {
 	switch {
-	case f.Full():
+	case f.full():
 		return false
 	case len(f.Diags) == MaxFileDiags:
 		f.Diags.Errorf(f.File, row, col, "too many diagnostics")

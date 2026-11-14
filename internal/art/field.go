@@ -12,7 +12,7 @@ import (
 func findFields(d *screen.FileDiags, rows []screen.Row) []screen.ArtField {
 	var fields []screen.ArtField
 	for i, row := range rows {
-		for c := 0; c < len(row) && !d.Full(); c++ {
+		for c := 0; c < len(row); c++ {
 			if row[c].Grapheme != "{" {
 				continue
 			}
