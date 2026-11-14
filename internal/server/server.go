@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net"
 	"net/netip"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -129,9 +130,16 @@ func (s *Server) handle(c net.Conn) {
 // session does the connect sequence of section 5.1 on c and runs the session.
 // It gives the client address, the reason of the end and whether the host sent
 // output that ends the connection. The caller closes c: the close after output
-// must not hold the limits.
-func (s *Server) session(c net.Conn, accepted time.Time) (netip.Addr, string, bool) {
-	addr := peerAddr(c)
+// must not hold the limits. A panic in the session ends only the session (section 10).
+func (s *Server) session(c net.Conn, accepted time.Time) (addr netip.Addr, reason string, output bool) {
+	// The first defer runs last: the limits are free before the log.
+	defer func() {
+		if v := recover(); v != nil {
+			s.log.Error("panic", "addr", addr, "err", v, "stack", string(debug.Stack()))
+			reason, output = "panic", false
+		}
+	}()
+	addr = peerAddr(c)
 	if !s.limits.Open() {
 		return addr, "max_conns", s.refuse(c)
 	}

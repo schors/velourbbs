@@ -157,3 +157,58 @@ func TestReadHeaderLong(t *testing.T) {
 		t.Errorf("error %v, want ErrHeader", err)
 	}
 }
+
+// FuzzReadHeader checks that one read and one byte in each read give the same header,
+// and that the bytes after a header are the input after it.
+func FuzzReadHeader(f *testing.F) {
+	for _, s := range []string{
+		"PROXY TCP4 192.0.2.1 198.51.100.1 1000 23\r\n\xff\xfb",
+		"PROXY TCP6 2001:db8::1 2001:db8::2 1000 23\r\n",
+		"PROXY UNKNOWN\r\n",
+		"PROXY TCP4 192.0.2.1\r\n",
+		"PROXY UNKNOWN " + strings.Repeat("x", 91) + "\r\n", // 107 bytes
+		"PROXY UNKNOWN " + strings.Repeat("x", 92) + "\r\n", // 108 bytes
+		v2(0x21, 0x11, inet(4)) + "tail",
+		v2(0x21, 0x21, inet6()),
+		v2(0x20, 0x00, nil),
+		v2(0x21, 0x11, inet(maxV2Len-12+1)),
+	} {
+		f.Add([]byte(s))
+	}
+	f.Fuzz(func(t *testing.T, in []byte) {
+		// n is the header length from the input, or -1 (section 9.3).
+		n, limit := -1, 16+536
+		switch {
+		case bytes.HasPrefix(in, []byte("\r\n\r\n\x00\r\nQUIT\n")) && len(in) >= 16:
+			n = 16 + int(binary.BigEndian.Uint16(in[14:16]))
+		case bytes.HasPrefix(in, []byte("PROXY ")):
+			n, limit = bytes.Index(in, []byte("\r\n")), 107
+			if n >= 0 {
+				n += 2
+			}
+		}
+		var hs [2]Header
+		var oks [2]bool
+		for i, one := range []bool{false, true} {
+			r := bytes.NewReader(in)
+			var src io.Reader = r
+			if one {
+				src = iotest.OneByteReader(r)
+			}
+			h, rest, err := ReadHeader(src)
+			hs[i], oks[i] = h, err == nil
+			if err != nil {
+				continue
+			}
+			if n < 0 || n > limit || n > len(in) {
+				t.Fatalf("one byte %v: a header of %d bytes, limit %d", one, n, limit)
+			}
+			if got := append(slices.Clone(rest), in[len(in)-r.Len():]...); !bytes.Equal(got, in[n:]) {
+				t.Fatalf("one byte %v: data after the header %q, want %q", one, got, in[n:])
+			}
+		}
+		if hs[0] != hs[1] || oks[0] != oks[1] {
+			t.Fatalf("one read: %v, %v; one byte in each read: %v, %v", hs[0], oks[0], hs[1], oks[1])
+		}
+	})
+}
