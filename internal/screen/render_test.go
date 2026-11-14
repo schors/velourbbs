@@ -11,8 +11,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"newbbs/internal/bbt"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/bbt"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 var update = flag.Bool("update", false, "rewrite the golden dumps in testdata/render")

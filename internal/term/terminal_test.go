@@ -9,8 +9,8 @@ import (
 	"testing/synctest"
 	"time"
 
-	"newbbs/internal/screen"
-	"newbbs/internal/telnet"
+	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/telnet"
 )
 
 // puttyClient answers the probe at once: XTERM gives 256 colours and NAWS gives 100x30.

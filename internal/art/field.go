@@ -3,7 +3,7 @@ package art
 import (
 	"strings"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // findFields finds the field tokens in the rows of the art (section 8.4)

@@ -3,7 +3,7 @@ package artimport
 import (
 	"testing"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // TestCP437 checks each entry class of the table of section 7.

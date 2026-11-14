@@ -9,9 +9,9 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"newbbs/internal/bbt"
-	"newbbs/internal/config"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/bbt"
+	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // fakeTerm is a Terminal without Events. It logs each page as "page: <row 1>".

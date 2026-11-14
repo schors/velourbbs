@@ -6,14 +6,14 @@ import (
 	"bytes"
 	"io/fs"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // MaxRows is the row limit of the art grid (section 10).
 const MaxRows = 1000
 
 // errNotFlat is the error of the steps 1, 2 and 4 of section 8.2.
-const errNotFlat = "not in the flat form, convert it with bbs art import"
+const errNotFlat = "not in the flat form, convert it with velourbbs art import"
 
 // Load reads the file name of fsys and parses it. name is also the file in the diagnostics.
 // fields is the aliases of bbs.toml (section 4.2).

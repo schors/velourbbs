@@ -1,17 +1,17 @@
 # Art import
 
-This specification defines the command `bbs art import`.
+This specification defines the command `velourbbs art import`.
 It converts ANSI art to the flat form ([screen-format](screen-format.md), section 8).
 
 ## 1. Goal
 
 The sysop draws art in an art editor and saves it in the form of the editor.
-`bbs art import` plays the file into a grid of cells once and writes the grid in the flat form.
+`velourbbs art import` plays the file into a grid of cells once and writes the grid in the flat form.
 The host never plays cursor moves and never reads CP437.
 
 ## 2. Command
 
-`bbs art import <input> <output>` reads the file `<input>` and writes the file `<output>`.
+`velourbbs art import <input> <output>` reads the file `<input>` and writes the file `<output>`.
 
 - Each other count of arguments is a usage error (screen-format, section 9).
 - `<input>` and `<output>` that name the same file are a usage error.
@@ -212,7 +212,7 @@ The import writes the grid in the flat form (screen-format, section 8):
 4. 0x1A and the SAUCE record (SAUCE 00) with a COMNT block when there are comments.
 
 After the write, the import reads its output by screen-format, sections 8.2 and 8.3.
-The fields of section 8.4 need `bbs.toml`, so `bbs check` checks them.
+The fields of section 8.4 need `bbs.toml`, so `velourbbs check` checks them.
 When that grid differs from the grid of the play, it is an error at the first different cell.
 Example: two regional indicators in two cells join into one flag grapheme.
 An output over the file limit (screen-format, section 10) is an error.

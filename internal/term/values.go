@@ -3,8 +3,8 @@ package term
 import (
 	"strings"
 
-	"newbbs/internal/screen"
-	"newbbs/internal/telnet"
+	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/telnet"
 )
 
 // typeLen is the maximum number of graphemes of a TTYPE name (section 6).

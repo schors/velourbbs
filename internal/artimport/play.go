@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"unicode/utf8"
 
-	"newbbs/internal/art"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/art"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // The start style of the play and the style of a cell that the play does not write.

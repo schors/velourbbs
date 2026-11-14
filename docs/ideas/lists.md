@@ -39,10 +39,10 @@ The user pages through the list and selects a row.
 
 ## Sample data
 
-- `bbs fields` lists each field with its type, a sample value and its maximum width.
-- `bbs fields --sample` writes `sample.toml` with sample values.
+- `velourbbs fields` lists each field with its type, a sample value and its maximum width.
+- `velourbbs fields --sample` writes `sample.toml` with sample values.
 - The sysop adds named sample sets to `sample.toml`, for example one set with new mail and one
-  without. `bbs preview <name> --sample newmail` uses a set.
+  without. `velourbbs preview <name> --sample newmail` uses a set.
 
 ## Example
 

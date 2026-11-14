@@ -5,10 +5,10 @@ import (
 	"io/fs"
 )
 
-// check runs bbs check (section 9.1): it writes each error and warning to stderr.
+// check runs velourbbs check (section 9.1): it writes each error and warning to stderr.
 func check(args []string, fsys fs.FS, stderr io.Writer) int {
 	if len(args) > 0 {
-		_, _ = io.WriteString(stderr, "bbs check: no arguments expected\n"+usage)
+		_, _ = io.WriteString(stderr, "velourbbs check: no arguments expected\n"+usage)
 		return exitUsage
 	}
 	_, _, ds := load(fsys)

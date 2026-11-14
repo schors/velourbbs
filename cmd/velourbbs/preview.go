@@ -10,19 +10,19 @@ import (
 	"strings"
 	"unicode"
 
-	"newbbs/internal/config"
-	"newbbs/internal/key"
-	"newbbs/internal/menu"
-	"newbbs/internal/screen"
-	"newbbs/internal/term"
+	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/key"
+	"github.com/schors/velourbbs/internal/menu"
+	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/term"
 )
 
-// preview runs bbs preview (section 9.2): it renders a screen and writes its cell dump
+// preview runs velourbbs preview (section 9.2): it renders a screen and writes its cell dump
 // to stdout. With --keys, it runs a session (menu-nav, section 8).
 // The flags can come before and after the name.
 func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	term := screen.Term{Type: "xterm", Cols: 80, Rows: 24, Charset: "utf-8", Colors: screen.Colors256}
-	fl := flag.NewFlagSet("bbs preview", flag.ContinueOnError)
+	fl := flag.NewFlagSet("velourbbs preview", flag.ContinueOnError)
 	fl.SetOutput(stderr)
 	fl.Usage = func() { _, _ = io.WriteString(stderr, usage) }
 	fl.Func("size", "", func(v string) error { return parseSize(v, &term) })
@@ -50,12 +50,12 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		args = fl.Args()[1:]
 	}
 	if len(names) != 1 || names[0] == "" {
-		_, _ = io.WriteString(stderr, "bbs preview: expected one screen name\n"+usage)
+		_, _ = io.WriteString(stderr, "velourbbs preview: expected one screen name\n"+usage)
 		return exitUsage
 	}
 	name := names[0]
 	if err := term.Check(); err != nil {
-		_, _ = fmt.Fprintf(stderr, "bbs preview: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		return exitUsage
 	}
 
@@ -66,19 +66,19 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	}
 	if session {
 		if err := menu.CheckTarget(screens, name); err != nil {
-			_, _ = fmt.Fprintf(stderr, "bbs preview: %v\n", err)
+			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 			return exitUsage
 		}
 		return runKeys(&keysTerm{term: term, keys: keys, w: stdout}, cfg, screens, name, stderr)
 	}
 	s, ok := screens[name]
 	if !ok {
-		_, _ = fmt.Fprintf(stderr, "bbs preview: unknown screen %q\n", name)
+		_, _ = fmt.Fprintf(stderr, "velourbbs preview: unknown screen %q\n", name)
 		return exitUsage
 	}
 	env, _ := menu.Enabled(s, term)
 	if err := screen.WriteDump(stdout, term.Rows, screen.Render(s, env, cfg.Theme, cfg.More)); err != nil {
-		_, _ = fmt.Fprintf(stderr, "bbs preview: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		return exitError
 	}
 	return 0
@@ -156,7 +156,7 @@ func parseKeys(v string) ([]string, error) {
 // errNoKeys is the error of keysTerm.Key at the end of the key list.
 var errNoKeys = errors.New("no more keys")
 
-// keysTerm is the terminal of bbs preview --keys. It takes the keys from a list
+// keysTerm is the terminal of velourbbs preview --keys. It takes the keys from a list
 // and writes the events of menu-nav, section 8, to w.
 type keysTerm struct {
 	term screen.Term
@@ -200,7 +200,7 @@ func (t *keysTerm) Logoff() error {
 	return err
 }
 
-// runKeys runs the session of bbs preview --keys from the screen start
+// runKeys runs the session of velourbbs preview --keys from the screen start
 // and gives the exit status. The end of the key list ends the session.
 // A key after the end of the session at logoff is an error.
 func runKeys(t *keysTerm, cfg config.Config, screens map[string]*screen.Screen, start string, stderr io.Writer) int {
@@ -209,10 +209,10 @@ func runKeys(t *keysTerm, cfg config.Config, screens map[string]*screen.Screen, 
 	case errors.Is(err, errNoKeys):
 		return 0
 	case err != nil:
-		_, _ = fmt.Fprintf(stderr, "bbs preview: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		return exitError
 	case len(t.keys) > 0:
-		_, _ = fmt.Fprintf(stderr, "bbs preview: key %q after logoff\n", key.Map(t.keys[0]))
+		_, _ = fmt.Fprintf(stderr, "velourbbs preview: key %q after logoff\n", key.Map(t.keys[0]))
 		return exitError
 	}
 	return 0

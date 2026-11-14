@@ -8,8 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"newbbs/internal/art"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/art"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 const bom = "\xef\xbb\xbf"

@@ -7,8 +7,8 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
-	"newbbs/internal/art"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/art"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // MaxPlayCells is the limit of written and erased cells of the play: 16 grids

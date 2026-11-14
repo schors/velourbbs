@@ -6,9 +6,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"newbbs/internal/key"
-	"newbbs/internal/screen"
-	"newbbs/internal/tomlcheck"
+	"github.com/schors/velourbbs/internal/key"
+	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
 // front is the front matter of a screen (section 3.2).

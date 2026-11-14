@@ -10,14 +10,14 @@ import (
 	"os/signal"
 	"syscall"
 
-	"newbbs/internal/server"
+	"github.com/schors/velourbbs/internal/server"
 )
 
-// serve runs bbs serve (telnet-term, section 10) until SIGINT or SIGTERM.
+// serve runs velourbbs serve (telnet-term, section 10) until SIGINT or SIGTERM.
 // It writes the diagnostics and the log to stderr.
 func serve(args []string, fsys fs.FS, stderr io.Writer) int {
 	if len(args) > 0 {
-		_, _ = io.WriteString(stderr, "bbs serve: no arguments expected\n"+usage)
+		_, _ = io.WriteString(stderr, "velourbbs serve: no arguments expected\n"+usage)
 		return exitUsage
 	}
 	cfg, screens, ds := load(fsys)

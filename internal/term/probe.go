@@ -6,8 +6,8 @@ import (
 	"log/slog"
 	"time"
 
-	"newbbs/internal/screen"
-	"newbbs/internal/telnet"
+	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/telnet"
 )
 
 // replyWait is the time without a reply that ends a wait of the probe (section 5.1).

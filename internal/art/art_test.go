@@ -8,8 +8,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"newbbs/internal/art"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/art"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // aliases is the [fields] of bbs.toml in the tests: w is term.cols.
@@ -135,7 +135,7 @@ func withField(file []byte, offset int, v byte) []byte {
 
 // TestNotFlat checks the steps 1, 2 and 4 of section 8.2.
 func TestNotFlat(t *testing.T) {
-	const notFlat = "a.ans:1:1: not in the flat form, convert it with bbs art import"
+	const notFlat = "a.ans:1:1: not in the flat form, convert it with velourbbs art import"
 	tests := []struct {
 		name string
 		data []byte

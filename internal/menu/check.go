@@ -7,8 +7,8 @@ import (
 	"maps"
 	"slices"
 
-	"newbbs/internal/config"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // Check does the checks of section 7 between files: the goto actions, the screens

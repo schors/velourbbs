@@ -4,8 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"newbbs/internal/screen"
-	"newbbs/internal/telnet"
+	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/telnet"
 )
 
 func TestCleanName(t *testing.T) {

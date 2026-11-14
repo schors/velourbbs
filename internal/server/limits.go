@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"newbbs/internal/config"
+	"github.com/schors/velourbbs/internal/config"
 )
 
 // The connect counter of section 9.2: its address limit and its time window in seconds.

@@ -20,7 +20,7 @@ func artFile(data, title string) []byte {
 	return append([]byte(data+"\x1a"), r...)
 }
 
-// runArt runs bbs with args and gives stderr and the exit status. It fails the test
+// runArt runs velourbbs with args and gives stderr and the exit status. It fails the test
 // on output to stdout.
 func runArt(t *testing.T, args ...string) (string, int) {
 	t.Helper()
@@ -114,7 +114,7 @@ func TestArtImportLink(t *testing.T) {
 	if err := os.Symlink("missing.ans", dangling); err != nil {
 		t.Fatal(err)
 	}
-	if errOut, status := runArt(t, "art", "import", in, dangling); !strings.HasPrefix(errOut, "bbs art import: ") || status != exitError {
+	if errOut, status := runArt(t, "art", "import", in, dangling); !strings.HasPrefix(errOut, "velourbbs art import: ") || status != exitError {
 		t.Errorf("dangling: stderr %q, status %d", errOut, status)
 	}
 	if got := files(t, dir); !slices.Equal(got, []string{"dangling.ans", "in.ans", "link.ans", "target.ans"}) {
@@ -161,7 +161,7 @@ func TestArtImportPaths(t *testing.T) {
 	}
 	// The same file through link/..: a usage error.
 	errOut, status = runArt(t, "art", "import", filepath.Join(top, "link")+"/../in.ans", filepath.Join(dir, "real", "in.ans"))
-	if !strings.HasPrefix(errOut, "bbs art import: <input> and <output> are the same file\n") || status != exitUsage {
+	if !strings.HasPrefix(errOut, "velourbbs art import: <input> and <output> are the same file\n") || status != exitUsage {
 		t.Errorf("link/.. same file: stderr %q, status %d", errOut, status)
 	}
 }
@@ -193,7 +193,7 @@ func TestArtImportError(t *testing.T) {
 	}
 	writeFile(t, in, artFile("a", ""))
 	errOut, status = runArt(t, "art", "import", in, filepath.Join(dir, "no", "out.ans"))
-	if !strings.HasPrefix(errOut, "bbs art import: ") || status != exitError {
+	if !strings.HasPrefix(errOut, "velourbbs art import: ") || status != exitError {
 		t.Errorf("missing directory: stderr %q, status %d", errOut, status)
 	}
 	if got := files(t, dir); !slices.Equal(got, []string{"in.ans", "out.ans"}) {
@@ -212,16 +212,16 @@ func TestArtUsage(t *testing.T) {
 	if err := os.Link(in, hard); err != nil {
 		t.Fatal(err)
 	}
-	const same = "bbs art import: <input> and <output> are the same file"
+	const same = "velourbbs art import: <input> and <output> are the same file"
 	tests := []struct {
 		args []string
 		msg  string // the first line of stderr
 	}{
-		{[]string{"art"}, "bbs art: expected the command import"},
-		{[]string{"art", "frob"}, `bbs art: unknown command "frob"`},
-		{[]string{"art", "import"}, "bbs art import: expected <input> and <output>"},
-		{[]string{"art", "import", in}, "bbs art import: expected <input> and <output>"},
-		{[]string{"art", "import", in, "a", "b"}, "bbs art import: expected <input> and <output>"},
+		{[]string{"art"}, "velourbbs art: expected the command import"},
+		{[]string{"art", "frob"}, `velourbbs art: unknown command "frob"`},
+		{[]string{"art", "import"}, "velourbbs art import: expected <input> and <output>"},
+		{[]string{"art", "import", in}, "velourbbs art import: expected <input> and <output>"},
+		{[]string{"art", "import", in, "a", "b"}, "velourbbs art import: expected <input> and <output>"},
 		{[]string{"art", "import", in, in}, same},
 		{[]string{"art", "import", in, link}, same},
 		{[]string{"art", "import", hard, in}, same},
@@ -230,7 +230,7 @@ func TestArtUsage(t *testing.T) {
 	for _, tt := range tests {
 		errOut, status := runArt(t, tt.args...)
 		first, _, _ := strings.Cut(errOut, "\n")
-		if first != tt.msg || !strings.Contains(errOut, "bbs art import <input> <output>") || status != exitUsage {
+		if first != tt.msg || !strings.Contains(errOut, "velourbbs art import <input> <output>") || status != exitUsage {
 			t.Errorf("%q: stderr %q, status %d; want %q, the usage and status 2", tt.args, errOut, status, tt.msg)
 		}
 	}

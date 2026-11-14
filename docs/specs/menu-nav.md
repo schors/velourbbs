@@ -1,7 +1,7 @@
 # Menu and navigation
 
 This specification defines the menu items, the keys, the navigation of a session,
-the menu checks of `bbs check` and the key sequences of `bbs preview`.
+the menu checks of `velourbbs check` and the key sequences of `velourbbs preview`.
 Related parts: [screen-format](screen-format.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
@@ -144,9 +144,9 @@ ESC has no implicit action.
 start = "welcome"
 ```
 
-## 7. `bbs check`
+## 7. `velourbbs check`
 
-`bbs check` ([screen-format](screen-format.md), section 9.1) also finds these errors:
+`velourbbs check` ([screen-format](screen-format.md), section 9.1) also finds these errors:
 
 - an item without `key` or without `do`;
 - an invalid key;
@@ -166,7 +166,7 @@ start = "welcome"
 - An error of a screen without items has the position 1:1.
 - An error of the start screen has the position 1:1 in `bbs.toml`.
 - The checks of a `goto`, of a screen without items and of the start screen use all screens.
-  `bbs check` does them only when the files have no other errors.
+  `velourbbs check` does them only when the files have no other errors.
 
 Examples:
 
@@ -179,16 +179,16 @@ screens/about.bbt:1:1: screen has no items
 bbs.toml:1:1: menu: start: unknown screen "mian"
 ```
 
-## 8. `bbs preview --keys`
+## 8. `velourbbs preview --keys`
 
-`bbs preview <name> --keys <keys>` runs a session from the screen `<name>` without telnet.
+`velourbbs preview <name> --keys <keys>` runs a session from the screen `<name>` without telnet.
 It is the test harness for the navigation.
 
 - `<keys>` is a list of keys, separated with commas. A key is a key name of section 3.1
   except `ANY`, or one other printable character except the comma and the space.
   Example: `S,ы,ESC,G`. An empty list is valid.
 - `<name>` must be a valid start screen (section 7). Else it is an invalid argument.
-- The other arguments of `bbs preview` ([screen-format](screen-format.md), section 9.2) apply.
+- The other arguments of `velourbbs preview` ([screen-format](screen-format.md), section 9.2) apply.
 - The output has one part for each event:
   - `screen <name>` and the cell dump of the first page, when the host shows a screen;
   - the cell dump of the next page, after a key on a More row;
@@ -196,11 +196,11 @@ It is the test harness for the navigation.
   - `logoff` when an item runs `logoff`. The pages of `goodbye` follow it.
 - The output gives a key after the map of section 3.2. A letter, a digit or a key name
   is in upper case. Each other character is as it is. Example: `ы` gives `key S`.
-- When the list ends, `bbs preview` stops after the current page and exits with status 0.
+- When the list ends, `velourbbs preview` stops after the current page and exits with status 0.
 - A key after the end of the session at `logoff` (section 5) is an error.
-  `bbs preview` exits with status 1.
+  `velourbbs preview` exits with status 1.
 
-Example: `bbs preview main --keys S,X,G --size 80x25`:
+Example: `velourbbs preview main --keys S,X,G --size 80x25`:
 
 ```
 screen main
@@ -233,10 +233,10 @@ page 1 80x25
 - The model (`screen.Item`) holds the key in upper case and the parsed action.
   `internal/screen` uses `internal/key` for the case rule of `item.<KEY>`.
 - The terminal interface gives the size and the keys and shows a page.
-  `bbs preview` and telnet-term give its implementations.
+  `velourbbs preview` and telnet-term give its implementations.
 - A terminal can also take the other events of section 8: the screen name, a key,
   an ignored key and `logoff`. The session sends them only to a terminal that implements
-  this second interface. `bbs preview` implements it.
+  this second interface. `velourbbs preview` implements it.
 
 ## 10. Not in the MVP
 

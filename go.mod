@@ -1,4 +1,4 @@
-module newbbs
+module github.com/schors/velourbbs
 
 go 1.27.3
 

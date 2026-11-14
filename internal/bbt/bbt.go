@@ -11,8 +11,8 @@ import (
 	"path"
 	"strings"
 
-	"newbbs/internal/art"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/art"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // MaxBodyLines is the line limit of the body of a screen after includes (section 10).

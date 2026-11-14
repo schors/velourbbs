@@ -6,7 +6,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // EscWait is the wait for the next byte after ESC and after each byte

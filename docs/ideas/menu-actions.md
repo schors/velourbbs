@@ -46,7 +46,7 @@ args = { area = "{arg.area}", n = "{in}" }
   The check is the same for menu items and for the Lua call `bbs.action`.
 - `when` only disables the item and its key. The template hides the item text with
   `{#if item.<KEY>}`.
-- `bbs check` gives a warning for a `when` item whose target has no `require`.
+- `velourbbs check` gives a warning for a `when` item whose target has no `require`.
 
 ## Arrow-key selection
 

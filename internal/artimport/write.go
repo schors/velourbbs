@@ -8,8 +8,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"newbbs/internal/art"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/art"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // maxComments is the largest count of COMNT lines: the SAUCE field has one byte.

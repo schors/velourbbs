@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 var (

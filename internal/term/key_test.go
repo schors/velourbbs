@@ -7,8 +7,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"newbbs/internal/key"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/key"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 var t0 = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
