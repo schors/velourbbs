@@ -12,11 +12,16 @@ const (
 	comntLine  = 64
 )
 
-// Sauce holds the fields of a SAUCE record that the loaders use.
+// Sauce holds the fields of a SAUCE record. The text fields are the raw bytes
+// of the record; internal/art uses only the numbers.
 type Sauce struct {
-	DataType, FileType byte
-	TInfo1, TInfo2     int
-	TFlags             byte
+	Title, Author, Group, Date []byte
+	DataType, FileType         byte
+	TInfo1, TInfo2             int
+	Comments                   int // the count of COMNT lines in the record
+	TFlags                     byte
+	TInfoS                     []byte
+	Lines                      [][]byte // the COMNT lines; nil when the block is missing
 }
 
 // SplitSauce gives the data of the file and its SAUCE record (section 8.2, step 1).
@@ -29,14 +34,25 @@ func SplitSauce(file []byte) ([]byte, *Sauce) {
 	}
 	r := file[n:]
 	rec := &Sauce{
+		Title:    r[7:42],
+		Author:   r[42:62],
+		Group:    r[62:82],
+		Date:     r[82:90],
 		DataType: r[94],
 		FileType: r[95],
 		TInfo1:   int(binary.LittleEndian.Uint16(r[96:])),
 		TInfo2:   int(binary.LittleEndian.Uint16(r[98:])),
+		Comments: int(r[104]),
 		TFlags:   r[105],
+		TInfoS:   r[106:128],
 	}
-	if lines := int(r[104]); lines > 0 {
-		if c := n - comntIDLen - lines*comntLine; c >= 0 && bytes.HasPrefix(file[c:], []byte("COMNT")) {
+	if rec.Comments > 0 {
+		c := n - comntIDLen - rec.Comments*comntLine
+		if c >= 0 && bytes.HasPrefix(file[c:], []byte("COMNT")) {
+			for i := range rec.Comments {
+				at := c + comntIDLen + i*comntLine
+				rec.Lines = append(rec.Lines, file[at:at+comntLine])
+			}
 			return file[:c], rec
 		}
 	}

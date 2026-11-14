@@ -46,17 +46,25 @@ These are not targets:
 
 The editors write the CP437 glyphs of LF, CR, 0x1A and ESC as these controls
 or as other glyphs. The import cannot restore these glyphs.
+icy_draw at the level UTF-8 also writes the glyphs of 0x08, 0x09 and 0x7F as these controls,
+and each is an error. Export such art at the level IcyTerm.
 
 ## 4. Reading
 
 1. The SAUCE record and the COMNT block have the layout of screen-format, section 8.2, step 1.
    The input can have no SAUCE record. When `Comments` is > 0, the COMNT block must be
    at its place. The import does not check the SAUCE `FileSize`.
+   Moebius pads each comment line to 64 characters (UTF-16 code units) and then writes
+   UTF-8, so a non-ASCII comment moves the block. When the block is not at its place
+   and the bytes after the first 0x1A start with `COMNT`, these bytes are the block:
+   its text in lines of 64 characters. A block without lines (Moebius writes it
+   for a comment of only spaces) is valid.
 2. The data is the bytes before the COMNT block or the SAUCE record.
    The first 0x1A ends the data. A byte after it in the data is an error.
 3. The input is UTF-8 when the data starts with a BOM. The import removes the BOM.
    Else the input is CP437.
 4. UTF-8 input must be valid UTF-8. Invalid UTF-8 is one error, and the import stops.
+   The play finds it, so an error that stops the play before it comes in its place.
    LF, CR and ESC are controls. Each other control character
    (screen-format, section 2.1) is an error.
 5. In CP437 input, LF, CR and ESC are controls. Each other byte is a character
@@ -86,7 +94,12 @@ The import plays the data into a grid of cells. The grid width is the art width.
 - When wrap is off, a grapheme at the right edge overwrites the last cell.
   A wide grapheme overwrites the last two cells.
 - A write to one half of a wide grapheme turns the other half into a space in its style.
-- A cursor move stays inside the grid width and the row limit (screen-format, section 10).
+- `CSI A`, `B`, `H` and `f` keep the cursor inside the grid width and the row limit
+  (screen-format, section 10). `CSI C` and `D` change only the column, inside the grid width.
+  A restore (`CSI u`, `ESC 8`) goes back to the saved row and column.
+- In UTF-8 input, a wrap also resets the style to `7/0` without attributes.
+  icy_draw at the level UTF-8 starts each row in this style and writes no SGR
+  after a full row.
 - The grid height is the last row with a written cell after the last `CSI 2 J`,
   or `TInfo2` of SAUCE if it is larger.
 
@@ -142,7 +155,7 @@ The style of a written cell, in this order:
 
 A grapheme, `CSI n K` or `CSI 2 J` that writes a cell that a grapheme wrote before
 is an "overwrite". The cell keeps the last write: the grid is the last frame.
-The first overwrite gives one warning with its position.
+The first overwrite gives one warning with the position of the cell.
 
 ## 7. CP437 table
 
@@ -211,8 +224,8 @@ SAUCE fields of the output:
 | `TInfoS` | From a character SAUCE, else empty. |
 
 - The import reads a text field of the input SAUCE as UTF-8 when it is valid UTF-8.
-  Else it reads it by the table of section 7. Moebius writes UTF-8, icy_draw and PabloDraw
-  write ASCII. A CP437 text that is valid UTF-8 reads wrong.
+  Else it reads it by the table of section 7. Moebius and icy_draw write UTF-8,
+  PabloDraw writes ASCII. A CP437 text that is valid UTF-8 reads wrong.
   The import removes trailing spaces and NUL bytes.
 - The output text fields are UTF-8, padded with spaces. A field that is longer
   than its bytes is cut after the last whole grapheme that fits. The cut gives a warning.

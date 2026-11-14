@@ -2,13 +2,9 @@ package art
 
 import (
 	"bytes"
-	"fmt"
 
 	"newbbs/internal/screen"
 )
-
-// maxParam is the largest value of an SGR parameter. A larger parameter counts as maxParam.
-const maxParam = 9999
 
 // The start style and the cell that the data does not write (section 8.3).
 var (
@@ -147,61 +143,24 @@ func (r *reader) grid(height int) []screen.Row {
 }
 
 // escape reads the ESC at data[i] and gives the index after the sequence.
-// The only sequence is SGR. ECMA-48, section 5.4, delimits a CSI sequence.
+// The only sequence is SGR.
 func (r *reader) escape(data []byte, i int) int {
 	if i+1 == len(data) || data[i+1] != '[' {
 		r.errorf(`ESC without "["`)
 		return i + 1 // the byte after ESC reads
 	}
-	start := i + 2
-	j := start
-	for j < len(data) && 0x30 <= data[j] && data[j] <= 0x3f {
-		j++
+	seq, next, ok := ScanCSI(data, i+2)
+	if !ok {
+		r.errorf("incomplete sequence %s", seq.Text)
+		return next
 	}
-	k := j
-	for k < len(data) && 0x20 <= data[k] && data[k] <= 0x2f {
-		k++
+	ps, ok := AppendParams(nil, seq.Params)
+	if seq.Final != 'm' || len(seq.Inter) > 0 || !ok {
+		r.errorf("unknown sequence %s", seq.Text)
+		return next
 	}
-	if k == len(data) || data[k] < 0x40 || data[k] > 0x7e {
-		r.errorf("incomplete sequence %s", seqText(data[start:k]))
-		return k // the byte at k reads
-	}
-	text := seqText(data[start : k+1])
-	ps, ok := parseParams(data[start:j])
-	if data[k] != 'm' || j < k || !ok {
-		r.errorf("unknown sequence %s", text)
-		return k + 1
-	}
-	r.sgr(ps, bytes.Split(data[start:j], []byte{';'}), text)
-	return k + 1
-}
-
-// seqText gives a CSI sequence for a message. It cuts a long sequence.
-func seqText(b []byte) string {
-	const maxLen = 24
-	if len(b) > maxLen {
-		return fmt.Sprintf("%q", "ESC["+string(b[:maxLen])+"...")
-	}
-	return fmt.Sprintf("%q", "ESC["+string(b))
-}
-
-// parseParams parses the SGR parameters: digits, separated by ";".
-// A missing parameter is 0. It reports false for another byte.
-func parseParams(b []byte) ([]int, bool) {
-	ps := []int{}
-	v := 0
-	for _, c := range b {
-		switch {
-		case c == ';':
-			ps = append(ps, v)
-			v = 0
-		case '0' <= c && c <= '9':
-			v = min(v*10+int(c-'0'), maxParam)
-		default:
-			return nil, false
-		}
-	}
-	return append(ps, v), true
+	r.sgr(ps, bytes.Split(seq.Params, []byte{';'}), seq.Text)
+	return next
 }
 
 // sgr does the SGR parameters ps (section 8.3). raw holds the digits of each parameter
@@ -233,7 +192,7 @@ func (r *reader) sgr(ps []int, raw [][]byte, text string) {
 		case v == 49:
 			s.Bg = screen.IndexColour(0)
 		case v == 38 || v == 48:
-			c, n, ok := extColour(ps[k+1:])
+			c, n, ok := ExtColour(ps[k+1:])
 			if !ok {
 				r.errorf("invalid colour in %s", text)
 				return
@@ -249,16 +208,4 @@ func (r *reader) sgr(ps []int, raw [][]byte, text string) {
 			return
 		}
 	}
-}
-
-// extColour parses the parameters after 38 or 48: "5;n" or "2;r;g;b".
-// It gives the colour and the count of parameters.
-func extColour(ps []int) (screen.Colour, int, bool) {
-	switch {
-	case len(ps) >= 2 && ps[0] == 5 && ps[1] <= 255:
-		return screen.IndexColour(uint8(ps[1])), 2, true
-	case len(ps) >= 4 && ps[0] == 2 && ps[1] <= 255 && ps[2] <= 255 && ps[3] <= 255:
-		return screen.RGBColour(uint8(ps[1]), uint8(ps[2]), uint8(ps[3])), 4, true
-	}
-	return screen.Colour{}, 0, false
 }

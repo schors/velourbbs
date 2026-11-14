@@ -1,14 +1,12 @@
 package artimport
 
 import (
-	"fmt"
+	"bytes"
+	"unicode/utf8"
 
 	"newbbs/internal/art"
 	"newbbs/internal/screen"
 )
-
-// maxParam is the largest value of a CSI parameter (section 5).
-const maxParam = 9999
 
 // The start style of the play and the style of a cell that the play does not write.
 var (
@@ -46,16 +44,17 @@ func (p pen) style(ice bool) screen.Style {
 
 // player plays the data of an .ans file into a grid (section 5).
 type player struct {
-	d       *screen.FileDiags
-	width   int
-	ice     bool
-	moebius bool // the Moebius form: a row over the width is an error
-	skipLF  bool // the Moebius form before the first grapheme: LF does nothing
+	d         *screen.FileDiags
+	width     int
+	ice       bool
+	wrapReset bool // UTF-8 input: a wrap resets the style (section 5)
 
-	rows   []screen.Row // a nil row has no writes
-	height int          // the last written row
-	maxCol int          // the last column of a written grapheme
-	cells  int          // the written and erased cells (section 8)
+	rows     []screen.Row // a nil row has no writes
+	drawn    [][]bool     // the cells that a grapheme wrote, for the overwrite warning (section 6)
+	height   int          // the last written row
+	frame    int          // the last row written after the last CSI 2 J: the grid height
+	cells    int          // the written and erased cells (section 8)
+	animated bool         // the play gave the overwrite warning
 
 	row, col           int // 1-based; LF can move row past art.MaxRows
 	pending            bool
@@ -68,9 +67,9 @@ type player struct {
 	params             []int
 }
 
-func newPlayer(d *screen.FileDiags, width int, ice, moebius bool) *player {
+func newPlayer(d *screen.FileDiags, width int, ice, wrapReset bool) *player {
 	return &player{
-		d: d, width: width, ice: ice, moebius: moebius, skipLF: moebius,
+		d: d, width: width, ice: ice, wrapReset: wrapReset,
 		row: 1, col: 1, wrap: true, pen: startPen, savedRow: 1, savedCol: 1,
 	}
 }
@@ -118,11 +117,6 @@ func (p *player) errorf(format string, args ...any) {
 	p.d.Errorf(row, col, format, args...)
 }
 
-func (p *player) warnf(format string, args ...any) {
-	row, col := p.pos()
-	p.d.Warnf(row, col, format, args...)
-}
-
 // stop adds an error and stops the play.
 func (p *player) stop(format string, args ...any) {
 	p.errorf(format, args...)
@@ -153,24 +147,19 @@ func (p *player) text(run []byte) {
 		p.put(g, w)
 	}
 	if len(valid) < len(run) && !p.stopped {
-		p.stop("invalid UTF-8: art must be UTF-8, CP437 art needs a conversion")
+		p.d.Diags = nil // invalid UTF-8 is the only error of the file (section 4, step 4)
+		p.stop("invalid UTF-8")
 	}
 }
 
 // put writes the grapheme g of the width w at the cursor.
 func (p *player) put(g string, w int) {
-	p.skipLF = false
 	if w > p.width {
 		p.errorf("wide grapheme in art of width %d", p.width)
 		return
 	}
 	if p.pending || w == 2 && p.col == p.width && p.wrap {
-		if p.moebius {
-			p.d.Errorf(p.row, p.col, "row is over %d columns", p.width)
-			p.stopped = true
-			return
-		}
-		p.row, p.col, p.pending = p.row+1, 1, false
+		p.wrapRow()
 	}
 	if w == 2 && p.col == p.width {
 		p.col-- // wrap off: the wide grapheme takes the last two cells
@@ -188,7 +177,7 @@ func (p *player) put(g string, w int) {
 	if w == 2 {
 		r[p.col] = screen.Cell{Style: style}
 	}
-	p.maxCol = max(p.maxCol, p.col+w-1)
+	fillFlags(p.drawn[p.row-1][p.col-1 : p.col-1+w])
 	p.last, p.lastWidth = g, w
 	if p.col+w > p.width {
 		p.col, p.pending = p.width, p.wrap
@@ -201,6 +190,7 @@ func (p *player) put(g string, w int) {
 // When the write cuts a wide grapheme, the other half becomes a space in its style.
 func (p *player) open(a, b int) screen.Row {
 	r := p.rowAt(p.row)
+	p.overwrite(p.row, a, b)
 	if a > 1 && r[a-1].Grapheme == "" {
 		r[a-2].Grapheme = " "
 	}
@@ -208,18 +198,42 @@ func (p *player) open(a, b int) screen.Row {
 		r[b].Grapheme = " "
 	}
 	p.height = max(p.height, p.row)
+	p.frame = max(p.frame, p.row)
 	return r
+}
+
+// overwrite gives the warning of section 6 at the first write to a cell of a..b
+// in the row n that a grapheme wrote. The warning has the position of the cell.
+func (p *player) overwrite(n, a, b int) {
+	if p.animated {
+		return
+	}
+	for i, drawn := range p.drawn[n-1][a-1 : b] {
+		if drawn {
+			p.animated = true
+			p.d.Warnf(n, a+i, "art overwrites a cell, the import keeps the last frame")
+			return
+		}
+	}
 }
 
 // rowAt gives the row n. It allocates the row at the first write.
 func (p *player) rowAt(n int) screen.Row {
 	for len(p.rows) < n {
 		p.rows = append(p.rows, nil)
+		p.drawn = append(p.drawn, nil)
 	}
 	if p.rows[n-1] == nil {
 		p.rows[n-1] = newRow(p.width, blankCell)
+		p.drawn[n-1] = make([]bool, p.width)
 	}
 	return p.rows[n-1]
+}
+
+func fillFlags(f []bool) {
+	for i := range f {
+		f[i] = true
+	}
 }
 
 func newRow(width int, c screen.Cell) screen.Row {
@@ -234,17 +248,17 @@ func fillCells(r screen.Row, c screen.Cell) {
 	}
 }
 
-// grid gives the rows of the art. The rows without writes share one blank row.
-func (p *player) grid(height, width int) []screen.Row {
+// grid gives the rows 1..height of the art. The rows without writes share one blank row.
+func (p *player) grid(height int) []screen.Row {
 	rows := make([]screen.Row, height)
 	var blankRow screen.Row
 	for i := range rows {
 		if i < len(p.rows) && p.rows[i] != nil {
-			rows[i] = p.rows[i][:width:width]
+			rows[i] = p.rows[i]
 			continue
 		}
 		if blankRow == nil {
-			blankRow = newRow(width, blankCell)
+			blankRow = newRow(p.width, blankCell)
 		}
 		rows[i] = blankRow
 	}
@@ -252,88 +266,123 @@ func (p *player) grid(height, width int) []screen.Row {
 }
 
 func (p *player) lf() {
-	if p.skipLF {
-		return
-	}
 	p.row, p.col, p.pending = p.row+1, 1, false
 }
 
 // doWrap does a pending wrap.
 func (p *player) doWrap() {
 	if p.pending {
-		p.row, p.col, p.pending = p.row+1, 1, false
+		p.wrapRow()
+	}
+}
+
+// wrapRow moves the cursor to column 1 of the next row. In UTF-8 input it resets the style.
+func (p *player) wrapRow() {
+	p.row, p.col, p.pending = p.row+1, 1, false
+	if p.wrapReset {
+		p.pen = startPen
 	}
 }
 
 // moveTo moves the cursor inside the grid width and the row limit.
 func (p *player) moveTo(row, col int) {
 	p.row = min(max(row, 1), art.MaxRows)
+	p.moveCol(col)
+}
+
+// moveCol moves the cursor inside the grid width. The row stays, also past the row limit.
+func (p *player) moveCol(col int) {
 	p.col = min(max(col, 1), p.width)
+}
+
+// restore moves the cursor to the saved position. The row can be past the row limit.
+func (p *player) restore() {
+	p.doWrap()
+	p.row, p.col = p.savedRow, p.savedCol
 }
 
 // escape plays the ESC at data[i] and gives the index after it.
 func (p *player) escape(data []byte, i int) int {
 	if i+1 == len(data) {
+		p.errorf(`incomplete sequence "ESC"`)
 		return i + 1
 	}
 	switch data[i+1] {
 	case '[':
-		return p.csi(data, i+2)
+		seq, next, ok := art.ScanCSI(data, i+2)
+		if !ok {
+			p.errorf("incomplete sequence %s", seq.Text)
+		} else {
+			p.control(seq)
+		}
+		return next // after an incomplete sequence, the byte at next plays
 	case '7':
 		p.doWrap()
 		p.savedRow, p.savedCol = p.row, p.col
 		return i + 2
 	case '8':
-		p.doWrap()
-		p.moveTo(p.savedRow, p.savedCol)
+		p.restore()
 		return i + 2
 	}
-	return i + 1 // the loader drops the ESC and plays the byte
-}
-
-// csi plays the CSI sequence after "ESC [" at data[i] (ECMA-48, section 5.4)
-// and gives the index after it.
-func (p *player) csi(data []byte, i int) int {
-	j := i
-	for j < len(data) && 0x30 <= data[j] && data[j] <= 0x3f {
-		j++
+	next := data[i+1 : i+2]
+	if r, n := utf8.DecodeRune(data[i+1:]); r != utf8.RuneError {
+		next = data[i+1 : i+1+n]
 	}
-	k := j
-	for k < len(data) && 0x20 <= data[k] && data[k] <= 0x2f {
-		k++
-	}
-	if k == len(data) || data[k] < 0x40 || data[k] > 0x7e {
-		p.warnf("incomplete sequence %s", seqText(data[i:k]))
-		return k // the byte at k plays
-	}
-	p.control(data[i:j], data[j:k], data[k], seqText(data[i:k+1]))
-	return k + 1
-}
-
-// seqText gives a CSI sequence for a message. It cuts a long sequence.
-func seqText(b []byte) string {
-	const maxLen = 24
-	if len(b) > maxLen {
-		return fmt.Sprintf("%q", "ESC["+string(b[:maxLen])+"...")
-	}
-	return fmt.Sprintf("%q", "ESC["+string(b))
+	p.errorf("unknown sequence %q", "ESC"+string(next))
+	return i + 1 // the byte after ESC plays
 }
 
 // control does the effect of a CSI sequence (section 5).
-func (p *player) control(params, inter []byte, final byte, text string) {
+func (p *player) control(seq art.CSI) {
+	params := seq.Params
 	var marker byte
 	if len(params) > 0 && params[0] >= 0x3c {
 		marker, params = params[0], params[1:]
 	}
-	ps, ok := p.parseParams(params)
-	// Only the mode sequences take a marker, and only "?".
-	mode := final == 'h' || final == 'l'
-	known := len(inter) == 0 && (marker == 0 && !mode || marker == '?' && mode)
-	if !ok || !known {
-		p.warnf("unknown sequence %s", text)
-		return
+	ps, ok := art.AppendParams(p.params[:0], params)
+	p.params = ps
+	switch inter := string(seq.Inter); {
+	case !ok:
+	case marker == 0 && inter == "":
+		if p.plain(seq.Final, ps, len(params) == 0, seq) {
+			return
+		}
+	case marker == '?' && inter == "" && (seq.Final == 'h' || seq.Final == 'l'):
+		if len(ps) == 1 && (ps[0] == 33 || ps[0] == 7) {
+			if ps[0] == 33 {
+				p.ice = seq.Final == 'h'
+			} else {
+				p.wrap = seq.Final == 'h'
+			}
+			return
+		}
+	case marker == 0 && inter == " " && seq.Final == 'D':
+		if len(ps) == 2 && ps[0] == 0 {
+			return // the font page of icy_draw: no effect
+		}
 	}
-	n := max(arg(ps, 0), 1)
+	p.errorf("unknown sequence %s", seq.Text)
+}
+
+// plain does a CSI sequence without a marker and intermediate bytes. empty reports that
+// the sequence has no parameter bytes. It reports false for a sequence that is not
+// in the table of section 5.
+func (p *player) plain(final byte, ps []int, empty bool, seq art.CSI) bool {
+	n := max(ps[0], 1)
+	switch final {
+	case 'A', 'B', 'C', 'D', 'b', 'J', 'K':
+		if len(ps) > 1 {
+			return false
+		}
+	case 'H', 'f':
+		if len(ps) > 2 {
+			return false
+		}
+	case 's', 'u':
+		if !empty {
+			return false
+		}
+	}
 	switch final {
 	case 'A':
 		p.doWrap()
@@ -343,70 +392,56 @@ func (p *player) control(params, inter []byte, final byte, text string) {
 		p.moveTo(p.row+n, p.col)
 	case 'C':
 		p.doWrap()
-		p.moveTo(p.row, p.col+n)
+		p.moveCol(p.col + n)
 	case 'D':
 		p.doWrap()
-		p.moveTo(p.row, p.col-n)
+		p.moveCol(p.col - n)
 	case 'H', 'f':
 		p.doWrap()
 		p.moveTo(n, max(arg(ps, 1), 1))
 	case 'J':
-		if len(ps) != 1 || ps[0] != 2 {
-			p.warnf("unknown sequence %s", text)
-			return
+		if ps[0] != 2 {
+			return false
 		}
 		p.clear()
 	case 'K':
-		if len(ps) != 1 || ps[0] > 2 {
-			p.warnf("unknown sequence %s", text)
-			return
+		if ps[0] > 2 {
+			return false
 		}
 		p.erase(ps[0])
 	case 's':
 		p.doWrap()
 		p.savedRow, p.savedCol = p.row, p.col
 	case 'u':
-		p.doWrap()
-		p.moveTo(p.savedRow, p.savedCol)
+		p.restore()
 	case 'b':
 		p.repeat(n)
-	case 'h', 'l':
-		for _, v := range ps {
-			switch v {
-			case 33:
-				p.ice = final == 'h'
-			case 7:
-				p.wrap = final == 'h'
-			default:
-				p.warnf("unknown mode %d in %s", v, text)
-			}
-		}
+	case 't':
+		p.rgb(ps, seq.Text)
 	case 'm':
-		p.sgr(ps, text)
+		p.sgr(ps, seq)
 	default:
-		p.warnf("unknown sequence %s", text)
+		return false
 	}
+	return true
 }
 
-// parseParams parses the parameters of a CSI sequence. A missing parameter is 0.
-// A parameter over maxParam counts as maxParam. It reports false for a byte
-// other than a digit or ";".
-func (p *player) parseParams(b []byte) ([]int, bool) {
-	ps := p.params[:0]
-	v := 0
-	for _, c := range b {
-		switch {
-		case c == ';':
-			ps = append(ps, v)
-			v = 0
-		case '0' <= c && c <= '9':
-			v = min(v*10+int(c-'0'), maxParam)
-		default:
-			return nil, false
-		}
+// rgb does CSI 0;r;g;b t and CSI 1;r;g;b t of PabloDraw: the background and the foreground.
+func (p *player) rgb(ps []int, text string) {
+	if ps[0] > 1 {
+		p.errorf("unknown sequence %s", text)
+		return
 	}
-	p.params = append(ps, v)
-	return p.params, true
+	if len(ps) != 4 || ps[1] > 255 || ps[2] > 255 || ps[3] > 255 {
+		p.errorf("invalid colour in %s", text)
+		return
+	}
+	c := screen.RGBColour(uint8(ps[1]), uint8(ps[2]), uint8(ps[3]))
+	if ps[0] == 1 {
+		p.pen.fg = c
+	} else {
+		p.pen.bg = c
+	}
 }
 
 func arg(ps []int, i int) int {
@@ -442,6 +477,7 @@ func (p *player) erase(mode int) {
 }
 
 // clear does CSI 2 J: it erases the rows 1 to the height and moves the cursor to row 1, column 1.
+// The grid height starts again from 0.
 func (p *player) clear() {
 	if !p.spend(p.height * p.width) {
 		return
@@ -449,8 +485,9 @@ func (p *player) clear() {
 	c := screen.Cell{Grapheme: " ", Style: p.eraseStyle()}
 	for n := 1; n <= p.height; n++ {
 		fillCells(p.rowAt(n), c)
+		p.overwrite(n, 1, p.width)
 	}
-	p.row, p.col, p.pending = 1, 1, false
+	p.row, p.col, p.pending, p.frame = 1, 1, false, 0
 }
 
 // repeat does CSI n b. It stops at the row limit.
@@ -470,8 +507,10 @@ func (p *player) repeat(n int) {
 	}
 }
 
-// sgr does CSI ... m.
-func (p *player) sgr(ps []int, text string) {
+// sgr does CSI ... m. An unknown parameter is an error; the rest of the sequence plays.
+// After an invalid 38 or 48, the rest does nothing.
+func (p *player) sgr(ps []int, seq art.CSI) {
+	var raw [][]byte // the digits of each parameter, for the messages
 	for k := 0; k < len(ps); k++ {
 		switch v := ps[k]; {
 		case v == 0:
@@ -497,9 +536,9 @@ func (p *player) sgr(ps []int, text string) {
 		case v == 49:
 			p.pen.bg = screen.IndexColour(0)
 		case v == 38 || v == 48:
-			c, n, ok := extColour(ps[k+1:])
+			c, n, ok := art.ExtColour(ps[k+1:])
 			if !ok {
-				p.warnf("invalid colour in %s", text)
+				p.errorf("invalid colour in %s", seq.Text)
 				return
 			}
 			if v == 38 {
@@ -509,19 +548,10 @@ func (p *player) sgr(ps []int, text string) {
 			}
 			k += n
 		default:
-			p.warnf("unknown SGR parameter %d in %s", v, text)
+			if raw == nil {
+				raw = bytes.Split(seq.Params, []byte{';'})
+			}
+			p.errorf("unknown SGR parameter %s in %s", raw[k], seq.Text)
 		}
 	}
-}
-
-// extColour parses the parameters after 38 or 48: "5;n" or "2;r;g;b".
-// It gives the colour and the count of parameters.
-func extColour(ps []int) (screen.Colour, int, bool) {
-	switch {
-	case len(ps) >= 2 && ps[0] == 5 && ps[1] <= 255:
-		return screen.IndexColour(uint8(ps[1])), 2, true
-	case len(ps) >= 4 && ps[0] == 2 && ps[1] <= 255 && ps[2] <= 255 && ps[3] <= 255:
-		return screen.RGBColour(uint8(ps[1]), uint8(ps[2]), uint8(ps[3])), 4, true
-	}
-	return screen.Colour{}, 0, false
 }
