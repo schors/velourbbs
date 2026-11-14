@@ -89,10 +89,10 @@ func TestPalette(t *testing.T) {
 }
 
 func TestAppendPage(t *testing.T) {
-	page := screen.Page{
-		{cell("a", idx(7), idx(0), 0), cell("b", idx(7), idx(0), 0), cell("c", idx(15), idx(4), screen.Bold)},
-		{cell(" ", idx(7), idx(0), 0), cell("é", def, def, 0), cell("d", def, def, 0)},
-	}
+	page := rows(
+		screen.Row{cell("a", idx(7), idx(0), 0), cell("b", idx(7), idx(0), 0), cell("c", idx(15), idx(4), screen.Bold)},
+		screen.Row{cell(" ", idx(7), idx(0), 0), cell("é", def, def, 0), cell("d", def, def, 0)},
+	)
 	want := "\x1b[0m\x1b[2J" +
 		"\x1b[1;1H\x1b[0;37;40mab\x1b[0;1;97;44mc" +
 		"\x1b[2;1H\x1b[0;37;40m \x1b[0mé" + "d" +
@@ -102,9 +102,26 @@ func TestAppendPage(t *testing.T) {
 	}
 }
 
+// rows gives a page of rows without a margin.
+func rows(rs ...screen.Row) screen.Page {
+	return screen.Page{Rows: rs, Cols: len(rs[0])}
+}
+
+// TestAppendPageMargin: the cells outside the screen area are spaces in Fill.
+func TestAppendPageMargin(t *testing.T) {
+	page := screen.Page{
+		Rows: []screen.Row{{cell("x", idx(15), idx(4), 0)}},
+		Cols: 4, Margin: 1, Fill: screen.Style{Fg: idx(7), Bg: idx(0)},
+	}
+	want := "\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;37;40m \x1b[0;97;44mx\x1b[0;37;40m  \x1b[0m"
+	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
+		t.Errorf("AppendPage = %q, want %q", got, want)
+	}
+}
+
 // TestAppendPageDefaultStart: the first cell in the default style needs no SGR.
 func TestAppendPageDefaultStart(t *testing.T) {
-	page := screen.Page{{cell("x", def, def, 0)}}
+	page := rows(screen.Row{cell("x", def, def, 0)})
 	want := "\x1b[0m\x1b[2J\x1b[1;1Hx\x1b[0m"
 	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
@@ -113,7 +130,7 @@ func TestAppendPageDefaultStart(t *testing.T) {
 
 func TestAppendPageWide(t *testing.T) {
 	s := screen.Style{Fg: idx(7), Bg: idx(0)}
-	page := screen.Page{{{Grapheme: "中", Style: s}, {Grapheme: "", Style: s}, {Grapheme: "a", Style: s}}}
+	page := rows(screen.Row{{Grapheme: "中", Style: s}, {Grapheme: "", Style: s}, {Grapheme: "a", Style: s}})
 	got := string(AppendPage(nil, page, screen.Colors16))
 	if n := strings.Count(got, "中"); n != 1 {
 		t.Errorf("AppendPage gives %q %d times, want 1: %q", "中", n, got)
@@ -125,7 +142,7 @@ func TestAppendPageWide(t *testing.T) {
 
 // TestAppendPageReducedEqual: two model styles with one reduced style give one SGR.
 func TestAppendPageReducedEqual(t *testing.T) {
-	page := screen.Page{{cell("a", rgb(250, 250, 250), def, 0), cell("b", rgb(255, 255, 255), def, 0)}}
+	page := rows(screen.Row{cell("a", rgb(250, 250, 250), def, 0), cell("b", rgb(255, 255, 255), def, 0)})
 	tests := []struct {
 		colors int
 		want   string
@@ -142,7 +159,7 @@ func TestAppendPageReducedEqual(t *testing.T) {
 }
 
 func TestAppendPageAppends(t *testing.T) {
-	got := string(AppendPage([]byte("x"), nil, screen.Colors16))
+	got := string(AppendPage([]byte("x"), screen.Page{}, screen.Colors16))
 	if want := "x\x1b[0m\x1b[2J\x1b[0m"; got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
 	}

@@ -85,16 +85,10 @@ func (t *Terminal) Key() (string, error) {
 	return k, nil
 }
 
-// Page writes page n of pages in one write (sections 7.1 and 9.4).
-func (t *Terminal) Page(_ string, pages []screen.Page, n int) error {
-	return t.write(telnet.Escape(nil, AppendPage(nil, pages[n], t.term.Colors)))
+// Page writes the page p in one write (sections 7.1 and 9.4).
+func (t *Terminal) Page(p screen.Page) error {
+	return t.write(telnet.Escape(nil, AppendPage(nil, p, t.term.Colors)))
 }
-
-// KeyEvent does nothing: the terminal ignores the events of the session (section 11).
-func (t *Terminal) KeyEvent(string, bool) error { return nil }
-
-// Logoff does nothing: the terminal ignores the events of the session (section 11).
-func (t *Terminal) Logoff() error { return nil }
 
 // read writes the waiting replies, then reads the input once, until the deadline dl
 // at the latest. It gives the telnet events and the CPR replies. The keys go to the queue.

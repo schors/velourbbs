@@ -16,7 +16,27 @@ type Cell struct {
 type Row []Cell
 
 // Page is the rows that the terminal shows at one time (section 6.4).
-type Page []Row
+// A row holds the cells of the screen area. Line gives the row at term.cols cells.
+type Page struct {
+	Rows   []Row
+	Cols   int   // term.cols
+	Margin int   // the left margin of the screen area
+	Fill   Style // the style of the cells outside the screen area: normal
+}
+
+// Line gives row i at p.Cols cells in buf: each cell outside the screen area
+// is a space in p.Fill (section 6.2). It reuses the memory of buf.
+func (p Page) Line(i int, buf Row) Row {
+	buf = buf[:0]
+	for range p.Margin {
+		buf = append(buf, Cell{" ", p.Fill})
+	}
+	buf = append(buf, p.Rows[i]...)
+	for len(buf) < p.Cols {
+		buf = append(buf, Cell{" ", p.Fill})
+	}
+	return buf
+}
 
 // MaxWidth is the largest render width and art width (sections 3.2 and 8.2).
 const MaxWidth = 255

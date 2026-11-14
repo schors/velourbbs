@@ -14,7 +14,7 @@ import (
 	"newbbs/internal/screen"
 )
 
-// fakeTerm is a Terminal that logs the events as strings.
+// fakeTerm is a Terminal without Events. It logs each page as "page: <row 1>".
 type fakeTerm struct {
 	cols    []int // the cols of each Term call; the last value stays
 	keys    []string
@@ -39,21 +39,24 @@ func (f *fakeTerm) Key() (string, error) {
 	return k, nil
 }
 
-// Page logs "screen <name> <n>/<count>: <row 1>" for page 1, else "page <n>/<count>: <row 1>".
-func (f *fakeTerm) Page(name string, pages []screen.Page, n int) error {
+func (f *fakeTerm) Page(p screen.Page) error {
 	var row strings.Builder
-	for _, c := range pages[n][0] {
+	for _, c := range p.Line(0, nil) {
 		row.WriteString(c.Grapheme)
 	}
-	ev := "page"
-	if n == 0 {
-		ev = "screen " + name
-	}
-	f.log = append(f.log, fmt.Sprintf("%s %d/%d: %s", ev, n+1, len(pages), strings.TrimRight(row.String(), " ")))
+	f.log = append(f.log, "page: "+strings.TrimRight(row.String(), " "))
 	return f.pageErr
 }
 
-func (f *fakeTerm) KeyEvent(k string, ignored bool) error {
+// eventsTerm is a fakeTerm with Events. It logs the events as strings.
+type eventsTerm struct{ *fakeTerm }
+
+func (f eventsTerm) Screen(name string) error {
+	f.log = append(f.log, "screen "+name)
+	return nil
+}
+
+func (f eventsTerm) KeyEvent(k string, ignored bool) error {
 	if ignored {
 		k += " ignored"
 	}
@@ -61,7 +64,7 @@ func (f *fakeTerm) KeyEvent(k string, ignored bool) error {
 	return nil
 }
 
-func (f *fakeTerm) Logoff() error {
+func (f eventsTerm) Logoff() error {
 	f.log = append(f.log, "logoff")
 	return nil
 }
@@ -133,17 +136,17 @@ func TestRun(t *testing.T) {
 		cols: []int{80},
 		keys: []string{"s", "X", "q"},
 		want: []string{
-			"screen main 1/1: [S]ystem [G]oodbye",
-			"key S", "screen info 1/1: Info",
+			"screen main", "page: [S]ystem [G]oodbye",
+			"key S", "screen info", "page: Info",
 			"key X ignored",
-			"key Q", "screen main 1/1: [S]ystem [G]oodbye",
+			"key Q", "screen main", "page: [S]ystem [G]oodbye",
 		},
 		wantErr: io.EOF,
 	}, {
 		name:    "Russian layout",
 		cols:    []int{80},
 		keys:    []string{"ы", "ж"},
-		want:    []string{"screen main 1/1: [S]ystem [G]oodbye", "key S", "screen info 1/1: Info", "key ж ignored"},
+		want:    []string{"screen main", "page: [S]ystem [G]oodbye", "key S", "screen info", "page: Info", "key ж ignored"},
 		wantErr: io.EOF,
 	}, {
 		// S is disabled at 40 columns, so ANY matches it and renders main again
@@ -152,8 +155,8 @@ func TestRun(t *testing.T) {
 		cols: []int{40, 80},
 		keys: []string{"S"},
 		want: []string{
-			"screen main 1/1: [G]oodbye",
-			"key S", "screen main 1/1: [S]ystem [G]oodbye",
+			"screen main", "page: [G]oodbye",
+			"key S", "screen main", "page: [S]ystem [G]oodbye",
 		},
 		wantErr: io.EOF,
 	}, {
@@ -161,46 +164,46 @@ func TestRun(t *testing.T) {
 		cols: []int{80},
 		keys: []string{"L", "s", "B"},
 		want: []string{
-			"screen main 1/1: [S]ystem [G]oodbye",
-			"key L", "screen long 1/2: 1",
-			"key S", "page 2/2: 10",
-			"key B", "screen main 1/1: [S]ystem [G]oodbye",
+			"screen main", "page: [S]ystem [G]oodbye",
+			"key L", "screen long", "page: 1",
+			"key S", "page: 10",
+			"key B", "screen main", "page: [S]ystem [G]oodbye",
 		},
 		wantErr: io.EOF,
 	}, {
 		name:    "keys end on a More row",
 		cols:    []int{80},
 		keys:    []string{"L"},
-		want:    []string{"screen main 1/1: [S]ystem [G]oodbye", "key L", "screen long 1/2: 1"},
+		want:    []string{"screen main", "page: [S]ystem [G]oodbye", "key L", "screen long", "page: 1"},
 		wantErr: io.EOF,
 	}, {
 		// Run does not wait for a key after goodbye: X stays.
 		name: "logoff with goodbye",
 		cols: []int{80},
 		keys: []string{"G", "X"},
-		want: []string{"screen main 1/1: [S]ystem [G]oodbye", "key G", "logoff", "screen goodbye 1/1: Bye"},
+		want: []string{"screen main", "page: [S]ystem [G]oodbye", "key G", "logoff", "screen goodbye", "page: Bye"},
 	}, {
 		name:   "logoff with More rows in goodbye",
 		change: map[string]string{"goodbye": lines(12)},
 		cols:   []int{80},
 		keys:   []string{"G", "X", "Y"},
 		want: []string{
-			"screen main 1/1: [S]ystem [G]oodbye",
-			"key G", "logoff", "screen goodbye 1/2: 1",
-			"key X", "page 2/2: 10",
+			"screen main", "page: [S]ystem [G]oodbye",
+			"key G", "logoff", "screen goodbye", "page: 1",
+			"key X", "page: 10",
 		},
 	}, {
 		name:   "logoff without goodbye",
 		change: map[string]string{"goodbye": ""},
 		cols:   []int{80},
 		keys:   []string{"G"},
-		want:   []string{"screen main 1/1: [S]ystem [G]oodbye", "key G", "logoff"},
+		want:   []string{"screen main", "page: [S]ystem [G]oodbye", "key G", "logoff"},
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ss := load(t, tt.change)
 			ft := &fakeTerm{cols: tt.cols, keys: slices.Clone(tt.keys)}
-			err := Run(ft, config.Config{More: "-- More --"}, ss, "main")
+			err := Run(eventsTerm{ft}, config.Config{More: "-- More --"}, ss, "main")
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("error %v, want %v", err, tt.wantErr)
 			}
@@ -218,5 +221,17 @@ func TestRunTermError(t *testing.T) {
 	err := Run(ft, config.Config{}, load(t, nil), "main")
 	if !errors.Is(err, errClosed) || len(ft.log) != 1 {
 		t.Errorf("error %v, log %q; want %v after one page", err, ft.log, errClosed)
+	}
+}
+
+// A terminal without Events gets the pages only.
+func TestRunNoEvents(t *testing.T) {
+	ft := &fakeTerm{cols: []int{80}, keys: []string{"L", "S", "B", "G", "X"}}
+	if err := Run(ft, config.Config{More: "-- More --"}, load(t, nil), "main"); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"page: [S]ystem [G]oodbye", "page: 1", "page: 10", "page: [S]ystem [G]oodbye", "page: Bye"}
+	if !slices.Equal(ft.log, want) {
+		t.Errorf("log %q, want %q", ft.log, want)
 	}
 }

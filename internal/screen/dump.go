@@ -4,39 +4,46 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"iter"
 )
 
-// WriteDump writes the cell dump of section 9.3 for a terminal of cols x rows.
-func WriteDump(w io.Writer, cols, rows int, pages []Page) error {
-	for i, page := range pages {
-		if err := WritePage(w, cols, rows, i+1, len(pages), page); err != nil {
+// WriteDump writes the cell dump of section 9.3 of pages for a terminal of term.rows = rows.
+func WriteDump(w io.Writer, rows int, pages iter.Seq[Page]) error {
+	n := 0
+	for p := range pages {
+		n++
+		if err := WritePage(w, rows, n, p); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// WritePage writes the part of the cell dump for page n of count (section 9.3).
-func WritePage(w io.Writer, cols, rows, n, count int, page Page) error {
+// WritePage writes the part of the cell dump for page n, 1-based, of a terminal
+// of term.rows = rows (section 9.3).
+func WritePage(w io.Writer, rows, n int, p Page) error {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "page %d/%d %dx%d\n", n, count, cols, rows)
-	for _, row := range page {
+	fmt.Fprintf(&b, "page %d %dx%d\n", n, p.Cols, rows)
+	var line Row
+	for i := range p.Rows {
+		line = p.Line(i, line)
 		b.WriteByte('|')
-		for _, c := range row {
+		for _, c := range line {
 			b.WriteString(c.Grapheme)
 		}
 		b.WriteString("|\n")
 	}
 	b.WriteString("styles\n")
-	for i, row := range page {
+	for i := range p.Rows {
+		line = p.Line(i, line)
 		fmt.Fprintf(&b, "%d:", i+1)
 		sep := " "
-		for start := 0; start < len(row); {
+		for start := 0; start < len(line); {
 			end := start + 1
-			for end < len(row) && row[end].Style == row[start].Style {
+			for end < len(line) && line[end].Style == line[start].Style {
 				end++
 			}
-			fmt.Fprintf(&b, "%s%d-%d %s", sep, start+1, end, row[start].Style)
+			fmt.Fprintf(&b, "%s%d-%d %s", sep, start+1, end, line[start].Style)
 			sep = ", "
 			start = end
 		}

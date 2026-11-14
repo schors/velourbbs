@@ -75,8 +75,7 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 	env, _ := menu.Enabled(s, term)
-	pages := screen.Render(s, env, cfg.Theme, cfg.More)
-	if err := screen.WriteDump(stdout, term.Cols, term.Rows, pages); err != nil {
+	if err := screen.WriteDump(stdout, term.Rows, screen.Render(s, env, cfg.Theme, cfg.More)); err != nil {
 		_, _ = fmt.Fprintf(stderr, "bbs preview: %v\n", err)
 		return exitError
 	}
@@ -156,6 +155,7 @@ type keysTerm struct {
 	term screen.Term
 	keys []string
 	w    io.Writer
+	page int // the number of the last page of the screen
 }
 
 func (t *keysTerm) Term() screen.Term { return t.term }
@@ -169,13 +169,15 @@ func (t *keysTerm) Key() (string, error) {
 	return k, nil
 }
 
-func (t *keysTerm) Page(name string, pages []screen.Page, n int) error {
-	if n == 0 {
-		if _, err := fmt.Fprintf(t.w, "screen %s\n", name); err != nil {
-			return err
-		}
-	}
-	return screen.WritePage(t.w, t.term.Cols, t.term.Rows, n+1, len(pages), pages[n])
+func (t *keysTerm) Page(p screen.Page) error {
+	t.page++
+	return screen.WritePage(t.w, t.term.Rows, t.page, p)
+}
+
+func (t *keysTerm) Screen(name string) error {
+	t.page = 0
+	_, err := fmt.Fprintf(t.w, "screen %s\n", name)
+	return err
 }
 
 func (t *keysTerm) KeyEvent(k string, ignored bool) error {

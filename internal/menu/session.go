@@ -17,9 +17,15 @@ type Terminal interface {
 	// except ANY, or one other character: a character without a key name of section 3.1.
 	// An error ends the session.
 	Key() (string, error)
-	// Page shows page n of pages, 0-based. A new screen starts with page 0.
-	// name is the name of the screen.
-	Page(name string, pages []screen.Page, n int) error
+	// Page shows the page p. The rows of p are valid until Page returns.
+	Page(p screen.Page) error
+}
+
+// Events takes the other events of section 8. Run sends them only to a Terminal
+// that implements Events.
+type Events interface {
+	// Screen tells that the session shows the screen name. Its pages follow.
+	Screen(name string) error
 	// KeyEvent tells that the key k arrived, after the map of section 3.2.
 	// ignored is true when no item matches k.
 	KeyEvent(k string, ignored bool) error
@@ -27,17 +33,36 @@ type Terminal interface {
 	Logoff() error
 }
 
+// noEvents is the Events of a Terminal that does not implement Events.
+type noEvents struct{}
+
+func (noEvents) Screen(string) error         { return nil }
+func (noEvents) KeyEvent(string, bool) error { return nil }
+func (noEvents) Logoff() error               { return nil }
+
+// session is the state of Run.
+type session struct {
+	t   Terminal
+	ev  Events
+	cfg config.Config
+}
+
 // Run runs a session from the screen start until logoff (section 6).
 // screens is the result of a load without errors and of Check, and start passes
 // CheckTarget. Run returns nil after logoff, else the first error of t unchanged.
 func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start string) error {
+	ev, ok := t.(Events)
+	if !ok {
+		ev = noEvents{}
+	}
+	ss := &session{t: t, ev: ev, cfg: cfg}
 	s := screens[start]
 	for {
-		items, err := show(t, cfg, s)
+		items, err := ss.show(s)
 		if err != nil {
 			return err
 		}
-		it, err := next(t, items)
+		it, err := ss.next(items)
 		if err != nil {
 			return err
 		}
@@ -45,11 +70,11 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 			s = screens[it.Do.Screen]
 			continue
 		}
-		if err := t.Logoff(); err != nil {
+		if err := ev.Logoff(); err != nil {
 			return err
 		}
 		if g, ok := screens["goodbye"]; ok {
-			_, err = show(t, cfg, g)
+			_, err = ss.show(g)
 		}
 		return err
 	}
@@ -57,20 +82,24 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 
 // show shows the screen s: it renders s and shows its pages (section 6).
 // After each page with a More row, it waits for any key. It gives the enabled items.
-func show(t Terminal, cfg config.Config, s *screen.Screen) (map[string]screen.Item, error) {
-	env, items := Enabled(s, t.Term())
-	pages := screen.Render(s, env, cfg.Theme, cfg.More)
-	for n := range pages {
-		if n > 0 {
-			k, err := t.Key()
+func (ss *session) show(s *screen.Screen) (map[string]screen.Item, error) {
+	if err := ss.ev.Screen(s.Name); err != nil {
+		return nil, err
+	}
+	env, items := Enabled(s, ss.t.Term())
+	first := true
+	for p := range screen.Render(s, env, ss.cfg.Theme, ss.cfg.More) {
+		if !first {
+			k, err := ss.t.Key()
 			if err != nil {
 				return nil, err
 			}
-			if err := t.KeyEvent(key.Map(k), false); err != nil {
+			if err := ss.ev.KeyEvent(key.Map(k), false); err != nil {
 				return nil, err
 			}
 		}
-		if err := t.Page(s.Name, pages, n); err != nil {
+		first = false
+		if err := ss.t.Page(p); err != nil {
 			return nil, err
 		}
 	}
@@ -93,9 +122,9 @@ func Enabled(s *screen.Screen, term screen.Term) (*screen.Env, map[string]screen
 
 // next waits for keys until one matches an enabled item (section 3.3)
 // and gives this item.
-func next(t Terminal, items map[string]screen.Item) (screen.Item, error) {
+func (ss *session) next(items map[string]screen.Item) (screen.Item, error) {
 	for {
-		k, err := t.Key()
+		k, err := ss.t.Key()
 		if err != nil {
 			return screen.Item{}, err
 		}
@@ -104,7 +133,7 @@ func next(t Terminal, items map[string]screen.Item) (screen.Item, error) {
 		if !ok {
 			it, ok = items[key.Any]
 		}
-		if err := t.KeyEvent(k, !ok); err != nil {
+		if err := ss.ev.KeyEvent(k, !ok); err != nil {
 			return screen.Item{}, err
 		}
 		if ok {
