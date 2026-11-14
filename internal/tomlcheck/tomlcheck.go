@@ -1,14 +1,12 @@
 // Package tomlcheck decodes a TOML document of the host: bbs.toml or a front matter.
 // It gives the errors of docs/specs/screen-format.md, section 9.1.
 //
-// go-toml v2 has three gaps that Decode closes:
-//   - A type with UnmarshalText takes an integer, a float or a boolean as its text,
-//     and a table as an empty value. So the first decode into plain types checks
-//     the types, and the second decode into the types with UnmarshalText checks the values.
+// go-toml v2 has two gaps that Decode closes:
 //   - A key matches a field also without case, and DisallowUnknownFields does not stop it.
 //   - A table header [x] fills a slice of structs as one element.
 //
-// So a third decode into map[string]any finds the last two. It gives no positions.
+// So a decode into map[string]any finds them. It gives no positions.
+// The same decode finds the syntax errors before the strict decode.
 package tomlcheck
 
 import (
@@ -34,23 +32,27 @@ type Error struct {
 	Msg       string
 }
 
-// Decode decodes data into shape and values, pointers to structs.
+// Decode decodes data into shape, a pointer to a struct.
 // shape has a field with a plain type for each key: string, int64, a slice, a map, a struct.
-// values has the fields with a value check: struct types with UnmarshalText.
 // Decode gives the first of these: an error of the size, of the syntax or of a type;
-// the first invalid value; all unknown keys and tables in place of an array of tables.
-// The message of a type error or an invalid value starts with the dotted key path.
-func Decode(data []byte, shape, values any) []Error {
+// all unknown keys and tables in place of an array of tables.
+// The message of a type error starts with the dotted key path.
+func Decode(data []byte, shape any) []Error {
 	if len(data) > MaxBytes {
 		return []Error{{1, 1, fmt.Sprintf("TOML document is over %d bytes", MaxBytes)}}
 	}
+	var m map[string]any
+	if err := toml.Unmarshal(data, &m); err != nil {
+		return []Error{syntaxError(data, err)}
+	}
+	t := reflect.TypeOf(shape)
 	err := toml.NewDecoder(bytes.NewReader(data)).DisallowUnknownFields().Decode(shape)
 	var unknown *toml.StrictMissingError
 	if err != nil && !errors.As(err, &unknown) {
-		return []Error{decodeError(data, err, reflect.TypeOf(shape))}
-	}
-	if err := toml.Unmarshal(data, values); err != nil {
-		return []Error{decodeError(data, err, nil)}
+		if e, ok := typeError(err, t, m); ok {
+			return []Error{e}
+		}
+		// The key of the error matches a field only without case: exact reports it.
 	}
 	var errs []Error
 	if unknown != nil {
@@ -59,11 +61,7 @@ func Decode(data []byte, shape, values any) []Error {
 			errs = append(errs, Error{line, col, fmt.Sprintf("unknown key %q", strings.Join(e.Key(), "."))})
 		}
 	}
-	var m map[string]any
-	if err := toml.Unmarshal(data, &m); err != nil {
-		return []Error{decodeError(data, err, nil)}
-	}
-	exact(reflect.TypeOf(shape), m, nil, &errs)
+	exact(t, m, nil, &errs)
 	return errs
 }
 
@@ -107,47 +105,66 @@ func isTables(t reflect.Type) bool {
 	return t.Kind() == reflect.Slice && deref(t.Elem()).Kind() == reflect.Struct
 }
 
-// decodeError converts a decode error of data. shape is the type of the plain decode,
-// or nil for the decode of the values.
-func decodeError(data []byte, err error, shape reflect.Type) Error {
+// syntaxError converts an error of the decode of data into a map.
+func syntaxError(data []byte, err error) Error {
 	var de *toml.DecodeError
 	if !errors.As(err, &de) {
 		return Error{1, 1, err.Error()}
 	}
 	line, col := de.Position()
-	msg := strings.TrimPrefix(de.Error(), "toml: ")
-	key := de.Key()
-	switch {
-	case shape == nil:
-		// An invalid value.
-	case strings.HasPrefix(msg, "cannot decode TOML ") || strings.HasPrefix(msg, "cannot store "):
-		var t reflect.Type
-		t, key = fieldType(shape, key)
-		// In an inline table the key path of go-toml ends at the table, so the field
-		// can be other than the target of the error. Then the message names no type.
-		target := msg[strings.LastIndexByte(msg, ' ')+1:]
-		if _, t, ok := strings.Cut(msg, " of type "); ok {
-			target = t // the form "into struct field <name> of type <type>"
-		}
-		if t != nil && (target == deref(t).String() || isElem(t, target)) {
-			msg = "must be " + describe(t)
-		} else {
-			msg = "invalid type of a value"
-		}
-	default:
-		// A syntax error. go-toml gives the first byte of a character that is not ASCII.
-		return Error{line, col, fixRune(msg, data, line, col)}
-	}
-	if len(key) > 0 {
-		msg = strings.Join(key, ".") + ": " + msg
-	}
-	return Error{line, col, msg}
+	// go-toml gives the first byte of a character that is not ASCII.
+	return Error{line, col, fixRune(strings.TrimPrefix(de.Error(), "toml: "), data, line, col)}
 }
 
-// isElem reports whether target is the element type of the slice type t.
-func isElem(t reflect.Type, target string) bool {
+// typeError converts an error of the strict decode into the struct type t.
+// m is the decode of the document into a map.
+// ok is false when the key path has no field.
+func typeError(err error, t reflect.Type, m map[string]any) (e Error, ok bool) {
+	var de *toml.DecodeError
+	if !errors.As(err, &de) {
+		return Error{1, 1, err.Error()}, true
+	}
+	line, col := de.Position()
+	ft, key := fieldType(t, de.Key())
+	if ft == nil {
+		return Error{}, false
+	}
+	msg := "must be " + describe(ft)
+	if inTable(ft, lookup(m, key)) {
+		// In an inline table the key path of go-toml ends at the table,
+		// so the field of the error is not known.
+		msg = "invalid type"
+	}
+	return Error{line, col, strings.Join(key, ".") + ": " + msg}, true
+}
+
+// inTable reports whether v is a table, or an array with a table, at a field of the type t:
+// a struct, a map or a slice of structs. Then a type error at the key of t
+// is in a value of the table.
+func inTable(t reflect.Type, v any) bool {
 	t = deref(t)
-	return t.Kind() == reflect.Slice && deref(t.Elem()).String() == target
+	if t.Kind() != reflect.Struct && t.Kind() != reflect.Map && !isTables(t) {
+		return false
+	}
+	isTable := func(v any) bool { _, ok := v.(map[string]any); return ok }
+	if a, ok := v.([]any); ok {
+		return isTables(t) && slices.ContainsFunc(a, isTable)
+	}
+	return isTable(v)
+}
+
+// lookup gives the value at the key path in the table m, or nil.
+// It does not go into an array of tables.
+func lookup(m map[string]any, key []string) any {
+	var v any = m
+	for _, k := range key {
+		t, ok := v.(map[string]any)
+		if !ok {
+			return nil
+		}
+		v = t[k]
+	}
+	return v
 }
 
 // fieldType gives the type of the field at the key path from the struct type t,

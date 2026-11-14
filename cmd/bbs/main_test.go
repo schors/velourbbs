@@ -43,7 +43,7 @@ func TestCheckMenu(t *testing.T) {
 screens/about.bbt:1:1: screen has no items
 screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"
 `},
-		{"[[item]]\nkey = \"s\"\ndo = \"logoff\"\n[[item]]\ndo = \"logoff\"\nkey = \"?\"\n", `screens/main.bbt:7:7: item.key: invalid key "?"
+		{"[[item]]\nkey = \"s\"\ndo = \"logoff\"\n[[item]]\ndo = \"logoff\"\nkey = \"?\"\n", `screens/main.bbt:2:1: item 2: key: invalid key "?"
 `},
 		{"[[item]]\nkey = \"s\"\ndo = \"logoff\"\n[[item]]\nkey = \"S\"\ndo = \"logoff\"\n[[item]]\ndo = \"logoff\"\n", `screens/main.bbt:2:1: item "S": key: duplicate key
 screens/main.bbt:2:1: item 3: key is missing
@@ -76,7 +76,8 @@ func TestCheckTelnet(t *testing.T) {
 		"bbs.toml":         {Data: []byte("[telnet]\nmax_conns = 0\nallow = [\"x\"]\n")},
 		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"g\"\ndo = \"logoff\"\n+++\n")},
 	}
-	want := `bbs.toml:3:10: telnet.allow: invalid address or prefix "x"
+	want := `bbs.toml:1:1: telnet.max_conns: 0 is not from 1 to 1000000
+bbs.toml:1:1: telnet.allow: invalid address or prefix "x"
 `
 	var out, errOut bytes.Buffer
 	status := run([]string{"check"}, fsys, &out, &errOut)

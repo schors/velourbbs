@@ -222,7 +222,7 @@ func TestFrontMatter(t *testing.T) {
 		{map[string]string{"s.bbt": "+++\nfields = { \"яя\" = \"term.cols\", and = \"term.rows\" }\n+++\n"},
 			[]string{`screens/s.bbt:2:1: fields: alias "and" is a reserved word`, `screens/s.bbt:2:1: fields: invalid alias "яя"`}},
 		// The column counts code points.
-		{map[string]string{"s.bbt": "+++\nfields = { \"яя\" = \"term.cols\", w = 5 }\n+++\n"}, []string{`screens/s.bbt:2:36: fields: invalid type of a value`}},
+		{map[string]string{"s.bbt": "+++\nfields = { \"яя\" = \"term.cols\", w = 5 }\n+++\n"}, []string{`screens/s.bbt:2:36: fields: invalid type`}},
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ndo = 1\nx = \"y\"\n+++\n"}, []string{`screens/s.bbt:5:6: item.do: must be a string`}},
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ny = 1\nx = 2\n+++\n"}, []string{
 			`screens/s.bbt:5:1: unknown key "item.y"`,
@@ -289,23 +289,27 @@ func TestItemErrors(t *testing.T) {
 		items []string // the lines of each [[item]] table
 		want  []string
 	}{
-		{[]string{`key = "?"`, `do = "logoff"`}, []string{`screens/s.bbt:3:7: item.key: invalid key "?"`}},
-		{[]string{`key = "ы"`, `do = "logoff"`}, []string{`screens/s.bbt:3:7: item.key: invalid key "ы"`}},
-		{[]string{`key = "F13"`, `do = "x"`}, []string{`screens/s.bbt:3:7: item.key: invalid key "F13"`}},
-		// A type error comes before an invalid value.
+		// An invalid key or do is an other error at 2:1. An item without a valid key has its number.
+		{[]string{`key = "?"`, `do = "logoff"`}, []string{`screens/s.bbt:2:1: item 1: key: invalid key "?"`}},
+		{[]string{`key = "ы"`, `do = "logoff"`}, []string{`screens/s.bbt:2:1: item 1: key: invalid key "ы"`}},
+		{[]string{`key = "F13"`, `do = "x"`}, []string{
+			`screens/s.bbt:2:1: item 1: key: invalid key "F13"`,
+			`screens/s.bbt:2:1: item 1: do: unknown action "x"`,
+		}},
+		// A type error hides the other errors.
 		{[]string{`do = "x"`, `key = 1`}, []string{`screens/s.bbt:4:7: item.key: must be a string`}},
 		{[]string{`key = true`}, []string{`screens/s.bbt:3:7: item.key: must be a string`}},
 		{[]string{`key = 1.5`}, []string{`screens/s.bbt:3:7: item.key: must be a string`}},
 		{[]string{`key = {}`}, []string{`screens/s.bbt:3:7: item.key: must be a string`}},
 		{[]string{`do = "logoff"`, `[item.key]`}, []string{`screens/s.bbt:4:2: item.key: must be a string`}},
-		{[]string{`key = "esc"`, `do = "Goto main"`}, []string{`screens/s.bbt:4:6: item.do: unknown action "Goto"`}},
-		{[]string{`key = "A"`, `do = ""`}, []string{`screens/s.bbt:4:6: item.do: unknown action ""`}},
-		{[]string{`key = "A"`, `do = "goto"`}, []string{`screens/s.bbt:4:6: item.do: goto needs a screen name`}},
-		{[]string{`key = "A"`, `do = "goto  main"`}, []string{`screens/s.bbt:4:6: item.do: invalid screen name " main"`}},
-		{[]string{`key = "A"`, `do = "goto Main"`}, []string{`screens/s.bbt:4:6: item.do: invalid screen name "Main"`}},
-		{[]string{`key = "A"`, `do = "goto _f"`}, []string{`screens/s.bbt:4:6: item.do: invalid screen name "_f"`}},
-		{[]string{`key = "A"`, `do = "logoff now"`}, []string{`screens/s.bbt:4:6: item.do: logoff takes no argument`}},
-		{[]string{`key = "A"`, `do = "logoff "`}, []string{`screens/s.bbt:4:6: item.do: logoff takes no argument`}},
+		{[]string{`key = "esc"`, `do = "Goto main"`}, []string{`screens/s.bbt:2:1: item "ESC": do: unknown action "Goto"`}},
+		{[]string{`key = "A"`, `do = ""`}, []string{`screens/s.bbt:2:1: item "A": do: unknown action ""`}},
+		{[]string{`key = "A"`, `do = "goto"`}, []string{`screens/s.bbt:2:1: item "A": do: goto needs a screen name`}},
+		{[]string{`key = "A"`, `do = "goto  main"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name " main"`}},
+		{[]string{`key = "A"`, `do = "goto Main"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name "Main"`}},
+		{[]string{`key = "A"`, `do = "goto _f"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name "_f"`}},
+		{[]string{`key = "A"`, `do = "logoff now"`}, []string{`screens/s.bbt:2:1: item "A": do: logoff takes no argument`}},
+		{[]string{`key = "A"`, `do = "logoff "`}, []string{`screens/s.bbt:2:1: item "A": do: logoff takes no argument`}},
 		{[]string{`key = "a"`, `do = 1`, `when = "item.A"`, `x = 1`}, []string{`screens/s.bbt:4:6: item.do: must be a string`}},
 		// Each when error is an other error at 2:1, also a syntax error.
 		{[]string{`key = "a"`, `do = "logoff"`, `when = "item.A"`}, []string{

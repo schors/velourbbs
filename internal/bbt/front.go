@@ -31,38 +31,11 @@ type frontDoc struct {
 	} `toml:"item"`
 }
 
-// frontValues is the decode of the values with a check (section 9.1).
-type frontValues struct {
-	Item []struct {
-		Key itemKey    `toml:"key"`
-		Do  itemAction `toml:"do"`
-	} `toml:"item"`
-}
-
-type itemKey struct{ k string }
-
-func (k *itemKey) UnmarshalText(text []byte) error {
-	var ok bool
-	if k.k, ok = key.Parse(string(text)); !ok {
-		return fmt.Errorf("invalid key %q", text)
-	}
-	return nil
-}
-
-type itemAction struct{ a screen.Action }
-
-func (a *itemAction) UnmarshalText(text []byte) error {
-	var err error
-	a.a, err = parseAction(string(text))
-	return err
-}
-
 // parseFront parses the front matter lines. The first line of lines is line 2 of the file.
 // The result is nil when the front matter has an error.
 func parseFront(d *screen.FileDiags, lines []string) *front {
 	var doc frontDoc
-	var vals frontValues
-	errs := tomlcheck.Decode([]byte(strings.Join(lines, "\n")), &doc, &vals)
+	errs := tomlcheck.Decode([]byte(strings.Join(lines, "\n")), &doc)
 	for _, e := range errs {
 		// The line after "+++" and a column in code points.
 		col := e.Col
@@ -100,22 +73,27 @@ func parseFront(d *screen.FileDiags, lines []string) *front {
 	}
 	seen := map[string]bool{}
 	for i, it := range doc.Item {
-		v := vals.Item[i]
-		// The label of menu-nav, section 7: the key, else the number.
+		// The label of menu-nav, section 7: the valid key, else the number.
 		label := fmt.Sprintf("item %d", i+1)
-		if it.Key != nil {
-			label = fmt.Sprintf("item %q", v.Key.k)
-		}
-		item := screen.Item{Key: v.Key.k, Do: v.Do.a}
-		switch {
-		case it.Key == nil:
+		var item screen.Item
+		if it.Key == nil {
 			errorf("%s: key is missing", label)
-		case seen[item.Key]:
-			errorf("%s: key: duplicate key", label)
+		} else if k, valid := key.Parse(*it.Key); !valid {
+			errorf("%s: key: invalid key %q", label, *it.Key)
+		} else {
+			item.Key = k
+			label = fmt.Sprintf("item %q", k)
+			if seen[k] {
+				errorf("%s: key: duplicate key", label)
+			}
+			seen[k] = true
 		}
-		seen[item.Key] = true
 		if it.Do == nil {
 			errorf("%s: do is missing", label)
+		} else if a, err := parseAction(*it.Do); err != nil {
+			errorf("%s: do: %v", label, err)
+		} else {
+			item.Do = a
 		}
 		if it.When != nil {
 			c, err := screen.ParseCond(*it.When, fr.fields, false)

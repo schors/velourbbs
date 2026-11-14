@@ -397,7 +397,9 @@ The style of a written cell, in this order:
 - A TOML document (`bbs.toml` or a front matter) gives one syntax or type error;
   else all unknown keys. Only a document without these gives its other errors.
 - A key that differs from a known key only in case is an unknown key. A table `[item]`
-  in place of `[[item]]` is a type error.
+  in place of `[[item]]` gives `item: must be an array of tables` with the unknown keys.
+  If a key that differs only in case has a type error, the document gives only
+  these two kinds of errors.
 - A syntax error has the position that go-toml gives. A type error and an unknown key
   have the position of the key or value. The message of a type error starts with
   the dotted key. In an inline table, the key ends at the table.
