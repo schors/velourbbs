@@ -27,7 +27,7 @@ func messages(ds screen.Diags) []string {
 }
 
 func TestDefaults(t *testing.T) {
-	cfg, ds := Parse("bbs.toml", nil)
+	cfg, ds := Parse(nil)
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
@@ -37,8 +37,8 @@ func TestDefaults(t *testing.T) {
 	if len(cfg.Theme) != 2 || cfg.Theme["normal"] != style(t, "7/0") || cfg.Theme["more"] != style(t, "15/0") {
 		t.Errorf("theme = %v", cfg.Theme)
 	}
-	if cfg.Start != "main" || cfg.StartPos != (screen.Pos{File: "bbs.toml", Line: 1, Col: 1}) {
-		t.Errorf("start %q at %v", cfg.Start, cfg.StartPos)
+	if cfg.Start != "main" {
+		t.Errorf("start %q", cfg.Start)
 	}
 }
 
@@ -57,15 +57,15 @@ more = "-/-"
 [menu]
   start = "welcome"
 `
-	cfg, ds := Parse("bbs.toml", []byte(data))
+	cfg, ds := Parse([]byte(data))
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
 	if cfg.Width != (screen.WidthLimits{Min: 64, Max: 132}) || cfg.More != "[ ещё ]" {
 		t.Errorf("cfg = %+v", cfg)
 	}
-	if cfg.Start != "welcome" || cfg.StartPos != (screen.Pos{File: "bbs.toml", Line: 13, Col: 3}) {
-		t.Errorf("start %q at %v", cfg.Start, cfg.StartPos)
+	if cfg.Start != "welcome" {
+		t.Errorf("start %q", cfg.Start)
 	}
 	want := map[string]string{
 		"normal": "14/0",      // the background from the default normal
@@ -85,7 +85,7 @@ more = "-/-"
 
 // A theme style takes the colours of normal, not its attributes.
 func TestNormalAttributes(t *testing.T) {
-	cfg, ds := Parse("bbs.toml", []byte("[theme]\nnormal = \"2/3 bold\"\nx = \"5\"\n"))
+	cfg, ds := Parse([]byte("[theme]\nnormal = \"2/3 bold\"\nx = \"5\"\n"))
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
@@ -94,28 +94,21 @@ func TestNormalAttributes(t *testing.T) {
 	}
 }
 
+// Each other error has the position 1:1 (section 9.1).
 func TestErrors(t *testing.T) {
 	data := strings.Join([]string{
-		`server = 1`,                 // 1
-		`[screen]`,                   // 2
-		`width = [80, 40]`,           // 3
-		`more = "a` + "\u200b" + `"`, // 4
-		`rows = 25`,                  // 5
-		`[theme]`,                    // 6
-		`Title = "1"`,                // 7
-		`prompt = "14 bolt"`,         // 8
-		`menu = 3`,                   // 9
-		`normal = "7/0"`,             // 10
+		`[screen]`,
+		`width = [80, 40]`,
+		`more = "a` + "\u200b" + `"`,
+		`[theme]`,
+		`Title = "1"`,
+		`normal = "7/0"`,
 	}, "\n")
-	cfg, ds := Parse("bbs.toml", []byte(data))
+	cfg, ds := Parse([]byte(data))
 	want := []string{
-		`bbs.toml:1:1: unknown key "server"`,
-		`bbs.toml:3:1: screen.width: width [80, 40] is not in 1 <= min <= max <= 255`,
-		`bbs.toml:4:1: screen.more: zero-width grapheme U+200B`,
-		`bbs.toml:5:1: unknown key "screen.rows"`,
-		`bbs.toml:7:1: theme: invalid style name "Title"`,
-		`bbs.toml:8:1: theme.prompt: invalid style "14 bolt": unknown attribute "bolt"`,
-		`bbs.toml:9:1: theme.menu: must be a string`,
+		`bbs.toml:1:1: screen.width: width [80, 40] is not in 1 <= min <= max <= 255`,
+		`bbs.toml:1:1: screen.more: zero-width grapheme U+200B`,
+		`bbs.toml:1:1: theme: invalid style name "Title"`,
 	}
 	if got := messages(ds); !slices.Equal(got, want) {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
@@ -128,29 +121,46 @@ func TestErrors(t *testing.T) {
 	}
 }
 
-func TestTypeErrors(t *testing.T) {
+// A TOML error gives the first of: a syntax or type error, the first invalid value,
+// all unknown keys (section 9.1).
+func TestTOMLErrors(t *testing.T) {
 	tests := []struct {
 		data string
-		want string
+		want []string
 	}{
-		{"screen = 1", `bbs.toml:1:1: screen: must be a table`},
-		{"theme = []", `bbs.toml:1:1: theme: must be a table`},
-		{"menu = \"main\"", `bbs.toml:1:1: menu: must be a table`},
-		{"[menu]\nstart = 1", `bbs.toml:2:1: menu: start: must be a string`},
-		{"[menu]\nfirst = \"main\"", `bbs.toml:2:1: unknown key "menu.first"`},
-		{"[screen]\nwidth = [1]", `bbs.toml:2:1: screen.width: must be an array of 2 integers`},
-		{"[screen]\nwidth = [1, \"2\"]", `bbs.toml:2:1: screen.width: must be an array of 2 integers`},
-		{"[screen]\nmore = 1", `bbs.toml:2:1: screen.more: must be a string`},
-		{"[screen]\nmore = \"\t\"", `bbs.toml:2:1: screen.more: control character U+0009`},
-		{"[screen]\nwidth = ", `bbs.toml:2:8: expected value, not end of input`},
-		{"a.b = 1", `bbs.toml:1:1: unknown key "a"`},
-		{"\n[foo.bar]\nx = 1", `bbs.toml:2:2: unknown key "foo"`},
+		{"screen = 1", []string{`bbs.toml:1:10: screen: must be a table`}},
+		{"theme = []", []string{`bbs.toml:1:9: theme: must be a table of strings`}},
+		{"menu = \"main\"", []string{`bbs.toml:1:8: menu: must be a table`}},
+		{"[menu]\nstart = 1", []string{`bbs.toml:2:9: menu.start: must be a string`}},
+		{"[screen]\nwidth = [1]", []string{`bbs.toml:1:1: screen.width: must be an array of 2 integers`}},
+		{"[screen]\nwidth = [1, \"2\"]", []string{`bbs.toml:2:13: screen.width: must be an array of integers`}},
+		{"[screen]\nmore = 1", []string{`bbs.toml:2:8: screen.more: must be a string`}},
+		{"[screen]\nmore = \"\t\"", []string{`bbs.toml:1:1: screen.more: control character U+0009`}},
+		{"[screen]\nwidth = ", []string{`bbs.toml:2:8: expected value, not end of input`}},
+		{"[theme]\nprompt = \"14 bolt\"", []string{`bbs.toml:2:10: theme.prompt: invalid style "14 bolt": unknown attribute "bolt"`}},
+		{"[theme]\nprompt = 14", []string{`bbs.toml:2:10: theme.prompt: must be a string`}},
+		{"a.b = 1", []string{`bbs.toml:1:1: unknown key "a.b"`}},
+		{"[TELNET]\nlisten = \":1\"", []string{`bbs.toml:1:1: unknown key "TELNET"`}},
+		{"[telnet]\nlisten = \":1\"\nLISTEN = \":2\"", []string{`bbs.toml:1:1: unknown key "telnet.LISTEN"`}},
+		{"\n[foo.bar]\nx = 1", []string{`bbs.toml:2:2: unknown key "foo.bar"`}},
+		// A type error comes before an invalid value, an invalid value before an unknown key.
+		{"[theme]\nx = \"bad\"\ny = 1\nz = \"bad\"", []string{`bbs.toml:3:5: theme.y: must be a string`}},
+		{"a = 1\n[theme]\nx = \"bad\"\nz = \"bad\"", []string{`bbs.toml:3:5: theme.x: invalid style "bad": invalid colour "bad"`}},
+		{"a = 1\n[screen]\nb = 2\nwidth = [1, 1]", []string{`bbs.toml:1:1: unknown key "a"`, `bbs.toml:3:1: unknown key "screen.b"`}},
 	}
 	for _, tt := range tests {
-		_, ds := Parse("bbs.toml", []byte(tt.data))
-		if got := messages(ds); !slices.Equal(got, []string{tt.want}) {
+		_, ds := Parse([]byte(tt.data))
+		if got := messages(ds); !slices.Equal(got, tt.want) {
 			t.Errorf("Parse(%q) = %q, want %q", tt.data, got, tt.want)
 		}
+	}
+}
+
+// The loader removes a BOM (section 2).
+func TestBOM(t *testing.T) {
+	cfg, ds := Parse([]byte("\ufeff[menu]\nstart = \"x\"\n"))
+	if len(ds) != 0 || cfg.Start != "x" {
+		t.Errorf("start %q, diags %q", cfg.Start, messages(ds))
 	}
 }
 
@@ -159,7 +169,7 @@ func TestDiagLimit(t *testing.T) {
 	for i := range 2 * screen.MaxFileDiags {
 		fmt.Fprintf(&b, "k%d = 1\n", i)
 	}
-	_, ds := Parse("bbs.toml", []byte(b.String()))
+	_, ds := Parse([]byte(b.String()))
 	got := messages(ds)
 	if len(got) != screen.MaxFileDiags+1 || got[0] != `bbs.toml:1:1: unknown key "k0"` ||
 		got[len(got)-1] != "bbs.toml:101:1: too many diagnostics" {

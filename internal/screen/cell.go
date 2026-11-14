@@ -46,27 +46,14 @@ type WidthLimits struct {
 	Min, Max int
 }
 
-// Check reports an error unless 1 <= Min <= Max <= MaxWidth.
-func (w WidthLimits) Check() error {
-	if w.Min < 1 || w.Min > w.Max || w.Max > MaxWidth {
-		return fmt.Errorf("width [%d, %d] is not in 1 <= min <= max <= %d", w.Min, w.Max, MaxWidth)
+// NewWidth gives the width limits of the TOML value a: an array of 2 integers.
+// bbs.toml and the front matter use it.
+func NewWidth(a []int64) (WidthLimits, error) {
+	if len(a) != 2 {
+		return WidthLimits{}, errors.New("must be an array of 2 integers")
 	}
-	return nil
-}
-
-// ParseWidth gives the width limits of a TOML value: an array of 2 integers,
-// as toml.Unmarshal decodes it. bbs.toml and the front matter use it.
-func ParseWidth(v any) (WidthLimits, error) {
-	errType := errors.New("must be an array of 2 integers")
-	a, ok := v.([]any)
-	if !ok || len(a) != 2 {
-		return WidthLimits{}, errType
+	if a[0] < 1 || a[0] > a[1] || a[1] > MaxWidth {
+		return WidthLimits{}, fmt.Errorf("width [%d, %d] is not in 1 <= min <= max <= %d", a[0], a[1], MaxWidth)
 	}
-	lo, ok1 := a[0].(int64)
-	hi, ok2 := a[1].(int64)
-	if !ok1 || !ok2 {
-		return WidthLimits{}, errType
-	}
-	w := WidthLimits{Min: int(lo), Max: int(hi)}
-	return w, w.Check()
+	return WidthLimits{Min: int(a[0]), Max: int(a[1])}, nil
 }

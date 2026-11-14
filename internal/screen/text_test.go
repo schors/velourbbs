@@ -101,15 +101,15 @@ func TestIsIdent(t *testing.T) {
 	}
 }
 
-func TestWidthLimits(t *testing.T) {
-	for _, w := range []WidthLimits{{1, 1}, {40, 80}, {255, 255}} {
-		if err := w.Check(); err != nil {
-			t.Errorf("%v: %v", w, err)
+func TestNewWidth(t *testing.T) {
+	for _, a := range [][]int64{{1, 1}, {40, 80}, {255, 255}} {
+		if w, err := NewWidth(a); err != nil || w != (WidthLimits{int(a[0]), int(a[1])}) {
+			t.Errorf("%v: %v, %v", a, w, err)
 		}
 	}
-	for _, w := range []WidthLimits{{0, 80}, {81, 80}, {40, 256}} {
-		if err := w.Check(); err == nil {
-			t.Errorf("%v: want an error", w)
+	for _, a := range [][]int64{{0, 80}, {81, 80}, {40, 256}, {1 << 32, 1 << 32}, {-1 << 63, 80}, {1}, {1, 2, 3}, nil} {
+		if _, err := NewWidth(a); err == nil {
+			t.Errorf("%v: want an error", a)
 		}
 	}
 }

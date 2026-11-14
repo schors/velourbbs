@@ -1,16 +1,16 @@
 package config
 
 import (
+	"fmt"
 	"net/netip"
 	"reflect"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 )
 
 func TestTelnetDefaults(t *testing.T) {
-	cfg, ds := Parse("bbs.toml", []byte("[telnet]\n"))
+	cfg, ds := Parse([]byte("[telnet]\n"))
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
@@ -37,7 +37,7 @@ idle_timeout = 3
 probe_timeout = 4
 output_timeout = 5
 `
-	cfg, ds := Parse("bbs.toml", []byte(data))
+	cfg, ds := Parse([]byte(data))
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
@@ -61,7 +61,7 @@ output_timeout = 5
 
 func TestTelnetListen(t *testing.T) {
 	for _, s := range []string{":1", ":65535", "[::1]:2323", "localhost:2323"} {
-		cfg, ds := Parse("bbs.toml", []byte(`telnet.listen = "`+s+`"`))
+		cfg, ds := Parse([]byte(`telnet.listen = "` + s + `"`))
 		if len(ds) != 0 || cfg.Telnet.Listen != s {
 			t.Errorf("listen %q: Listen %q, diags %q", s, cfg.Telnet.Listen, messages(ds))
 		}
@@ -73,33 +73,34 @@ func TestTelnetErrors(t *testing.T) {
 		data string
 		want string
 	}{
-		{"telnet = 1", `telnet: must be a table`},
-		{"[telnet]\nport = 23", `unknown key "telnet.port"`},
-		{"[telnet]\nlisten = 2323", `telnet.listen: must be a string`},
-		{"[telnet]\nlisten = \"2323\"", `telnet.listen: invalid address "2323": must be <host>:<port>`},
-		{"[telnet]\nlisten = \":0\"", `telnet.listen: invalid port "0": must be from 1 to 65535`},
-		{"[telnet]\nlisten = \":65536\"", `telnet.listen: invalid port "65536": must be from 1 to 65535`},
-		{"[telnet]\nlisten = \":telnet\"", `telnet.listen: invalid port "telnet": must be from 1 to 65535`},
-		{"[telnet]\nlisten = \"::1:23\"", `telnet.listen: invalid address "::1:23": must be <host>:<port>`},
-		{"[telnet]\nallow = \"192.0.2.1\"", `telnet.allow: must be an array of strings`},
-		{"[telnet]\nallow = [1]", `telnet.allow: must be an array of strings`},
-		{"[telnet]\nallow = [\"192.0.2.300\"]", `telnet.allow: invalid address or prefix "192.0.2.300"`},
-		{"[telnet]\nproxy = [\"192.0.2.0/33\"]", `telnet.proxy: invalid address or prefix "192.0.2.0/33"`},
-		{"[telnet]\nproxy = [\"host\"]", `telnet.proxy: invalid address or prefix "host"`},
+		{"telnet = 1", `1:10: telnet: must be a table`},
+		{"[telnet]\nport = 23", `2:1: unknown key "telnet.port"`},
+		{"[telnet]\nlisten = 2323", `2:10: telnet.listen: must be a string`},
+		{"[telnet]\nlisten = \"2323\"", `2:10: telnet.listen: invalid address "2323": must be <host>:<port>`},
+		{"[telnet]\nlisten = \":0\"", `2:10: telnet.listen: invalid port "0": must be from 1 to 65535`},
+		{"[telnet]\nlisten = \":65536\"", `2:10: telnet.listen: invalid port "65536": must be from 1 to 65535`},
+		{"[telnet]\nlisten = \":telnet\"", `2:10: telnet.listen: invalid port "telnet": must be from 1 to 65535`},
+		{"[telnet]\nlisten = \"::1:23\"", `2:10: telnet.listen: invalid address "::1:23": must be <host>:<port>`},
+		{"[telnet]\nallow = \"192.0.2.1\"", `2:9: telnet.allow: must be an array of strings`},
+		{"[telnet]\nallow = [1]", `2:10: telnet.allow: must be an array of strings`},
+		{"[telnet]\nallow = [\"192.0.2.300\"]", `2:10: telnet.allow: invalid address or prefix "192.0.2.300"`},
+		{"[telnet]\nproxy = [\"192.0.2.0/33\"]", `2:10: telnet.proxy: invalid address or prefix "192.0.2.0/33"`},
+		{"[telnet]\nproxy = [\"host\"]", `2:10: telnet.proxy: invalid address or prefix "host"`},
 	}
 	for _, key := range []string{"max_conns", "max_conns_per_addr", "max_connects_per_min",
 		"idle_timeout", "probe_timeout", "output_timeout"} {
+		// An integer out of its range is an other error at 1:1; a type error has the position of the value.
+		col := fmt.Sprintf("2:%d: ", len(key)+4)
 		tests = append(tests,
-			struct{ data, want string }{"[telnet]\n" + key + " = 0", "telnet." + key + ": 0 is not from 1 to 1000000"},
-			struct{ data, want string }{"[telnet]\n" + key + " = 1000001", "telnet." + key + ": 1000001 is not from 1 to 1000000"},
-			struct{ data, want string }{"[telnet]\n" + key + " = 1.5", "telnet." + key + ": must be an integer"},
-			struct{ data, want string }{"[telnet]\n" + key + " = \"5\"", "telnet." + key + ": must be an integer"},
+			struct{ data, want string }{"[telnet]\n" + key + " = 0", "1:1: telnet." + key + ": 0 is not from 1 to 1000000"},
+			struct{ data, want string }{"[telnet]\n" + key + " = 1000001", "1:1: telnet." + key + ": 1000001 is not from 1 to 1000000"},
+			struct{ data, want string }{"[telnet]\n" + key + " = 1.5", col + "telnet." + key + ": must be an integer"},
+			struct{ data, want string }{"[telnet]\n" + key + " = \"5\"", col + "telnet." + key + ": must be an integer"},
 		)
 	}
 	for _, tt := range tests {
-		cfg, ds := Parse("bbs.toml", []byte(tt.data))
-		line := strings.Count(tt.data, "\n") + 1
-		want := "bbs.toml:" + string(rune('0'+line)) + ":1: " + tt.want
+		cfg, ds := Parse([]byte(tt.data))
+		want := "bbs.toml:" + tt.want
 		if got := messages(ds); !slices.Equal(got, []string{want}) {
 			t.Errorf("Parse(%q) = %q, want %q", tt.data, got, want)
 		}

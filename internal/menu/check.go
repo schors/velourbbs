@@ -38,13 +38,13 @@ func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags
 				continue
 			}
 			if err := CheckTarget(screens, it.Do.Screen); err != nil {
-				fd(it.DoPos.File).Errorf(it.DoPos.Line, it.DoPos.Col, "item %q: do: %v", it.Key, err)
+				// An error between an item and another screen has the position 2:1.
+				fd(s.File).Errorf(2, 1, "item %q: do: %v", it.Key, err)
 			}
 		}
 	}
 	if err := CheckTarget(screens, cfg.Start); err != nil {
-		p := cfg.StartPos
-		fd(p.File).Errorf(p.Line, p.Col, "menu: start: %v", err)
+		fd(config.File).Errorf(1, 1, "menu: start: %v", err)
 	}
 	var out screen.Diags
 	for _, d := range files {

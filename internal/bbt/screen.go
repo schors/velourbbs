@@ -184,7 +184,7 @@ func (l *loader) checkItems(units []*unit) {
 			continue
 		}
 		if u.s.Name == "goodbye" && len(u.s.Items) > 0 {
-			errorAt(l.fd(u.f.name), u.f.front.pos("item"), "the goodbye screen cannot have items")
+			l.fd(u.f.name).Errorf(2, 1, "the goodbye screen cannot have items")
 		}
 		keys := map[string]bool{}
 		for _, it := range u.s.Items {

@@ -4,10 +4,13 @@
 package config
 
 import (
-	"errors"
+	"bytes"
+	"fmt"
+	"maps"
+	"slices"
 
 	"newbbs/internal/screen"
-	"newbbs/internal/tomlpos"
+	"newbbs/internal/tomlcheck"
 )
 
 // Config is the host settings.
@@ -19,9 +22,7 @@ type Config struct {
 	// Theme maps a style name to a style (section 7.3). It always has normal and more.
 	Theme map[string]screen.Style
 	// Start is the name of the first screen of a session (menu-nav, section 6).
-	// StartPos is the position of start, or 1:1 when bbs.toml has no start.
-	Start    string
-	StartPos screen.Pos
+	Start string
 	// Telnet is the table [telnet] (telnet-term, section 9.1).
 	Telnet Telnet
 }
@@ -36,128 +37,88 @@ var (
 	}
 )
 
-// Parse reads bbs.toml from data. file is the name in the diagnostics.
+// doc is the plain decode of bbs.toml. A nil pointer is a key that is not set.
+type doc struct {
+	Screen struct {
+		Width *[]int64 `toml:"width"`
+		More  *string  `toml:"more"`
+	} `toml:"screen"`
+	Theme map[string]string `toml:"theme"`
+	Menu  struct {
+		Start *string `toml:"start"`
+	} `toml:"menu"`
+	Telnet telnetDoc `toml:"telnet"`
+}
+
+// values is the decode of the values with a check (screen-format, section 9.1).
+type values struct {
+	Theme  map[string]themeStyle `toml:"theme"`
+	Telnet telnetValues          `toml:"telnet"`
+}
+
+// themeStyle is a style of [theme] (section 7.2).
+type themeStyle struct{ spec screen.StyleSpec }
+
+func (s *themeStyle) UnmarshalText(text []byte) error {
+	spec, err := screen.ParseStyle(string(text))
+	if err != nil {
+		return fmt.Errorf("invalid style %q: %v", text, err)
+	}
+	s.spec = spec
+	return nil
+}
+
+// File is the name of the host settings file in the BBS directory and in the diagnostics.
+const File = "bbs.toml"
+
+// Parse reads bbs.toml from data.
 // An unknown key is an error, as in the front matter of a screen (section 3.2).
 // It gives at most screen.MaxFileDiags diagnostics (section 10).
 // Parse returns the defaults for each value with an error.
-func Parse(file string, data []byte) (Config, screen.Diags) {
-	p := parser{file: file, cfg: Config{
-		Width: defaultWidth, More: defaultMore,
-		Start: "main", StartPos: screen.Pos{File: file, Line: 1, Col: 1},
-		Telnet: defaultTelnet,
-	}}
-	theme := map[string]any{}
-	doc, err := tomlpos.Parse(data)
-	if err != nil {
-		var e *tomlpos.Error
-		errors.As(err, &e)
-		p.diags.Errorf(file, e.Pos.Line, e.Pos.Col, "%s", e.Msg)
-		doc = &tomlpos.Doc{}
+func Parse(data []byte) (Config, screen.Diags) {
+	cfg := Config{
+		Width: defaultWidth, More: defaultMore, Start: "main", Telnet: defaultTelnet,
 	}
-	p.doc = doc
-	for key, v := range doc.Values {
-		switch key {
-		case "screen":
-			p.screen(v)
-		case "menu":
-			p.menu(v)
-		case "telnet":
-			p.telnet(v)
-		case "theme":
-			if t, ok := p.table(v, key); ok {
-				theme = t
-			}
-		default:
-			p.errorf([]string{key}, "unknown key %q", key)
-		}
+	fd := screen.FileDiags{File: File}
+	var d doc
+	var v values
+	errs := tomlcheck.Decode(bytes.TrimPrefix(data, screen.BOM), &d, &v)
+	for _, e := range errs {
+		fd.Errorf(e.Line, e.Col, "%s", e.Msg)
 	}
-	p.theme(theme)
-	// The map order of the keys is random, so the limit of section 10 applies after the sort.
-	p.diags.Sort()
-	fd := screen.FileDiags{File: file}
-	for _, d := range p.diags {
-		if d.Warning {
-			fd.Warnf(d.Row, d.Col, "%s", d.Msg)
+	if len(errs) > 0 {
+		cfg.Theme = theme(nil)
+		return cfg, fd.Diags
+	}
+	// Each other error has the position 1:1 (screen-format, section 9.1).
+	errorf := func(format string, args ...any) { fd.Errorf(1, 1, format, args...) }
+	if p := d.Screen.Width; p != nil {
+		w, err := screen.NewWidth(*p)
+		if err != nil {
+			errorf("screen.width: %v", err)
 		} else {
-			fd.Errorf(d.Row, d.Col, "%s", d.Msg)
+			cfg.Width = w
 		}
 	}
-	return p.cfg, fd.Diags
-}
-
-type parser struct {
-	file  string
-	doc   *tomlpos.Doc
-	cfg   Config
-	diags screen.Diags
-}
-
-func (p *parser) errorf(path []string, format string, args ...any) {
-	pos := p.doc.Pos(path...)
-	p.diags.Errorf(p.file, pos.Line, pos.Col, format, args...)
-}
-
-func (p *parser) table(v any, name string) (map[string]any, bool) {
-	t, ok := v.(map[string]any)
-	if !ok {
-		p.errorf([]string{name}, "%s: must be a table", name)
-	}
-	return t, ok
-}
-
-func (p *parser) screen(v any) {
-	t, ok := p.table(v, "screen")
-	if !ok {
-		return
-	}
-	for key, v := range t {
-		path := []string{"screen", key}
-		switch key {
-		case "width":
-			w, err := screen.ParseWidth(v)
-			if err != nil {
-				p.errorf(path, "screen.width: %v", err)
-				continue
-			}
-			p.cfg.Width = w
-		case "more":
-			s, ok := v.(string)
-			if !ok {
-				p.errorf(path, "screen.more: must be a string")
-				continue
-			}
-			if err := checkText(s); err != nil {
-				p.errorf(path, "screen.more: %v", err)
-				continue
-			}
-			p.cfg.More = s
-		default:
-			p.errorf(path, "unknown key \"screen.%s\"", key)
+	if p := d.Screen.More; p != nil {
+		if err := checkText(*p); err != nil {
+			errorf("screen.more: %v", err)
+		} else {
+			cfg.More = *p
 		}
 	}
-}
-
-// menu parses [menu]. The menu check of internal/menu checks the name of start.
-func (p *parser) menu(v any) {
-	t, ok := p.table(v, "menu")
-	if !ok {
-		return
+	if p := d.Menu.Start; p != nil {
+		cfg.Start = *p
 	}
-	for key, v := range t {
-		path := []string{"menu", key}
-		if key != "start" {
-			p.errorf(path, "unknown key \"menu.%s\"", key)
-			continue
+	cfg.Telnet = telnet(d.Telnet, v.Telnet, errorf)
+	for _, name := range slices.Sorted(maps.Keys(v.Theme)) {
+		if !screen.IsIdent(name) {
+			errorf("theme: invalid style name %q", name)
+			delete(v.Theme, name)
 		}
-		s, ok := v.(string)
-		if !ok {
-			p.errorf(path, "menu: start: must be a string")
-			continue
-		}
-		pos := p.doc.Pos(path...)
-		p.cfg.Start = s
-		p.cfg.StartPos = screen.Pos{File: p.file, Line: pos.Line, Col: pos.Col}
 	}
+	cfg.Theme = theme(v.Theme)
+	return cfg, fd.Diags
 }
 
 func checkText(s string) error {
@@ -169,32 +130,18 @@ func checkText(s string) error {
 	return nil
 }
 
-// theme parses the styles. A style without a colour takes it from normal;
+// theme gives the theme of the styles t. A style without a colour takes it from normal;
 // normal takes it from its default (section 7.3).
-func (p *parser) theme(t map[string]any) {
+func theme(t map[string]themeStyle) map[string]screen.Style {
 	specs := map[string]screen.StyleSpec{"normal": {}, "more": defaultMoreStyle}
-	for name, v := range t {
-		path := []string{"theme", name}
-		if !screen.IsIdent(name) {
-			p.errorf(path, "theme: invalid style name %q", name)
-			continue
-		}
-		text, ok := v.(string)
-		if !ok {
-			p.errorf(path, "theme.%s: must be a string", name)
-			continue
-		}
-		spec, err := screen.ParseStyle(text)
-		if err != nil {
-			p.errorf(path, "theme.%s: invalid style %q: %v", name, text, err)
-			continue
-		}
-		specs[name] = spec
+	for name, s := range t {
+		specs[name] = s.spec
 	}
 	normal := specs["normal"].Over(defaultNormal)
 	base := screen.Style{Fg: normal.Fg, Bg: normal.Bg}
-	p.cfg.Theme = make(map[string]screen.Style, len(specs))
+	th := make(map[string]screen.Style, len(specs))
 	for name, spec := range specs {
-		p.cfg.Theme[name] = spec.Over(base)
+		th[name] = spec.Over(base)
 	}
+	return th
 }

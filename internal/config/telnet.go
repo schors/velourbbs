@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"net/netip"
@@ -44,73 +43,100 @@ var defaultTelnet = Telnet{
 // maxInt is the largest integer of [telnet]. It keeps a timeout in a time.Duration.
 const maxInt = 1000000
 
-// telnet parses [telnet]. An invalid value keeps its default.
-func (p *parser) telnet(v any) {
-	t, ok := p.table(v, "telnet")
-	if !ok {
-		return
-	}
-	c := &p.cfg.Telnet
-	ints := map[string]*int{
-		"max_conns":            &c.MaxConns,
-		"max_conns_per_addr":   &c.MaxConnsPerAddr,
-		"max_connects_per_min": &c.MaxConnectsPerMin,
-	}
-	timeouts := map[string]*time.Duration{
-		"idle_timeout":   &c.IdleTimeout,
-		"probe_timeout":  &c.ProbeTimeout,
-		"output_timeout": &c.OutputTimeout,
-	}
-	prefixes := map[string]*[]netip.Prefix{"allow": &c.Allow, "proxy": &c.Proxy}
-	for key, v := range t {
-		path := []string{"telnet", key}
-		var err error
-		if dst, ok := ints[key]; ok {
-			var n int
-			if n, err = parseInt(v); err == nil {
-				*dst = n
-			}
-		} else if dst, ok := timeouts[key]; ok {
-			var n int
-			if n, err = parseInt(v); err == nil {
-				*dst = time.Duration(n) * time.Second
-			}
-		} else if dst, ok := prefixes[key]; ok {
-			var ps []netip.Prefix
-			if ps, err = parsePrefixes(v); err == nil {
-				*dst = ps
-			}
-		} else if key == "listen" {
-			if err = checkListen(v); err == nil {
-				c.Listen = v.(string)
-			}
-		} else {
-			p.errorf(path, "unknown key \"telnet.%s\"", key)
-			continue
-		}
-		if err != nil {
-			p.errorf(path, "telnet.%s: %v", key, err)
-		}
-	}
+// telnetDoc is the plain decode of [telnet]. A nil pointer is a key that is not set.
+type telnetDoc struct {
+	Listen            *string   `toml:"listen"`
+	MaxConns          *int64    `toml:"max_conns"`
+	MaxConnsPerAddr   *int64    `toml:"max_conns_per_addr"`
+	MaxConnectsPerMin *int64    `toml:"max_connects_per_min"`
+	Allow             *[]string `toml:"allow"`
+	Proxy             *[]string `toml:"proxy"`
+	IdleTimeout       *int64    `toml:"idle_timeout"`
+	ProbeTimeout      *int64    `toml:"probe_timeout"`
+	OutputTimeout     *int64    `toml:"output_timeout"`
 }
 
-func parseInt(v any) (int, error) {
-	n, ok := v.(int64)
-	if !ok {
-		return 0, errors.New("must be an integer")
+// telnetValues is the decode of the values of [telnet] with a check.
+type telnetValues struct {
+	Listen address  `toml:"listen"`
+	Allow  []prefix `toml:"allow"`
+	Proxy  []prefix `toml:"proxy"`
+}
+
+type address struct{}
+
+func (address) UnmarshalText(text []byte) error { return checkListen(string(text)) }
+
+type prefix struct{ p netip.Prefix }
+
+func (p *prefix) UnmarshalText(text []byte) error {
+	var err error
+	if p.p, err = parsePrefix(string(text)); err != nil {
+		return fmt.Errorf("invalid address or prefix %q", text)
 	}
-	if n < 1 || n > maxInt {
-		return 0, fmt.Errorf("%d is not from 1 to %d", n, maxInt)
+	return nil
+}
+
+// telnet gives the settings of [telnet]. An integer out of its range keeps its default.
+func telnet(d telnetDoc, v telnetValues, errorf func(format string, args ...any)) Telnet {
+	c := defaultTelnet
+	if d.Listen != nil {
+		c.Listen = *d.Listen
 	}
-	return int(n), nil
+	if d.Allow != nil {
+		c.Allow = prefixes(v.Allow)
+	}
+	if d.Proxy != nil {
+		c.Proxy = prefixes(v.Proxy)
+	}
+	ints := []struct {
+		key string
+		src *int64
+		dst *int
+	}{
+		{"max_conns", d.MaxConns, &c.MaxConns},
+		{"max_conns_per_addr", d.MaxConnsPerAddr, &c.MaxConnsPerAddr},
+		{"max_connects_per_min", d.MaxConnectsPerMin, &c.MaxConnectsPerMin},
+	}
+	timeouts := []struct {
+		key string
+		src *int64
+		dst *time.Duration
+	}{
+		{"idle_timeout", d.IdleTimeout, &c.IdleTimeout},
+		{"probe_timeout", d.ProbeTimeout, &c.ProbeTimeout},
+		{"output_timeout", d.OutputTimeout, &c.OutputTimeout},
+	}
+	check := func(key string, n int64) bool {
+		if n < 1 || n > maxInt {
+			errorf("telnet.%s: %d is not from 1 to %d", key, n, maxInt)
+			return false
+		}
+		return true
+	}
+	for _, e := range ints {
+		if e.src != nil && check(e.key, *e.src) {
+			*e.dst = int(*e.src)
+		}
+	}
+	for _, e := range timeouts {
+		if e.src != nil && check(e.key, *e.src) {
+			*e.dst = time.Duration(*e.src) * time.Second
+		}
+	}
+	return c
+}
+
+func prefixes(a []prefix) []netip.Prefix {
+	ps := make([]netip.Prefix, len(a))
+	for i, p := range a {
+		ps[i] = p.p
+	}
+	return ps
 }
 
 // checkListen checks <host>:<port>. The host can be empty; listen checks it.
-func checkListen(v any) error {
-	s, ok := v.(string)
-	if !ok {
-		return errors.New("must be a string")
-	}
+func checkListen(s string) error {
 	_, port, err := net.SplitHostPort(s)
 	if err != nil {
 		return fmt.Errorf("invalid address %q: must be <host>:<port>", s)
@@ -122,29 +148,9 @@ func checkListen(v any) error {
 	return nil
 }
 
-// parsePrefixes parses an array of addresses and prefixes.
+// parsePrefix parses an address or a prefix.
 // An address is a prefix of its full length. An IPv4-mapped IPv6 entry of at least /96
 // becomes IPv4, as the address of a client (section 9.2).
-func parsePrefixes(v any) ([]netip.Prefix, error) {
-	a, ok := v.([]any)
-	if !ok {
-		return nil, errors.New("must be an array of strings")
-	}
-	ps := make([]netip.Prefix, 0, len(a))
-	for _, e := range a {
-		s, ok := e.(string)
-		if !ok {
-			return nil, errors.New("must be an array of strings")
-		}
-		p, err := parsePrefix(s)
-		if err != nil {
-			return nil, fmt.Errorf("invalid address or prefix %q", s)
-		}
-		ps = append(ps, p)
-	}
-	return ps, nil
-}
-
 func parsePrefix(s string) (netip.Prefix, error) {
 	if !strings.Contains(s, "/") {
 		a, err := netip.ParseAddr(s)

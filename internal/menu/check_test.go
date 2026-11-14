@@ -19,14 +19,13 @@ func screens(specs map[string][]string) map[string]*screen.Screen {
 	}
 	for name, spec := range specs {
 		s := ss[name]
-		for i, line := range spec {
+		for _, line := range spec {
 			k, do, _ := strings.Cut(line, " ")
 			act := screen.Action{Op: screen.Logoff}
 			if target, ok := strings.CutPrefix(do, "goto "); ok {
 				act = screen.Action{Op: screen.Goto, Screen: target}
 			}
-			pos := screen.Pos{File: s.File, Line: i + 4, Col: 1}
-			s.Items = append(s.Items, screen.Item{Key: k, Do: act, DoPos: pos})
+			s.Items = append(s.Items, screen.Item{Key: k, Do: act})
 		}
 	}
 	return ss
@@ -48,7 +47,7 @@ var valid = map[string][]string{
 }
 
 func TestCheck(t *testing.T) {
-	start := config.Config{Start: "main", StartPos: screen.Pos{File: "bbs.toml", Line: 1, Col: 1}}
+	start := config.Config{Start: "main"}
 	tests := []struct {
 		name   string
 		change map[string][]string // the screens to add or replace; nil deletes a screen
@@ -57,23 +56,23 @@ func TestCheck(t *testing.T) {
 	}{
 		{name: "valid"},
 		{name: "unknown screen", change: map[string][]string{"main": {"S goto sysinf", "G logoff"}}, want: []string{
-			`screens/main.bbt:4:1: item "S": do: unknown screen "sysinf"`,
+			`screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"`,
 		}},
 		{name: "goto goodbye", change: map[string][]string{"sysinfo": {"ESC goto main", "ANY goto goodbye"}}, want: []string{
-			`screens/sysinfo.bbt:5:1: item "ANY": do: screen "goodbye" has no items`,
+			`screens/sysinfo.bbt:2:1: item "ANY": do: screen "goodbye" has no items`,
 		}},
 		{name: "no items", change: map[string][]string{"about": {}}, want: []string{
 			`screens/about.bbt:1:1: screen has no items`,
 		}},
 		{name: "no main", change: map[string][]string{"main": nil}, want: []string{
 			`bbs.toml:1:1: menu: start: unknown screen "main"`,
-			`screens/sysinfo.bbt:4:1: item "ANY": do: unknown screen "main"`,
+			`screens/sysinfo.bbt:2:1: item "ANY": do: unknown screen "main"`,
 		}},
 		{name: "start unknown", start: "mian", want: []string{
-			`bbs.toml:2:1: menu: start: unknown screen "mian"`,
+			`bbs.toml:1:1: menu: start: unknown screen "mian"`,
 		}},
 		{name: "start without items", start: "goodbye", want: []string{
-			`bbs.toml:2:1: menu: start: screen "goodbye" has no items`,
+			`bbs.toml:1:1: menu: start: screen "goodbye" has no items`,
 		}},
 		{name: "start valid", start: "sysinfo"},
 	}
@@ -92,7 +91,7 @@ func TestCheck(t *testing.T) {
 			}
 			cfg := start
 			if tt.start != "" {
-				cfg = config.Config{Start: tt.start, StartPos: screen.Pos{File: "bbs.toml", Line: 2, Col: 1}}
+				cfg.Start = tt.start
 			}
 			got := messages(Check(cfg, screens(specs), nil))
 			if !slices.Equal(got, tt.want) {
@@ -112,12 +111,12 @@ func TestCheckLimit(t *testing.T) {
 	var ds screen.Diags
 	ds.Warnf("screens/main.bbt", 1, 1, "w")
 	ds.Warnf("screens/x.ans", 1, 1, "w")
-	got := messages(Check(config.Config{Start: "main", StartPos: screen.Pos{File: "bbs.toml", Line: 1, Col: 1}}, ss, ds))
+	got := messages(Check(config.Config{Start: "main"}, ss, ds))
 	if len(got) != screen.MaxFileDiags+2 {
 		t.Fatalf("%d diagnostics, want %d", len(got), screen.MaxFileDiags+2)
 	}
 	if got[0] != "screens/main.bbt:1:1: warning: w" || got[len(got)-1] != "screens/x.ans:1:1: warning: w" ||
-		!slices.Contains(got, "screens/main.bbt:103:1: too many diagnostics") {
+		!slices.Contains(got, "screens/main.bbt:2:1: too many diagnostics") {
 		t.Errorf("first %q, last %q, no limit error", got[0], got[len(got)-1])
 	}
 }

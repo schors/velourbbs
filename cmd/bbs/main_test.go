@@ -23,7 +23,7 @@ func TestCheck(t *testing.T) {
 	// a width in the front matter puts the art insert after line 3.
 	want := `screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100
 screens/main.ans:4:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16
-screens/main.bbt:9:1: item "S": when: unknown field "term.colours"
+screens/main.bbt:2:1: item "S": when: unknown field "term.colours"
 `
 	out, errOut, status := runIn(t, "check", "check")
 	if out != "" || errOut != want || status != exitError {
@@ -31,22 +31,35 @@ screens/main.bbt:9:1: item "S": when: unknown field "term.colours"
 	}
 }
 
-// The menu checks run after a load without errors. So TestCheck does not report
-// the goto to "setup" and the screen "about" without items.
+// The examples of menu-nav, section 7. The menu checks run after a load without errors,
+// so each case is one run. So TestCheck does not report the goto to "setup"
+// and the screen "about" without items.
 func TestCheckMenu(t *testing.T) {
-	fsys := fstest.MapFS{
-		"bbs.toml":          {Data: []byte("")},
-		"screens/start.bbt": {Data: []byte("+++\n[[item]]\nkey = \"s\"\ndo = \"goto sysinf\"\n+++\n")},
-		"screens/about.bbt": {Data: []byte("About\n")},
-	}
-	want := `bbs.toml:1:1: menu: start: unknown screen "main"
+	tests := []struct {
+		main string // the front matter of screens/main.bbt
+		want string
+	}{
+		{"[[item]]\nkey = \"s\"\ndo = \"goto sysinf\"\n", `bbs.toml:1:1: menu: start: unknown screen "mian"
 screens/about.bbt:1:1: screen has no items
-screens/start.bbt:4:1: item "S": do: unknown screen "sysinf"
-`
-	var out, errOut bytes.Buffer
-	status := run([]string{"check"}, fsys, &out, &errOut)
-	if out.String() != "" || errOut.String() != want || status != exitError {
-		t.Errorf("stdout %q, stderr:\n%s\nstatus %d; want stderr:\n%s\nstatus 1", out.String(), errOut.String(), status, want)
+screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"
+`},
+		{"[[item]]\nkey = \"s\"\ndo = \"logoff\"\n[[item]]\ndo = \"logoff\"\nkey = \"?\"\n", `screens/main.bbt:7:7: item.key: invalid key "?"
+`},
+		{"[[item]]\nkey = \"s\"\ndo = \"logoff\"\n[[item]]\nkey = \"S\"\ndo = \"logoff\"\n[[item]]\ndo = \"logoff\"\n", `screens/main.bbt:2:1: item "S": key: duplicate key
+screens/main.bbt:2:1: item 3: key is missing
+`},
+	}
+	for _, tt := range tests {
+		fsys := fstest.MapFS{
+			"bbs.toml":          {Data: []byte("[menu]\nstart = \"mian\"\n")},
+			"screens/main.bbt":  {Data: []byte("+++\n" + tt.main + "+++\n")},
+			"screens/about.bbt": {Data: []byte("About\n")},
+		}
+		var out, errOut bytes.Buffer
+		status := run([]string{"check"}, fsys, &out, &errOut)
+		if out.String() != "" || errOut.String() != tt.want || status != exitError {
+			t.Errorf("stdout %q, stderr:\n%s\nstatus %d; want stderr:\n%s\nstatus 1", out.String(), errOut.String(), status, tt.want)
+		}
 	}
 }
 
@@ -63,8 +76,7 @@ func TestCheckTelnet(t *testing.T) {
 		"bbs.toml":         {Data: []byte("[telnet]\nmax_conns = 0\nallow = [\"x\"]\n")},
 		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"g\"\ndo = \"logoff\"\n+++\n")},
 	}
-	want := `bbs.toml:2:1: telnet.max_conns: 0 is not from 1 to 1000000
-bbs.toml:3:1: telnet.allow: invalid address or prefix "x"
+	want := `bbs.toml:3:10: telnet.allow: invalid address or prefix "x"
 `
 	var out, errOut bytes.Buffer
 	status := run([]string{"check"}, fsys, &out, &errOut)

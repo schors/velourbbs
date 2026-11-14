@@ -393,14 +393,18 @@ The style of a written cell, in this order:
   A TOML document is an exception (below).
   It writes them to the standard error. It exits with status 1 after an error.
 - A TOML document (`bbs.toml` or a front matter) gives the first of these:
-  a syntax error; else the first value error; else all unknown keys.
-  Each has the position of its key or value.
-- A "value error" is a type error or an invalid string value: a style, a condition syntax,
-  a key, a `do`, a screen name, an address.
+  the first syntax or type error; else the first invalid value; else all unknown keys.
+  Only a document without these gives its other errors.
+- An "invalid value" is an invalid style, key, `do` or address.
+- Each of these has the position of its key or value. The message of a type error
+  or an invalid value starts with the dotted key. In an inline table, the key ends at the table.
+- A key that differs from a known key only in case is an unknown key. A table `[item]`
+  in place of `[[item]]` is a type error. These errors and a type error in a nested array
+  have the position of the first line of the document: go-toml gives no position for them.
 - Each other error of a TOML document has the position of the first line of the document:
   1:1 in `bbs.toml`, 2:1 in a front matter. The message names the key. Examples: an invalid
-  `width`, an integer out of its range, an invalid alias or style name, an error between keys,
-  or between a key and another file or screen.
+  `width`, an integer out of its range, an invalid alias or style name, an error of `when`,
+  an error between keys, or between a key and another file or screen.
 - An error has the form `<file>:<row>:<col>: <message>`, with 1-based numbers.
   In a `.bbt` file, the column counts code points.
   For art, the row and the column are grid positions, as the art editor shows them.
@@ -462,7 +466,8 @@ styles
 
 | Item | Limit |
 |---|---|
-| `.bbt`, `.ans` or `bbs.toml` file | 1 MB. |
+| `.bbt` or `.ans` file | 1 MB. |
+| TOML document: `bbs.toml` or a front matter | 64 KB. |
 | Art grid | 255 columns, 1000 rows. |
 | Body of a screen after includes | 10000 lines and 1 MB. An include or an art insert counts its own line, and the lines of the fragment or the rows of the art. |
 | All screens after includes | 160000 lines and 16 MB. |
