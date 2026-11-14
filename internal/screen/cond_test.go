@@ -116,7 +116,7 @@ func TestCondItems(t *testing.T) {
 		t.Errorf("when: %v", err)
 	}
 
-	// A narrow screen checks its conditions against the items of each screen that names it.
+	// A screen checks its conditions against its own items.
 	c, err := ParseCond("item.A or item.s", nil, true)
 	if err != nil {
 		t.Fatal(err)

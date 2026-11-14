@@ -57,7 +57,7 @@ func Load(fsys fs.FS, theme map[string]screen.Style, width screen.WidthLimits) (
 	for _, u := range units {
 		l.screen(u)
 	}
-	l.narrow(units)
+	l.checkItems(units)
 	for _, e := range entries {
 		name := path.Join("screens", e.Name())
 		var used bool

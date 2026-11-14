@@ -10,8 +10,8 @@ import (
 	"newbbs/internal/screen"
 )
 
-// screens makes screens from specs. A spec is a list of items "<KEY> <do>",
-// or "narrow <name>" for the narrow screen. The do of the n-th item is on line n+3.
+// screens makes screens from specs. A spec is a list of items "<KEY> <do>".
+// The do of the n-th item is on line n+3.
 func screens(specs map[string][]string) map[string]*screen.Screen {
 	ss := map[string]*screen.Screen{}
 	for name := range specs {
@@ -21,10 +21,6 @@ func screens(specs map[string][]string) map[string]*screen.Screen {
 		s := ss[name]
 		for i, line := range spec {
 			k, do, _ := strings.Cut(line, " ")
-			if k == "narrow" {
-				s.Narrow = ss[do]
-				continue
-			}
 			act := screen.Action{Op: screen.Logoff}
 			if target, ok := strings.CutPrefix(do, "goto "); ok {
 				act = screen.Action{Op: screen.Goto, Screen: target}
@@ -46,9 +42,8 @@ func messages(ds screen.Diags) []string {
 
 // valid is a valid set of screens. Each case changes it.
 var valid = map[string][]string{
-	"main":    {"S goto sysinfo", "G logoff", "narrow small"},
+	"main":    {"S goto sysinfo", "G logoff"},
 	"sysinfo": {"ANY goto main"},
-	"small":   {},
 	"goodbye": {},
 }
 
@@ -61,11 +56,8 @@ func TestCheck(t *testing.T) {
 		want   []string
 	}{
 		{name: "valid"},
-		{name: "unknown screen", change: map[string][]string{"main": {"S goto sysinf", "G logoff", "narrow small"}}, want: []string{
+		{name: "unknown screen", change: map[string][]string{"main": {"S goto sysinf", "G logoff"}}, want: []string{
 			`screens/main.bbt:4:1: item "S": do: unknown screen "sysinf"`,
-		}},
-		{name: "goto narrow", change: map[string][]string{"sysinfo": {"ESC goto small", "ANY goto main"}}, want: []string{
-			`screens/sysinfo.bbt:4:1: item "ESC": do: screen "small" has no items`,
 		}},
 		{name: "goto goodbye", change: map[string][]string{"sysinfo": {"ESC goto main", "ANY goto goodbye"}}, want: []string{
 			`screens/sysinfo.bbt:5:1: item "ANY": do: screen "goodbye" has no items`,
@@ -73,7 +65,7 @@ func TestCheck(t *testing.T) {
 		{name: "no items", change: map[string][]string{"about": {}}, want: []string{
 			`screens/about.bbt:1:1: screen has no items`,
 		}},
-		{name: "no main", change: map[string][]string{"main": nil, "goodbye": {"narrow small"}}, want: []string{
+		{name: "no main", change: map[string][]string{"main": nil}, want: []string{
 			`bbs.toml:1:1: menu: start: unknown screen "main"`,
 			`screens/sysinfo.bbt:4:1: item "ANY": do: unknown screen "main"`,
 		}},
@@ -82,9 +74,6 @@ func TestCheck(t *testing.T) {
 		}},
 		{name: "start without items", start: "goodbye", want: []string{
 			`bbs.toml:2:1: menu: start: screen "goodbye" has no items`,
-		}},
-		{name: "start narrow", start: "small", want: []string{
-			`bbs.toml:2:1: menu: start: screen "small" has no items`,
 		}},
 		{name: "start valid", start: "sysinfo"},
 	}

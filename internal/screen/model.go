@@ -10,12 +10,11 @@ type Pos struct {
 // Screen is a screen after the load (sections 3 and 6).
 // The model is immutable after the load.
 type Screen struct {
-	Name   string
-	File   string
-	Width  WidthLimits // after the sources of section 6.1
-	Narrow *Screen     // nil when narrow is not set
-	Items  []Item
-	Body   []Seg
+	Name  string
+	File  string
+	Width WidthLimits // width, else [screen] width (section 6.1)
+	Items []Item
+	Body  []Seg
 }
 
 // Item is a menu item of the front matter. When is nil when the item has no when.

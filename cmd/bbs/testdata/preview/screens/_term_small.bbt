@@ -1,4 +1,1 @@
-+++
-width = [20, 29]
-+++
 small {#if item.W}[W]ide{#else}narrow{/if}

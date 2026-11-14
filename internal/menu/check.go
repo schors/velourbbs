@@ -28,15 +28,9 @@ func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags
 	for _, d := range ds {
 		fd(d.File).Diags = append(fd(d.File).Diags, d)
 	}
-	narrow := map[string]bool{}
-	for _, s := range screens {
-		if s.Narrow != nil {
-			narrow[s.Narrow.Name] = true
-		}
-	}
 	for _, name := range slices.Sorted(maps.Keys(screens)) {
 		s := screens[name]
-		if len(s.Items) == 0 && name != "goodbye" && !narrow[name] {
+		if len(s.Items) == 0 && name != "goodbye" {
 			fd(s.File).Errorf(1, 1, "screen has no items")
 		}
 		for _, it := range s.Items {

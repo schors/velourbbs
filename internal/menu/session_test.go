@@ -77,9 +77,6 @@ when = "term.cols >= 80"
 key = "L"
 do = "goto long"
 [[item]]
-key = "N"
-do = "goto wide"
-[[item]]
 key = "G"
 do = "logoff"
 [[item]]
@@ -90,8 +87,6 @@ do = "goto main"
 `,
 	"info":    "+++\n[[item]]\nkey = \"Q\"\ndo = \"goto main\"\n+++\nInfo\n",
 	"long":    "+++\n[[item]]\nkey = \"ANY\"\ndo = \"goto main\"\n+++\n" + lines(12),
-	"wide":    "+++\nwidth = [60, 80]\nnarrow = \"small\"\n[[item]]\nkey = \"Q\"\ndo = \"goto main\"\n+++\nwide\n",
-	"small":   "+++\nwidth = [20, 59]\n+++\nsmall\n",
 	"goodbye": "Bye\n",
 }
 
@@ -177,16 +172,6 @@ func TestRun(t *testing.T) {
 		cols:    []int{80},
 		keys:    []string{"L"},
 		want:    []string{"screen main 1/1: [S]ystem [G]oodbye", "key L", "screen long 1/2: 1"},
-		wantErr: io.EOF,
-	}, {
-		name: "narrow screen",
-		cols: []int{40},
-		keys: []string{"N", "Q"},
-		want: []string{
-			"screen main 1/1: [G]oodbye",
-			"key N", "screen small 1/1: small",
-			"key Q", "screen main 1/1: [G]oodbye",
-		},
 		wantErr: io.EOF,
 	}, {
 		// Run does not wait for a key after goodbye: X stays.

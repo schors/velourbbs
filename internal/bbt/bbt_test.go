@@ -108,7 +108,6 @@ func TestExample(t *testing.T) {
 	screens := mustLoad(t, map[string]string{
 		"main.bbt": `+++
 width = [64, 100]
-narrow = "main_small"
 [fields]
 w = "term.cols"
 [[item]]
@@ -123,16 +122,15 @@ do = "goto about"
 {!title}Welcome! Your terminal has {w} columns.
 {!prompt}[A]bout [G]oodbye
 `,
-		"main_small.bbt": "Hi\n",
-		"main_wide.ans":  sauceArt("x", 100),
-		"main.ans":       sauceArt("{w}", 64),
+		"main_wide.ans": sauceArt("x", 100),
+		"main.ans":      sauceArt("{w}", 64),
 	})
 	s := screens["main"]
-	if s.Width != (screen.WidthLimits{Min: 64, Max: 100}) || s.Narrow != screens["main_small"] {
-		t.Errorf("width %v, narrow %v", s.Width, s.Narrow)
+	if s.Width != (screen.WidthLimits{Min: 64, Max: 100}) {
+		t.Errorf("width %v", s.Width)
 	}
 	if !slices.Equal(s.Items, []screen.Item{{
-		Key: "A", Do: screen.Action{Op: screen.Goto, Screen: "about"}, DoPos: screen.Pos{File: "screens/main.bbt", Line: 8, Col: 1},
+		Key: "A", Do: screen.Action{Op: screen.Goto, Screen: "about"}, DoPos: screen.Pos{File: "screens/main.bbt", Line: 7, Col: 1},
 	}}) {
 		t.Errorf("items %+v", s.Items)
 	}
@@ -140,7 +138,7 @@ do = "goto about"
 	if got := show(s.Body); got != want {
 		t.Errorf("body\n got %s\nwant %s", got, want)
 	}
-	if s.File != "screens/main.bbt" || s.Name != "main" || show(screens["main_small"].Body) != `"Hi" /` {
+	if s.File != "screens/main.bbt" || s.Name != "main" {
 		t.Errorf("screen %+v", s)
 	}
 }
@@ -217,8 +215,8 @@ func TestFrontMatter(t *testing.T) {
 			[]string{`screens/main.bbt:9:1: item "S": when: unknown field "term.colours"`}},
 		{map[string]string{"s.bbt": "+++\nwidth = 5\ncolor = 1\n+++\n"},
 			[]string{`screens/s.bbt:2:1: width: must be an array of 2 integers`, `screens/s.bbt:3:1: unknown key "color"`}},
-		{map[string]string{"s.bbt": "+++\nwidth = [0, 300]\nnarrow = \"_x\"\n+++\n"},
-			[]string{`screens/s.bbt:2:1: width: width [0, 300] is not in 1 <= min <= max <= 255`, `screens/s.bbt:3:1: narrow: invalid screen name "_x"`}},
+		{map[string]string{"s.bbt": "+++\nwidth = [0, 300]\nnarrow = \"small\"\n+++\n"},
+			[]string{`screens/s.bbt:2:1: width: width [0, 300] is not in 1 <= min <= max <= 255`, `screens/s.bbt:3:1: unknown key "narrow"`}},
 		{map[string]string{"s.bbt": "+++\nfields = { \"яя\" = \"term.cols\", and = \"term.rows\" }\n+++\n"},
 			[]string{`screens/s.bbt:2:12: fields: invalid alias "яя"`, `screens/s.bbt:2:32: fields: alias "and" is a reserved word`}},
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ndo = 1\nx = \"y\"\n+++\n"},
@@ -474,24 +472,39 @@ func TestLimits(t *testing.T) {
 }
 
 func TestWidth(t *testing.T) {
+	// The art does not set the width limits (section 6.1).
 	screens := mustLoad(t, map[string]string{
-		"a.bbt": "{>x.ans}\n{>_f}", "_f.bbt": "{>y.ans}",
-		"b.bbt": "text",
-		"x.ans": sauceArt("x", 120), "y.ans": sauceArt("y", 120),
+		"a.bbt": "{>x.ans}", "b.bbt": "+++\nwidth = [20, 30]\n+++\n{>x.ans}",
+		"x.ans": sauceArt("x", 30),
 	})
-	if w := screens["a"].Width; w != (screen.WidthLimits{Min: 120, Max: 120}) {
+	if w := screens["a"].Width; w != defaultWidth {
 		t.Errorf("a: %v", w)
 	}
-	if w := screens["b"].Width; w != defaultWidth {
+	if w := screens["b"].Width; w != (screen.WidthLimits{Min: 20, Max: 30}) {
 		t.Errorf("b: %v", w)
+	}
+
+	// A screen without width takes [screen] width of bbs.toml.
+	fsys := fstest.MapFS{
+		"screens/a.bbt": {Data: []byte("{>x.ans}\n{>y.ans}")},
+		"screens/x.ans": {Data: []byte(sauceArt("x", 50))},
+		"screens/y.ans": {Data: []byte(sauceArt("y", 132))},
+	}
+	screens, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 20, Max: 60})
+	if w := screens["a"].Width; w != (screen.WidthLimits{Min: 20, Max: 60}) {
+		t.Errorf("[screen] width: %v", w)
+	}
+	if want := `screens/a.bbt:2:1: warning: art "y.ans" is 132 cells wide, max width is 60`; len(ds) != 1 || ds[0].String() != want {
+		t.Errorf("[screen] width: diags %v", ds)
 	}
 
 	tests := []struct {
 		files map[string]string
 		want  []string
 	}{
-		{map[string]string{"s.bbt": "{#if term.cols > 100}\n{>x.ans}\n{#else}\n{>y.ans}\n{/if}", "x.ans": sauceArt("x", 120), "y.ans": "y"},
-			[]string{`screens/s.bbt:4:1: art "y.ans" is 80 cells wide, art "x.ans" is 120 cells wide: set width`}},
+		// Art of two widths and no width: the default limits, a warning for the wider art.
+		{map[string]string{"s.bbt": "{#if term.cols > 100}\n{>x.ans}\n{#else}\n{>y.ans}\n{/if}", "x.ans": sauceArt("x", 132), "y.ans": "y"},
+			[]string{`screens/s.bbt:2:1: warning: art "x.ans" is 132 cells wide, max width is 80`}},
 		{map[string]string{"about.bbt": "+++\nwidth = [40, 100]\n+++\n{>logo.ans}\n{>_f}", "_f.bbt": "{>logo.ans}", "logo.ans": sauceArt("x", 132)},
 			[]string{`screens/_f.bbt:1:1: warning: screen "about": art "logo.ans" is 132 cells wide, max width is 100`, `screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100`}},
 		{map[string]string{"s.bbt": "{>a.ans}", "a.ans": "{nope}"},
@@ -509,33 +522,22 @@ func TestWidth(t *testing.T) {
 	}
 }
 
-func TestNarrow(t *testing.T) {
-	screens := mustLoad(t, map[string]string{
-		"main.bbt":  "+++\nnarrow = \"small\"\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{#if item.A}a{/if}",
-		"other.bbt": "+++\nnarrow = \"small\"\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n",
-		"small.bbt": "{#if item.A}a{/if}",
+func TestItemPaths(t *testing.T) {
+	mustLoad(t, map[string]string{
+		"main.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{#if item.A}a{/if}\n{>_f}",
+		"_f.bbt":   "{#if item.A}a{/if}",
 	})
-	if screens["main"].Narrow != screens["small"] || screens["other"].Narrow != screens["small"] {
-		t.Errorf("narrow %v", screens["main"].Narrow)
-	}
 
 	tests := []struct {
 		files map[string]string
 		want  []string
 	}{
-		{map[string]string{"main.bbt": "+++\nnarrow = \"small\"\n+++\n", "small.bbt": "+++\nnarrow = \"main\"\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n"},
-			[]string{
-				`screens/main.bbt:2:1: a narrow screen cannot have narrow (screen "small" names it)`,
-				`screens/small.bbt:2:1: a narrow screen cannot have narrow (screen "main" names it)`,
-				`screens/small.bbt:3:3: a narrow screen cannot have items (screen "main" names it)`,
-			}},
-		{map[string]string{"main.bbt": "+++\nnarrow = \"none\"\n+++\n"}, []string{`screens/main.bbt:2:1: narrow: no screen "none"`}},
 		{map[string]string{"goodbye.bbt": "+++\nwidth = [40, 80]\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n"},
 			[]string{`screens/goodbye.bbt:3:3: the goodbye screen cannot have items`}},
 		{map[string]string{
-			"main.bbt": "+++\nnarrow = \"small\"\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n", "small.bbt": "{#if item.A and item.B}a{/if}\n{>_f}",
-			"_f.bbt": "{#if item.C}a{/if}",
-		}, []string{`screens/_f.bbt:1:1: screen "main": unknown field "item.C"`, `screens/small.bbt:1:1: screen "main": unknown field "item.B"`}},
+			"main.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{#if item.A and item.B}a{/if}\n{>_f}",
+			"_f.bbt":   "{#if item.C}a{/if}",
+		}, []string{`screens/_f.bbt:1:1: screen "main": unknown field "item.C"`, `screens/main.bbt:6:1: unknown field "item.B"`}},
 		{map[string]string{"s.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{#if item.a or item.b}a{/if}"},
 			[]string{`screens/s.bbt:6:1: unknown field "item.B"`}}, // the case rule: item.a is item.A
 	}

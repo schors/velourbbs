@@ -1,10 +1,13 @@
 +++
-width = [30, 40]
-narrow = "term_small"
+width = [20, 30]
 [[item]]
 key = "W"
 do = "goto main"
 when = "term.cols >= 25"
 +++
+{#if term.cols < 30}
+{>_term_small}
+{#else}
 {term.type} {term.colors}
 {#if item.W}[W]ide{#else}narrow{/if}
+{/if}
