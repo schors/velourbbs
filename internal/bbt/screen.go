@@ -19,22 +19,17 @@ type unit struct {
 	frags     map[*file]fragment
 	resolving map[*file]bool
 	artRefs   map[*screen.Art][]screen.Ref
-	// size is the size of the body so far. at is the position in the screen file
+	// lines is the lines of the body so far. at is the position in the screen file
 	// of the node in progress, for a limit error. over is true after a limit error.
-	size count
-	at   screen.Pos
-	over bool
+	lines int
+	at    screen.Pos
+	over  bool
 }
 
-// fragment is a fragment body, resolved for one screen, and its size after includes.
+// fragment is a fragment body, resolved for one screen, and its lines after includes.
 type fragment struct {
-	body []screen.Seg
-	size count
-}
-
-// count is the lines and the bytes of a body after includes.
-type count struct {
-	lines, bytes int
+	body  []screen.Seg
+	lines int
 }
 
 type condAt struct {
@@ -66,9 +61,6 @@ func (l *loader) errorf(u *unit, pos screen.Pos, warning bool, format string, ar
 // A screen with a front matter error resolves without aliases, for the errors
 // of its includes and art inserts, and gives no model.
 func (l *loader) screen(u *unit) {
-	if l.totalOver {
-		return
-	}
 	u.fr = u.f.front
 	if u.fr == nil {
 		u.fr = &front{fields: screen.Fields{}}
@@ -81,44 +73,26 @@ func (l *loader) screen(u *unit) {
 		u.s.Width = *u.fr.width
 	}
 	u.s.Body = l.resolve(u, u.f.body, true)
-	// A screen over a limit also counts in the total, so many such screens stop
-	// at the total limit. Its body is not kept.
-	l.total.lines += u.size.lines
-	l.total.bytes += u.size.bytes
-	if u.over {
+	if u.over { // the body of a screen over the limit is not kept
 		u.s.Body, u.frags, u.artRefs = nil, nil, nil
-		l.cut = true
 		return
 	}
 	u.s.Items = u.fr.items
 	u.done = !u.f.skip
 }
 
-// add adds c to the size of the body and checks the limits of section 10.
-// Over a limit, it reports one error and sets u.over.
-func (l *loader) add(u *unit, c count) {
-	u.size.lines += c.lines
-	u.size.bytes += c.bytes
-	start := screen.Pos{File: u.f.name, Line: 1, Col: 1}
-	switch {
-	case u.size.lines > MaxBodyLines:
+// add adds n lines to the body and checks MaxBodyLines.
+// Over the limit, it reports one error and sets u.over.
+func (l *loader) add(u *unit, n int) {
+	u.lines += n
+	if u.lines > MaxBodyLines {
 		errorAt(l.fd(u.f.name), u.at, "body is over %d lines after includes", MaxBodyLines)
-	case u.size.bytes > MaxBodyBytes:
-		errorAt(l.fd(u.f.name), u.at, "body is over %d bytes after includes", MaxBodyBytes)
-	case l.total.lines+u.size.lines > MaxTotalLines:
-		errorAt(l.fd(u.f.name), start, "screens are over %d lines after includes", MaxTotalLines)
-		l.totalOver = true
-	case l.total.bytes+u.size.bytes > MaxTotalBytes:
-		errorAt(l.fd(u.f.name), start, "screens are over %d bytes after includes", MaxTotalBytes)
-		l.totalOver = true
-	default:
-		return
+		u.over = true
 	}
-	u.over = true
 }
 
 // resolve gives the segments of nodes with the aliases of the screen and adds
-// their size. top is true for the nodes of the screen file. It stops at a limit.
+// their lines. top is true for the nodes of the screen file. It stops at a limit.
 func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 	var segs []screen.Seg
 	for _, n := range nodes {
@@ -134,7 +108,7 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 			if top {
 				u.at = screen.Pos{File: u.f.name, Line: n.row, Col: 1}
 			}
-			l.add(u, count{1, n.bytes})
+			l.add(u, 1)
 			segs = append(segs, screen.LineEnd{Block: n.block})
 		case field:
 			ref, err := screen.LookupField(n.path, u.fr.fields)
@@ -167,10 +141,10 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 				if missing {
 					l.errorOnce(n.pos, "art %q does not exist", n.file)
 				}
-				l.add(u, count{1, 0})
+				l.add(u, 1)
 				continue
 			}
-			l.add(u, count{1 + a.Height, 0})
+			l.add(u, 1+a.Height)
 			segs = append(segs, screen.ArtInsert{Art: a, Fields: l.artFields(u, n, a)})
 		}
 	}
@@ -184,7 +158,7 @@ func (l *loader) include(u *unit, n include, top bool) (body []screen.Seg, ok bo
 	if top {
 		u.at = n.pos
 	}
-	l.add(u, count{1, 0})
+	l.add(u, 1)
 	if u.over {
 		return nil, false
 	}
@@ -200,14 +174,14 @@ func (l *loader) include(u *unit, n include, top bool) (body []screen.Seg, ok bo
 		return nil, false
 	}
 	if fr, ok := u.frags[frag]; ok {
-		l.add(u, fr.size)
+		l.add(u, fr.lines)
 		return fr.body, true
 	}
-	before := u.size
+	before := u.lines
 	u.resolving[frag] = true
 	body = l.resolve(u, frag.body, false)
 	delete(u.resolving, frag)
-	u.frags[frag] = fragment{body, count{u.size.lines - before.lines, u.size.bytes - before.bytes}}
+	u.frags[frag] = fragment{body, u.lines - before}
 	return body, true
 }
 

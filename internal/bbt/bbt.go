@@ -13,15 +13,8 @@ import (
 	"newbbs/internal/screen"
 )
 
-// The limits of section 10: the body of a screen and of all screens after includes,
-// and the nesting of blocks in a file.
-const (
-	MaxBodyLines  = 10000
-	MaxBodyBytes  = 1 << 20
-	MaxTotalLines = 160000
-	MaxTotalBytes = 16 << 20
-	MaxNesting    = 100
-)
+// MaxBodyLines is the line limit of the body of a screen after includes (section 10).
+const MaxBodyLines = 10000
 
 // Load loads each screen of fsys/screens with the fragments and the art that it uses.
 // fsys is the BBS directory. theme and width come from bbs.toml.
@@ -73,7 +66,7 @@ func Load(fsys fs.FS, theme map[string]screen.Style, width screen.WidthLimits) (
 		}
 		if info, err := fs.Stat(fsys, name); err == nil && !info.Mode().IsRegular() {
 			l.fd(name).Errorf(1, 1, "not a regular file")
-		} else if !l.cut {
+		} else {
 			l.fd(name).Warnf(1, 1, "no screen uses this file")
 		}
 	}
@@ -103,12 +96,6 @@ type loader struct {
 	// reported holds the include and art insert positions with an error:
 	// the screens that use a fragment report its errors once.
 	reported map[screen.Pos]bool
-	// total is the size of the screens after includes; the screen pass stops over its limits.
-	total     count
-	totalOver bool
-	// cut is true after a stop at a limit: some files are not read,
-	// so "no screen uses this file" can be false.
-	cut bool
 }
 
 // fd gives the diagnostics of the file name.

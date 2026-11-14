@@ -8,8 +8,7 @@ const MaxRenderRows = 10000
 // Render renders the screen s for the terminal of env and gives its pages (section 6).
 // env.Term is in the ranges of section 4.1. env.Items holds the enabled items.
 // theme has the styles normal and more. more is the text of the More row.
-// The render holds one page: it renders the next rows after the consumer takes a page,
-// and it reuses the rows of the page. So the rows of a page are valid until the next page.
+// The render holds one page: it renders the next rows after the consumer takes a page.
 func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[Page] {
 	return func(yield func(Page) bool) {
 		cols := env.Term.Cols
@@ -46,10 +45,8 @@ type renderer struct {
 	height  int // term.rows
 	more    Row // the More row
 	rows    []Row
-	out     []Row // the rows of a page with the More row
-	free    []Row // the rows of the pages that the consumer took, for reuse
-	shown   bool  // a page with a More row is shown
-	count   int   // the rendered rows
+	shown   bool // a page with a More row is shown
+	count   int  // the rendered rows
 	yield   func(Page) bool
 	stopped bool // the consumer stopped the render
 	done    bool // the render stops: the rows are at MaxRenderRows, or the consumer stopped
@@ -264,12 +261,11 @@ func (r *renderer) addRow(cells []Cell) {
 		return
 	}
 	r.shown = true
-	r.out = append(append(r.out[:0], r.rows[:h]...), r.more)
-	if !r.yield(r.page(r.out)) {
+	out := append(r.rows[:h:h], r.more) // a new slice: r.rows keeps the rest
+	if !r.yield(r.page(out)) {
 		r.stopped, r.done = true, true
 		return
 	}
-	r.free = append(r.free, r.rows[:h]...)
 	r.rows = r.rows[:copy(r.rows, r.rows[h:])]
 }
 
@@ -278,16 +274,10 @@ func (r *renderer) page(rows []Row) Page {
 	return Page{Rows: rows, Cols: r.cols, Margin: r.margin, Fill: r.normal}
 }
 
-// row gives a row of the screen area with cells. It reuses a row of r.free.
-// It cuts cells at the screen area; a cut through a wide grapheme leaves a space in its style.
+// row gives a row of the screen area with cells. It cuts cells at the screen area; a cut through a wide grapheme leaves a space in its style.
 // Each other cell is a space in normal (section 6.2).
 func (r *renderer) row(cells []Cell) Row {
-	var row Row
-	if n := len(r.free); n > 0 {
-		row, r.free = r.free[n-1], r.free[:n-1]
-	} else {
-		row = make(Row, r.area)
-	}
+	row := make(Row, r.area)
 	for i := range row {
 		row[i] = Cell{" ", r.normal}
 	}

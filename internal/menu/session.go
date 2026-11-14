@@ -17,7 +17,7 @@ type Terminal interface {
 	// except ANY, or one other character: a character without a key name of section 3.1.
 	// An error ends the session.
 	Key() (string, error)
-	// Page shows the page p. The rows of p are valid until Page returns.
+	// Page shows the page p.
 	Page(p screen.Page) error
 }
 

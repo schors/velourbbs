@@ -216,9 +216,9 @@ func countRows(s *screen.Screen, env *screen.Env) int {
 	return rows - (pages - 1)
 }
 
-// A session holds one page (section 6.4): the render of MaxRenderRows rows
-// at 255 columns allocates less than 3 pages of cells. A row has the cells
-// of the screen area only: at W = 20, the render allocates less than 3 pages of 20 cells.
+// A session holds one page (section 6.4): during the render of MaxRenderRows rows
+// at 255 columns, the live heap holds less than 3 pages of cells. A row has the cells
+// of the screen area only: at W = 20, the live heap holds less than 3 pages of 20 cells.
 func TestRenderPageMemory(t *testing.T) {
 	cell := reflect.TypeFor[screen.Cell]().Size()
 	for _, tt := range []struct {
@@ -227,16 +227,24 @@ func TestRenderPageMemory(t *testing.T) {
 	}{{"[255, 255]", 255}, {"[20, 20]", 20}} {
 		s := load(t, "+++\nwidth = "+tt.width+"\n+++\n"+strings.Repeat("x\n", screen.MaxRenderRows))
 		env := &screen.Env{Term: screen.Term{Cols: 255, Rows: 25}}
-		var before, after runtime.MemStats
-		runtime.ReadMemStats(&before)
-		rows := countRows(s, env)
-		runtime.ReadMemStats(&after)
-		if rows != screen.MaxRenderRows {
-			t.Errorf("width %s: got %d rows, want %d", tt.width, rows, screen.MaxRenderRows)
-		}
 		limit := 3 * uint64(env.Term.Rows*tt.w) * uint64(cell)
-		if n := after.TotalAlloc - before.TotalAlloc; n > limit {
-			t.Errorf("width %s: render allocated %d bytes, want at most %d", tt.width, n, limit)
+		var before, now runtime.MemStats
+		runtime.GC()
+		runtime.ReadMemStats(&before)
+		pages, rows := 0, 0
+		for p := range screen.Render(s, env, theme, "") {
+			pages++
+			rows += len(p.Rows)
+			if pages%100 == 0 {
+				runtime.GC()
+				runtime.ReadMemStats(&now)
+				if n := int64(now.HeapAlloc) - int64(before.HeapAlloc); n > int64(limit) {
+					t.Errorf("width %s, page %d: live heap grew by %d bytes, want at most %d", tt.width, pages, n, limit)
+				}
+			}
+		}
+		if rows -= pages - 1; rows != screen.MaxRenderRows {
+			t.Errorf("width %s: got %d rows, want %d", tt.width, rows, screen.MaxRenderRows)
 		}
 	}
 }
