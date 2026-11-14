@@ -5,14 +5,13 @@ Backlog. It extends [screen-format](../specs/screen-format.md).
 ## Goal
 
 The host treats each kind of content by its trust tier. User content cannot change the terminal.
-A sysop can install screens and art without review.
 
 ## Decisions
 
 | Tier | What | Treatment |
 |---|---|---|
 | 1 | User content: names, messages, input | Hostile. Always escaped and filtered. |
-| 2 | Screens, art, theme, TOML files | Untrusted data. See [screen-format](../specs/screen-format.md), sections 1 and 10. |
+| 2 | Screens, art, theme, TOML files | Files of the sysop. Limits catch mistakes. See [screen-format](../specs/screen-format.md), sections 1 and 10. |
 | 3 | Lua scripts ([lua-mods](lua-mods.md)) | Trusted code. Limits catch bugs only. |
 
 ## User content
