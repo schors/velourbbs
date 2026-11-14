@@ -17,7 +17,6 @@ import (
 // front is the front matter of a screen (section 3.2).
 type front struct {
 	width  *screen.WidthLimits // nil when width is not set
-	narrow string
 	fields screen.Fields
 	items  []screen.Item
 	doc    *tomlpos.Doc
@@ -58,16 +57,6 @@ func parseFront(d *screen.FileDiags, lines []string) *front {
 				continue
 			}
 			fr.width = &w
-		case "narrow":
-			s, isStr := v.(string)
-			switch {
-			case !isStr:
-				errorf([]string{key}, "narrow: must be a string")
-			case !isName(s):
-				errorf([]string{key}, "narrow: invalid screen name %q", s)
-			default:
-				fr.narrow = s
-			}
 		case "item":
 			fr.parseItems(v, errorf)
 		default:

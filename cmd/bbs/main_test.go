@@ -118,8 +118,8 @@ styles
 2: 1-30 7/0
 `,
 	}, {
-		// The flags before the name. The narrow screen takes the items of the screen.
-		name: "narrow with item",
+		// The flags before the name. Below 30 columns, term.bbt shows its small fragment.
+		name: "small with item",
 		args: []string{"--size", "25x10", "term"},
 		want: `page 1/1 25x10
 |small [W]ide             |
@@ -127,7 +127,7 @@ styles
 1: 1-25 7/0
 `,
 	}, {
-		name: "narrow without item",
+		name: "small without item",
 		args: []string{"term", "--size", "20x10"},
 		want: `page 1/1 20x10
 |small narrow        |

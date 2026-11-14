@@ -9,7 +9,6 @@ const MaxRenderRows = 10000
 // Each row of a page has env.Term.Cols cells.
 func Render(s *Screen, env *Env, theme map[string]Style, more string) []Page {
 	cols := env.Term.Cols
-	s = s.For(cols)
 	w := min(max(cols, s.Width.Min), s.Width.Max)
 	r := &renderer{
 		env: env, normal: theme["normal"], w: w, cols: cols,
@@ -23,15 +22,6 @@ func Render(s *Screen, env *Env, theme map[string]Style, more string) []Page {
 		moreCells = appendCell(moreCells, Grapheme{g, gw}, theme["more"])
 	}
 	return paginate(r.rows, env.Term.Rows, r.row(moreCells))
-}
-
-// For gives the screen that a terminal of cols columns shows:
-// the narrow screen when cols is less than the minimum width (section 6.1), else s.
-func (s *Screen) For(cols int) *Screen {
-	if cols < s.Width.Min && s.Narrow != nil {
-		return s.Narrow
-	}
-	return s
 }
 
 // paginate splits rows into pages for a terminal of height rows (section 6.4).

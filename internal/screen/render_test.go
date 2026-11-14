@@ -85,6 +85,11 @@ func golden(t *testing.T, name, got string) {
 func TestRender(t *testing.T) {
 	logo := sauceArt("\x1b[1;33m{w}\x1b[0m a \x1b[44m{  w}\x1b[0m\r\nline 2", 12)
 	w10 := "+++\nwidth = [10, 10]\n+++\n"
+	recipe := map[string]string{
+		"main.bbt":   "+++\nwidth = [20, 30]\n+++\n{#if term.cols < 30}\n{>_small}\n{#else}\n{>main.ans}\n{/if}\n",
+		"_small.bbt": "{!14}small screen text that wraps\n",
+		"main.ans":   sauceArt("\x1b[1;33mart\x1b[0m", 30),
+	}
 	tests := []struct {
 		name       string
 		files      map[string]string
@@ -95,12 +100,11 @@ func TestRender(t *testing.T) {
 		{"example", map[string]string{
 			"main.bbt": "+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{!title}Welcome!{!}\n{!14}[G]oodbye\n",
 		}, 80, 25, nil},
-		// term.cols < min with narrow: the narrow screen with its own width limits.
-		{"narrow", map[string]string{
-			"main.bbt":  "+++\nwidth = [30, 40]\nnarrow = \"small\"\n+++\nwide screen\n",
-			"small.bbt": "+++\nwidth = [10, 12]\n+++\n{!14}small screen text\n",
-		}, 20, 10, nil},
-		// term.cols < min without narrow: W = min, each row cut at term.cols.
+		// The recipe of section 6.1 with art of width 30: the fragment below 30 columns,
+		// wrapped at term.cols; the art at 30 columns and more, centred.
+		{"recipe-small", recipe, 25, 10, nil},
+		{"recipe-art", recipe, 40, 10, nil},
+		// term.cols < min: W = min, each row cut at term.cols.
 		// The cut through 中 leaves a space in its style.
 		{"cut", map[string]string{
 			"main.bbt": "+++\nwidth = [22, 30]\n+++\n{!title}abcdefghijklmnopqrs中x\nabcdefghijklmnopqrstuv\n",

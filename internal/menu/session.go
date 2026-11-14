@@ -18,7 +18,7 @@ type Terminal interface {
 	// An error ends the session.
 	Key() (string, error)
 	// Page shows page n of pages, 0-based. A new screen starts with page 0.
-	// name is the rendered screen: the narrow screen when the host shows it.
+	// name is the name of the screen.
 	Page(name string, pages []screen.Page, n int) error
 	// KeyEvent tells that the key k arrived, after the map of section 3.2.
 	// ignored is true when no item matches k.
@@ -60,7 +60,6 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 func show(t Terminal, cfg config.Config, s *screen.Screen) (map[string]screen.Item, error) {
 	env, items := Enabled(s, t.Term())
 	pages := screen.Render(s, env, cfg.Theme, cfg.More)
-	name := s.For(env.Term.Cols).Name
 	for n := range pages {
 		if n > 0 {
 			k, err := t.Key()
@@ -71,7 +70,7 @@ func show(t Terminal, cfg config.Config, s *screen.Screen) (map[string]screen.It
 				return nil, err
 			}
 		}
-		if err := t.Page(name, pages, n); err != nil {
+		if err := t.Page(s.Name, pages, n); err != nil {
 			return nil, err
 		}
 	}
@@ -80,7 +79,6 @@ func show(t Terminal, cfg config.Config, s *screen.Screen) (map[string]screen.It
 
 // Enabled evaluates the when of each item of s for the terminal term (section 4).
 // It gives the field values of the render and the enabled items by key.
-// The items come from s also when the render uses its narrow screen.
 func Enabled(s *screen.Screen, term screen.Term) (*screen.Env, map[string]screen.Item) {
 	env := &screen.Env{Term: term, Items: map[string]bool{}}
 	items := map[string]screen.Item{}
