@@ -14,13 +14,13 @@ import (
 
 // Config is the host settings.
 type Config struct {
-	// Width is the default width limits of a screen (section 6.1).
+	// Width is the default width limits of a screen (bbt-format, section 6.1).
 	Width screen.WidthLimits
-	// More is the text of the More row (section 6.4).
+	// More is the text of the More row (bbt-format, section 6.4).
 	More string
-	// Theme maps a style name to a style (section 7.3). It always has normal and more.
+	// Theme maps a style name to a style (bbt-format, section 7.3). It always has normal and more.
 	Theme map[string]screen.Style
-	// Fields maps an alias to its field (section 4.2).
+	// Fields maps an alias to its field (bbt-format, section 4.2).
 	Fields screen.Fields
 	// Start is the name of the first screen of a session (menu-nav, section 5).
 	Start string
@@ -28,7 +28,7 @@ type Config struct {
 	Telnet Telnet
 }
 
-// The defaults of sections 6.1, 6.4 and 7.3.
+// The defaults of bbt-format, sections 6.1, 6.4 and 7.3.
 var (
 	defaultWidth     = screen.WidthLimits{Min: 40, Max: 80}
 	defaultMore      = "-- More --"
@@ -56,7 +56,7 @@ type doc struct {
 const File = "bbs.toml"
 
 // Parse reads bbs.toml from data.
-// An unknown key is an error, as in the front matter of a screen (section 3.2).
+// An unknown key is an error, as in the front matter of a screen (bbt-format, section 3.2).
 // It gives at most screen.MaxFileDiags diagnostics (screen-render, section 3.1).
 // Parse returns the defaults for each value with an error.
 func Parse(data []byte) (Config, screen.Diags) {
@@ -130,7 +130,7 @@ func checkText(s string) error {
 }
 
 // theme gives the theme of the styles t. A style without a colour takes it from normal;
-// normal takes it from its default (section 7.3).
+// normal takes it from its default (bbt-format, section 7.3).
 func theme(t map[string]screen.StyleSpec) map[string]screen.Style {
 	specs := map[string]screen.StyleSpec{"normal": {}, "more": defaultMoreStyle}
 	maps.Copy(specs, t)

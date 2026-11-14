@@ -19,7 +19,7 @@ func runIn(t *testing.T, dir string, args ...string) (stdout, stderr string, sta
 }
 
 func TestCheck(t *testing.T) {
-	// The three examples of screen-render, section 3.1. The warning is on line 4:
+	// Three of the examples of screen-render, section 3.1. The warning is on line 4:
 	// a width in the front matter puts the art insert after line 3.
 	want := `screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100
 screens/main.ans:4:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16

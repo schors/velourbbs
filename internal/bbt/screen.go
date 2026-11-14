@@ -179,7 +179,7 @@ func (l *loader) include(u *unit, n include, top bool) (body []screen.Seg, ok bo
 }
 
 // checkItems checks that goodbye has no items and the item.<KEY> paths of each screen
-// against its own items (menu-nav, section 6, and section 8.4).
+// against its own items (menu-nav, section 6, and bbt-format, section 8.4).
 func (l *loader) checkItems(units []*unit) {
 	for _, u := range units {
 		if !u.done {

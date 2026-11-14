@@ -1,5 +1,5 @@
 // Package key holds the key names and the case rule of bbt-format, section 8.1,
-// and the Russian layout map of menu-nav, section 3.
+// and the Russian layout map of menu-nav, section 3.2.
 // A section without a specification name is a section of menu-nav.
 package key
 

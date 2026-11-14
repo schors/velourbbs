@@ -56,7 +56,7 @@ func TestStart(t *testing.T) {
 }
 
 // TestAccept sends each request to a new parser: the host accepts only the options
-// of section 4.1 and refuses each other option.
+// of telnet-term, section 4.1, and refuses each other option.
 func TestAccept(t *testing.T) {
 	accepted := map[[2]byte]bool{
 		{cmdDO, OptEcho}: true, {cmdDO, OptSGA}: true, {cmdDO, OptBinary}: true,

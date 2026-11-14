@@ -95,7 +95,7 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `{#if <cond>}` `{#else}` `{/if}` | Conditional block. Section 5. |
 | `{!<style>}` | Style change. Section 7.3. |
 | `{>_<name>}` | Include of `screens/_<name>.bbt`. Section 3.4. |
-| `{><name>.ans}` | Art insert of `screens/<name>.ans`. Section 6.2. |
+| `{><name>.ans}` | Art insert of `screens/<name>.ans`. Sections 3.4 and 6.2. |
 | `{@<id>}` `{/@}` | Reserved for marks. An error in the MVP. |
 
 - The width of a fixed-width field includes the braces. Example: `{term.type      }` is 17 cells.
