@@ -159,7 +159,7 @@ start = "welcome"
 - items in `goodbye`;
 - a start screen that does not exist or has no items.
 
-- An invalid key, an invalid `do` and a syntax error of `when` are value errors
+- An invalid key and an invalid `do` are invalid values
   ([screen-format](screen-format.md), section 9.1). They have the position of the value.
 - Each other error of an item has the position 2:1. It starts with `item "<KEY>"`,
   with the key in upper case. An item without a key gives `item <n>`,
@@ -173,7 +173,7 @@ Examples:
 
 ```
 screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"
-screens/main.bbt:7:7: key: invalid key "?"
+screens/main.bbt:7:7: item.key: invalid key "?"
 screens/main.bbt:2:1: item "S": key: duplicate key
 screens/main.bbt:2:1: item 3: key is missing
 screens/about.bbt:1:1: screen has no items

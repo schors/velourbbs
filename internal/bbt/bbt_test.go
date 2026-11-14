@@ -130,7 +130,7 @@ do = "goto about"
 		t.Errorf("width %v", s.Width)
 	}
 	if !slices.Equal(s.Items, []screen.Item{{
-		Key: "A", Do: screen.Action{Op: screen.Goto, Screen: "about"}, DoPos: screen.Pos{File: "screens/main.bbt", Line: 7, Col: 1},
+		Key: "A", Do: screen.Action{Op: screen.Goto, Screen: "about"},
 	}}) {
 		t.Errorf("items %+v", s.Items)
 	}
@@ -207,35 +207,44 @@ func TestFileForm(t *testing.T) {
 }
 
 func TestFrontMatter(t *testing.T) {
+	// A TOML error has the position of its key or value; each other error has 2:1 (section 9.1).
 	tests := []struct {
 		files map[string]string
 		want  []string
 	}{
 		{map[string]string{"main.bbt": "+++\n[fields]\nw = \"term.cols\"\n\n\n[[item]]\nkey = \"S\"\ndo = \"logoff\"\nwhen = \"term.colours == 1\"\n+++\n"},
-			[]string{`screens/main.bbt:9:1: item "S": when: unknown field "term.colours"`}},
-		{map[string]string{"s.bbt": "+++\nwidth = 5\ncolor = 1\n+++\n"},
-			[]string{`screens/s.bbt:2:1: width: must be an array of 2 integers`, `screens/s.bbt:3:1: unknown key "color"`}},
-		{map[string]string{"s.bbt": "+++\nwidth = [0, 300]\nnarrow = \"small\"\n+++\n"},
-			[]string{`screens/s.bbt:2:1: width: width [0, 300] is not in 1 <= min <= max <= 255`, `screens/s.bbt:3:1: unknown key "narrow"`}},
+			[]string{`screens/main.bbt:2:1: item "S": when: unknown field "term.colours"`}},
+		{map[string]string{"s.bbt": "+++\nwidth = 5\ncolor = 1\n+++\n"}, []string{`screens/s.bbt:2:9: width: must be an array of integers`}},
+		{map[string]string{"s.bbt": "+++\nwidth = [0, 300]\nnarrow = \"small\"\n+++\n"}, []string{`screens/s.bbt:3:1: unknown key "narrow"`}},
+		{map[string]string{"s.bbt": "+++\nwidth = [0, 300]\n+++\n"},
+			[]string{`screens/s.bbt:2:1: width: width [0, 300] is not in 1 <= min <= max <= 255`}},
+		{map[string]string{"s.bbt": "+++\n\nwidth = [1]\n+++\n"}, []string{`screens/s.bbt:2:1: width: must be an array of 2 integers`}},
 		{map[string]string{"s.bbt": "+++\nfields = { \"яя\" = \"term.cols\", and = \"term.rows\" }\n+++\n"},
-			[]string{`screens/s.bbt:2:12: fields: invalid alias "яя"`, `screens/s.bbt:2:32: fields: alias "and" is a reserved word`}},
-		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ndo = 1\nx = \"y\"\n+++\n"},
-			[]string{`screens/s.bbt:3:1: fields: alias "k": "item.A" is valid only in {#if}`, `screens/s.bbt:4:3: item 1: key is missing`, `screens/s.bbt:5:1: item 1: do: must be a string`, `screens/s.bbt:6:1: item 1: unknown key "x"`}},
+			[]string{`screens/s.bbt:2:1: fields: alias "and" is a reserved word`, `screens/s.bbt:2:1: fields: invalid alias "яя"`}},
+		// The column counts code points.
+		{map[string]string{"s.bbt": "+++\nfields = { \"яя\" = \"term.cols\", w = 5 }\n+++\n"}, []string{`screens/s.bbt:2:36: fields: invalid type of a value`}},
+		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ndo = 1\nx = \"y\"\n+++\n"}, []string{`screens/s.bbt:5:6: item.do: must be a string`}},
+		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ny = 1\nx = 2\n+++\n"}, []string{
+			`screens/s.bbt:5:1: unknown key "item.y"`,
+			`screens/s.bbt:6:1: unknown key "item.x"`,
+		}},
+		{map[string]string{"s.bbt": "+++\n[fields]\nb = \"term.x\"\na = \"term.y\"\n[[item]]\n+++\n"}, []string{
+			`screens/s.bbt:2:1: fields: alias "a": unknown field "term.y"`,
+			`screens/s.bbt:2:1: fields: alias "b": unknown field "term.x"`,
+			`screens/s.bbt:2:1: item 1: key is missing`,
+			`screens/s.bbt:2:1: item 1: do is missing`,
+		}},
+		// A key that matches only without case and a table in place of [[item]] have 2:1.
+		{map[string]string{"s.bbt": "+++\n[[item]]\nKEY = \"a\"\nkey = \"b\"\ndo = \"logoff\"\n+++\n"}, []string{`screens/s.bbt:2:1: unknown key "item.KEY"`}},
+		{map[string]string{"s.bbt": "+++\n[item]\nkey = \"a\"\ndo = \"logoff\"\n+++\n"}, []string{`screens/s.bbt:2:1: item: must be an array of tables`}},
 		{map[string]string{"s.bbt": "+++\nwidth = [\n+++\n"}, []string{`screens/s.bbt:2:9: array is incomplete`}},
+		{map[string]string{"s.bbt": "+++\n" + strings.Repeat("#\n", 33<<10) + "+++\n"}, []string{`screens/s.bbt:2:1: TOML document is over 65536 bytes`}},
 		{map[string]string{"s.bbt": "+++\nwidth = [1, 2]\n"}, []string{`screens/s.bbt:1:1: front matter has no closing "+++"`}},
 		{map[string]string{"s.bbt": "{>_f}", "_f.bbt": "+++\n+++\nx"}, []string{`screens/_f.bbt:1:1: a fragment cannot have front matter`}},
 		{map[string]string{"Main.bbt": "", "_x.bbt": "\xff", "x.txt": "", "a.bbt.ans": ""}, []string{
 			`screens/Main.bbt:1:1: invalid screen name "Main"`,
 			`screens/_x.bbt:1:1: warning: no screen uses this file`,
 			`screens/a.bbt.ans:1:1: warning: no screen uses this file`,
-		}},
-		{map[string]string{"s.bbt": "+++\n[fields]\nb = \"term.x\"\na = \"term.y\"\n[[item]]\ny = 1\nx = 2\n+++\n"}, []string{
-			`screens/s.bbt:3:1: fields: alias "b": unknown field "term.x"`,
-			`screens/s.bbt:4:1: fields: alias "a": unknown field "term.y"`,
-			`screens/s.bbt:5:3: item 1: key is missing`,
-			`screens/s.bbt:5:3: item 1: do is missing`,
-			`screens/s.bbt:6:1: item 1: unknown key "y"`,
-			`screens/s.bbt:7:1: item 1: unknown key "x"`,
 		}},
 	}
 	for _, tt := range tests {
@@ -262,12 +271,12 @@ when = "term.cols > 80"
 		t.Fatalf("items %+v", items)
 	}
 	got := []screen.Item{
-		{Key: items[0].Key, Do: items[0].Do, DoPos: items[0].DoPos},
-		{Key: items[1].Key, Do: items[1].Do, DoPos: items[1].DoPos},
+		{Key: items[0].Key, Do: items[0].Do},
+		{Key: items[1].Key, Do: items[1].Do},
 	}
 	want := []screen.Item{
-		{Key: "ESC", Do: screen.Action{Op: screen.Goto, Screen: "main"}, DoPos: screen.Pos{File: "screens/s.bbt", Line: 4, Col: 1}},
-		{Key: "ANY", Do: screen.Action{Op: screen.Logoff}, DoPos: screen.Pos{File: "screens/s.bbt", Line: 7, Col: 1}},
+		{Key: "ESC", Do: screen.Action{Op: screen.Goto, Screen: "main"}},
+		{Key: "ANY", Do: screen.Action{Op: screen.Logoff}},
 	}
 	if !slices.Equal(got, want) {
 		t.Errorf("items %+v, want %+v", got, want)
@@ -280,28 +289,31 @@ func TestItemErrors(t *testing.T) {
 		items []string // the lines of each [[item]] table
 		want  []string
 	}{
-		{[]string{`key = "?"`, `do = "logoff"`}, []string{`screens/s.bbt:3:1: item 1: key: invalid key "?"`}},
-		{[]string{`key = "ы"`, `do = "logoff"`}, []string{`screens/s.bbt:3:1: item 1: key: invalid key "ы"`}},
-		{[]string{`key = "F13"`, `do = "x"`}, []string{
-			`screens/s.bbt:3:1: item 1: key: invalid key "F13"`,
-			`screens/s.bbt:4:1: item 1: do: unknown action "x"`,
+		{[]string{`key = "?"`, `do = "logoff"`}, []string{`screens/s.bbt:3:7: item.key: invalid key "?"`}},
+		{[]string{`key = "ы"`, `do = "logoff"`}, []string{`screens/s.bbt:3:7: item.key: invalid key "ы"`}},
+		{[]string{`key = "F13"`, `do = "x"`}, []string{`screens/s.bbt:3:7: item.key: invalid key "F13"`}},
+		// A type error comes before an invalid value.
+		{[]string{`do = "x"`, `key = 1`}, []string{`screens/s.bbt:4:7: item.key: must be a string`}},
+		{[]string{`key = true`}, []string{`screens/s.bbt:3:7: item.key: must be a string`}},
+		{[]string{`key = 1.5`}, []string{`screens/s.bbt:3:7: item.key: must be a string`}},
+		{[]string{`key = {}`}, []string{`screens/s.bbt:3:7: item.key: must be a string`}},
+		{[]string{`do = "logoff"`, `[item.key]`}, []string{`screens/s.bbt:4:2: item.key: must be a string`}},
+		{[]string{`key = "esc"`, `do = "Goto main"`}, []string{`screens/s.bbt:4:6: item.do: unknown action "Goto"`}},
+		{[]string{`key = "A"`, `do = ""`}, []string{`screens/s.bbt:4:6: item.do: unknown action ""`}},
+		{[]string{`key = "A"`, `do = "goto"`}, []string{`screens/s.bbt:4:6: item.do: goto needs a screen name`}},
+		{[]string{`key = "A"`, `do = "goto  main"`}, []string{`screens/s.bbt:4:6: item.do: invalid screen name " main"`}},
+		{[]string{`key = "A"`, `do = "goto Main"`}, []string{`screens/s.bbt:4:6: item.do: invalid screen name "Main"`}},
+		{[]string{`key = "A"`, `do = "goto _f"`}, []string{`screens/s.bbt:4:6: item.do: invalid screen name "_f"`}},
+		{[]string{`key = "A"`, `do = "logoff now"`}, []string{`screens/s.bbt:4:6: item.do: logoff takes no argument`}},
+		{[]string{`key = "A"`, `do = "logoff "`}, []string{`screens/s.bbt:4:6: item.do: logoff takes no argument`}},
+		{[]string{`key = "a"`, `do = 1`, `when = "item.A"`, `x = 1`}, []string{`screens/s.bbt:4:6: item.do: must be a string`}},
+		// Each when error is an other error at 2:1, also a syntax error.
+		{[]string{`key = "a"`, `do = "logoff"`, `when = "item.A"`}, []string{
+			`screens/s.bbt:2:1: item "A": when: field "item.A" is valid only in {#if}`,
 		}},
-		{[]string{`do = "x"`, `key = 1`}, []string{
-			`screens/s.bbt:3:1: item 1: do: unknown action "x"`,
-			`screens/s.bbt:4:1: item 1: key: must be a string`,
-		}},
-		{[]string{`key = "esc"`, `do = "Goto main"`}, []string{`screens/s.bbt:4:1: item "ESC": do: unknown action "Goto"`}},
-		{[]string{`key = "A"`, `do = ""`}, []string{`screens/s.bbt:4:1: item "A": do: unknown action ""`}},
-		{[]string{`key = "A"`, `do = "goto"`}, []string{`screens/s.bbt:4:1: item "A": do: goto needs a screen name`}},
-		{[]string{`key = "A"`, `do = "goto  main"`}, []string{`screens/s.bbt:4:1: item "A": do: invalid screen name " main"`}},
-		{[]string{`key = "A"`, `do = "goto Main"`}, []string{`screens/s.bbt:4:1: item "A": do: invalid screen name "Main"`}},
-		{[]string{`key = "A"`, `do = "goto _f"`}, []string{`screens/s.bbt:4:1: item "A": do: invalid screen name "_f"`}},
-		{[]string{`key = "A"`, `do = "logoff now"`}, []string{`screens/s.bbt:4:1: item "A": do: logoff takes no argument`}},
-		{[]string{`key = "A"`, `do = "logoff "`}, []string{`screens/s.bbt:4:1: item "A": do: logoff takes no argument`}},
-		{[]string{`key = "a"`, `do = 1`, `when = "item.A"`, `x = 1`}, []string{
-			`screens/s.bbt:4:1: item "A": do: must be a string`,
-			`screens/s.bbt:5:1: item "A": when: field "item.A" is valid only in {#if}`,
-			`screens/s.bbt:6:1: item "A": unknown key "x"`,
+		{[]string{`key = "a"`, `when = "term.cols >"`}, []string{
+			`screens/s.bbt:2:1: item "A": do is missing`,
+			`screens/s.bbt:2:1: item "A": when: expected an integer or a string, found end of condition`,
 		}},
 	}
 	for _, tt := range tests {
@@ -312,7 +324,7 @@ func TestItemErrors(t *testing.T) {
 		}
 	}
 
-	// Duplicate keys after the case rule, also ANY: the error is at the second key.
+	// Duplicate keys after the case rule, also ANY.
 	data := `+++
 [[item]]
 key = "s"
@@ -324,21 +336,13 @@ do = "logoff"
 key = "S"
 do = "logoff"
 [[item]]
-key = "?"
-do = "logoff"
-[[item]]
 key = "ANY"
-do = "logoff"
-[[item]]
-key = "?"
 do = "logoff"
 +++
 `
 	want := []string{
-		`screens/s.bbt:9:1: item "S": key: duplicate key`,
-		`screens/s.bbt:12:1: item 4: key: invalid key "?"`,
-		`screens/s.bbt:15:1: item "ANY": key: duplicate key`,
-		`screens/s.bbt:18:1: item 6: key: invalid key "?"`,
+		`screens/s.bbt:2:1: item "S": key: duplicate key`,
+		`screens/s.bbt:2:1: item "ANY": key: duplicate key`,
 	}
 	if _, msgs := load(map[string]string{"s.bbt": data}); !slices.Equal(msgs, want) {
 		t.Errorf("duplicates:\n got %q\nwant %q", msgs, want)
@@ -533,7 +537,7 @@ func TestItemPaths(t *testing.T) {
 		want  []string
 	}{
 		{map[string]string{"goodbye.bbt": "+++\nwidth = [40, 80]\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n"},
-			[]string{`screens/goodbye.bbt:3:3: the goodbye screen cannot have items`}},
+			[]string{`screens/goodbye.bbt:2:1: the goodbye screen cannot have items`}},
 		{map[string]string{
 			"main.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{#if item.A and item.B}a{/if}\n{>_f}",
 			"_f.bbt":   "{#if item.C}a{/if}",
