@@ -290,7 +290,7 @@ and their UTF-8 save forms:
 
 The loader accepts each form that they write. Where they differ from ECMA-48,
 the loader follows them. A CP437 file is an error.
-[art-convert](../ideas/art-convert.md) converts CP437 art to UTF-8.
+[art-import](../ideas/art-import.md) converts CP437 art to UTF-8.
 
 ### 8.2. Reading
 
@@ -516,7 +516,7 @@ styles
 
 - `#each`, list rows in art, data providers and `{#if}` inside art:
   [lists](../ideas/lists.md). In the MVP, logic is in the BBS template only.
-- CP437 art: [art-convert](../ideas/art-convert.md).
+- CP437 art: [art-import](../ideas/art-import.md).
 - Raw art and ANSI animation: [content-trust](../ideas/content-trust.md).
 - Reload: [reload](../ideas/reload.md). A restart is sufficient for the MVP.
 - Marks and arrow-key selection: [menu-actions](../ideas/menu-actions.md).
