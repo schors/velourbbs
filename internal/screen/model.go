@@ -50,7 +50,6 @@ type Text struct {
 
 // Field is a field token. Width is 0 for the natural width, else the cells of the token.
 type Field struct {
-	Pos   Pos
 	Ref   Ref
 	Width int
 	Right bool
@@ -58,7 +57,6 @@ type Field struct {
 
 // SetStyle is a style token (section 7.3).
 type SetStyle struct {
-	Pos   Pos
 	Spec  StyleSpec
 	Whole bool // a theme style: it also sets the attributes
 }
@@ -73,7 +71,6 @@ func (s SetStyle) Apply(cur Style) Style {
 
 // If is a conditional block. Else is empty without {#else}.
 type If struct {
-	Pos        Pos
 	Cond       *Cond
 	Then, Else []Seg
 }
@@ -81,14 +78,12 @@ type If struct {
 // Include is an include of a fragment. After it, the style is the style before it.
 // The includes of one fragment in one screen share Body.
 type Include struct {
-	Pos  Pos
 	File string
 	Body []Seg
 }
 
 // ArtInsert is an art insert. Fields resolves the paths of Art.Fields with the aliases of the screen.
 type ArtInsert struct {
-	Pos    Pos
 	Art    *Art
 	Fields []Ref
 }
