@@ -34,7 +34,7 @@ const readSize = 4096
 // ErrIdle tells that no key arrived within the idle timeout.
 var ErrIdle = errors.New("term: idle timeout")
 
-// Terminal is the terminal of menu-nav, section 9, on a telnet connection.
+// Terminal is the terminal of menu-nav, section 8, on a telnet connection.
 // Probe gives it. One goroutine uses it.
 type Terminal struct {
 	c       Conn

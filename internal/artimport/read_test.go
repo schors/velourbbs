@@ -36,7 +36,7 @@ func cp437File(data string, width, height int, flags byte) []byte {
 	return append([]byte(data+"\x1a"), sauceRec(width, height, flags)...)
 }
 
-// dump writes the grid of a in the cell dump form of section 9.3.
+// dump writes the grid of a in the cell dump form of screen-render, section 3.3.
 func dump(t *testing.T, a *screen.Art) string {
 	t.Helper()
 	var b strings.Builder
@@ -392,7 +392,7 @@ func filler(n int) string {
 	return s
 }
 
-// TestBudget checks each count rule of the art play budget (section 10):
+// TestBudget checks each count rule of the art play budget (section 8):
 // the play of the budget gives no diagnostic, and one more cell gives the error at the cursor.
 func TestBudget(t *testing.T) {
 	const w = screen.MaxWidth

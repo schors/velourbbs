@@ -1,7 +1,7 @@
 // Package bbt loads the BBS templates of screens/ into the screen model of internal/screen.
 // The file pass parses each file once and resolves its fields with the aliases of bbs.toml.
 // The screen pass expands the includes and the art inserts of each screen.
-// Specification: docs/specs/screen-format.md, sections 3, 4, 5, 6.1 and 10.
+// Specification: docs/specs/bbt-format.md.
 package bbt
 
 import (
@@ -15,7 +15,7 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// MaxBodyLines is the line limit of the body of a screen after includes (section 10).
+// MaxBodyLines is the line limit of the body of a screen after includes (section 9).
 const MaxBodyLines = 10000
 
 // Load loads each screen of fsys/screens with the fragments and the art that it uses.

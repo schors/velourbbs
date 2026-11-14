@@ -1,5 +1,6 @@
-// Package key holds the key names, the case rule and the Russian layout map
-// of the menu-nav specification, section 3.
+// Package key holds the key names and the case rule of bbt-format, section 8.1,
+// and the Russian layout map of menu-nav, section 3.2.
+// A section without a specification name is a section of menu-nav.
 package key
 
 import (
@@ -10,7 +11,7 @@ import (
 // Any is the key that matches each key without an enabled item of its own.
 const Any = "ANY"
 
-// named are the named keys of section 3.1, without F1–F12.
+// named are the named keys of bbt-format, section 8.1, without F1–F12.
 var named = []string{
 	"ESC", "ENTER", "SPACE", "TAB", "BS", "DEL", "UP", "DOWN", "LEFT", "RIGHT",
 	"HOME", "END", "PGUP", "PGDN",
@@ -27,7 +28,7 @@ func Upper(s string) string {
 }
 
 // Parse gives the key of an item after the case rule.
-// ok is false when s is not a key name of section 3.1 or ANY.
+// ok is false when s is not a key name of bbt-format, section 8.1, or ANY.
 func Parse(s string) (k string, ok bool) {
 	k = Upper(s)
 	if len(k) == 1 {
@@ -69,7 +70,7 @@ func Latin(r rune) (l rune, ok bool) {
 
 // Map gives the key of the menu match for a key from the terminal (section 3.3, step 1):
 // a Cyrillic letter gives its Latin letter (section 3.2), and the case rule applies.
-// k is a key name of section 3.1 or one character.
+// k is a key name of bbt-format, section 8.1, or one character.
 func Map(k string) string {
 	if r := []rune(k); len(r) == 1 {
 		if l, ok := Latin(r[0]); ok {

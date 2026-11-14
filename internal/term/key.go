@@ -52,7 +52,7 @@ const (
 // Decoder is the key decoder of one connection (section 8.1, steps 2–4, and section 8.2).
 // It takes the data bytes after the telnet parser. Its zero value is ready.
 //
-// A key is a key name of menu-nav, section 3.1, for example ENTER or F1,
+// A key is a key name of bbt-format, section 8.1, for example ENTER or F1,
 // or one character, for example "a" or "ы".
 type Decoder struct {
 	afterCR bool              // the previous byte was CR (section 8.1, step 2)

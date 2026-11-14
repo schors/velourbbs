@@ -41,7 +41,7 @@ func AppendPage(dst []byte, p screen.Page, colors int) []byte {
 }
 
 // appendUTF8 is the encoder of section 7.4. The model holds valid UTF-8
-// (screen-format, sections 4.3 and 8.2), so it copies the bytes.
+// (bbt-format, sections 2, 3.1 and 4.3, and art-format, section 2), so it copies the bytes.
 func appendUTF8(dst []byte, g string) []byte {
 	return append(dst, g...)
 }

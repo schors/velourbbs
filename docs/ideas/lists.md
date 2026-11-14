@@ -1,7 +1,7 @@
 # Idea: lists and data providers
 
-Backlog. It extends [screen-format](../specs/screen-format.md) and
-[menu-nav](../specs/menu-nav.md).
+Backlog. It extends [bbt-format](../specs/bbt-format.md), [art-format](../specs/art-format.md)
+and [menu-nav](../specs/menu-nav.md).
 
 ## Goal
 
@@ -69,7 +69,7 @@ A `.bbt` text list:
 
 1. How `<list>` in `{#each <list>}` names the `data` of the screen.
    A name without a dot shares the names of the aliases in `bbs.toml`.
-2. Fields in art of other authors. Now the sysop writes field tokens into the art file (screen-format, section 8.4).
+2. Fields in art of other authors. Now the sysop writes field tokens into the art file (art-format, section 4).
    The other option: art as a background, `art = "main"` in the front matter,
    and fields over the art at a row and a column.
 

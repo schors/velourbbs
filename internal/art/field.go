@@ -6,7 +6,7 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// findFields finds the field tokens in the rows of the art (section 8.4)
+// findFields finds the field tokens in the rows of the art (section 4)
 // and resolves their paths with the aliases fields.
 // A token is "{", optional spaces, a path, optional spaces and "}" on one row.
 // Each other "{" is a plain character.

@@ -2,13 +2,13 @@
 
 This specification defines the telnet server, the detection of the terminal at connect,
 the output of pages, the key decoder and the connection limits.
-Related parts: [screen-format](screen-format.md) and [menu-nav](menu-nav.md).
+Related parts: [bbt-format](bbt-format.md), [screen-render](screen-render.md) and [menu-nav](menu-nav.md).
 
 ## 1. Goal
 
 A user connects with telnet. The host finds the terminal type, the screen size, the charset
 and the colour depth. Then it starts the session at the first screen ([menu-nav](menu-nav.md),
-section 6).
+section 5).
 
 ## 2. Concepts
 
@@ -18,8 +18,8 @@ section 6).
 - The "encoder" is the last step of output. It converts cells to bytes for the charset
   of the terminal.
 - The "key decoder" converts input characters to keys: the key names and the characters
-  of [menu-nav](menu-nav.md), section 3.1.
-- The "control characters" are those of [screen-format](screen-format.md), section 2.1.
+  of [bbt-format](bbt-format.md), section 8.1, and [menu-nav](menu-nav.md), section 3.1.
+- The "control characters" are those of [bbt-format](bbt-format.md), section 2.1.
 - In the byte sequences of this specification, spaces and commas only separate the parts.
   The host does not send them.
 
@@ -115,7 +115,7 @@ The host keeps the state of each option for each side, as in RFC 1143:
 - The host clamps the size to 20–255 columns and 10–100 rows.
 - A NAWS update after the probe changes `term.cols` and `term.rows`.
   An update with 0 in a dimension does not change them.
-  The session uses the new size at the next screen ([menu-nav](menu-nav.md), section 6).
+  The session uses the new size at the next screen ([menu-nav](menu-nav.md), section 5).
 
 ### 5.3. Type
 
@@ -164,7 +164,7 @@ The TTYPE name in the log is filtered and cut as `term.type` (section 6).
 
 - `term.type` is untrusted client input. The host removes the control characters and cuts
   the name to 40 graphemes. A name that is empty after this counts as no name.
-  The value rules of [screen-format](screen-format.md), section 4.3, also apply.
+  The value rules of [bbt-format](bbt-format.md), section 4.3, also apply.
 - Colour depth: the first rule that matches `term.type` gives it:
   1. a name that ends with `-direct`, or that has `truecolor` or `24bit`: 16777216;
   2. a name that has `256color`: 256;
@@ -181,7 +181,7 @@ The TTYPE name in the log is filtered and cut as `term.type` (section 6).
 
 ### 7.1. Page
 
-The host shows a page ([menu-nav](menu-nav.md), section 6) in this order:
+The host shows a page ([menu-nav](menu-nav.md), section 5) in this order:
 
 1. `ESC[0m ESC[2J`: reset the style and clear the terminal screen.
 2. For each row of the page: `ESC[<row>;1H`, then the cells of the row.
@@ -189,7 +189,7 @@ The host shows a page ([menu-nav](menu-nav.md), section 6) in this order:
 
 - A wide grapheme appears once. Its second cell gives no output.
 - Each row starts at its own position, so a page has no line ends
-  ([screen-format](screen-format.md), section 6.4).
+  and the terminal does not scroll.
 
 ### 7.2. Styles
 
@@ -317,7 +317,7 @@ output_timeout = 60
 
 - Each integer is from 1 to 1000000. The port of `listen` is from 1 to 65535.
 - An address is an IPv4 or IPv6 address. A prefix is an address with `/<bits>`.
-- `velourbbs check` checks `[telnet]` with the rules of [screen-format](screen-format.md), section 9.1.
+- `velourbbs check` checks `[telnet]` with the rules of [screen-render](screen-render.md), section 3.1.
 
 ### 9.2. Connection limits
 
@@ -356,7 +356,7 @@ output_timeout = 60
 
 `velourbbs serve` starts the telnet server for the BBS directory, the current directory.
 
-- It does the checks of [screen-format](screen-format.md), section 9.1, at start.
+- It does the checks of [screen-render](screen-render.md), section 3.1, at start.
   It writes the errors and the warnings to the standard error.
 - It writes the log to the standard error: a `listen` line with the address,
   the probe line (section 5.6) and a `close` line for each connection.
@@ -379,7 +379,7 @@ output_timeout = 60
 | Package | Content |
 |---|---|
 | `internal/telnet` | The telnet parser, the option states and the subnegotiations. |
-| `internal/term` | The probe, the encoder, the colour reduction, the key decoder and the terminal of [menu-nav](menu-nav.md), section 9. |
+| `internal/term` | The probe, the encoder, the colour reduction, the key decoder and the terminal of [menu-nav](menu-nav.md), section 8. |
 | `internal/server` | The listener, the limits, the PROXY protocol header and the sessions. |
 | `internal/config` | `[telnet]` in `bbs.toml`. |
 

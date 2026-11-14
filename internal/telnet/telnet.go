@@ -123,7 +123,7 @@ func New() *Parser {
 	return &Parser{}
 }
 
-// Start gives the requests that the host sends at connect (section 4.1)
+// Start gives the requests that the host sends at connect (telnet-term, section 4.1)
 // and sets the state of these options to "want yes".
 func (p *Parser) Start() []byte {
 	reqs := []struct{ verb, opt byte }{
@@ -150,7 +150,7 @@ func SendTTYPE() []byte {
 	return []byte{cmdIAC, cmdSB, OptTTYPE, ttypeSEND, cmdIAC, cmdSE}
 }
 
-// Escape appends b to dst with each 0xFF doubled (section 4.3).
+// Escape appends b to dst with each 0xFF doubled (telnet-term, section 4.3).
 func Escape(dst, b []byte) []byte {
 	for _, c := range b {
 		dst = append(dst, c)
@@ -240,7 +240,7 @@ func (p *Parser) command(now time.Time, b byte, r *Result) error {
 	return nil
 }
 
-// negotiate handles a WILL, WONT, DO or DONT request for the option opt (section 4.1).
+// negotiate handles a WILL, WONT, DO or DONT request for the option opt (telnet-term, section 4.1).
 func (p *Parser) negotiate(verb, opt byte, r *Result) {
 	local := verb == cmdDO || verb == cmdDONT
 	on := verb == cmdWILL || verb == cmdDO

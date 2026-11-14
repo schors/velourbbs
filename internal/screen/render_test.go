@@ -108,7 +108,7 @@ func TestRender(t *testing.T) {
 		cols, rows int
 		items      []string
 	}{
-		// The example of section 9.3.
+		// The example of screen-render, section 3.3.
 		{"example", map[string]string{
 			"main.bbt": "+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{!title}Welcome!{!}\n{!14}[G]oodbye\n",
 		}, 80, 24, nil},
@@ -180,7 +180,7 @@ func TestRender(t *testing.T) {
 	}
 }
 
-// The golden dump of the example equals the dump of section 9.3.
+// The golden dump of the example equals the dump of screen-render, section 3.3.
 func TestRenderExampleDump(t *testing.T) {
 	want := `page 1 80x24
 |Welcome!                                                                        |
@@ -227,7 +227,7 @@ func countRows(s *screen.Screen, env *screen.Env) int {
 	return rows - (pages - 1)
 }
 
-// A session holds one page (section 6.4): during the render of MaxRenderRows rows
+// A session holds one page (screen-render, section 2): during the render of MaxRenderRows rows
 // at 255 columns, the live heap holds less than 3 pages of cells. A row has the cells
 // of the screen area only: at W = 20, the live heap holds less than 3 pages of 20 cells.
 func TestRenderPageMemory(t *testing.T) {

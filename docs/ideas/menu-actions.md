@@ -1,6 +1,6 @@
 # Idea: menu actions beyond goto
 
-Backlog. It extends [menu-nav](../specs/menu-nav.md).
+Backlog. It extends [bbt-format](../specs/bbt-format.md) and [menu-nav](../specs/menu-nav.md).
 
 ## Goal
 
@@ -50,7 +50,7 @@ args = { area = "{arg.area}", n = "{in}" }
 
 ## Arrow-key selection
 
-- A mark `{@<id>}...{/@}` is a named span in a screen. The screen format reserves this syntax.
+- A mark `{@<id>}...{/@}` is a named span in a screen. [bbt-format](../specs/bbt-format.md), section 3.3, reserves this syntax.
 - Layout reports the final cells of each mark.
 - Arrow keys move over the marks. Enter runs the item of the selected mark. Hotkeys also work.
 - A selected mark uses a theme style.

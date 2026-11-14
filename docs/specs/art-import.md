@@ -1,7 +1,7 @@
 # Art import
 
 This specification defines the command `velourbbs art import`.
-It converts ANSI art to the flat form ([screen-format](screen-format.md), section 8).
+It converts ANSI art to the flat form ([art-format](art-format.md)).
 
 ## 1. Goal
 
@@ -13,9 +13,9 @@ The host never plays cursor moves and never reads CP437.
 
 `velourbbs art import <input> <output>` reads the file `<input>` and writes the file `<output>`.
 
-- Each other count of arguments is a usage error (screen-format, section 9).
+- Each other count of arguments is a usage error ([screen-render](screen-render.md), section 3).
 - `<input>` and `<output>` that name the same file are a usage error.
-- The diagnostics have the form of screen-format, section 9.1, with the file `<input>`.
+- The diagnostics have the form of [screen-render](screen-render.md), section 3.1, with the file `<input>`.
 - After an error, the import writes no file and exits with status 1.
   An existing `<output>` stays unchanged.
 - Without an error, the import writes `<output>`. It replaces an existing file.
@@ -25,7 +25,7 @@ The host never plays cursor moves and never reads CP437.
 - An existing `<output>` keeps its mode. A new `<output>` gets the mode 0644.
 - The source file is the file that the editor can edit. Moebius and PabloDraw cannot read
   the flat form. Edit the source file, then import it again.
-  Keep the source file outside `screens/` (screen-format, section 2).
+  Keep the source file outside `screens/` ([bbt-format](bbt-format.md), section 2).
 
 ## 3. Target implementations
 
@@ -54,7 +54,7 @@ and each is an error. Export such art at the level IcyTerm.
 
 ## 4. Reading
 
-1. The SAUCE record and the COMNT block have the layout of screen-format, section 8.2, step 1.
+1. The SAUCE record and the COMNT block have the layout of [art-format](art-format.md), section 2, step 1.
    The input can have no SAUCE record. When `Comments` is > 0, the COMNT block must be
    at its place. The import does not check the SAUCE `FileSize`.
    Moebius pads each comment line to 64 characters (UTF-16 code units) and then writes
@@ -69,7 +69,7 @@ and each is an error. Export such art at the level IcyTerm.
 4. UTF-8 input must be valid UTF-8. Invalid UTF-8 is one error, and the import stops.
    The play finds it, so an error that stops the play before it comes in its place.
    LF, CR and ESC are controls. Each other control character
-   (screen-format, section 2.1) is an error.
+   ([bbt-format](bbt-format.md), section 2.1) is an error.
 5. In CP437 input, LF, CR and ESC are controls. Each other byte is a character
    by the table of section 7.
 6. A "character SAUCE" has `DataType` 1 and `FileType` 1. The import uses `TInfo1`,
@@ -78,7 +78,7 @@ and each is an error. Export such art at the level IcyTerm.
    A width over 255 or a `TInfo2` over 1000 is an error.
 7. iCE colours are on when bit 0 of `TFlags` is 1.
 
-The import checks each grapheme by screen-format, section 2.1.
+The import checks each grapheme by [bbt-format](bbt-format.md), section 2.1.
 
 ## 5. Play
 
@@ -98,7 +98,7 @@ The import plays the data into a grid of cells. The grid width is the art width.
   A wide grapheme overwrites the last two cells.
 - A write to one half of a wide grapheme turns the other half into a space in its style.
 - `CSI A`, `B`, `H` and `f` keep the cursor inside the grid width and the row limit
-  (screen-format, section 10). `CSI C` and `D` change only the column, inside the grid width.
+  ([art-format](art-format.md), section 5). `CSI C` and `D` change only the column, inside the grid width.
   A restore (`CSI u`, `ESC 8`) goes back to the saved row and column.
 - In UTF-8 input, a wrap also resets the style to `7/0` without attributes.
   icy_draw at the level UTF-8 starts each row in this style and writes no SGR
@@ -185,8 +185,9 @@ The table is fixed data, so a dependency gives no gain.
 
 ## 8. Limits
 
-The limits of screen-format, section 10, apply to the input: the file, the art grid,
-the grapheme and the diagnostics. The play has one more limit:
+These limits apply to the input: the file and the art grid ([art-format](art-format.md), section 5),
+the grapheme ([bbt-format](bbt-format.md), section 9) and the diagnostics
+([screen-render](screen-render.md), section 3.1). The play has one more limit:
 
 - The play writes and erases at most 4080000 cells: 16 grids of 255 columns and 1000 rows.
   Then one error at the cursor, and the import stops.
@@ -195,7 +196,7 @@ the grapheme and the diagnostics. The play has one more limit:
 
 ## 9. Output
 
-The import writes the grid in the flat form (screen-format, section 8):
+The import writes the grid in the flat form ([art-format](art-format.md)):
 
 1. A BOM.
 2. Each row of the grid, then LF. A row has no trailing cells that are a space in `7/0`.
@@ -211,11 +212,11 @@ The import writes the grid in the flat form (screen-format, section 8):
    and does not change at LF.
 4. 0x1A and the SAUCE record (SAUCE 00) with a COMNT block when there are comments.
 
-After the write, the import reads its output by screen-format, sections 8.2 and 8.3.
-The fields of section 8.4 need `bbs.toml`, so `velourbbs check` checks them.
+After the write, the import reads its output by [art-format](art-format.md), sections 2 and 3.
+The fields of art-format, section 4, need `bbs.toml`, so `velourbbs check` checks them.
 When that grid differs from the grid of the play, it is an error at the first different cell.
 Example: two regional indicators in two cells join into one flag grapheme.
-An output over the file limit (screen-format, section 10) is an error.
+An output over the file limit ([art-format](art-format.md), section 5) is an error.
 
 SAUCE fields of the output:
 

@@ -215,7 +215,7 @@ func TestFileForm(t *testing.T) {
 }
 
 func TestFrontMatter(t *testing.T) {
-	// A TOML error has the position of its key or value; each other error has 2:1 (section 9.1).
+	// A TOML error has the position of its key or value; each other error has 2:1 (screen-render, section 3.1).
 	tests := []struct {
 		files map[string]string
 		want  []string
@@ -458,7 +458,7 @@ func TestLimits(t *testing.T) {
 	}
 
 	// A chain of includes: each include line counts, so the nesting stops at the line limit.
-	// The screen pass does not read the last fragment (section 9.1).
+	// The screen pass does not read the last fragment (screen-render, section 3.1).
 	files = map[string]string{"s.bbt": "{>_f1}"}
 	for i := 1; i <= bbt.MaxBodyLines+1; i++ {
 		files[fmt.Sprintf("_f%d.bbt", i)] = fmt.Sprintf("{>_f%d}", i+1)
@@ -470,7 +470,7 @@ func TestLimits(t *testing.T) {
 	}
 
 	// The screen pass stops at the limit, so it does not read _g.bbt:
-	// the warning "no screen uses this file" is false (section 9.1).
+	// the warning "no screen uses this file" is false (screen-render, section 3.1).
 	_, msgs = load(map[string]string{"s.bbt": strings.Repeat("{>_f}\n", 100) + "{>_g}", "_f.bbt": frag, "_g.bbt": "x"})
 	want = []string{`screens/_g.bbt:1:1: warning: no screen uses this file`, `screens/s.bbt:99:1: body is over 10000 lines after includes`}
 	if !slices.Equal(msgs, want) {

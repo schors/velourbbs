@@ -21,7 +21,7 @@ func row(width int, text string, s, pad Style) Row {
 	return r
 }
 
-// The example of section 9.3.
+// The example of screen-render, section 3.3.
 func TestWriteDump(t *testing.T) {
 	normal := Style{Fg: IndexColour(7), Bg: IndexColour(0)}
 	title := Style{Fg: IndexColour(15), Bg: IndexColour(4), Attr: Bold}

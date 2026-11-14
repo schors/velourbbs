@@ -1,6 +1,7 @@
 # Idea: Lua mods
 
-Backlog. It extends [menu-nav](../specs/menu-nav.md) with the action `run`.
+Backlog. It extends [bbt-format](../specs/bbt-format.md) and [menu-nav](../specs/menu-nav.md)
+with the action `run`.
 
 ## Goal
 

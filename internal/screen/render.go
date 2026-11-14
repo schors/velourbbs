@@ -2,7 +2,7 @@ package screen
 
 import "iter"
 
-// MaxRenderRows is the row limit of a rendered screen (section 10).
+// MaxRenderRows is the row limit of a rendered screen (section 9).
 const MaxRenderRows = 10000
 
 // Render renders the screen s for the terminal of env and gives its pages (section 6).
@@ -226,7 +226,7 @@ func (r *renderer) newRow() {
 	r.cells, r.col = r.cells[:0], 0
 }
 
-// art adds the rows of an art insert with the values of its fields (sections 6.2 and 8.4).
+// art adds the rows of an art insert with the values of its fields (section 6.2 and art-format, section 4).
 func (r *renderer) art(a ArtInsert) {
 	fields := a.Art.Fields
 	fi := 0

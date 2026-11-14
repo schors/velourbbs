@@ -38,7 +38,7 @@ func (p Page) Line(i int, buf Row) Row {
 	return buf
 }
 
-// MaxWidth is the largest render width and art width (sections 3.2 and 8.2).
+// MaxWidth is the largest render width and art width (section 3.2 and art-format, section 2).
 const MaxWidth = 255
 
 // WidthLimits is the [min, max] range of the render width (section 6.1).

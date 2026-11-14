@@ -24,7 +24,7 @@ type Sauce struct {
 	Lines                      [][]byte // the COMNT lines; nil when the block is missing
 }
 
-// SplitSauce gives the data of the file and its SAUCE record (section 8.2, step 1).
+// SplitSauce gives the data of the file and its SAUCE record (section 2, step 1).
 // The data is the bytes before the COMNT block or the SAUCE record. It keeps a 0x1A.
 // The record is nil when the file has none.
 func SplitSauce(file []byte) ([]byte, *Sauce) {

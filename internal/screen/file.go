@@ -8,7 +8,7 @@ import (
 	"unicode/utf8"
 )
 
-// MaxFileBytes is the size limit of a .bbt or an .ans file (section 10).
+// MaxFileBytes is the size limit of a .bbt or an .ans file (section 9 and art-format, section 5).
 // ReadFile also reads bbs.toml; internal/tomlcheck has its smaller limit.
 const MaxFileBytes = 1 << 20
 

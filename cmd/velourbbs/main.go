@@ -1,6 +1,6 @@
 // Command velourbbs checks and previews the screens of a BBS directory, the current directory,
 // and serves them over telnet. It also converts ANSI art to the flat form.
-// Specification: docs/specs/screen-format.md, section 9, docs/specs/art-import.md, section 2,
+// Specification: docs/specs/screen-render.md, section 3, docs/specs/art-import.md, section 2,
 // and docs/specs/telnet-term.md, section 10.
 package main
 
@@ -16,7 +16,7 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// The exit statuses: an error in the files (section 9.1) or of listen, and a usage error.
+// The exit statuses: an error in the files (screen-render, section 3.1) or of listen, and a usage error.
 const (
 	exitError = 1
 	exitUsage = 2
@@ -71,7 +71,7 @@ func load(fsys fs.FS) (config.Config, map[string]*screen.Screen, screen.Diags) {
 	if ds.HasErrors() {
 		return cfg, nil, ds
 	}
-	// The menu checks between files need all screens (menu-nav, section 7).
+	// The menu checks between files need all screens (menu-nav, section 6).
 	ds = menu.Check(cfg, screens, ds)
 	if ds.HasErrors() {
 		screens = nil

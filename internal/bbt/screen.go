@@ -37,7 +37,7 @@ type condAt struct {
 }
 
 // errorf reports an error at pos. A position in another file than the screen
-// starts with the screen name (section 9.1). A screen with a front matter error
+// starts with the screen name (screen-render, section 3.1). A screen with a front matter error
 // reports nothing: without its width limits and items, it gives only noise.
 func (l *loader) errorf(u *unit, pos screen.Pos, warning bool, format string, args ...any) {
 	if u.f.skip {
@@ -55,7 +55,7 @@ func (l *loader) errorf(u *unit, pos screen.Pos, warning bool, format string, ar
 	}
 }
 
-// screen does the screen pass: the limits of section 10, the includes,
+// screen does the screen pass: the limits of section 9, the includes,
 // the art inserts and the width limits. The file pass resolved the fields.
 // A screen with a front matter error resolves for the errors of its includes
 // and art inserts, and gives no model.
@@ -179,7 +179,7 @@ func (l *loader) include(u *unit, n include, top bool) (body []screen.Seg, ok bo
 }
 
 // checkItems checks that goodbye has no items and the item.<KEY> paths of each screen
-// against its own items (menu-nav, section 7).
+// against its own items (menu-nav, section 6, and bbt-format, section 8.4).
 func (l *loader) checkItems(units []*unit) {
 	for _, u := range units {
 		if !u.done {

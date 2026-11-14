@@ -17,8 +17,8 @@ import (
 	"github.com/schors/velourbbs/internal/term"
 )
 
-// preview runs velourbbs preview (section 9.2): it renders a screen and writes its cell dump
-// to stdout. With --keys, it runs a session (menu-nav, section 8).
+// preview runs velourbbs preview (screen-render, section 3.2): it renders a screen and writes its cell dump
+// to stdout. With --keys, it runs a session (menu-nav, section 7).
 // The flags can come before and after the name.
 func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	term := screen.Term{Type: "xterm", Cols: 80, Rows: 24, Charset: "utf-8", Colors: screen.Colors256}
@@ -132,7 +132,7 @@ func setField(v string, t *screen.Term, colorsSet *bool) error {
 	return fmt.Errorf("cannot set %q: only term.type and term.colors", path)
 }
 
-// parseKeys parses the key list of --keys (menu-nav, section 8). An element is a key name
+// parseKeys parses the key list of --keys (menu-nav, section 7). An element is a key name
 // except ANY, or one other printable character except the comma and the space.
 func parseKeys(v string) ([]string, error) {
 	if v == "" {
@@ -157,7 +157,7 @@ func parseKeys(v string) ([]string, error) {
 var errNoKeys = errors.New("no more keys")
 
 // keysTerm is the terminal of velourbbs preview --keys. It takes the keys from a list
-// and writes the events of menu-nav, section 8, to w.
+// and writes the events of menu-nav, section 7, to w.
 type keysTerm struct {
 	term screen.Term
 	keys []string

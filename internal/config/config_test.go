@@ -75,7 +75,7 @@ w = "term.cols"
 	}
 	want := map[string]string{
 		"normal": "14/0",      // the background from the default normal
-		"title":  "15/4 bold", // the example of section 7.3
+		"title":  "15/4 bold", // the example of bbt-format, section 7.3
 		"prompt": "14/1",      // the foreground from normal
 		"more":   "-/-",
 	}
@@ -100,7 +100,7 @@ func TestNormalAttributes(t *testing.T) {
 	}
 }
 
-// Each other error has the position 1:1 (section 9.1).
+// Each other error has the position 1:1 (screen-render, section 3.1).
 func TestErrors(t *testing.T) {
 	data := strings.Join([]string{
 		`[screen]`,
@@ -128,7 +128,7 @@ func TestErrors(t *testing.T) {
 }
 
 // A TOML document gives a syntax or type error; else all unknown keys;
-// else its other errors (section 9.1).
+// else its other errors (screen-render, section 3.1).
 func TestTOMLErrors(t *testing.T) {
 	tests := []struct {
 		data string
@@ -158,7 +158,7 @@ func TestTOMLErrors(t *testing.T) {
 		}},
 		{"a = 1\n[screen]\nb = 2\nwidth = [1, 1]", []string{`bbs.toml:1:1: unknown key "a"`, `bbs.toml:3:1: unknown key "screen.b"`}},
 		{"[fields]\nw = 1", []string{`bbs.toml:2:5: fields.w: must be a string`}},
-		// Each invalid alias is an other error at 1:1 (section 4.2).
+		// Each invalid alias is an other error at 1:1 (bbt-format, section 4.2).
 		{"fields = { \"яя\" = \"term.cols\", and = \"term.rows\", k = \"item.A\", u = \"term.x\", v = \"w\" }", []string{
 			`bbs.toml:1:1: fields: alias "and" is a reserved word`,
 			`bbs.toml:1:1: fields: alias "k": "item.A" is valid only in {#if}`,
@@ -175,7 +175,7 @@ func TestTOMLErrors(t *testing.T) {
 	}
 }
 
-// The loader removes a BOM (section 2).
+// The loader removes a BOM (bbt-format, section 2).
 func TestBOM(t *testing.T) {
 	cfg, ds := Parse([]byte("\ufeff[menu]\nstart = \"x\"\n"))
 	if len(ds) != 0 || cfg.Start != "x" {

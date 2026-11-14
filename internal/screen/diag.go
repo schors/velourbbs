@@ -9,7 +9,7 @@ import (
 	"unicode/utf8"
 )
 
-// Diag is an error or a warning in a file (section 9.1).
+// Diag is an error or a warning in a file (screen-render, section 3.1).
 // Row and Col are 1-based.
 type Diag struct {
 	File     string
@@ -77,7 +77,7 @@ func (ds Diags) Sort() {
 	})
 }
 
-// MaxFileDiags is the limit of errors and warnings of one file (section 10).
+// MaxFileDiags is the limit of errors and warnings of one file (screen-render, section 3.1).
 const MaxFileDiags = 100
 
 // FileDiags collects the diagnostics of one file up to MaxFileDiags.

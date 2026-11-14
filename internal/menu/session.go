@@ -6,22 +6,22 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// Terminal is the session view of the client (section 9).
+// Terminal is the session view of the client (section 8).
 // velourbbs preview and telnet-term give its implementations.
 type Terminal interface {
 	// Term gives the terminal fields. The values pass screen.Term.Check
-	// (screen-format, section 4.1). The session reads them before each screen,
+	// (bbt-format, section 4.1). The session reads them before each screen,
 	// so a resize takes effect at the next screen.
 	Term() screen.Term
-	// Key waits for the next key of the input queue: a key name of section 3.1
-	// except ANY, or one other character: a character without a key name of section 3.1.
+	// Key waits for the next key of the input queue: a key name of bbt-format,
+	// section 8.1, except ANY, or one other character: a character without a key name.
 	// An error ends the session.
 	Key() (string, error)
 	// Page shows the page p.
 	Page(p screen.Page) error
 }
 
-// Events takes the other events of section 8. Run sends them only to a Terminal
+// Events takes the other events of section 7. Run sends them only to a Terminal
 // that implements Events.
 type Events interface {
 	// Screen tells that the session shows the screen name. Its pages follow.
@@ -47,7 +47,7 @@ type session struct {
 	cfg config.Config
 }
 
-// Run runs a session from the screen start until logoff (section 6).
+// Run runs a session from the screen start until logoff (section 5).
 // screens is the result of a load without errors and of Check, and start passes
 // CheckTarget. Run returns nil after logoff, else the first error of t unchanged.
 func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start string) error {
@@ -80,7 +80,7 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 	}
 }
 
-// show shows the screen s: it renders s and shows its pages (section 6).
+// show shows the screen s: it renders s and shows its pages (section 5).
 // After each page with a More row, it waits for any key. It gives the enabled items.
 func (ss *session) show(s *screen.Screen) (map[string]screen.Item, error) {
 	if err := ss.ev.Screen(s.Name); err != nil {
@@ -106,7 +106,7 @@ func (ss *session) show(s *screen.Screen) (map[string]screen.Item, error) {
 	return items, nil
 }
 
-// Enabled evaluates the when of each item of s for the terminal term (section 4).
+// Enabled evaluates the when of each item of s for the terminal term (bbt-format, section 8.2).
 // It gives the field values of the render and the enabled items by key.
 func Enabled(s *screen.Screen, term screen.Term) (*screen.Env, map[string]screen.Item) {
 	env := &screen.Env{Term: term, Items: map[string]bool{}}

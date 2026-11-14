@@ -37,7 +37,7 @@ func flat(data string, width, height int) []byte {
 	return append([]byte("\xef\xbb\xbf"+data+"\x1a"), sauce(width, height, 0)...)
 }
 
-// dump writes the grid of a in the cell dump form of section 9.3.
+// dump writes the grid of a in the cell dump form of screen-render, section 3.3.
 func dump(t *testing.T, a *screen.Art) string {
 	t.Helper()
 	var b strings.Builder
@@ -133,7 +133,7 @@ func withField(file []byte, offset int, v byte) []byte {
 	return file
 }
 
-// TestNotFlat checks the steps 1, 2 and 4 of section 8.2.
+// TestNotFlat checks the steps 1, 2 and 4 of section 2.
 func TestNotFlat(t *testing.T) {
 	const notFlat = "a.ans:1:1: not in the flat form, convert it with velourbbs art import"
 	tests := []struct {
@@ -351,7 +351,7 @@ func FuzzParse(f *testing.F) {
 	})
 }
 
-// TestReadGrid checks that ReadGrid reads the grid by sections 8.2 and 8.3 without the fields:
+// TestReadGrid checks that ReadGrid reads the grid by sections 2 and 3 without the fields:
 // an unknown alias and a token in two colours are no errors.
 func TestReadGrid(t *testing.T) {
 	a, ds := art.ReadGrid("a.ans", flat("{x} {\x1b[31mw}", 8, 1))
