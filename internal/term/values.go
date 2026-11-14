@@ -13,7 +13,7 @@ const typeLen = 40
 // The default size (section 5.2).
 const (
 	defaultCols = 80
-	defaultRows = 25
+	defaultRows = 24
 )
 
 // names16 are the names of rule 3 of the colour depth (section 6).
@@ -33,6 +33,16 @@ func cleanName(name string) string {
 		b.WriteString(g.Text)
 	}
 	return b.String()
+}
+
+// TypeColors gives term.type and term.colors from the terminal name name (section 6):
+// the clean name in lower case, or ansi for an empty name, and its colour depth.
+func TypeColors(name string) (typ string, colors int) {
+	typ = "ansi"
+	if c := cleanName(name); c != "" {
+		typ = strings.ToLower(c)
+	}
+	return typ, colorDepth(typ)
 }
 
 // colorDepth gives term.colors for term.type typ (section 6).
@@ -65,11 +75,8 @@ type replies struct {
 // values gives the terminal values of section 6. utf8 is false when the charset probe
 // gives "not UTF-8" (section 5.4).
 func (r *replies) values() (t screen.Term, utf8 bool) {
-	t = screen.Term{Type: "ansi", Charset: "utf-8"}
-	if c := cleanName(r.ttype); c != "" {
-		t.Type = strings.ToLower(c)
-	}
-	t.Colors = colorDepth(t.Type)
+	t = screen.Term{Charset: "utf-8"}
+	t.Type, t.Colors = TypeColors(r.ttype)
 	utf8 = !r.cprGot || r.cpr.Col != 3
 	t.Cols, t.Rows = r.naws.Cols, r.naws.Rows
 	if t.Cols == 0 {

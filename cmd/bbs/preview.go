@@ -14,18 +14,20 @@ import (
 	"newbbs/internal/key"
 	"newbbs/internal/menu"
 	"newbbs/internal/screen"
+	"newbbs/internal/term"
 )
 
 // preview runs bbs preview (section 9.2): it renders a screen and writes its cell dump
 // to stdout. With --keys, it runs a session (menu-nav, section 8).
 // The flags can come before and after the name.
 func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
-	term := screen.Term{Type: "xterm", Cols: 80, Rows: 25, Charset: "utf-8", Colors: screen.Colors256}
+	term := screen.Term{Type: "xterm", Cols: 80, Rows: 24, Charset: "utf-8", Colors: screen.Colors256}
 	fl := flag.NewFlagSet("bbs preview", flag.ContinueOnError)
 	fl.SetOutput(stderr)
 	fl.Usage = func() { _, _ = io.WriteString(stderr, usage) }
 	fl.Func("size", "", func(v string) error { return parseSize(v, &term) })
-	fl.Func("set", "", func(v string) error { return setField(v, &term) })
+	colorsSet := false
+	fl.Func("set", "", func(v string) error { return setField(v, &term, &colorsSet) })
 	var keys []string
 	session := false
 	fl.Func("keys", "", func(v string) error {
@@ -105,21 +107,26 @@ func decimal(s string) (int, error) {
 	return strconv.Atoi(s)
 }
 
-// setField sets term.type or term.colors from "<path>=<value>".
-func setField(v string, term *screen.Term) error {
+// setField sets term.type or term.colors of t from "<path>=<value>".
+// term.type also gives term.colors, unless colorsSet: an explicit term.colors overrides it.
+func setField(v string, t *screen.Term, colorsSet *bool) error {
 	path, value, ok := strings.Cut(v, "=")
 	switch {
 	case !ok:
 		return fmt.Errorf("expected <path>=<value>")
 	case path == "term.type":
-		term.Type = value
+		typ, colors := term.TypeColors(value)
+		t.Type = typ
+		if !*colorsSet {
+			t.Colors = colors
+		}
 		return nil
 	case path == "term.colors":
 		n, err := decimal(value)
 		if err != nil {
 			return err
 		}
-		term.Colors = n
+		t.Colors, *colorsSet = n, true
 		return nil
 	}
 	return fmt.Errorf("cannot set %q: only term.type and term.colors", path)

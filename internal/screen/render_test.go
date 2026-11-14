@@ -100,7 +100,7 @@ func TestRender(t *testing.T) {
 		// The example of section 9.3.
 		{"example", map[string]string{
 			"main.bbt": "+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{!title}Welcome!{!}\n{!14}[G]oodbye\n",
-		}, 80, 25, nil},
+		}, 80, 24, nil},
 		// The recipe of section 6.1 with art of width 30: the fragment below 30 columns,
 		// wrapped at term.cols; the art at 30 columns and more, centred.
 		{"recipe-small", recipe, 25, 10, nil},
@@ -171,7 +171,7 @@ func TestRender(t *testing.T) {
 
 // The golden dump of the example equals the dump of section 9.3.
 func TestRenderExampleDump(t *testing.T) {
-	want := `page 1 80x25
+	want := `page 1 80x24
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
 styles
