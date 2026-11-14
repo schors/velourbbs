@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // TestPlayAfterDiagnostics checks that the play goes on after the diagnostic limit (section 10).

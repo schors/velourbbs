@@ -8,8 +8,8 @@ import (
 	"maps"
 	"slices"
 
-	"newbbs/internal/screen"
-	"newbbs/internal/tomlcheck"
+	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
 // Config is the host settings.

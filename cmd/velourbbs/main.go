@@ -1,4 +1,4 @@
-// Command bbs checks and previews the screens of a BBS directory, the current directory,
+// Command velourbbs checks and previews the screens of a BBS directory, the current directory,
 // and serves them over telnet. It also converts ANSI art to the flat form.
 // Specification: docs/specs/screen-format.md, section 9, docs/specs/art-import.md, section 2,
 // and docs/specs/telnet-term.md, section 10.
@@ -10,10 +10,10 @@ import (
 	"io/fs"
 	"os"
 
-	"newbbs/internal/bbt"
-	"newbbs/internal/config"
-	"newbbs/internal/menu"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/bbt"
+	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/menu"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // The exit statuses: an error in the files (section 9.1) or of listen, and a usage error.
@@ -23,10 +23,10 @@ const (
 )
 
 const usage = `usage:
-  bbs art import <input> <output>
-  bbs check
-  bbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]... [--keys <keys>]
-  bbs serve
+  velourbbs art import <input> <output>
+  velourbbs check
+  velourbbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]... [--keys <keys>]
+  velourbbs serve
 `
 
 func main() {
@@ -49,7 +49,7 @@ func run(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	case "serve":
 		return serve(args[1:], fsys, stderr)
 	}
-	_, _ = fmt.Fprintf(stderr, "bbs: unknown command %q\n%s", args[0], usage)
+	_, _ = fmt.Fprintf(stderr, "velourbbs: unknown command %q\n%s", args[0], usage)
 	return exitUsage
 }
 

@@ -10,7 +10,7 @@ import (
 	"testing/fstest"
 )
 
-// runIn runs bbs with args in the directory dir of testdata.
+// runIn runs velourbbs with args in the directory dir of testdata.
 func runIn(t *testing.T, dir string, args ...string) (stdout, stderr string, status int) {
 	t.Helper()
 	var out, errOut bytes.Buffer
@@ -70,7 +70,7 @@ func TestCheckValid(t *testing.T) {
 	}
 }
 
-// bbs check reports the errors of [telnet] (telnet-term, section 9.1).
+// velourbbs check reports the errors of [telnet] (telnet-term, section 9.1).
 func TestCheckTelnet(t *testing.T) {
 	fsys := fstest.MapFS{
 		"bbs.toml":         {Data: []byte("[telnet]\nmax_conns = 0\nallow = [\"x\"]\n")},
@@ -248,28 +248,28 @@ func TestPreviewErrors(t *testing.T) {
 		msg    string // the first line of stderr
 		status int
 	}{
-		{"preview", []string{"main", "--size", "19x25"}, "bbs preview: term.cols is 19, must be from 20 to 255", exitUsage},
-		{"preview", []string{"main", "--size", "256x25"}, "bbs preview: term.cols is 256, must be from 20 to 255", exitUsage},
-		{"preview", []string{"main", "--size", "80x9"}, "bbs preview: term.rows is 9, must be from 10 to 100", exitUsage},
-		{"preview", []string{"main", "--size", "80x101"}, "bbs preview: term.rows is 101, must be from 10 to 100", exitUsage},
+		{"preview", []string{"main", "--size", "19x25"}, "velourbbs preview: term.cols is 19, must be from 20 to 255", exitUsage},
+		{"preview", []string{"main", "--size", "256x25"}, "velourbbs preview: term.cols is 256, must be from 20 to 255", exitUsage},
+		{"preview", []string{"main", "--size", "80x9"}, "velourbbs preview: term.rows is 9, must be from 10 to 100", exitUsage},
+		{"preview", []string{"main", "--size", "80x101"}, "velourbbs preview: term.rows is 101, must be from 10 to 100", exitUsage},
 		{"preview", []string{"main", "--size", "+80x25"}, `invalid value "+80x25" for flag -size: cols: "+80" is not a decimal number`, exitUsage},
 		{"preview", []string{"main", "--size", "80"}, `invalid value "80" for flag -size: rows: "" is not a decimal number`, exitUsage},
 		{"preview", []string{"main", "--set", "term.cols=100"}, `invalid value "term.cols=100" for flag -set: cannot set "term.cols": only term.type and term.colors`, exitUsage},
 		{"preview", []string{"main", "--set", "term.charset=koi8-r"}, `invalid value "term.charset=koi8-r" for flag -set: cannot set "term.charset": only term.type and term.colors`, exitUsage},
-		{"preview", []string{"main", "--set", "term.colors=17"}, "bbs preview: term.colors is 17, must be 16, 256 or 16777216", exitUsage},
+		{"preview", []string{"main", "--set", "term.colors=17"}, "velourbbs preview: term.colors is 17, must be 16, 256 or 16777216", exitUsage},
 		{"preview", []string{"main", "--set", "term.type"}, `invalid value "term.type" for flag -set: expected <path>=<value>`, exitUsage},
-		{"preview", []string{"nope"}, `bbs preview: unknown screen "nope"`, exitUsage},
-		{"preview", []string{}, "bbs preview: expected one screen name", exitUsage},
-		{"preview", []string{"main", "term"}, "bbs preview: expected one screen name", exitUsage},
-		{"preview", []string{"main", "--size", "20x10", "term"}, "bbs preview: expected one screen name", exitUsage},
-		{"preview", []string{"", "main"}, "bbs preview: expected one screen name", exitUsage},
+		{"preview", []string{"nope"}, `velourbbs preview: unknown screen "nope"`, exitUsage},
+		{"preview", []string{}, "velourbbs preview: expected one screen name", exitUsage},
+		{"preview", []string{"main", "term"}, "velourbbs preview: expected one screen name", exitUsage},
+		{"preview", []string{"main", "--size", "20x10", "term"}, "velourbbs preview: expected one screen name", exitUsage},
+		{"preview", []string{"", "main"}, "velourbbs preview: expected one screen name", exitUsage},
 		{"preview", []string{"main", "-h"}, "usage:", exitUsage},
 		{"keys", []string{"main", "--keys", "S,,G"}, `invalid value "S,,G" for flag -keys: invalid key ""`, exitUsage},
 		{"keys", []string{"main", "--keys", "ANY"}, `invalid value "ANY" for flag -keys: invalid key "ANY"`, exitUsage},
 		{"keys", []string{"main", "--keys", "S, G"}, `invalid value "S, G" for flag -keys: invalid key " G"`, exitUsage},
 		{"keys", []string{"main", "--keys", "AB"}, `invalid value "AB" for flag -keys: invalid key "AB"`, exitUsage},
-		{"keys", []string{"goodbye", "--keys", "S"}, `bbs preview: screen "goodbye" has no items`, exitUsage},
-		{"keys", []string{"nope", "--keys", ""}, `bbs preview: unknown screen "nope"`, exitUsage},
+		{"keys", []string{"goodbye", "--keys", "S"}, `velourbbs preview: screen "goodbye" has no items`, exitUsage},
+		{"keys", []string{"nope", "--keys", ""}, `velourbbs preview: unknown screen "nope"`, exitUsage},
 		{"check", []string{"main"}, `screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100`, exitError},
 	}
 	for _, tt := range tests {
@@ -324,7 +324,7 @@ func TestPreviewKeys(t *testing.T) {
 		name:   "key after goodbye",
 		args:   []string{"main", "--keys", "G,ы", "--size", "40x10"},
 		want:   main40 + "key G\nlogoff\n" + goodbye40,
-		errOut: "bbs preview: key \"S\" after logoff\n",
+		errOut: "velourbbs preview: key \"S\" after logoff\n",
 		status: exitError,
 	}}
 	for _, tt := range tests {
@@ -344,7 +344,7 @@ func TestPreviewKeysNoGoodbye(t *testing.T) {
 		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\nBye\n")},
 	}
 	want := "screen main\n" + page(40, 10, "Bye") + "key G\nlogoff\n"
-	wantErr := "bbs preview: key \"X\" after logoff\n"
+	wantErr := "velourbbs preview: key \"X\" after logoff\n"
 	var out, errOut bytes.Buffer
 	status := run([]string{"preview", "main", "--size", "40x10", "--keys", "G,x"}, fsys, &out, &errOut)
 	if out.String() != want || errOut.String() != wantErr || status != exitError {
@@ -384,10 +384,10 @@ func TestUsage(t *testing.T) {
 		msg  string // the first line of stderr
 	}{
 		{[]string{}, "usage:"},
-		{[]string{"-h"}, `bbs: unknown command "-h"`},
-		{[]string{"frob"}, `bbs: unknown command "frob"`},
-		{[]string{"check", "extra"}, "bbs check: no arguments expected"},
-		{[]string{"serve", "extra"}, "bbs serve: no arguments expected"},
+		{[]string{"-h"}, `velourbbs: unknown command "-h"`},
+		{[]string{"frob"}, `velourbbs: unknown command "frob"`},
+		{[]string{"check", "extra"}, "velourbbs check: no arguments expected"},
+		{[]string{"serve", "extra"}, "velourbbs serve: no arguments expected"},
 	}
 	for _, tt := range tests {
 		out, errOut, status := runIn(t, "preview", tt.args...)

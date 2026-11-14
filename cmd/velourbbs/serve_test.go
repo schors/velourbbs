@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-// syncBuffer is the stderr of bbs serve: the test reads it while the server writes.
+// syncBuffer is the stderr of velourbbs serve: the test reads it while the server writes.
 type syncBuffer struct {
 	mu sync.Mutex
 	b  bytes.Buffer
@@ -86,7 +86,7 @@ func TestServeSignal(t *testing.T) {
 		var errOut syncBuffer
 		done := make(chan int, 1)
 		go func() { done <- run([]string{"serve"}, serveFS(freeAddr(t)), &bytes.Buffer{}, &errOut) }()
-		// bbs serve handles the signals before the listen line.
+		// velourbbs serve handles the signals before the listen line.
 		for end := time.Now().Add(5 * time.Second); !strings.Contains(errOut.String(), "msg=listen "); {
 			if time.Now().After(end) {
 				t.Fatalf("%v: no listen line; stderr %q", sig, errOut.String())

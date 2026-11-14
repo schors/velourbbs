@@ -7,7 +7,7 @@ package term
 import (
 	"strconv"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // AppendPage appends the output of page p (section 7.1) to dst for a terminal

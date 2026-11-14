@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"newbbs/internal/screen"
-	"newbbs/internal/telnet"
+	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/telnet"
 )
 
 // Conn is the connection of a terminal. net.Conn has these methods.

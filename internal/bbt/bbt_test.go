@@ -9,9 +9,9 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"newbbs/internal/bbt"
-	"newbbs/internal/menu"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/bbt"
+	"github.com/schors/velourbbs/internal/menu"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 func style(text string) screen.Style {

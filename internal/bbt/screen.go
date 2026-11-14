@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"path"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // unit is a screen during the load.

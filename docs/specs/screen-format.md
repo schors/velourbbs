@@ -1,14 +1,14 @@
 # Screen format
 
 This specification defines the screen files, the screen model, the layout
-and the commands `bbs check` and `bbs preview`.
+and the commands `velourbbs check` and `velourbbs preview`.
 Related parts: [menu-nav](menu-nav.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
 The host loads the screen files into an in-memory screen model at start.
 It renders a screen for one terminal of any size. 80x24 is not a limit.
-`bbs check` finds the errors in the files. `bbs preview` renders a screen to a "cell dump".
+`velourbbs check` finds the errors in the files. `velourbbs preview` renders a screen to a "cell dump".
 
 The host parses the screen files at load. There is no compile step and no cache.
 Screen files are the files of the sysop. The host trusts them.
@@ -204,7 +204,7 @@ The body gives rows in source order:
 - The content of a false block gives nothing: no text, no line end, no art and no include.
 - A source line with a block token gives no row when it has only spaces after the evaluation.
 - An art insert gives the rows of the art. Each row starts at the left edge of the screen area.
-  The host cuts the art at W. `bbs check` warns when the art is wider than `max`.
+  The host cuts the art at W. `velourbbs check` warns when the art is wider than `max`.
 - A cut of a row at W or at `term.cols` through a wide grapheme leaves a space in its style.
 - Each other source line gives one or more rows (section 6.3). An empty line gives an empty row.
 - Each cell that the screen does not draw is a space in the theme style `normal`.
@@ -298,7 +298,7 @@ The host reads only the flat form. Each other input is an error.
 5. The data must be valid UTF-8. Invalid UTF-8 is one error, and the load stops.
 6. LF and ESC are controls. Each other control character is an error.
 
-An error of steps 1, 2 or 4 is one error `not in the flat form, convert it with bbs art import`,
+An error of steps 1, 2 or 4 is one error `not in the flat form, convert it with velourbbs art import`,
 and the load stops.
 
 ### 8.3. Grid
@@ -340,12 +340,12 @@ A cell takes the style of the SGR state. Art cells have no `bold` attribute.
 ## 9. Commands
 
 - A missing or unknown command, or an invalid argument of a command, is a usage error.
-  `bbs` exits with status 2 after a usage error.
-- `bbs art import` converts art to the flat form: [art-import](art-import.md).
+  `velourbbs` exits with status 2 after a usage error.
+- `velourbbs art import` converts art to the flat form: [art-import](art-import.md).
 
-### 9.1. `bbs check`
+### 9.1. `velourbbs check`
 
-- `bbs check` reads `bbs.toml` and each file in `screens/`.
+- `velourbbs check` reads `bbs.toml` and each file in `screens/`.
   It checks each screen with the fragments and the art that the screen uses.
 - It warns about a fragment or an art file that no screen uses.
   After the limit error of a body (section 10), the warning can be false:
@@ -384,17 +384,17 @@ Examples:
 
 ```
 screens/main.bbt:2:1: item "S": when: unknown field "term.colours"
-screens/logo.ans:1:1: not in the flat form, convert it with bbs art import
+screens/logo.ans:1:1: not in the flat form, convert it with velourbbs art import
 screens/main.ans:4:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16
 screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100
 ```
 
-### 9.2. `bbs preview`
+### 9.2. `velourbbs preview`
 
-`bbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]...` renders a screen
+`velourbbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]...` renders a screen
 and writes its cell dump to the standard output.
 
-- It does the checks of `bbs check` first. After an error it writes no dump
+- It does the checks of `velourbbs check` first. After an error it writes no dump
   and exits with status 1.
 - The default size is 80x24. `--size` is the only way to set the size.
 - `--set` sets `term.type` or `term.colors`. Example: `--set term.colors=256`.
@@ -448,7 +448,7 @@ styles
 
 ## 11. Code
 
-- The host language is Go. The Go module is `newbbs`.
+- The host language is Go. The Go module is `github.com/schors/velourbbs`.
 - The model is immutable after the load. Sessions read it at the same time without locks.
 - The checks are `go vet ./...`, `go test ./...` and `golangci-lint run ./...`
   (golangci-lint 2.15.0, configuration in `.golangci.yml`).

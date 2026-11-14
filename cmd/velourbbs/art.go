@@ -7,34 +7,34 @@ import (
 	"os"
 	"path/filepath"
 
-	"newbbs/internal/artimport"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/artimport"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
-// art runs bbs art. Its only command is import.
+// art runs velourbbs art. Its only command is import.
 func art(args []string, stderr io.Writer) int {
 	if len(args) == 0 {
-		_, _ = io.WriteString(stderr, "bbs art: expected the command import\n"+usage)
+		_, _ = io.WriteString(stderr, "velourbbs art: expected the command import\n"+usage)
 		return exitUsage
 	}
 	if args[0] != "import" {
-		_, _ = fmt.Fprintf(stderr, "bbs art: unknown command %q\n%s", args[0], usage)
+		_, _ = fmt.Fprintf(stderr, "velourbbs art: unknown command %q\n%s", args[0], usage)
 		return exitUsage
 	}
 	return importArt(args[1:], stderr)
 }
 
-// importArt runs bbs art import (art-import, section 2): it converts the file args[0]
+// importArt runs velourbbs art import (art-import, section 2): it converts the file args[0]
 // to the flat form and writes it to the file args[1]. After an error it writes no file.
 func importArt(args []string, stderr io.Writer) int {
 	if len(args) != 2 {
-		_, _ = io.WriteString(stderr, "bbs art import: expected <input> and <output>\n"+usage)
+		_, _ = io.WriteString(stderr, "velourbbs art import: expected <input> and <output>\n"+usage)
 		return exitUsage
 	}
 	in, out := args[0], args[1]
 	file, info, err := readInput(in)
 	if sameFile(in, out, info) {
-		_, _ = io.WriteString(stderr, "bbs art import: <input> and <output> are the same file\n"+usage)
+		_, _ = io.WriteString(stderr, "velourbbs art import: <input> and <output> are the same file\n"+usage)
 		return exitUsage
 	}
 	if err != nil {
@@ -50,7 +50,7 @@ func importArt(args []string, stderr io.Writer) int {
 		return exitError
 	}
 	if err := replaceFile(out, data); err != nil {
-		_, _ = fmt.Fprintf(stderr, "bbs art import: %v\n", err)
+		_, _ = fmt.Fprintf(stderr, "velourbbs art import: %v\n", err)
 		return exitError
 	}
 	return 0
@@ -105,7 +105,7 @@ func replaceFile(name string, data []byte) error {
 	} else if info, lerr := os.Lstat(name); lerr == nil && info.Mode()&os.ModeSymlink != 0 {
 		return err // a symlink to a missing file
 	}
-	f, err := os.CreateTemp(filepath.Dir(name), ".bbs-art-import-*")
+	f, err := os.CreateTemp(filepath.Dir(name), ".velourbbs-art-import-*")
 	if err != nil {
 		return err
 	}

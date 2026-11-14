@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // file is a .bbt file after the file pass. The file pass runs once for each file;

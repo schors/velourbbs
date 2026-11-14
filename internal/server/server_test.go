@@ -16,10 +16,10 @@ import (
 	"testing/fstest"
 	"time"
 
-	"newbbs/internal/bbt"
-	"newbbs/internal/config"
-	"newbbs/internal/menu"
-	"newbbs/internal/server"
+	"github.com/schors/velourbbs/internal/bbt"
+	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/menu"
+	"github.com/schors/velourbbs/internal/server"
 )
 
 // The screens of the tests. Q runs logoff.

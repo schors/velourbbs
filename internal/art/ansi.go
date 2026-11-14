@@ -3,7 +3,7 @@ package art
 import (
 	"fmt"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // MaxParam is the largest value of a CSI parameter. A larger parameter counts as MaxParam.

@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"newbbs/internal/art"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/art"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // importOK imports file and fails the test on a diagnostic.

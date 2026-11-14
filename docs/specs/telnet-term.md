@@ -317,7 +317,7 @@ output_timeout = 60
 
 - Each integer is from 1 to 1000000. The port of `listen` is from 1 to 65535.
 - An address is an IPv4 or IPv6 address. A prefix is an address with `/<bits>`.
-- `bbs check` checks `[telnet]` with the rules of [screen-format](screen-format.md), section 9.1.
+- `velourbbs check` checks `[telnet]` with the rules of [screen-format](screen-format.md), section 9.1.
 
 ### 9.2. Connection limits
 
@@ -354,7 +354,7 @@ output_timeout = 60
 
 ## 10. Command
 
-`bbs serve` starts the telnet server for the BBS directory, the current directory.
+`velourbbs serve` starts the telnet server for the BBS directory, the current directory.
 
 - It does the checks of [screen-format](screen-format.md), section 9.1, at start.
   It writes the errors and the warnings to the standard error.
@@ -383,7 +383,7 @@ output_timeout = 60
 | `internal/server` | The listener, the limits, the PROXY protocol header and the sessions. |
 | `internal/config` | `[telnet]` in `bbs.toml`. |
 
-- `cmd/bbs` loads the screens and gives them to `internal/server`.
+- `cmd/velourbbs` loads the screens and gives them to `internal/server`.
 
 ## 12. Libraries
 

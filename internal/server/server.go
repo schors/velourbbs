@@ -11,10 +11,10 @@ import (
 	"sync"
 	"time"
 
-	"newbbs/internal/config"
-	"newbbs/internal/menu"
-	"newbbs/internal/screen"
-	"newbbs/internal/term"
+	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/menu"
+	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/term"
 )
 
 // tooMany is the line of section 9.2.

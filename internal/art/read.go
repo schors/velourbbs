@@ -3,7 +3,7 @@ package art
 import (
 	"bytes"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // The start style and the cell that the data does not write (section 8.3).

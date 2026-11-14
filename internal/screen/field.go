@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"newbbs/internal/key"
+	"github.com/schors/velourbbs/internal/key"
 )
 
 // Type is the type of a field (section 4.1).

@@ -12,8 +12,8 @@ import (
 	"testing/synctest"
 	"time"
 
-	"newbbs/internal/screen"
-	"newbbs/internal/telnet"
+	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/telnet"
 )
 
 // The telnet bytes of the fake client.

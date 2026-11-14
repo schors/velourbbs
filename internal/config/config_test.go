@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 func style(t *testing.T, text string) screen.Style {

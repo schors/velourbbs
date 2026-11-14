@@ -84,7 +84,7 @@ end)
 - The directory name is the namespace: `run oneliners/main`, `bbs.screen("oneliners/list")`.
 - Lua `require` loads only from the mod directory.
   Module names match `[a-z0-9_]+(\.[a-z0-9_]+)*`.
-- `bbs check` lists the scripts of each mod and its `bbs.*` calls that write data.
+- `velourbbs check` lists the scripts of each mod and its `bbs.*` calls that write data.
 
 ## Limits
 

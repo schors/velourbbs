@@ -1,6 +1,6 @@
 # Idea: log-format
 
-Backlog. It changes the logger of `bbs serve`.
+Backlog. It changes the logger of `velourbbs serve`.
 
 ## Goal
 

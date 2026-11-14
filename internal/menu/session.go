@@ -1,13 +1,13 @@
 package menu
 
 import (
-	"newbbs/internal/config"
-	"newbbs/internal/key"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/key"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // Terminal is the session view of the client (section 9).
-// bbs preview and telnet-term give its implementations.
+// velourbbs preview and telnet-term give its implementations.
 type Terminal interface {
 	// Term gives the terminal fields. The values pass screen.Term.Check
 	// (screen-format, section 4.1). The session reads them before each screen,

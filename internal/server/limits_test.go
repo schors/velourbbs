@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"newbbs/internal/config"
-	"newbbs/internal/server"
+	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/server"
 )
 
 var t0 = time.Date(2026, 11, 13, 12, 0, 0, 0, time.UTC)

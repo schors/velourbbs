@@ -1,6 +1,6 @@
 # Idea: deploy-limits
 
-Backlog. It adds deployment files or documentation for `bbs serve`.
+Backlog. It adds deployment files or documentation for `velourbbs serve`.
 It does not change [telnet-term](../specs/telnet-term.md).
 
 ## Goal
@@ -10,7 +10,7 @@ The deployment limits connections and resources outside the host process.
 ## Decisions
 
 - The host limits of telnet-term §9.2 and §9.3 stay as they are. Do not extend them.
-- A systemd unit runs `bbs serve` with `MemoryMax`, `TasksMax` and `LimitNOFILE`.
+- A systemd unit runs `velourbbs serve` with `MemoryMax`, `TasksMax` and `LimitNOFILE`.
 - nftables limits the connections for each address (`ct count`) and the connect rate.
 - `tc` shapes traffic (QoS), if needed.
 
@@ -26,4 +26,4 @@ The deployment limits connections and resources outside the host process.
 
 - nftables works only on Linux and needs root.
 - systemd `MaxConnectionsPerSource` needs `Accept=yes` socket activation.
-  It does not apply to `bbs serve`.
+  It does not apply to `velourbbs serve`.

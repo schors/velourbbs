@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"newbbs/internal/config"
-	"newbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/screen"
 )
 
 // screens makes screens from specs. A spec is a list of items "<KEY> <do>".
