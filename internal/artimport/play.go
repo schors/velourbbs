@@ -1,12 +1,13 @@
-package art
+package artimport
 
 import (
 	"fmt"
 
+	"newbbs/internal/art"
 	"newbbs/internal/screen"
 )
 
-// maxParam is the largest value of a CSI parameter (section 8.3).
+// maxParam is the largest value of a CSI parameter (section 5).
 const maxParam = 9999
 
 // The start style of the play and the style of a cell that the play does not write.
@@ -21,7 +22,7 @@ type pen struct {
 	bold, underline, blink, reverse bool
 }
 
-// style gives the style of a written cell by the rules of section 8.3.
+// style gives the style of a written cell by the rules of section 5.
 func (p pen) style(ice bool) screen.Style {
 	s := screen.Style{Fg: p.fg, Bg: p.bg}
 	if p.bold && s.Fg.Kind == screen.Index && s.Fg.Value < 8 {
@@ -43,7 +44,7 @@ func (p pen) style(ice bool) screen.Style {
 	return s
 }
 
-// player plays the data of an .ans file into a grid (section 8.3).
+// player plays the data of an .ans file into a grid (section 5).
 type player struct {
 	d       *screen.FileDiags
 	width   int
@@ -54,9 +55,9 @@ type player struct {
 	rows   []screen.Row // a nil row has no writes
 	height int          // the last written row
 	maxCol int          // the last column of a written grapheme
-	cells  int          // the written and erased cells (section 10)
+	cells  int          // the written and erased cells (section 8)
 
-	row, col           int // 1-based; LF can move row past MaxRows
+	row, col           int // 1-based; LF can move row past art.MaxRows
 	pending            bool
 	wrap               bool
 	pen                pen
@@ -174,8 +175,8 @@ func (p *player) put(g string, w int) {
 	if w == 2 && p.col == p.width {
 		p.col-- // wrap off: the wide grapheme takes the last two cells
 	}
-	if p.row > MaxRows {
-		p.stop("art is over %d rows", MaxRows)
+	if p.row > art.MaxRows {
+		p.stop("art is over %d rows", art.MaxRows)
 		return
 	}
 	if !p.spend(w) {
@@ -266,7 +267,7 @@ func (p *player) doWrap() {
 
 // moveTo moves the cursor inside the grid width and the row limit.
 func (p *player) moveTo(row, col int) {
-	p.row = min(max(row, 1), MaxRows)
+	p.row = min(max(row, 1), art.MaxRows)
 	p.col = min(max(col, 1), p.width)
 }
 
@@ -318,7 +319,7 @@ func seqText(b []byte) string {
 	return fmt.Sprintf("%q", "ESC["+string(b))
 }
 
-// control does the effect of a CSI sequence (section 8.3).
+// control does the effect of a CSI sequence (section 5).
 func (p *player) control(params, inter []byte, final byte, text string) {
 	var marker byte
 	if len(params) > 0 && params[0] >= 0x3c {
@@ -423,8 +424,8 @@ func (p *player) eraseStyle() screen.Style {
 
 // erase does CSI n K: 0 to the end of the row, 1 to the start, 2 the whole row.
 func (p *player) erase(mode int) {
-	if p.row > MaxRows {
-		p.stop("art is over %d rows", MaxRows)
+	if p.row > art.MaxRows {
+		p.stop("art is over %d rows", art.MaxRows)
 		return
 	}
 	a, b := 1, p.width
@@ -462,7 +463,7 @@ func (p *player) repeat(n int) {
 		if p.pending || p.lastWidth == 2 && p.col == p.width && p.wrap {
 			next++
 		}
-		if next > MaxRows {
+		if next > art.MaxRows {
 			return
 		}
 		p.put(p.last, p.lastWidth)

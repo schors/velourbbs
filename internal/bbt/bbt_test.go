@@ -39,13 +39,13 @@ func alias(name, path string) screen.Ref {
 	return r
 }
 
-// sauceArt gives an .ans file with a character SAUCE of the width.
+// sauceArt gives an .ans file in the flat form: a BOM, data, 0x1A and a character SAUCE of the width.
 func sauceArt(data string, width int) string {
 	r := make([]byte, 128)
 	copy(r, "SAUCE00")
 	r[94], r[95] = 1, 1
 	binary.LittleEndian.PutUint16(r[96:], uint16(width))
-	return data + "\x1a" + string(r)
+	return "\xef\xbb\xbf" + data + "\x1a" + string(r)
 }
 
 // load loads the files, given by their names in screens/.
@@ -376,7 +376,7 @@ func TestIncludes(t *testing.T) {
 	}
 	// An alias of bbs.toml means the same in each screen, fragment and art.
 	screens = mustLoad(t, map[string]string{
-		"s.bbt": "{>_f}", "t.bbt": "{>_f}\n{>a.ans}", "_f.bbt": "{w}\n{#if t == \"x\"}{/if}\n{>a.ans}", "a.ans": "{t}",
+		"s.bbt": "{>_f}", "t.bbt": "{>_f}\n{>a.ans}", "_f.bbt": "{w}\n{#if t == \"x\"}{/if}\n{>a.ans}", "a.ans": sauceArt("{t}", 80),
 	})
 	for _, name := range []string{"s", "t"} {
 		if got := show(screens[name].Body); !strings.HasPrefix(got, `screens/_f.bbt({term.cols} / if()else() /b art80[term.type])`) {
@@ -410,7 +410,7 @@ func TestIncludes(t *testing.T) {
 		{map[string]string{"s.bbt": "+++\nx = 1\n+++\n{w}{nope}\n{>_x}"},
 			[]string{`screens/s.bbt:2:1: unknown key "x"`, `screens/s.bbt:4:4: unknown field "nope"`, `screens/s.bbt:5:1: fragment "screens/_x.bbt" does not exist`}},
 		// A field error in a fragment or in art that two screens use: once, with no screen name.
-		{map[string]string{"s.bbt": "{>_f}", "t.bbt": "{>_f}\n{>a.ans}", "_f.bbt": "{bad}\n{#if x}\n{>a.ans}", "a.ans": "{w} {bad}"},
+		{map[string]string{"s.bbt": "{>_f}", "t.bbt": "{>_f}\n{>a.ans}", "_f.bbt": "{bad}\n{#if x}\n{>a.ans}", "a.ans": sauceArt("{w} {bad}", 80)},
 			[]string{`screens/_f.bbt:1:1: unknown field "bad"`, `screens/_f.bbt:2:1: unknown field "x"`, `screens/_f.bbt:2:1: {#if} has no {/if}`, `screens/a.ans:1:5: unknown field "bad"`}},
 		// A fragment that cannot be read exists: its error, once.
 		{map[string]string{"s.bbt": "{>_f}", "t.bbt": "{>_f}", "_f.bbt": strings.Repeat("x", screen.MaxFileBytes+1)},
@@ -446,7 +446,7 @@ func TestLimits(t *testing.T) {
 	}
 
 	// Art counts its line and its rows.
-	_, msgs = load(map[string]string{"s.bbt": strings.Repeat("{>a.ans}\n", 11), "a.ans": strings.Repeat("x\n", 999) + "x"})
+	_, msgs = load(map[string]string{"s.bbt": strings.Repeat("{>a.ans}\n", 11), "a.ans": sauceArt(strings.Repeat("x\n", 999)+"x", 80)})
 	if want := []string{`screens/s.bbt:10:1: body is over 10000 lines after includes`}; !slices.Equal(msgs, want) {
 		t.Errorf("art: %q", msgs)
 	}
@@ -522,16 +522,16 @@ func TestWidth(t *testing.T) {
 		want  []string
 	}{
 		// Art of two widths and no width: the default limits, a warning for the wider art.
-		{map[string]string{"s.bbt": "{#if term.cols > 100}\n{>x.ans}\n{#else}\n{>y.ans}\n{/if}", "x.ans": sauceArt("x", 132), "y.ans": "y"},
+		{map[string]string{"s.bbt": "{#if term.cols > 100}\n{>x.ans}\n{#else}\n{>y.ans}\n{/if}", "x.ans": sauceArt("x", 132), "y.ans": sauceArt("y", 80)},
 			[]string{`screens/s.bbt:2:1: warning: art "x.ans" is 132 cells wide, max width is 80`}},
 		{map[string]string{"about.bbt": "+++\nwidth = [40, 100]\n+++\n{>logo.ans}\n{>_f}", "_f.bbt": "{>logo.ans}", "logo.ans": sauceArt("x", 132)},
 			[]string{`screens/_f.bbt:1:1: warning: screen "about": art "logo.ans" is 132 cells wide, max width is 100`, `screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100`}},
-		{map[string]string{"s.bbt": "{>a.ans}", "a.ans": "{nope}"},
+		{map[string]string{"s.bbt": "{>a.ans}", "a.ans": sauceArt("{nope}", 80)},
 			[]string{`screens/a.ans:1:1: unknown field "nope"`}},
 		{map[string]string{"s.bbt": "x", "_f.bbt": "{>a.ans}", "a.ans": "x", "b.ans": "\xff"},
 			[]string{`screens/_f.bbt:1:1: warning: no screen uses this file`, `screens/a.ans:1:1: warning: no screen uses this file`, `screens/b.ans:1:1: warning: no screen uses this file`}},
-		{map[string]string{"s.bbt": "{>a.ans}", "a.ans": "\xff"},
-			[]string{`screens/a.ans:1:1: invalid UTF-8: art must be UTF-8, CP437 art needs a conversion`}},
+		{map[string]string{"s.bbt": "{>a.ans}", "a.ans": sauceArt("\xff", 80)},
+			[]string{`screens/a.ans:1:1: invalid UTF-8`}},
 	}
 	for _, tt := range tests {
 		_, msgs := load(tt.files)
@@ -605,7 +605,7 @@ func FuzzLoad(f *testing.F) {
 		fsys := fstest.MapFS{
 			"screens/s.bbt":  {Data: s},
 			"screens/_f.bbt": {Data: frag},
-			"screens/a.ans":  {Data: []byte("{w}")},
+			"screens/a.ans":  {Data: []byte(sauceArt("{w}", 80))},
 		}
 		screens, ds := bbt.Load(fsys, theme, defaultWidth, aliases)
 		if ds.HasErrors() {

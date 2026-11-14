@@ -20,7 +20,7 @@ The limits of section 10 catch mistakes, for example a file that is too large.
 |---|---|
 | `screens/<name>.bbt` | A "screen": a "BBS template" that the host shows. Section 3. |
 | `screens/_<name>.bbt` | A "fragment": a BBS template that an include inserts. Section 3.4. |
-| `screens/<name>.ans` | ANSI art. Section 8. |
+| `screens/<name>.ans` | ANSI art in the flat form. Section 8. |
 | `bbs.toml` | Host settings. This specification defines its tables `[screen]`, `[theme]` and `[fields]`. |
 
 - `<name>` matches `[a-z0-9][a-z0-9_-]*`. Example: `main_wide`.
@@ -278,104 +278,59 @@ prompt = "14"
 
 ## 8. Art
 
-### 8.1. Target implementations
+### 8.1. Flat form
 
-Art files are UTF-8 only. The target implementations are these art editors
-and their UTF-8 save forms:
-
-| Editor | Save form |
-|---|---|
-| Moebius 1.0.29 | "Export As UTF-8": `38;5;n` colours, an LF before each row, no BOM and no SAUCE. |
-| icy_draw 0.6.2 | Level UTF-8: a BOM and `38;2` colours. |
-
-The loader accepts each form that they write. Where they differ from ECMA-48,
-the loader follows them. A CP437 file is an error.
-[art-import](../ideas/art-import.md) converts CP437 art to UTF-8.
+Art files are in the "flat form": UTF-8 graphemes, SGR, LF and SAUCE.
+[art-import](art-import.md) converts the files of the art editors to the flat form.
+The host reads only the flat form. Each other input is an error.
 
 ### 8.2. Reading
 
-1. A "SAUCE record" (SAUCE 00) is the last 128 bytes of the file, when they start with `SAUCE00`.
+1. A SAUCE record (SAUCE 00) is the last 128 bytes of the file, when they start with `SAUCE00`.
    The COMNT block of `Comments` lines comes before it, when it starts with `COMNT`.
-2. The data is the bytes before the COMNT block or the SAUCE record. The loader removes
+   The file must have a SAUCE record.
+2. The SAUCE must have `DataType` 1 and `FileType` 1. The art width is `TInfo1`, 1–255.
+   `TInfo2` is the least height, 0–1000. Bit 0 of `TFlags` (iCE colours) must be 0.
+   The loader does not check the other fields.
+3. The data is the bytes before the COMNT block or the SAUCE record. The loader removes
    one 0x1A at the end of the data.
-3. The data must be valid UTF-8. Invalid UTF-8 is one error, and the load stops.
-   The loader removes a BOM.
-4. LF, CR and ESC are controls. Each other control character is an error.
-5. A "character SAUCE" has `DataType` 1 and `FileType` 1. The loader uses `TInfo1`,
-   `TInfo2` and `TFlags` only from a character SAUCE.
-   The art width is `TInfo1` when it is > 0. Else the width is 80. A width over 255 is an error.
-6. The Moebius form has no BOM and no SAUCE. For a file without both, an LF before
-   the first grapheme does nothing. Its width is the widest row without wrap, at least 80.
-7. iCE colours are on when bit 0 of `TFlags` is 1.
+4. The data must start with a BOM. The loader removes it.
+5. The data must be valid UTF-8. Invalid UTF-8 is one error, and the load stops.
+6. LF and ESC are controls. Each other control character is an error.
+
+An error of steps 1, 2 or 4 is one error `not in the flat form, convert it with bbs art import`,
+and the load stops.
 
 ### 8.3. Grid
 
-The loader plays the data into a grid of cells. The grid width is the art width.
+The loader reads the data into a grid of cells. The grid width is the art width.
 
-- The cursor starts at row 1, column 1. The style starts as `7/0`.
-  Each cell that the play does not write is a space in `7/0`. Art has no colour `default`.
-- When a grapheme fills the last column, a "wrap is pending" and the cursor stays.
-  - LF clears the pending wrap and moves the cursor to column 1 of the next row.
-  - A grapheme, CR or a cursor sequence first does the wrap: the cursor goes
-    to column 1 of the next row.
-  - The cursor sequences are `CSI` `A`–`D`, `H`, `f`, `s`, `u`, `ESC 7` and `ESC 8`.
-    `CSI 2 J` clears the pending wrap. Each other sequence keeps it.
-- CR moves the cursor to column 1.
-- A wide grapheme that does not fit before the right edge does the wrap first.
-- When wrap is off, a grapheme at the right edge overwrites the last cell.
-  A wide grapheme overwrites the last two cells.
-- A cursor move stays inside the grid width and the row limit (section 10).
-- The grid height is the last row with a written cell, or `TInfo2` of SAUCE if it is larger.
+- Each LF ends a row. The last row can have no LF.
+- A row writes its graphemes from column 1. A row over the art width is an error.
+- The grid height is the count of rows, or `TInfo2` if it is larger.
+- Each cell that the data does not write is a space in `7/0`. Art has no colour `default`.
+- The style starts as `7/0`. It does not change at LF.
 
-The loader parses a CSI sequence by ECMA-48, section 5.4: parameter bytes, intermediate bytes,
-a final byte. A missing or 0 parameter is 1 for `A`–`D`, `H`, `f` and `b`.
-A parameter over 9999 counts as 9999. A byte outside these ranges ends the sequence
-with no effect and a warning, and the byte plays.
-
-| Sequence | Effect |
-|---|---|
-| `CSI n A`, `B`, `C`, `D` | Cursor up, down, right, left. |
-| `CSI r;c H`, `CSI r;c f` | Cursor position. |
-| `CSI 2 J` | Clear the grid. Cursor to row 1, column 1. |
-| `CSI n K` | Erase in the row: 0 to the end, 1 to the start, 2 the whole row. |
-| `CSI s`, `CSI u`, `ESC 7`, `ESC 8` | Save and restore the cursor. |
-| `CSI n b` | Repeat the last grapheme n times. It stops at the row limit. |
-| `CSI ? 33 h`, `CSI ? 33 l` | iCE colours on, off. |
-| `CSI ? 7 h`, `CSI ? 7 l` | Wrap on, off. |
-| `CSI ... m` | SGR, see below. |
-
-- Each other CSI sequence does nothing. Example: `CSI 0;1 SP D` (icy_draw font page).
-  `bbs check` warns with its position.
-- ESC followed by a byte other than `[`, `7` or `8`: the loader drops the ESC
-  and plays the byte, as Moebius does.
-- `CSI n K` and `CSI 2 J` write spaces with the foreground 7, the background of a written cell
-  and no attributes.
+The only sequence is SGR: `ESC [`, parameters, `m`. A parameter is digits;
+`;` separates the parameters. A missing parameter is 0.
+Each other sequence, an incomplete sequence and ESC without `[` are errors.
 
 | SGR | Effect |
 |---|---|
 | `0` | Reset to `7/0` without attributes. |
-| `1`, `22` | Bold on, off. |
 | `4`, `24` | Underline on, off. |
 | `5`, `25` | Blink on, off. |
-| `7`, `27` | Reverse on, off. |
 | `30`–`37`, `90`–`97`, `39` | Foreground: index 0–7, index 8–15, index 7. |
 | `40`–`47`, `100`–`107`, `49` | Background: index 0–7, index 8–15, index 0. |
 | `38;5;n`, `48;5;n` | Foreground, background: index n. They take 3 parameters. |
 | `38;2;r;g;b`, `48;2;r;g;b` | Foreground, background: RGB. They take 5 parameters. |
 
-Each other SGR parameter does nothing. `bbs check` warns with its position.
-After an invalid `38` or `48`, the rest of the sequence does nothing.
-
-The style of a written cell, in this order:
-
-1. Bold with a foreground index 0–7 adds 8 to the index. Art cells have no `bold` attribute.
-2. Blink with iCE colours and a background index 0–7 adds 8 to the index.
-   Blink without iCE colours sets the `blink` attribute.
-3. Reverse swaps the foreground and the background.
+Each other SGR parameter and an invalid `38` or `48` are errors.
+A cell takes the style of the SGR state. Art cells have no `bold` attribute.
 
 ### 8.4. Fields in art
 
-- After the play, the loader finds fields in each grid row. A field token in art is `{`,
+- After the read, the loader finds fields in each grid row. A field token in art is `{`,
   optional spaces, a path, optional spaces and `}` on one row. Each other `{` is a plain character.
 - All cells of a token must have one background. All its non-space cells must have
   one foreground. An error gives both colours and their columns.
@@ -386,6 +341,7 @@ The style of a written cell, in this order:
 
 - A missing or unknown command, or an invalid argument of a command, is a usage error.
   `bbs` exits with status 2 after a usage error.
+- `bbs art import` converts art to the flat form: [art-import](art-import.md).
 
 ### 9.1. `bbs check`
 
@@ -415,7 +371,7 @@ The style of a written cell, in this order:
   file or screen.
 - An error has the form `<file>:<row>:<col>: <message>`, with 1-based numbers.
   In a `.bbt` file, the column counts code points.
-  For art, the row and the column are grid positions, as the art editor shows them.
+  For art, the row and the column are grid positions.
   A warning has `warning: ` before the message.
 - A diagnostic escapes each invalid UTF-8 byte and each rune that is not printable,
   as a Go quoted string does. Example: a file name with ESC gives `\x1b`.
@@ -428,6 +384,7 @@ Examples:
 
 ```
 screens/main.bbt:2:1: item "S": when: unknown field "term.colours"
+screens/logo.ans:1:1: not in the flat form, convert it with bbs art import
 screens/main.ans:4:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16
 screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100
 ```
@@ -480,7 +437,6 @@ styles
 | `.bbt` or `.ans` file | 1 MB. |
 | TOML document: `bbs.toml` or a front matter | 64 KB. |
 | Art grid | 255 columns, 1000 rows. |
-| Art play | 4080000 written and erased cells: 16 grids of 255 columns and 1000 rows. Then one error at the cursor, and the load of the file stops. |
 | Body of a screen after includes | 10000 lines. An include or an art insert counts its own line, and the lines of the fragment or the rows of the art. |
 | Rendered screen | 10000 rows. |
 | Grapheme | 32 bytes. |
@@ -489,9 +445,6 @@ styles
 - An item of a file over a limit is an error. The loader counts the lines while it expands
   the includes, and stops at the limit.
 - The render stops at the row limit.
-- The art play counts the cells at the play width: the art width, or 255 in the Moebius form.
-  A grapheme counts its cells. `CSI n K` counts the erased cells. `CSI 2 J` counts the rows
-  from row 1 to the last written row, times the play width.
 
 ## 11. Code
 
@@ -506,9 +459,9 @@ styles
 |---|---|---|---|
 | TOML | `github.com/pelletier/go-toml/v2` | `github.com/BurntSushi/toml` | The decode into structs with `DisallowUnknownFields` gives the positions of unknown keys and type errors (section 9.1). `BurntSushi/toml` gives no positions of unknown keys. |
 | Graphemes and width | `github.com/clipperhouse/displaywidth` | `github.com/rivo/uniseg`, `github.com/mattn/go-runewidth` | One iterator gives each grapheme with its width, the cell model. The release has Unicode 17; `uniseg` has Unicode 15. `go-runewidth` measures runes. |
-| ANSI art and SAUCE | Own parser | `github.com/charmbracelet/x/ansi` | The loader needs about 12 sequences and the editor rules of section 8. A terminal parser adds a large dependency. |
+| ANSI art and SAUCE | Own parser | `github.com/charmbracelet/x/ansi` | The loader needs SGR only. The import needs about 15 sequences and the editor rules of [art-import](art-import.md). A terminal parser adds a large dependency. |
 | Conditions | Own parser | `github.com/expr-lang/expr` | The grammar has 7 rules and static types from the registry. `expr` adds arithmetic and functions that the format excludes. |
-| Command line | `flag` | `github.com/spf13/cobra` | The standard library is sufficient for two commands. |
+| Command line | `flag` | `github.com/spf13/cobra` | The standard library is sufficient for the commands of section 9. |
 
 - The Go standard library and `golang.org/x/text` have no grapheme segmentation.
 
@@ -516,7 +469,6 @@ styles
 
 - `#each`, list rows in art, data providers and `{#if}` inside art:
   [lists](../ideas/lists.md). In the MVP, logic is in the BBS template only.
-- CP437 art: [art-import](../ideas/art-import.md).
 - Raw art and ANSI animation: [content-trust](../ideas/content-trust.md).
 - Reload: [reload](../ideas/reload.md). A restart is sufficient for the MVP.
 - Marks and arrow-key selection: [menu-actions](../ideas/menu-actions.md).

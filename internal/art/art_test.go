@@ -4,11 +4,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"testing/fstest"
-	"time"
 
 	"newbbs/internal/art"
 	"newbbs/internal/screen"
@@ -23,15 +21,20 @@ var aliases = func() screen.Fields {
 	return screen.Fields{"w": r}
 }()
 
-// withSauce adds a SAUCE record with the width, the height and the TFlags to data.
-func withSauce(data string, width, height int, flags byte) []byte {
+// sauce gives a character SAUCE record with the width, the height and the TFlags.
+func sauce(width, height int, flags byte) []byte {
 	r := make([]byte, 128)
 	copy(r, "SAUCE00")
 	r[94], r[95] = 1, 1
 	binary.LittleEndian.PutUint16(r[96:], uint16(width))
 	binary.LittleEndian.PutUint16(r[98:], uint16(height))
 	r[105] = flags
-	return append([]byte(data+"\x1a"), r...)
+	return r
+}
+
+// flat gives a file in the flat form: a BOM, data, 0x1A and a SAUCE record.
+func flat(data string, width, height int) []byte {
+	return append([]byte("\xef\xbb\xbf"+data+"\x1a"), sauce(width, height, 0)...)
 }
 
 // dump writes the grid of a in the cell dump form of section 9.3.
@@ -55,149 +58,200 @@ func diagText(ds screen.Diags) string {
 func parse(t *testing.T, data []byte) *screen.Art {
 	t.Helper()
 	a, ds := art.Parse("a.ans", data, aliases)
-	if ds.HasErrors() || a == nil {
-		t.Fatalf("errors:\n%s", diagText(ds))
+	if len(ds) > 0 || a == nil {
+		t.Fatalf("diagnostics:\n%s", diagText(ds))
 	}
 	return a
 }
 
-func cell(a *screen.Art, row, col int) screen.Cell { return a.Rows[row-1][col-1] }
-
-func TestMoebius(t *testing.T) {
-	data, err := os.ReadFile("testdata/moebius.ans")
-	if err != nil {
-		t.Fatal(err)
-	}
-	a, ds := art.Parse("moebius.ans", data, aliases)
-	if len(ds) > 0 || a == nil {
-		t.Fatalf("diagnostics:\n%s", diagText(ds))
-	}
-	if a.Width != 132 || a.Height != 3 {
-		t.Errorf("size %dx%d, want 132x3", a.Width, a.Height)
-	}
-	if c := cell(a, 1, 1); c.Grapheme != "H" || c.Style.String() != "14/4" {
-		t.Errorf("1:1 = %q %s", c.Grapheme, c.Style)
-	}
-	if c := cell(a, 3, 3); c.Grapheme != "日" || c.Style.String() != "196/0" || cell(a, 3, 4).Grapheme != "" {
-		t.Errorf("3:3 = %q %s", c.Grapheme, c.Style)
-	}
-	want := []screen.ArtField{{Row: 2, Col: 128, Width: 4, Ref: aliases["w"], Right: true, Style: cell(a, 2, 1).Style}}
-	if fmt.Sprint(a.Fields) != fmt.Sprint(want) {
-		t.Errorf("fields %v, want %v", a.Fields, want)
-	}
-}
-
-func TestIcyDraw(t *testing.T) {
-	a, ds := art.Load(os.DirFS("testdata"), "icydraw.ans", aliases)
-	if a == nil {
-		t.Fatalf("errors:\n%s", diagText(ds))
-	}
-	if got, want := diagText(ds), `icydraw.ans:1:1: warning: unknown sequence "ESC[0;1 D"`; got != want {
-		t.Errorf("diagnostics:\n%s\nwant:\n%s", got, want)
-	}
-	if a.Width != 40 || a.Height != 4 {
-		t.Errorf("size %dx%d, want 40x4 (SAUCE TInfo1, TInfo2)", a.Width, a.Height)
-	}
-	if c := cell(a, 1, 1); c.Style.String() != "#ff8800/#000020" {
-		t.Errorf("1:1 style %s", c.Style)
-	}
-	// iCE colours: blink makes the background bright.
-	if c := cell(a, 2, 1); c.Grapheme != "X" || c.Style.String() != "7/12" {
-		t.Errorf("2:1 = %q %s", c.Grapheme, c.Style)
-	}
-	if len(a.Fields) != 1 || a.Fields[0].Ref.String() != "term.cols" || a.Fields[0].Right || a.Fields[0].Width != 12 {
-		t.Errorf("fields %v", a.Fields)
-	}
-}
-
-func TestPlay(t *testing.T) {
+func TestGrid(t *testing.T) {
 	tests := []struct {
-		name, data string
-		width      int
-		flags      byte
-		want       string
+		name, data    string
+		width, height int
+		want          string
 	}{
-		{"pending wrap and LF", "abcd\nef", 4, 0, "|abcd|\n|ef  |\n"},
-		{"pending wrap and grapheme", "abcde", 4, 0, "|abcd|\n|e   |\n"},
-		{"pending wrap and CR", "abcd\re", 4, 0, "|abcd|\n|e   |\n"},
-		{"pending wrap and cursor", "abcd\x1b[Ce", 4, 0, "|abcd|\n| e  |\n"},
-		{"SGR keeps the wrap pending", "abcd\x1b[m\x1b[De", 4, 0, "|abcd|\n|e   |\n"},
-		{"wrap off", "\x1b[?7labcdef", 4, 0, "|abcf|\n"},
-		{"wide grapheme at the edge", "abc日", 4, 0, "|abc |\n|日  |\n"},
-		{"wide grapheme at the edge, wrap off", "\x1b[?7labc日", 4, 0, "|ab日|\n"},
-		{"repeat", "a\x1b[5b", 4, 0, "|aaaa|\n|aa  |\n"},
-		{"repeat, wrap off", "\x1b[?7la\x1b[9999bc", 4, 0, "|aaac|\n"},
-		{"cut wide grapheme", "日\rx", 4, 0, "|x   |\n"},
-		{"ESC and another byte", "\x1bXa", 4, 0, "|Xa  |\n"},
-		{"cursor position and save", "\x1b[2;3Ha\x1b[s\x1b[Hb\x1b[uc", 4, 0, "|b   |\n|  ac|\n"},
-		{"cursor stays inside the grid", "\x1b[99Ca\x1b[9A\x1b[99Db", 4, 0, "|b  a|\n"},
+		{"rows", "ab\ncd", 4, 0, "|ab  |\n|cd  |\nstyles\n1: 1-4 7/0\n2: 1-4 7/0\n"},
+		{"LF at the end", "ab\n", 4, 0, "|ab  |\nstyles\n1: 1-4 7/0\n"},
+		{"empty rows", "\n\nab\n\n", 2, 0, "|  |\n|  |\n|ab|\n|  |\nstyles\n1: 1-2 7/0\n2: 1-2 7/0\n3: 1-2 7/0\n4: 1-2 7/0\n"},
+		// Bytes after the last LF make a row, also SGR only.
+		{"SGR after the last LF", "ab\n\x1b[0m", 2, 0, "|ab|\n|  |\nstyles\n1: 1-2 7/0\n2: 1-2 7/0\n"},
+		{"TInfo2 is larger", "ab", 2, 3, "|ab|\n|  |\n|  |\nstyles\n1: 1-2 7/0\n2: 1-2 7/0\n3: 1-2 7/0\n"},
+		{"TInfo2 is smaller", "a\nb\nc", 1, 2, "|a|\n|b|\n|c|\nstyles\n1: 1-1 7/0\n2: 1-1 7/0\n3: 1-1 7/0\n"},
+		{"no data", "", 3, 0, "styles\n"},
+		{"full row", "abcd", 4, 0, "|abcd|\nstyles\n1: 1-4 7/0\n"},
+		{"wide grapheme", "日x\n日日", 4, 0, "|日x |\n|日日|\nstyles\n1: 1-4 7/0\n2: 1-4 7/0\n"},
+		// The style continues across LF. Unwritten cells are a space in 7/0.
+		{"style across LF", "\x1b[31;44ma\nb", 3, 0, "|a  |\n|b  |\nstyles\n1: 1-1 1/4, 2-3 7/0\n2: 1-1 1/4, 2-3 7/0\n"},
+		{"space in a style", "\x1b[44m \x1b[0m", 2, 0, "|  |\nstyles\n1: 1-1 7/4, 2-2 7/0\n"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := dump(t, parse(t, withSauce(tt.data, tt.width, 0, tt.flags)))
-			got = got[:strings.Index(got, "styles\n")]
-			if got != tt.want {
+			a := parse(t, flat(tt.data, tt.width, tt.height))
+			if got := dump(t, a); got != tt.want {
 				t.Errorf("got\n%swant\n%s", got, tt.want)
+			}
+			if a.Width != tt.width || len(a.Rows) != a.Height {
+				t.Errorf("width %d, height %d, %d rows", a.Width, a.Height, len(a.Rows))
 			}
 		})
 	}
 }
 
 func TestStyles(t *testing.T) {
-	tests := []struct {
-		name, data string
-		flags      byte
-		want       string
-	}{
-		{"start style", "a", 0, "7/0"},
-		{"bold adds 8", "\x1b[1;31mA", 0, "9/0"},
-		{"bold and RGB", "\x1b[1;38;2;1;2;3mA", 0, "#010203/0"},
-		{"blink without iCE", "\x1b[5;41mA", 0, "7/1 blink"},
-		{"blink with iCE from SAUCE", "\x1b[5;41mA", 1, "7/9"},
-		{"blink with iCE from CSI", "\x1b[?33h\x1b[5;41mA", 0, "7/9"},
-		{"iCE off", "\x1b[?33l\x1b[5;41mA", 1, "7/1 blink"},
-		{"order: bold, blink, reverse", "\x1b[1;5;31;44;7mA", 1, "12/9"},
-		{"underline", "\x1b[4mA", 0, "7/0 underline"},
-		{"default colours", "\x1b[31;41;39;49mA", 0, "7/0"},
-		{"bright", "\x1b[91;101mA", 0, "9/9"},
-		{"index", "\x1b[38;5;200;48;5;17mA", 0, "200/17"},
-		{"reset", "\x1b[1;5;4;7;31;41;0mA", 0, "7/0"},
-		{"off", "\x1b[1;5;4;7;31m\x1b[22;25;24;27mA", 0, "1/0"},
+	tests := []struct{ data, want string }{
+		{"a", "7/0"},
+		{"\x1b[mA", "7/0"},
+		{"\x1b[31;41;0mA", "7/0"},
+		{"\x1b[4mA", "7/0 underline"},
+		{"\x1b[4;24mA", "7/0"},
+		{"\x1b[5mA", "7/0 blink"},
+		{"\x1b[4;5;25mA", "7/0 underline"},
+		{"\x1b[30;47mA", "0/7"},
+		{"\x1b[37;40mA", "7/0"},
+		{"\x1b[90;100mA", "8/8"},
+		{"\x1b[97;107mA", "15/15"},
+		{"\x1b[31;41;39;49mA", "7/0"},
+		{"\x1b[38;5;200;48;5;17mA", "200/17"},
+		{"\x1b[38;2;255;136;0;48;2;0;0;32mA", "#ff8800/#000020"},
+		{"\x1b[31m\x1b[44mA", "1/4"},
+		{"\x1b[;31mA", "1/0"},
+		{"\x1b[00031mA", "1/0"},
 	}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			a := parse(t, withSauce(tt.data, 4, 0, tt.flags))
-			if got := cell(a, 1, 1).Style.String(); got != tt.want {
+		t.Run(fmt.Sprintf("%q", tt.data), func(t *testing.T) {
+			a := parse(t, flat(tt.data, 4, 0))
+			if got := a.Rows[0][0].Style.String(); got != tt.want {
 				t.Errorf("style %s, want %s", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestErase(t *testing.T) {
-	a := parse(t, withSauce("\x1b[44mabcd\x1b[1;2H\x1b[K", 4, 0, 0))
-	if got, want := dump(t, a), "|a   |\nstyles\n1: 1-4 7/4\n"; got != want {
-		t.Errorf("K 0:\n%s", got)
+// withField sets the byte at the offset of the SAUCE record of file to v.
+func withField(file []byte, offset int, v byte) []byte {
+	file[len(file)-128+offset] = v
+	return file
+}
+
+// TestNotFlat checks the steps 1, 2 and 4 of section 8.2.
+func TestNotFlat(t *testing.T) {
+	const notFlat = "a.ans:1:1: not in the flat form, convert it with bbs art import"
+	tests := []struct {
+		name string
+		data []byte
+	}{
+		{"no SAUCE", []byte("\xef\xbb\xbfab")},
+		{"empty file", nil},
+		{"SAUCE without the ID", withField(flat("ab", 4, 0), 0, 'X')},
+		{"DataType 0", withField(flat("ab", 4, 0), 94, 0)},
+		{"FileType 2", withField(flat("ab", 4, 0), 95, 2)},
+		{"TInfo1 0", flat("ab", 0, 0)},
+		{"TInfo1 256", flat("ab", 256, 0)},
+		{"TInfo2 1001", flat("ab", 4, 1001)},
+		{"iCE colours", withField(flat("ab", 4, 0), 105, 1)},
+		{"no BOM", append([]byte("ab\x1a"), sauce(4, 0, 0)...)},
+		{"BOM after 0x1A", append([]byte("ab\x1a\xef\xbb\xbf"), sauce(4, 0, 0)...)},
+		{"CP437", append([]byte("\xb0\xb1\x1a"), sauce(4, 0, 0)...)},
 	}
-	a = parse(t, withSauce("\x1b[31;1;44mabc\x1b[1K", 4, 0, 0))
-	if got, want := dump(t, a), "|    |\nstyles\n1: 1-4 7/4\n"; got != want {
-		t.Errorf("K 1:\n%s", got)
-	}
-	// CSI 2 J erases the rows up to the height, then the play continues at 1:1.
-	a = parse(t, withSauce("ab\nc\x1b[41m\x1b[2Jx", 4, 0, 0))
-	if got, want := dump(t, a), "|x   |\n|    |\nstyles\n1: 1-4 7/1\n2: 1-4 7/1\n"; got != want {
-		t.Errorf("J:\n%s", got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a, ds := art.Parse("a.ans", tt.data, aliases)
+			if got := diagText(ds); got != notFlat || a != nil {
+				t.Errorf("got %q", got)
+			}
+		})
 	}
 }
 
-func TestMoebiusForm(t *testing.T) {
-	a := parse(t, []byte("\n\nab\ncd"))
-	if a.Width != 80 || a.Height != 2 || cell(a, 1, 1).Grapheme != "a" {
-		t.Errorf("size %dx%d, 1:1 %q", a.Width, a.Height, cell(a, 1, 1).Grapheme)
+// TestSauce checks the SAUCE fields that the loader accepts and the end of the data.
+func TestSauce(t *testing.T) {
+	// TInfo1 255, TInfo2 1000 and the other TFlags bits.
+	a := parse(t, withField(flat("ab", 255, 1000), 105, 0x1e))
+	if a.Width != 255 || a.Height != 1000 {
+		t.Errorf("size %dx%d", a.Width, a.Height)
 	}
-	_, ds := art.Parse("a.ans", []byte(strings.Repeat("x", 256)), aliases)
-	if got, want := diagText(ds), "a.ans:1:255: row is over 255 columns"; got != want {
-		t.Errorf("got %q, want %q", got, want)
+	// No 0x1A before the SAUCE.
+	a = parse(t, append([]byte("\xef\xbb\xbfab"), sauce(2, 0, 0)...))
+	if got := dump(t, a); got != "|ab|\nstyles\n1: 1-2 7/0\n" {
+		t.Errorf("no 0x1A:\n%s", got)
+	}
+	// A COMNT block of two lines comes before the SAUCE.
+	rec := sauce(2, 0, 0)
+	rec[104] = 2
+	file := append([]byte("\xef\xbb\xbfab\x1aCOMNT"), bytes.Repeat([]byte("c"), 128)...)
+	a = parse(t, append(file, rec...))
+	if got := dump(t, a); got != "|ab|\nstyles\n1: 1-2 7/0\n" {
+		t.Errorf("COMNT:\n%s", got)
+	}
+	// The loader removes only one 0x1A.
+	_, ds := art.Parse("a.ans", flat("ab\x1a", 4, 0), aliases)
+	if got, want := diagText(ds), "a.ans:1:3: control character U+001A"; got != want {
+		t.Errorf("two 0x1A: got %q, want %q", got, want)
+	}
+}
+
+func TestErrors(t *testing.T) {
+	tests := []struct {
+		name, data string
+		width      int
+		diags      string
+	}{
+		{"CR", "ab\r\ncd", 4, "a.ans:1:3: control character U+000D"},
+		{"tab", "a\tb", 4, "a.ans:1:2: control character U+0009"},
+		{"DEL", "a\x7fb", 4, "a.ans:1:2: control character U+007F"},
+		{"C1 control", "a\u0085b", 4, "a.ans:1:2: control character U+0085"},
+		{"zero width", "\n\u200bb", 4, "a.ans:2:1: zero-width grapheme U+200B"},
+		{"long grapheme", "a" + strings.Repeat("\u0301", 20), 4, "a.ans:1:1: grapheme over 32 bytes: 41 bytes"},
+		{"invalid UTF-8", "ab\nc\xb0d\xb1", 4, "a.ans:2:2: invalid UTF-8"},
+		// Invalid UTF-8 is the only error of the file.
+		{"invalid UTF-8 after errors", "\t\x1b[1m\nb\t\xff\t", 4, "a.ans:2:2: invalid UTF-8"},
+		{"invalid UTF-8 after the diagnostics limit", strings.Repeat("\t", 200) + "\xff", 4, "a.ans:1:1: invalid UTF-8"},
+		{"invalid UTF-8 over the width", "abcde\xff", 4, "a.ans:1:6: invalid UTF-8"},
+		{"row over the width", "abcde\nabcdef", 4, "a.ans:1:5: row is over 4 columns\na.ans:2:5: row is over 4 columns"},
+		// After the row is over the width, the columns count on.
+		{"error after the row is over the width", "abcde日\tx\x1b[1m", 4,
+			"a.ans:1:5: row is over 4 columns\na.ans:1:8: control character U+0009\n" + `a.ans:1:9: unknown SGR parameter 1 in "ESC[1m"`},
+		{"wide grapheme over the width", "abc日", 4, "a.ans:1:4: row is over 4 columns"},
+		{"wide grapheme in width 1", "日", 1, "a.ans:1:1: row is over 1 columns"},
+		{"row 1001", strings.Repeat("\n", 1000) + "a\x1b[5n", 4, "a.ans:1001:1: art is over 1000 rows"},
+		{"SGR in row 1001", strings.Repeat("\n", 1000) + "\x1b[0m", 4, "a.ans:1001:1: art is over 1000 rows"},
+		{"bold", "a\x1b[1mb", 4, `a.ans:1:2: unknown SGR parameter 1 in "ESC[1m"`},
+		{"reverse", "\x1b[7m", 4, `a.ans:1:1: unknown SGR parameter 7 in "ESC[7m"`},
+		{"bold off", "\x1b[22m", 4, `a.ans:1:1: unknown SGR parameter 22 in "ESC[22m"`},
+		{"large parameter", "\x1b[123456m", 4, `a.ans:1:1: unknown SGR parameter 123456 in "ESC[123456m"`},
+		{"leading zeros", "\x1b[0;0001m", 4, `a.ans:1:1: unknown SGR parameter 0001 in "ESC[0;0001m"`},
+		{"cursor position", "a\x1b[2;3Hb", 4, `a.ans:1:2: unknown sequence "ESC[2;3H"`},
+		{"cursor right", "\x1b[C", 4, `a.ans:1:1: unknown sequence "ESC[C"`},
+		{"iCE mode", "\x1b[?33h", 4, `a.ans:1:1: unknown sequence "ESC[?33h"`},
+		{"font page", "\x1b[0;1 D", 4, `a.ans:1:1: unknown sequence "ESC[0;1 D"`},
+		{"intermediate before m", "\x1b[0 m", 4, `a.ans:1:1: unknown sequence "ESC[0 m"`},
+		{"colon", "\x1b[1:2m", 4, `a.ans:1:1: unknown sequence "ESC[1:2m"`},
+		{"invalid colour", "\x1b[38;5m\x1b[48;5;256m\x1b[38;2;1;2m\x1b[38;3;1m", 4,
+			`a.ans:1:1: invalid colour in "ESC[38;5m"` + "\n" + `a.ans:1:1: invalid colour in "ESC[48;5;256m"` + "\n" +
+				`a.ans:1:1: invalid colour in "ESC[38;2;1;2m"` + "\n" + `a.ans:1:1: invalid colour in "ESC[38;3;1m"`},
+		{"one error for a sequence", "\x1b[1;7;99m", 4, `a.ans:1:1: unknown SGR parameter 1 in "ESC[1;7;99m"`},
+		{"incomplete at the end", "a\x1b[31", 4, `a.ans:1:2: incomplete sequence "ESC[31"`},
+		// The byte that ends an incomplete sequence reads.
+		{"incomplete before LF", "\x1b[31\nb\x1b[1m", 4, `a.ans:1:1: incomplete sequence "ESC[31"` + "\n" + `a.ans:2:2: unknown SGR parameter 1 in "ESC[1m"`},
+		{"ESC at the end", "ab\x1b", 4, `a.ans:1:3: ESC without "["`},
+		{"ESC and another byte", "\x1b7a\x1b[1m", 4, `a.ans:1:1: ESC without "["` + "\n" + `a.ans:1:3: unknown SGR parameter 1 in "ESC[1m"`},
+		{"long sequence", "\x1b[" + strings.Repeat("1;", 100) + "z", 4, `a.ans:1:1: unknown sequence "ESC[1;1;1;1;1;1;1;1;1;1;1;1;..."`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a, ds := art.Parse("a.ans", flat(tt.data, tt.width, 0), aliases)
+			if got := diagText(ds); got != tt.diags || a != nil {
+				t.Errorf("got\n%s\nwant\n%s", got, tt.diags)
+			}
+		})
+	}
+}
+
+// TestRowLimit checks that 1000 rows load.
+func TestRowLimit(t *testing.T) {
+	a := parse(t, flat(strings.Repeat("a\n", 1000), 1, 0))
+	if a.Height != 1000 {
+		t.Errorf("height %d", a.Height)
 	}
 }
 
@@ -213,7 +267,7 @@ func TestFields(t *testing.T) {
 		{"plain", "{ BBS } {a {} {!x} {{w}", "[{1 21 3 term.cols false 7/0}]", ""},
 		{"style of the first cell", "\x1b[33;44m{w}", "[{1 1 3 term.cols false 3/4}]", ""},
 		{"space with another foreground", "\x1b[31m{\x1b[32m \x1b[31mw}", "[{1 1 4 term.cols true 1/0}]", ""},
-		{"two foregrounds", "\x1b[3;15H\x1b[93m{\x1b[97mw}", "[]",
+		{"two foregrounds", "\n\n              \x1b[93m{\x1b[97mw}", "[]",
 			`a.ans:3:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16`},
 		{"two backgrounds", "{\x1b[41m w}", "[]",
 			`a.ans:1:1: token "{ w}" changes the background: 0 at col 1, 1 at col 2`},
@@ -225,7 +279,7 @@ func TestFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			a, ds := art.Parse("a.ans", withSauce(tt.data, 30, 0, 0), aliases)
+			a, ds := art.Parse("a.ans", flat(tt.data, 30, 0), aliases)
 			if got := diagText(ds); got != tt.diags {
 				t.Errorf("diagnostics %q, want %q", got, tt.diags)
 			}
@@ -242,62 +296,8 @@ func TestFields(t *testing.T) {
 	}
 }
 
-func TestErrors(t *testing.T) {
-	tests := []struct {
-		name  string
-		data  []byte
-		diags string
-	}{
-		{"file over 1 MB", make([]byte, screen.MaxFileBytes+1), "a.ans:1:1: file is over 1048576 bytes"},
-		{"row 1001", withSauce("\x1b[1000Ha\nb", 4, 0, 0), "a.ans:1001:1: art is over 1000 rows"},
-		{"erase at row 1001", withSauce("\x1b[1000H\n\x1b[K", 4, 0, 0), "a.ans:1001:1: art is over 1000 rows"},
-		{"CP437", withSauce("ab\xb0\xb1", 4, 0, 0),
-			"a.ans:1:3: invalid UTF-8: art must be UTF-8, CP437 art needs a conversion"},
-		{"SAUCE width", withSauce("", 300, 0, 0), "a.ans:1:1: SAUCE width 300 is over 255"},
-		{"SAUCE height", withSauce("", 80, 1001, 0), "a.ans:1:1: SAUCE height 1001 is over 1000 rows"},
-		{"control character", withSauce("a\tb", 4, 0, 0), "a.ans:1:2: control character U+0009"},
-		{"C1 control", withSauce("a\u0085b", 4, 0, 0), "a.ans:1:2: control character U+0085"},
-		{"zero width", withSauce("\u200bb", 4, 0, 0), "a.ans:1:1: zero-width grapheme U+200B"},
-		{"wide in width 1", withSauce("日", 1, 0, 0), "a.ans:1:1: wide grapheme in art of width 1"},
-		{"warnings", withSauce("\x1b[5n\x1b[99m\x1b[38;5m\x1b[?1h\x1b[1J\x1b[3K\x1b[1:2m\x1b[", 4, 0, 0),
-			`a.ans:1:1: warning: unknown sequence "ESC[5n"` + "\n" +
-				`a.ans:1:1: warning: unknown SGR parameter 99 in "ESC[99m"` + "\n" +
-				`a.ans:1:1: warning: invalid colour in "ESC[38;5m"` + "\n" +
-				`a.ans:1:1: warning: unknown mode 1 in "ESC[?1h"` + "\n" +
-				`a.ans:1:1: warning: unknown sequence "ESC[1J"` + "\n" +
-				`a.ans:1:1: warning: unknown sequence "ESC[3K"` + "\n" +
-				`a.ans:1:1: warning: unknown sequence "ESC[1:2m"` + "\n" +
-				`a.ans:1:1: warning: incomplete sequence "ESC["`},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			_, ds := art.Parse("a.ans", tt.data, aliases)
-			if got := diagText(ds); got != tt.diags {
-				t.Errorf("got\n%s\nwant\n%s", got, tt.diags)
-			}
-		})
-	}
-}
-
-func TestLimits(t *testing.T) {
-	// CSI n b stops at the row limit without an error.
-	a := parse(t, withSauce("\x1b[999Ha\x1b[9999b", 4, 0, 0))
-	if a.Height != 1000 {
-		t.Errorf("height %d, want 1000", a.Height)
-	}
-	a = parse(t, withSauce("a\x1b[9999b", 80, 0, 0))
-	if a.Height != 125 || cell(a, 125, 80).Grapheme != "a" {
-		t.Errorf("height %d, want 125", a.Height)
-	}
-	// A long sequence is cut in the message.
-	_, ds := art.Parse("a.ans", withSauce("\x1b["+strings.Repeat("1;", 1000)+"z", 4, 0, 0), aliases)
-	if got := diagText(ds); len(got) > 80 || !strings.Contains(got, `..."`) {
-		t.Errorf("message %q", got)
-	}
-}
-
 func TestTooManyDiagnostics(t *testing.T) {
-	_, ds := art.Parse("a.ans", withSauce(strings.Repeat("\t", 200), 4, 0, 0), aliases)
+	_, ds := art.Parse("a.ans", flat(strings.Repeat("\t", 200)+"\n\x1b[1m", 4, 0), aliases)
 	if len(ds) != screen.MaxFileDiags+1 || ds[len(ds)-1].Msg != "too many diagnostics" {
 		t.Errorf("%d diagnostics, last %q", len(ds), ds[len(ds)-1].Msg)
 	}
@@ -306,7 +306,7 @@ func TestTooManyDiagnostics(t *testing.T) {
 func TestLoad(t *testing.T) {
 	fsys := fstest.MapFS{
 		"big.ans": {Data: bytes.Repeat([]byte("a"), screen.MaxFileBytes+1)},
-		"ok.ans":  {Data: []byte("ab")},
+		"ok.ans":  {Data: flat("ab", 2, 0)},
 	}
 	if _, ds := art.Load(fsys, "big.ans", aliases); diagText(ds) != "big.ans:1:1: file is over 1048576 bytes" {
 		t.Errorf("big: %s", diagText(ds))
@@ -320,14 +320,8 @@ func TestLoad(t *testing.T) {
 }
 
 func FuzzParse(f *testing.F) {
-	for _, name := range []string{"testdata/moebius.ans", "testdata/icydraw.ans"} {
-		data, err := os.ReadFile(name)
-		if err != nil {
-			f.Fatal(err)
-		}
-		f.Add(data)
-	}
-	f.Add(withSauce("日\x1b[?7l\x1b[5b\x1b[2J{w}\x1b[1;5;7m\x1b[K", 3, 2, 1))
+	f.Add(flat("\x1b[38;5;14;48;5;4mHello\n\x1b[0m{  w}=日\x1b[4;5m\n\n", 12, 5))
+	f.Add(flat("\x1b[38;2;255;136;0m{term.cols }\x1b[0;1 D\r\n\x1b[1;5;44mX", 40, 4))
 	f.Fuzz(func(t *testing.T, data []byte) {
 		a, ds := art.Parse("f.ans", data, aliases)
 		if a == nil {
@@ -343,6 +337,11 @@ func FuzzParse(f *testing.F) {
 			if len(r) != a.Width {
 				t.Fatalf("row %d has %d cells", i+1, len(r))
 			}
+			for c, cell := range r {
+				if cell.Style.Attr&screen.Bold != 0 || cell.Grapheme == "" && (c == 0 || r[c-1].Grapheme == "") {
+					t.Fatalf("cell %d:%d = %q %s", i+1, c+1, cell.Grapheme, cell.Style)
+				}
+			}
 		}
 		for _, fl := range a.Fields {
 			if fl.Row > a.Height || fl.Col+fl.Width-1 > a.Width {
@@ -350,120 +349,4 @@ func FuzzParse(f *testing.F) {
 			}
 		}
 	})
-}
-
-// TestRepeat checks that CSI n b gives the grid of n more copies of the last grapheme.
-func TestRepeat(t *testing.T) {
-	tests := []struct{ rep, plain string }{
-		{"a\x1b[9b", strings.Repeat("a", 10)},
-		{"日\x1b[6b", strings.Repeat("日", 7)},
-		{"xx日\x1b[3b", "xx" + strings.Repeat("日", 4)},
-		{"\x1b[?7lab\x1b[9999b", "\x1b[?7lab" + strings.Repeat("b", 10)},
-		{"\x1b[?7lx日\x1b[9999b", "\x1b[?7lx" + strings.Repeat("日", 10)},
-		{"日日日\rx\x1b[2b", "日日日\rxxx"},
-		{"\x1b[1;31ma\x1b[4b", "\x1b[1;31maaaaa"},
-	}
-	for _, tt := range tests {
-		for _, width := range []int{1, 2, 3, 5} {
-			got, gds := art.Parse("a.ans", withSauce(tt.rep, width, 0, 0), aliases)
-			want, wds := art.Parse("a.ans", withSauce(tt.plain, width, 0, 0), aliases)
-			if gds.HasErrors() != wds.HasErrors() || got != nil && dump(t, got) != dump(t, want) {
-				t.Errorf("%q, width %d: differs from %q", tt.rep, width, tt.plain)
-			}
-		}
-	}
-}
-
-func TestEraseTwice(t *testing.T) {
-	// The second clear refills the row in its own style.
-	a := parse(t, withSauce("ab\x1b[41m\x1b[2J\x1b[42m\x1b[2Jx", 4, 0, 0))
-	if got, want := dump(t, a), "|x   |\nstyles\n1: 1-4 7/2\n"; got != want {
-		t.Errorf("two clears:\n%s", got)
-	}
-}
-
-func TestOtherSauce(t *testing.T) {
-	// TInfo1, TInfo2 and TFlags count only for DataType 1 and FileType 1.
-	data := withSauce("\x1b[5;41ma", 4, 5, 1)
-	data[len(data)-128+94] = 0
-	a := parse(t, data)
-	if a.Width != 80 || a.Height != 1 || cell(a, 1, 1).Style.String() != "7/1 blink" {
-		t.Errorf("size %dx%d, style %s", a.Width, a.Height, cell(a, 1, 1).Style)
-	}
-}
-
-// filler gives a play of n erased cells at the play width 255: CSI 2 K for each 255 cells
-// and one CSI K from the column 256-r for the rest r.
-func filler(n int) string {
-	s := strings.Repeat("\x1b[2K", n/screen.MaxWidth)
-	if r := n % screen.MaxWidth; r > 0 {
-		s += fmt.Sprintf("\x1b[1;%dH\x1b[K", screen.MaxWidth-r+1)
-	}
-	return s
-}
-
-// TestBudget checks each count rule of the art play budget (section 10):
-// the play of the budget gives no diagnostic, and one more cell gives the error at the cursor.
-func TestBudget(t *testing.T) {
-	const w = screen.MaxWidth
-	tests := []struct {
-		name       string
-		sauce      bool // else the Moebius form: the play width is 255, the art width 80
-		prefix, op string
-		cost       int    // the cells of prefix and op
-		at         string // the position of the error
-	}{
-		{"grapheme", true, "", "\x1b[5;2Ha", 1, "5:2"},
-		{"wide grapheme", true, "", "\x1b[5;2H日", 2, "5:2"},
-		{"erase in the Moebius form", false, "", "\x1b[5;2H\x1b[K", w - 1, "5:2"},
-		{"clear", true, "\x1b[7H\x1b[2K", "\x1b[3;3H\x1b[2J", w + 7*w, "3:3"},
-		{"repeat with wrap", true, "", "\x1b[5;250Ha\x1b[9b", 10, "6:4"},
-		{"repeat without wrap", true, "", "\x1b[?7l\x1b[5;250Ha\x1b[9b", 10, "5:255"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			load := func(extra int) screen.Diags {
-				data := []byte(tt.prefix + filler(art.MaxPlayCells-tt.cost+extra) + tt.op)
-				if tt.sauce {
-					data = withSauce(string(data), w, 0, 0)
-				}
-				_, ds := art.Parse("a.ans", data, aliases)
-				return ds
-			}
-			if ds := load(0); len(ds) > 0 {
-				t.Errorf("at the budget:\n%s", diagText(ds))
-			}
-			want := "a.ans:" + tt.at + ": art play is over 4080000 written and erased cells"
-			if got := diagText(load(1)); got != want {
-				t.Errorf("over the budget: got %q, want %q", got, want)
-			}
-		})
-	}
-}
-
-// TestBudgetFiles checks that crafted files of 1 MB stop at the budget in less than 1 s.
-func TestBudgetFiles(t *testing.T) {
-	tests := []struct {
-		name, start, unit string
-		width             int
-	}{
-		{"repeat with wrap", "A", "\x1b[H\x1b[9999b", 80},
-		{"repeat without wrap", "\x1b[?7lA", "\x1b[H\x1b[9999b", 80},
-		{"clear", "", "\x1b[1000;255HA\x1b[2J", 255},
-		{"erase", "", "\x1b[2K\x1b[B", 255},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			body := tt.start + strings.Repeat(tt.unit, (screen.MaxFileBytes-200)/len(tt.unit))
-			data := withSauce(body, tt.width, 0, 0)
-			start := time.Now()
-			_, ds := art.Parse("a.ans", data, aliases)
-			if d := time.Since(start); d >= time.Second {
-				t.Errorf("load took %v", d)
-			}
-			if !strings.HasSuffix(diagText(ds), ": art play is over 4080000 written and erased cells") {
-				t.Errorf("diagnostics:\n%s", diagText(ds))
-			}
-		})
-	}
 }
