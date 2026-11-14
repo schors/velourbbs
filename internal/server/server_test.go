@@ -1,9 +1,11 @@
-package server
+package server_test
 
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -17,6 +19,7 @@ import (
 	"newbbs/internal/bbt"
 	"newbbs/internal/config"
 	"newbbs/internal/menu"
+	"newbbs/internal/server"
 )
 
 // The screens of the tests. Q runs logoff.
@@ -24,6 +27,12 @@ const (
 	mainScreen    = "+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\nHello from main\n"
 	goodbyeScreen = "Goodbye!\n"
 )
+
+// tooMany is the line of section 9.2.
+const tooMany = "Too many connections. Try again later.\r\n"
+
+// lingerTime is the longest discard of the input after output (section 10).
+const lingerTime = time.Second
 
 // The client replies of the tests: WONT NAWS and WONT TTYPE, then the CPR reply
 // of the charset probe (UTF-8).
@@ -94,7 +103,8 @@ func startWith(t *testing.T, set func(*config.Telnet), wrap func(net.Listener) n
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
-		done <- New(cfg, screens, slog.New(slog.NewTextHandler(ts.log, nil))).Serve(ctx, ln)
+		log := slog.New(slog.NewJSONHandler(ts.log, &slog.HandlerOptions{ReplaceAttr: noRecordTime}))
+		done <- server.New(cfg, screens, log).Serve(ctx, ln)
 	}()
 	var once sync.Once
 	var result error
@@ -169,16 +179,74 @@ func readAll(t *testing.T, c net.Conn) string {
 	return string(b)
 }
 
-// logLine gives the first line of the log with s.
-func logLine(t *testing.T, ts *testServer, s string) string {
+// noRecordTime removes the time of the log record. The "time" fields of the lines stay.
+func noRecordTime(groups []string, a slog.Attr) slog.Attr {
+	if len(groups) == 0 && a.Key == slog.TimeKey && a.Value.Kind() == slog.KindTime {
+		return slog.Attr{}
+	}
+	return a
+}
+
+// records gives the log records with the message msg, in the order of the log.
+func (ts *testServer) records(t *testing.T, msg string) []map[string]any {
 	t.Helper()
-	for _, l := range strings.Split(ts.log.String(), "\n") {
-		if strings.Contains(l, s) {
-			return l
+	var recs []map[string]any
+	for _, l := range strings.Split(strings.TrimSpace(ts.log.String()), "\n") {
+		var r map[string]any
+		if err := json.Unmarshal([]byte(l), &r); err != nil {
+			t.Fatalf("log line %q: %v", l, err)
+		}
+		if r["msg"] == msg {
+			recs = append(recs, r)
 		}
 	}
-	t.Errorf("log has no %q:\n%s", s, ts.log)
-	return ""
+	return recs
+}
+
+// logRecord gives the first log record with the message msg and the fields of kv:
+// pairs of a key and a value in fmt.Sprint form.
+func logRecord(t *testing.T, ts *testServer, msg string, kv ...string) map[string]any {
+	t.Helper()
+	for _, r := range ts.records(t, msg) {
+		if match(r, kv) {
+			return r
+		}
+	}
+	t.Errorf("log has no %q with %q:\n%s", msg, kv, ts.log)
+	return nil
+}
+
+func match(r map[string]any, kv []string) bool {
+	for i := 0; i+1 < len(kv); i += 2 {
+		if v, ok := r[kv[i]]; !ok || fmt.Sprint(v) != kv[i+1] {
+			return false
+		}
+	}
+	return true
+}
+
+// duration gives the "time" field of a record.
+func duration(t *testing.T, r map[string]any) time.Duration {
+	t.Helper()
+	ns, ok := r["time"].(float64)
+	if !ok {
+		t.Fatalf("record %v has no time", r)
+	}
+	return time.Duration(ns)
+}
+
+// waitRecords waits until the log has n records with the message msg, for 10 s at most.
+func (ts *testServer) waitRecords(t *testing.T, msg string, n int) []map[string]any {
+	t.Helper()
+	for end := time.Now().Add(10 * time.Second); ; {
+		if recs := ts.records(t, msg); len(recs) >= n || time.Now().After(end) {
+			if len(recs) < n {
+				t.Fatalf("log has %d %q records, want %d:\n%s", len(recs), msg, n, ts.log)
+			}
+			return recs
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 }
 
 // The client connects with TCP, does the probe and gets the first screen (section 5.1).
@@ -195,10 +263,12 @@ func TestServeFirstScreen(t *testing.T) {
 	if err := ts.stop(); err != nil {
 		t.Fatal(err)
 	}
-	logLine(t, ts, "msg=listen addr=127.0.0.1:")
-	logLine(t, ts, "msg=probe addr=127.0.0.1 ")
-	if l := logLine(t, ts, "msg=close addr=127.0.0.1 reason=logoff "); !strings.Contains(l, " time=") {
-		t.Errorf("close line %q has no time", l)
+	if r := logRecord(t, ts, "listen"); !strings.HasPrefix(fmt.Sprint(r["addr"]), "127.0.0.1:") {
+		t.Errorf("listen record %v has not the address", r)
+	}
+	logRecord(t, ts, "probe", "addr", "127.0.0.1")
+	if r := logRecord(t, ts, "close", "addr", "127.0.0.1", "reason", "logoff"); r != nil {
+		duration(t, r)
 	}
 }
 
@@ -223,8 +293,8 @@ func TestServeLimits(t *testing.T) {
 		name, reason string
 		set          func(*config.Telnet)
 	}{
-		{"max_conns", "max_conns ", func(c *config.Telnet) { c.MaxConns = 1 }},
-		{"max_conns_per_addr", `"address limit"`, func(c *config.Telnet) { c.MaxConnsPerAddr = 1 }},
+		{"max_conns", "max_conns", func(c *config.Telnet) { c.MaxConns = 1 }},
+		{"max_conns_per_addr", "address limit", func(c *config.Telnet) { c.MaxConnsPerAddr = 1 }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := start(t, tt.set)
@@ -239,7 +309,7 @@ func TestServeLimits(t *testing.T) {
 			if err := ts.stop(); err != nil {
 				t.Fatal(err)
 			}
-			logLine(t, ts, "msg=close addr=127.0.0.1 reason="+tt.reason)
+			logRecord(t, ts, "close", "addr", "127.0.0.1", "reason", tt.reason)
 		})
 	}
 }
@@ -286,11 +356,9 @@ func TestServeProxy(t *testing.T) {
 	if err := ts.stop(); err != nil {
 		t.Fatal(err)
 	}
-	if l := logLine(t, ts, "msg=probe addr=192.0.2.1 "); !strings.Contains(l, " naws=80x25 ") {
-		t.Errorf("probe line %q has no naws=80x25", l)
-	}
-	logLine(t, ts, "msg=probe addr=192.0.2.2 ")
-	logLine(t, ts, `msg=close addr=192.0.2.1 reason="address limit"`)
+	logRecord(t, ts, "probe", "addr", "192.0.2.1", "naws", "80x25")
+	logRecord(t, ts, "probe", "addr", "192.0.2.2")
+	logRecord(t, ts, "close", "addr", "192.0.2.1", "reason", "address limit")
 }
 
 // A connection that the address limits refuse does not hold its max_conns slot
@@ -313,40 +381,73 @@ func TestServeRefusalSlot(t *testing.T) {
 
 // At most max_conns connections discard their input at the same time.
 // The host closes each other connection at once (section 10).
+// The clients do not close, so a connection that discards its input ends after lingerTime.
 func TestServeLingerLimit(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	ts := start(t, func(c *config.Telnet) { c.MaxConns = 1 })
+	logoff := func() {
+		c := ts.dial(t)
+		probe(t, c, wontReplies)
+		write(t, c, "q")
+		readAll(t, c)
+	}
+	logoff() // c1 discards its input for lingerTime.
+	logoff() // c2 comes while c1 discards its input.
+	recs := ts.waitRecords(t, "close", 1)
+	if d := duration(t, recs[0]); d >= lingerTime {
+		t.Errorf("c2: close after %v, want at once", d)
+	}
+	recs = ts.waitRecords(t, "close", 2)
+	if d := duration(t, recs[1]); d < lingerTime {
+		t.Errorf("c1: close after %v, want %v or more", d, lingerTime)
+	}
+	// After the end of c1, a connection discards its input again.
+	logoff()
+	recs = ts.waitRecords(t, "close", 3)
+	if d := duration(t, recs[2]); d < lingerTime {
+		t.Errorf("c3: close after %v, want %v or more", d, lingerTime)
+	}
+}
+
+// panicListener gives connections whose Read panics on the input "PANIC".
+type panicListener struct{ net.Listener }
+
+func (l panicListener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
 	if err != nil {
+		return nil, err
+	}
+	return panicConn{c}, nil
+}
+
+type panicConn struct{ net.Conn }
+
+func (c panicConn) Read(b []byte) (int, error) {
+	n, err := c.Conn.Read(b)
+	if bytes.Contains(b[:n], []byte("PANIC")) {
+		panic("test panic")
+	}
+	return n, err
+}
+
+// A panic in a session ends only this session. The host logs it with the stack
+// and closes the connection. The limits of the session are free (section 10).
+func TestServePanic(t *testing.T) {
+	ts := startWith(t, func(c *config.Telnet) {
+		c.MaxConns = 1
+		c.MaxConnsPerAddr = 1
+	}, func(ln net.Listener) net.Listener { return panicListener{ln} })
+	c := ts.dial(t)
+	write(t, c, "PANIC")
+	readAll(t, c)
+	probe(t, ts.dial(t), wontReplies)
+	if err := ts.stop(); err != nil {
 		t.Fatal(err)
 	}
-	defer func() { _ = ln.Close() }()
-	s := &Server{cfg: config.Config{Telnet: config.Telnet{MaxConns: 1}}}
-	for _, lingers := range []int{1, 0} {
-		c := (&testServer{addr: ln.Addr().String()}).dial(t)
-		sc, err := ln.Accept()
-		if err != nil {
-			t.Fatal(err)
-		}
-		s.lingers = lingers
-		done := make(chan struct{})
-		go func() {
-			s.close(sc, true)
-			close(done)
-		}()
-		if lingers == 0 {
-			// The host waits for the EOF of the client.
-			write(t, c, "x")
-			readAll(t, c)
-			_ = c.Close()
-		}
-		select {
-		case <-done:
-		case <-time.After(lingerTime / 2):
-			t.Fatalf("lingers %d: close does not end", lingers)
-		}
-		if s.lingers != lingers {
-			t.Errorf("lingers %d after close, want %d", s.lingers, lingers)
-		}
+	r := logRecord(t, ts, "panic", "level", "ERROR", "addr", "127.0.0.1", "err", "test panic")
+	if stack := fmt.Sprint(r["stack"]); !strings.Contains(stack, "(*Server).session") {
+		t.Errorf("panic record has no stack of the session: %q", stack)
 	}
+	logRecord(t, ts, "close", "addr", "127.0.0.1", "reason", "panic")
 }
 
 // An invalid or missing header closes the connection without output (section 9.3).
@@ -366,8 +467,14 @@ func TestServeProxyInvalid(t *testing.T) {
 	if err := ts.stop(); err != nil {
 		t.Fatal(err)
 	}
-	if want := "reason=\"proxy header: "; strings.Count(ts.log.String(), want) != 2 {
-		t.Errorf("log has not 2 times %q:\n%s", want, ts.log)
+	n := 0
+	for _, r := range ts.records(t, "close") {
+		if strings.HasPrefix(fmt.Sprint(r["reason"]), "proxy header: ") {
+			n++
+		}
+	}
+	if n != 2 {
+		t.Errorf("%d close records with a proxy header reason, want 2:\n%s", n, ts.log)
 	}
 }
 
@@ -389,7 +496,7 @@ func (l *failOnce) Accept() (net.Conn, error) {
 func TestServeAcceptError(t *testing.T) {
 	ts := startWith(t, nil, func(ln net.Listener) net.Listener { return &failOnce{Listener: ln} })
 	probe(t, ts.dial(t), wontReplies)
-	logLine(t, ts, `level=ERROR msg=accept err="test accept error"`)
+	logRecord(t, ts, "accept", "level", "ERROR", "err", "test accept error")
 }
 
 // The stop closes the open connections, and Serve returns nil (section 10).

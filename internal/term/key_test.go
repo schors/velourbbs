@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
+
+	"newbbs/internal/screen"
 )
 
 var t0 = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -250,4 +253,55 @@ func TestCPR(t *testing.T) {
 	if !slices.Equal(keys, []string{"a", "b"}) || !slices.Equal(cprs, []CPR{{3, 2}, {24, 80}}) {
 		t.Errorf("keys and CPR: %q, %v", keys, cprs)
 	}
+}
+
+// FuzzDecoderFeed checks that input in one Feed and one byte in each Feed at one time
+// give the same keys and CPRs, and that each key and CPR is valid.
+func FuzzDecoderFeed(f *testing.F) {
+	for _, s := range []string{
+		"a\x1b[3;2Rb\x1b[24;80R", "\x1b[99999;1R\x1b[100000;1R", "\r\n\r\x00\n\r",
+		"\x1b[A\x1bOP\x1b[[A\x1b[15~\x1b", "ы\xd0\x1b[1;2 R\x7f\t ", "\x1b[" + strings.Repeat("1", maxSeq),
+	} {
+		f.Add([]byte(s))
+	}
+	f.Fuzz(func(t *testing.T, in []byte) {
+		keys, cprs := decode(string(in))
+
+		var d Decoder
+		var gotKeys []string
+		var gotCPRs []CPR
+		for i := range in {
+			k, c := d.Feed(t0, in[i:i+1])
+			gotKeys, gotCPRs = append(gotKeys, k...), append(gotCPRs, c...)
+		}
+		k, c := d.Feed(t0.Add(EscWait), nil)
+		gotKeys, gotCPRs = append(gotKeys, k...), append(gotCPRs, c...)
+		if !slices.Equal(gotKeys, keys) || !slices.Equal(gotCPRs, cprs) {
+			t.Fatalf("one byte in each Feed: %q %v; one Feed: %q %v", gotKeys, gotCPRs, keys, cprs)
+		}
+		for _, k := range keys {
+			if !isKey(k) {
+				t.Fatalf("key %q", k)
+			}
+		}
+		for _, c := range cprs {
+			if c.Row < 0 || c.Row > 99999 || c.Col < 0 || c.Col > 99999 {
+				t.Fatalf("CPR %v", c)
+			}
+		}
+	})
+}
+
+// isKey reports whether k is a key name or one character that is not a control
+// character (section 8.1).
+func isKey(k string) bool {
+	names := map[string]bool{"ENTER": true, "BS": true, "TAB": true, "SPACE": true, "ESC": true}
+	for _, n := range csiKeys {
+		names[n] = true
+	}
+	for _, n := range ss3Keys {
+		names[n] = true
+	}
+	r, size := utf8.DecodeRuneInString(k)
+	return names[k] || utf8.ValidString(k) && size == len(k) && size > 0 && r != ' ' && !screen.IsControl(r)
 }

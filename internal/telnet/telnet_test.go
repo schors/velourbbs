@@ -515,3 +515,41 @@ func TestEscape(t *testing.T) {
 		}
 	}
 }
+
+// FuzzFeed checks that input in one Feed and one byte in each Feed give the same result.
+func FuzzFeed(f *testing.F) {
+	f.Add(cat(cmdIAC, cmdWILL, OptNAWS, cmdIAC, cmdSB, OptNAWS, 0, 80, 0, 24, cmdIAC, cmdSE))
+	f.Add(cat(cmdIAC, cmdWILL, OptTTYPE, cmdIAC, cmdSB, OptTTYPE, ttypeIS, "xterm", cmdIAC, cmdSE))
+	f.Add(cat(cmdIAC, cmdDO, OptEcho, cmdIAC, cmdDONT, OptEcho, cmdIAC, cmdWONT, OptSGA, "a", cmdIAC, cmdIAC))
+	f.Add(cat(cmdIAC, cmdWILL, OptTTYPE, cmdIAC, cmdSB, OptTTYPE, ttypeIS, strings.Repeat("x", MaxSub)))
+	f.Add(cat(0xD0, cmdIAC, cmdSB, OptNAWS, 0, cmdIAC, cmdAYT, 0x9F, cmdIAC, cmdIP))
+	f.Fuzz(func(t *testing.T, in []byte) {
+		p := New()
+		p.Start()
+		want, wantErr := p.Feed(t0, in)
+
+		p = New()
+		p.Start()
+		var got Result
+		var err error
+		for i := range in {
+			var r Result
+			r, err = p.Feed(t0, in[i:i+1])
+			got.Data = append(got.Data, r.Data...)
+			got.Reply = append(got.Reply, r.Reply...)
+			got.Events = append(got.Events, r.Events...)
+			if err != nil {
+				break
+			}
+		}
+		if err != wantErr || !bytes.Equal(got.Data, want.Data) || !bytes.Equal(got.Reply, want.Reply) ||
+			!reflect.DeepEqual(got.Events, want.Events) {
+			t.Fatalf("one byte in each Feed: %v, %v; one Feed: %v, %v", got, err, want, wantErr)
+		}
+		for _, e := range want.Events {
+			if tt, ok := e.(TTYPE); ok && len(tt.Name) > MaxSub {
+				t.Fatalf("TTYPE name has %d bytes", len(tt.Name))
+			}
+		}
+	})
+}

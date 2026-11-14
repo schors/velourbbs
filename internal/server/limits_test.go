@@ -1,4 +1,4 @@
-package server
+package server_test
 
 import (
 	"net/netip"
@@ -7,22 +7,23 @@ import (
 	"time"
 
 	"newbbs/internal/config"
+	"newbbs/internal/server"
 )
 
 var t0 = time.Date(2026, 11, 13, 12, 0, 0, 0, time.UTC)
 
-func limits(maxConns, perAddr, perMin int, allow ...string) *Limits {
+func limits(maxConns, perAddr, perMin int, allow ...string) *server.Limits {
 	c := config.Telnet{MaxConns: maxConns, MaxConnsPerAddr: perAddr, MaxConnectsPerMin: perMin}
 	for _, s := range allow {
 		c.Allow = append(c.Allow, netip.MustParsePrefix(s))
 	}
-	return NewLimits(c)
+	return server.NewLimits(c)
 }
 
 func ip(s string) netip.Addr { return netip.MustParseAddr(s) }
 
 // openN calls OpenAddr n times at now and gives the count of true results.
-func openN(l *Limits, a string, n int, now time.Time) int {
+func openN(l *server.Limits, a string, n int, now time.Time) int {
 	ok := 0
 	for range n {
 		if l.OpenAddr(ip(a), now) {
@@ -58,9 +59,8 @@ func TestPerAddr(t *testing.T) {
 	}
 	l.CloseAddr(ip("192.0.2.1"))
 	l.CloseAddr(ip("192.0.2.1"))
-	l.CloseAddr(ip("192.0.2.2"))
-	if len(l.open) != 0 {
-		t.Errorf("open = %v after all CloseAddr", l.open)
+	if got := openN(l, "192.0.2.1", 3, t0); got != 2 {
+		t.Errorf("%d connections after all CloseAddr, want 2", got)
 	}
 }
 
@@ -77,7 +77,7 @@ func TestKey(t *testing.T) {
 			t.Errorf("%s and %s are not one address", tt.a, tt.b)
 		}
 		l.CloseAddr(ip(tt.b))
-		if len(l.open) != 0 {
+		if !l.OpenAddr(ip(tt.a), t0) {
 			t.Errorf("%s: CloseAddr(%s) did not close", tt.a, tt.b)
 		}
 	}
@@ -96,9 +96,6 @@ func TestAllow(t *testing.T) {
 			t.Errorf("%s: %d of 5 connections", a, got)
 		}
 		l.CloseAddr(ip(a))
-	}
-	if len(l.open) != 0 || len(l.times) != 0 {
-		t.Errorf("allow counts: open %v, times %d", l.open, len(l.times))
 	}
 	if got := openN(l, "2001:db8::2", 2, t0); got != 1 {
 		t.Errorf("2001:db8::2: %d connections, want 1", got)
@@ -152,6 +149,7 @@ func TestPerMinRefused(t *testing.T) {
 
 // The counter keeps 10000 addresses. It removes the address with the oldest connect.
 func TestMaxAddrs(t *testing.T) {
+	const maxAddrs = 10000
 	l := limits(100, 100, 1)
 	a, b := ip("2001:db8::a"), ip("2001:db8:0:1::b")
 	l.OpenAddr(a, t0)
@@ -163,9 +161,6 @@ func TestMaxAddrs(t *testing.T) {
 	for range maxAddrs - 1 {
 		l.OpenAddr(other, t0.Add(2*time.Second))
 		other = other.Next()
-	}
-	if len(l.times) != maxAddrs {
-		t.Errorf("%d addresses, want %d", len(l.times), maxAddrs)
 	}
 	// The loop fills the counter and removes b: its last connect is the oldest.
 	// a stays and is refused. b comes back as a new key and is accepted.
