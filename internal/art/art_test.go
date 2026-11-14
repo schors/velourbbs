@@ -350,3 +350,18 @@ func FuzzParse(f *testing.F) {
 		}
 	})
 }
+
+// TestReadGrid checks that ReadGrid reads the grid by sections 8.2 and 8.3 without the fields:
+// an unknown alias and a token in two colours are no errors.
+func TestReadGrid(t *testing.T) {
+	a, ds := art.ReadGrid("a.ans", flat("{x} {\x1b[31mw}", 8, 1))
+	if len(ds) > 0 || a == nil {
+		t.Fatalf("diagnostics:\n%s", diagText(ds))
+	}
+	if got := dump(t, a); got != "|{x} {w} |\nstyles\n1: 1-5 7/0, 6-7 1/0, 8-8 7/0\n" || a.Fields != nil {
+		t.Errorf("got\n%sfields %v", got, a.Fields)
+	}
+	if _, ds := art.ReadGrid("a.ans", flat("\x1b[1m", 8, 1)); diagText(ds) != `a.ans:1:1: unknown SGR parameter 1 in "ESC[1m"` {
+		t.Errorf("error: %q", diagText(ds))
+	}
+}

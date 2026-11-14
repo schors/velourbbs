@@ -20,6 +20,9 @@ The host never plays cursor moves and never reads CP437.
   An existing `<output>` stays unchanged.
 - Without an error, the import writes `<output>`. It replaces an existing file.
   It writes the warnings to the standard error.
+- When `<output>` is a symlink, the import writes the file that the link names.
+  A symlink to a missing file is an error.
+- An existing `<output>` keeps its mode. A new `<output>` gets the mode 0644.
 - The source file is the file that the editor can edit. Moebius and PabloDraw cannot read
   the flat form. Edit the source file, then import it again.
   Keep the source file outside `screens/` (screen-format, section 2).
@@ -208,9 +211,11 @@ The import writes the grid in the flat form (screen-format, section 8):
    and does not change at LF.
 4. 0x1A and the SAUCE record (SAUCE 00) with a COMNT block when there are comments.
 
-After the write, the import reads its output by screen-format, section 8.
+After the write, the import reads its output by screen-format, sections 8.2 and 8.3.
+The fields of section 8.4 need `bbs.toml`, so `bbs check` checks them.
 When that grid differs from the grid of the play, it is an error at the first different cell.
 Example: two regional indicators in two cells join into one flag grapheme.
+An output over the file limit (screen-format, section 10) is an error.
 
 SAUCE fields of the output:
 
@@ -227,5 +232,8 @@ SAUCE fields of the output:
   Else it reads it by the table of section 7. Moebius and icy_draw write UTF-8,
   PabloDraw writes ASCII. A CP437 text that is valid UTF-8 reads wrong.
   The import removes trailing spaces and NUL bytes.
-- The output text fields are UTF-8, padded with spaces. A field that is longer
-  than its bytes is cut after the last whole grapheme that fits. The cut gives a warning.
+- The output text fields are UTF-8. `TInfoS` is padded with NUL bytes (a SAUCE ZString),
+  the other fields with spaces. A field that is longer than its bytes is cut after the last
+  whole grapheme that fits. The cut gives a warning. The cut comment lines give one warning.
+- The output has at most 255 comment lines. The import keeps the first 255 lines
+  and gives a warning.

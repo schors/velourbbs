@@ -336,6 +336,9 @@ func FuzzParse(f *testing.F) {
 				t.Fatalf("row %d has %d cells", i+1, len(r))
 			}
 		}
+		if out, ds := Import("f.ans", data); out == nil && !ds.HasErrors() {
+			t.Fatal("no output and no error")
+		}
 	})
 }
 
