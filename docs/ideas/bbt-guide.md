@@ -14,7 +14,7 @@ The artist and the screen author learn to write screens without the specificatio
 - The guide refers to bbt-format and art-format for the full rules.
 - The guide is in English and Russian. English is the source, Russian is a translation.
   Change both in the same commit.
-- The guide builds the light example BBS of [example-style](example-style.md).
+- The guide builds the example BBS of [example-style](../specs/example-style.md).
 
 ## Open questions
 
