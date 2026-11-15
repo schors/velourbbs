@@ -448,8 +448,8 @@ All screen text is Russian except addresses and the station name. Short lines, s
           ▀   ▀▀▀▀▀ ▀▀▀▀▀  ▀▀▀   ▀▀▀  ▀   ▀
 
         ────────────────────────────────────────────────────────── B B S
-        ■ ■ ■ ■  Вечер, текст и немного золота
 
+        ■ ■ ■ ■  Вечер, текст и немного золота
 
 
 
