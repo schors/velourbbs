@@ -1,6 +1,7 @@
 [screen]
 width = [80, 80]
 more = "    more ∙ any key"
+fill = "spaces"
 
 [theme.default]
 normal = "#e9dccb/#2a201d"
