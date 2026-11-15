@@ -1,0 +1,30 @@
+[screen]
+width = [80, 80]
+more = "    ещё ∙ любая клавиша"
+
+[theme.default]
+normal = "#e9dccb/#2a201d"
+dim    = "#9e8a7c"
+line   = "#8a6a5c"
+title  = "#f7c7a3 bold"
+key    = "#ffb088 bold"
+orn    = "#f2a27e"
+more   = "#9e8a7c"
+
+[theme.256]
+normal = "223/235"
+dim    = "137"
+line   = "95"
+title  = "230 bold"
+key    = "216 bold"
+orn    = "216"
+more   = "137"
+
+[theme.16]
+normal = "7/0"
+dim    = "8"
+line   = "8"
+title  = "15 bold"
+key    = "15 bold"
+orn    = "7"
+more   = "8"
