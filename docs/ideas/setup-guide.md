@@ -18,8 +18,7 @@ The deployment limits connections and resources outside the host process.
 - The guide refers to the `bbs.toml` specification for the full rules.
 - The guide is in English and Russian. English is the source, Russian is a translation.
   Change both in the same commit.
-- An example BBS will exist as a separate issue. The guide takes it into account.
-- The example BBS and the examples of the guide follow the [brandbook](../brand/brandbook.md).
+- The guide builds the light example BBS of [example-style](example-style.md).
 - The host limits of telnet-term §9.2 and §9.3 stay as they are. Do not extend them.
 - A systemd unit runs `velourbbs serve` with `MemoryMax`, `TasksMax` and `LimitNOFILE`.
 - nftables limits the connections for each address (`ct count`) and the connect rate.
