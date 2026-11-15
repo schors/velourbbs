@@ -45,7 +45,8 @@ type artInsert struct {
 }
 
 // parseFile does the file pass (sections 3.1–3.4, 4 and 5). d.File is the file name.
-// theme and fields come from screens/screens.toml.
+// theme is the base theme and fields is the aliases of screens/screens.toml.
+// The file pass uses only the names of theme.
 func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, fields screen.Fields, fragment bool) *file {
 	f := &file{name: d.File}
 	data = bytes.TrimPrefix(data, screen.BOM)
@@ -95,7 +96,7 @@ func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, 
 // scanner reads the body lines into a tree of nodes and checks the block balance.
 type scanner struct {
 	d      *screen.FileDiags
-	theme  map[string]screen.Style
+	theme  map[string]screen.Style // the base theme: only its names
 	fields screen.Fields
 	root   []node
 	open   []*ifNode
@@ -263,20 +264,15 @@ func (s *scanner) block(pos screen.Pos, c string) bool {
 
 // style handles a style token with the text after "!" (section 7.3).
 func (s *scanner) style(pos screen.Pos, text string) {
-	whole := func(st screen.Style) {
-		spec := screen.StyleSpec{Fg: st.Fg, Bg: st.Bg, HasFg: true, HasBg: true, Attr: st.Attr}
-		s.add(screen.SetStyle{Spec: spec, Whole: true})
-	}
 	switch {
 	case text == "":
-		whole(s.theme["normal"])
+		s.add(screen.SetStyle{Name: "normal"})
 	case screen.IsIdent(text):
-		st, ok := s.theme[text]
-		if !ok {
+		if _, ok := s.theme[text]; !ok {
 			s.d.Errorf(pos.Line, pos.Col, "unknown style %q", text)
 			return
 		}
-		whole(st)
+		s.add(screen.SetStyle{Name: text})
 	default:
 		spec, err := screen.ParseStyle(text)
 		switch {
