@@ -313,28 +313,16 @@ func (s *scanner) field(pos screen.Pos, c string) {
 // insert gives the node of an include or an art insert. c is the token content after "{".
 func (s *scanner) insert(pos screen.Pos, c string) node {
 	name := c[1:]
-	if base, ok := strings.CutSuffix(name, ".ans"); ok && isName(base) {
+	if base, ok := strings.CutSuffix(name, ".ans"); ok && screen.IsName(base) {
 		return artInsert{pos: pos, file: "screens/" + name}
 	}
-	if rest, ok := strings.CutPrefix(name, "_"); ok && isName(rest) {
+	if rest, ok := strings.CutPrefix(name, "_"); ok && screen.IsName(rest) {
 		return include{pos: pos, file: "screens/" + name + ".bbt"}
 	}
-	if isName(name) {
+	if screen.IsName(name) {
 		s.d.Errorf(pos.Line, pos.Col, "include %q: a fragment name starts with \"_\"", name)
 	} else {
 		s.d.Errorf(pos.Line, pos.Col, "invalid include %q", "{"+c+"}")
 	}
 	return nil
-}
-
-// isName reports whether s matches the file name syntax [a-z0-9][a-z0-9_-]* (section 2).
-func isName(s string) bool {
-	for i := range len(s) {
-		c := s[i]
-		ok := 'a' <= c && c <= 'z' || '0' <= c && c <= '9' || i > 0 && (c == '_' || c == '-')
-		if !ok {
-			return false
-		}
-	}
-	return s != ""
 }

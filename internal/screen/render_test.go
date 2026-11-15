@@ -25,7 +25,7 @@ func style(text string) screen.Style {
 	return spec.Over(screen.Style{})
 }
 
-// theme is the theme of section 7.3 with the default more style.
+// theme is the theme of the example of bbs-toml, section 4, with the default more style.
 var theme = map[string]screen.Style{
 	"normal": style("7/0"), "more": style("15/0"), "title": style("15/4 bold"), "prompt": style("14/0"),
 }

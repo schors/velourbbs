@@ -1,9 +1,8 @@
 # BBT format
 
-This specification defines the BBT files, the layout of a screen and the `bbs.toml` tables
-`[screen]`, `[theme]` and `[fields]`.
-Related parts: [art-format](art-format.md), [screen-render](screen-render.md),
-[menu-nav](menu-nav.md) and [telnet-term](telnet-term.md).
+This specification defines the BBT files and the layout of a screen.
+Related parts: [art-format](art-format.md), [bbs-toml](bbs-toml.md),
+[screen-render](screen-render.md), [menu-nav](menu-nav.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
@@ -18,12 +17,11 @@ The limits of section 9 catch mistakes, for example a file that is too large.
 | `screens/<name>.bbt` | A "screen": a "BBS template" that the host shows. Section 3. |
 | `screens/_<name>.bbt` | A "fragment": a BBS template that an include inserts. Section 3.4. |
 | `screens/<name>.ans` | ANSI art in the flat form: [art-format](art-format.md). |
-| `bbs.toml` | Host settings. This specification defines its tables `[screen]`, `[theme]` and `[fields]`. |
+| `bbs.toml` | Host settings: [bbs-toml](bbs-toml.md). |
 
 - `<name>` matches `[a-z0-9][a-z0-9_-]*`. Example: `main_wide`.
 - An `.ans` file is art only. Only an art insert in a BBS template shows it.
 - A `.bbt` or `.ans` file that is not a regular file is an error.
-- `bbs.toml` is UTF-8. The loader removes a BOM.
 - The first screen and the screen `goodbye` have special roles: [menu-nav](menu-nav.md),
   sections 4 and 5.
 
@@ -133,17 +131,8 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 
 ### 4.2. Aliases
 
-- `[fields]` in `bbs.toml` maps an alias to a registry path. An alias matches `[a-z][a-z0-9_]*`.
-- An alias cannot be `term`, `item`, `and`, `or` or `not`.
-- The path of an alias cannot be `item.<KEY>`.
+- `[fields]` in `bbs.toml` maps an alias to a registry path: [bbs-toml](bbs-toml.md), section 3.3.
 - An alias is valid in each screen, fragment and art. Short aliases let art have short fields.
-
-Example `bbs.toml`:
-
-```toml
-[fields]
-w = "term.cols"
-```
 
 ### 4.3. Values
 
@@ -182,8 +171,8 @@ string  = '"' { any character except '"' and '}' } '"' ;
 ### 6.1. Width
 
 - The "render width" W is `term.cols`, clamped to the "width limits" `[min, max]`.
-- The width limits are `width` in the front matter, else `[screen] width` in `bbs.toml`.
-  Its default is `[40, 80]`.
+- The width limits are `width` in the front matter, else `[screen] width`
+  ([bbs-toml](bbs-toml.md), section 3.1).
 - When `term.cols` > W, the "screen area" has a left margin of `(term.cols - W) / 2` cells,
   rounded down.
 - When `term.cols` < `min`, the host renders at W = `min` and cuts each row at `term.cols`.
@@ -225,9 +214,9 @@ The body gives rows in source order:
 - A screen has no height limit.
 - When a screen has more rows than `term.rows`, the host shows it in pages of `term.rows - 1` rows.
   After each page except the last, the host shows the "More row" ([menu-nav](menu-nav.md), section 5).
-- The More row is `[screen] more` in `bbs.toml`, in the theme style `more`,
-  at the left edge of the screen area. The host cuts it at the screen area.
-  The default text is `-- More --`.
+- The More row is `[screen] more` ([bbs-toml](bbs-toml.md), section 3.1),
+  in the theme style `more`, at the left edge of the screen area.
+  The host cuts it at the screen area.
 
 ## 7. Colours and styles
 
@@ -254,9 +243,7 @@ attr   = "bold" | "underline" | "blink" ;
 
 ### 7.3. Theme and style tokens
 
-- `[theme]` in `bbs.toml` maps a style name to a style. A name matches `[a-z][a-z0-9_]*`.
-- The theme always has `normal` and `more`. Their defaults are `7/0` and `15/0`.
-- A theme style without a foreground or a background takes it from `normal`.
+- `[theme]` in `bbs.toml` maps a style name to a style: [bbs-toml](bbs-toml.md), section 3.2.
 - `{!<name>}` sets the whole theme style `<name>`. An unknown name is an error.
 - `{!14}`, `{!14/1}` and `{!/1}` set only the colours that they name.
   The other colour and the attributes stay. A style token cannot have attributes.
@@ -264,15 +251,6 @@ attr   = "bold" | "underline" | "blink" ;
 - Each screen starts with `normal`. The style continues across lines and blocks.
   A style token in a false block has no effect.
 - An art insert does not change the style of the text after it.
-
-Example `bbs.toml`:
-
-```toml
-[theme]
-normal = "7/0"
-title  = "15/4 bold"
-prompt = "14"
-```
 
 ## 8. Items
 
@@ -366,7 +344,7 @@ without items, the items of `goodbye` and the start screen. It also has the form
 | Content | Limit |
 |---|---|
 | `.bbt` file | 1 MB. |
-| TOML document: `bbs.toml` or a front matter | 64 KB. |
+| Front matter | 64 KB. |
 | Body of a screen after includes | 10000 lines. An include or an art insert counts its own line, and the lines of the fragment or the rows of the art. |
 | Rendered screen | 10000 rows. |
 | Grapheme | 32 bytes. |

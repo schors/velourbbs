@@ -38,7 +38,7 @@ func Load(fsys fs.FS, theme map[string]screen.Style, width screen.WidthLimits, f
 			continue
 		}
 		name := path.Join("screens", e.Name())
-		if !isName(base) {
+		if !screen.IsName(base) {
 			l.fd(name).Errorf(1, 1, "invalid screen name %q", base)
 			continue
 		}

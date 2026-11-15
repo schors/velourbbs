@@ -70,7 +70,7 @@ func TestCheckValid(t *testing.T) {
 	}
 }
 
-// velourbbs check reports the errors of [telnet] (telnet-term, section 9.1).
+// velourbbs check reports the errors of [telnet] (bbs-toml, section 3.5).
 func TestCheckTelnet(t *testing.T) {
 	fsys := fstest.MapFS{
 		"bbs.toml":         {Data: []byte("[telnet]\nmax_conns = 0\nallow = [\"x\"]\n")},

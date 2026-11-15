@@ -75,7 +75,7 @@ w = "term.cols"
 	}
 	want := map[string]string{
 		"normal": "14/0",      // the background from the default normal
-		"title":  "15/4 bold", // the example of bbt-format, section 7.3
+		"title":  "15/4 bold", // the example of bbs-toml, section 4
 		"prompt": "14/1",      // the foreground from normal
 		"more":   "-/-",
 	}
@@ -109,11 +109,14 @@ func TestErrors(t *testing.T) {
 		`[theme]`,
 		`Title = "1"`,
 		`normal = "7/0"`,
+		`[menu]`,
+		`start = "Main"`,
 	}, "\n")
 	cfg, ds := Parse([]byte(data))
 	want := []string{
 		`bbs.toml:1:1: screen.width: width [80, 40] is not in 1 <= min <= max <= 255`,
 		`bbs.toml:1:1: screen.more: zero-width grapheme U+200B`,
+		`bbs.toml:1:1: menu.start: invalid screen name "Main"`,
 		`bbs.toml:1:1: theme: invalid style name "Title"`,
 	}
 	if got := messages(ds); !slices.Equal(got, want) {
@@ -122,7 +125,7 @@ func TestErrors(t *testing.T) {
 	if !ds.HasErrors() {
 		t.Error("HasErrors = false")
 	}
-	if cfg.Width != (screen.WidthLimits{Min: 40, Max: 80}) || cfg.More != "-- More --" {
+	if cfg.Width != (screen.WidthLimits{Min: 40, Max: 80}) || cfg.More != "-- More --" || cfg.Start != "main" {
 		t.Errorf("an invalid value replaced a default: %+v", cfg)
 	}
 }
@@ -158,7 +161,7 @@ func TestTOMLErrors(t *testing.T) {
 		}},
 		{"a = 1\n[screen]\nb = 2\nwidth = [1, 1]", []string{`bbs.toml:1:1: unknown key "a"`, `bbs.toml:3:1: unknown key "screen.b"`}},
 		{"[fields]\nw = 1", []string{`bbs.toml:2:5: fields.w: must be a string`}},
-		// Each invalid alias is an other error at 1:1 (bbt-format, section 4.2).
+		// Each invalid alias is an other error at 1:1 (bbs-toml, section 3.3).
 		{"fields = { \"яя\" = \"term.cols\", and = \"term.rows\", k = \"item.A\", u = \"term.x\", v = \"w\" }", []string{
 			`bbs.toml:1:1: fields: alias "and" is a reserved word`,
 			`bbs.toml:1:1: fields: alias "k": "item.A" is valid only in {#if}`,

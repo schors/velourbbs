@@ -22,8 +22,9 @@ import (
 	"github.com/pelletier/go-toml/v2"
 )
 
-// MaxBytes is the size limit of a TOML document (bbt-format, section 9). The time of a decode
-// grows with the square of the size: each unknown key error scans the document.
+// MaxBytes is the size limit of a TOML document (bbt-format, section 9, and bbs-toml,
+// section 2). The time of a decode grows with the square of the size: each unknown key error
+// scans the document.
 const MaxBytes = 64 << 10
 
 // Error is an error of a document. Line and Col are 1-based; Col counts bytes.

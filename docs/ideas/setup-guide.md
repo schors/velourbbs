@@ -1,7 +1,7 @@
 # Idea: setup-guide
 
 Backlog. It adds a guide to the setup of a BBS.
-It comes after [bbs-toml-spec](bbs-toml-spec.md).
+It uses [bbs-toml](../specs/bbs-toml.md).
 It does not change [telnet-term](../specs/telnet-term.md).
 
 ## Goal

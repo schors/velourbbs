@@ -11,7 +11,7 @@ The host treats each kind of content by its trust tier. User content cannot chan
 | Tier | What | Treatment |
 |---|---|---|
 | 1 | User content: names, messages, input | Hostile. Always escaped and filtered. |
-| 2 | Screens, art, theme, TOML files | Files of the sysop. Limits catch mistakes. See [bbt-format](../specs/bbt-format.md), sections 1 and 9, and [art-format](../specs/art-format.md), section 5. |
+| 2 | Screens, art, theme, TOML files | Files of the sysop. Limits catch mistakes. See [bbt-format](../specs/bbt-format.md), sections 1 and 9, [bbs-toml](../specs/bbs-toml.md), section 2, and [art-format](../specs/art-format.md), section 5. |
 | 3 | Lua scripts ([lua-mods](lua-mods.md)) | Trusted code. Limits catch bugs only. |
 
 ## User content
