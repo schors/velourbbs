@@ -115,7 +115,7 @@ func load(t *testing.T, change map[string]string) map[string]*screen.Screen {
 		}
 	}
 	theme := map[string]screen.Style{"normal": {}, "more": {}}
-	ss, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 20, Max: 80}, nil)
+	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
 	ds = Check(config.Config{Start: "main"}, ss, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
@@ -270,7 +270,7 @@ func TestRunSessionTheme(t *testing.T) {
 		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{!title}T\n")},
 	}
 	cfg, ds := config.Load(fsys)
-	ss, lds := bbt.Load(fsys, cfg.Theme, cfg.Width, cfg.Fields)
+	ss, lds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
 	if ds = append(ds, lds...); len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}

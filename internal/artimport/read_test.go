@@ -40,10 +40,10 @@ func cp437File(data string, width, height int, flags byte) []byte {
 func dump(t *testing.T, a *screen.Art) string {
 	t.Helper()
 	var b strings.Builder
-	if err := screen.WritePage(&b, a.Height, 1, screen.Page{Rows: a.Rows, Cols: a.Width}); err != nil {
+	if err := screen.WritePage(&b, 1, screen.Page{Rows: a.Rows, Cols: a.Width, Height: a.Height}); err != nil {
 		t.Fatal(err)
 	}
-	return strings.TrimPrefix(b.String(), fmt.Sprintf("page 1 %dx%d\n", a.Width, a.Height))
+	return strings.TrimPrefix(b.String(), fmt.Sprintf("page 1 %dx%d fill none\n", a.Width, a.Height))
 }
 
 func diagText(ds screen.Diags) string {

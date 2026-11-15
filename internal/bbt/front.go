@@ -13,14 +13,17 @@ import (
 
 // front is the front matter of a screen (section 3.2).
 type front struct {
-	width *screen.WidthLimits // nil when width is not set
-	items []screen.Item
+	layout screen.LayoutKeys
+	items  []screen.Item
 }
 
 // frontDoc is the plain decode of a front matter. A nil pointer is a key that is not set.
 type frontDoc struct {
-	Width *[]int64 `toml:"width"`
-	Item  []struct {
+	Width  *[]int64 `toml:"width"`
+	Align  *string  `toml:"align"`
+	VAlign *string  `toml:"valign"`
+	Fill   *string  `toml:"fill"`
+	Item   []struct {
 		Key  *string `toml:"key"`
 		Do   *string `toml:"do"`
 		When *string `toml:"when"`
@@ -50,15 +53,8 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 		d.Errorf(2, 1, format, args...)
 		ok = false
 	}
-	fr := &front{}
-	if doc.Width != nil {
-		w, err := screen.NewWidth(*doc.Width)
-		if err != nil {
-			errorf("width: %v", err)
-		} else {
-			fr.width = &w
-		}
-	}
+	fr := &front{layout: screen.ParseLayoutKeys(doc.Width, doc.Align, doc.VAlign, doc.Fill,
+		func(key string, err error) { errorf("%s: %v", key, err) })}
 	seen := map[string]bool{}
 	for i, it := range doc.Item {
 		// The label of menu-nav, section 6: the valid key, else the number.

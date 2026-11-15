@@ -14,9 +14,16 @@ func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[P
 	return func(yield func(Page) bool) {
 		cols := env.Term.Cols
 		w := min(max(cols, s.Width.Min), s.Width.Max)
+		margin := max(cols-w, 0) // align = "right" (section 6.1)
+		switch s.Align {
+		case AlignCenter:
+			margin /= 2
+		case AlignLeft:
+			margin = 0
+		}
 		r := &renderer{
 			env: env, theme: theme, normal: theme["normal"], w: w, cols: cols,
-			area: min(w, cols), margin: max(cols-w, 0) / 2, height: env.Term.Rows,
+			area: min(w, cols), margin: margin, height: env.Term.Rows, fill: s.Fill,
 			values: map[Ref][]Grapheme{}, lead: true, yield: yield,
 		}
 		var moreCells []Cell
@@ -25,9 +32,19 @@ func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[P
 		}
 		r.more = r.row(moreCells)
 		r.walk(s.Body, r.normal)
-		if !r.stopped {
-			yield(r.page(r.rows))
+		if r.stopped {
+			return
 		}
+		p := r.page(r.rows)
+		if !r.shown { // the only page (section 6.5)
+			switch s.VAlign {
+			case VAlignMiddle:
+				p.Top = (r.height - len(r.rows)) / 2
+			case VAlignBottom:
+				p.Top = r.height - len(r.rows)
+			}
+		}
+		yield(p)
 	}
 }
 
@@ -41,6 +58,7 @@ type renderer struct {
 	cols   int // term.cols
 	area   int // the cells of the screen area: W, or term.cols when it is smaller
 	margin int // the left margin of the screen area
+	fill   Fill
 	values map[Ref][]Grapheme
 
 	// The pages (section 6.4).
@@ -273,7 +291,7 @@ func (r *renderer) addRow(cells []Cell) {
 
 // page gives a page of rows.
 func (r *renderer) page(rows []Row) Page {
-	return Page{Rows: rows, Cols: r.cols, Margin: r.margin, Fill: r.normal}
+	return Page{Rows: rows, Cols: r.cols, Height: r.height, Margin: r.margin, Normal: r.normal, Fill: r.fill}
 }
 
 // row gives a row of the screen area with cells. It cuts cells at the screen area; a cut through a wide grapheme leaves a space in its style.

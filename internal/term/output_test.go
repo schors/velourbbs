@@ -107,11 +107,11 @@ func rows(rs ...screen.Row) screen.Page {
 	return screen.Page{Rows: rs, Cols: len(rs[0])}
 }
 
-// TestAppendPageMargin: the cells outside the screen area are spaces in Fill.
+// TestAppendPageMargin: the cells outside the screen area are spaces in Normal.
 func TestAppendPageMargin(t *testing.T) {
 	page := screen.Page{
 		Rows: []screen.Row{{cell("x", idx(15), idx(4), 0)}},
-		Cols: 4, Margin: 1, Fill: screen.Style{Fg: idx(7), Bg: idx(0)},
+		Cols: 4, Margin: 1, Normal: screen.Style{Fg: idx(7), Bg: idx(0)},
 	}
 	want := "\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;37;40m \x1b[0;97;44mx\x1b[0;37;40m  \x1b[0m"
 	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
@@ -155,6 +155,44 @@ func TestAppendPageReducedEqual(t *testing.T) {
 		if got := string(AppendPage(nil, page, tt.colors)); got != want {
 			t.Errorf("colors %d: AppendPage = %q, want %q", tt.colors, got, want)
 		}
+	}
+}
+
+// TestAppendPageFill: the fill rows of each fill (section 7.1). A page of 1 row on 3 terminal rows,
+// with valign = "bottom" (Top 2) and with valign = "top" (Top 0).
+func TestAppendPageFill(t *testing.T) {
+	normal := screen.Style{Fg: idx(7), Bg: idx(0)}
+	row := screen.Row{cell("x", idx(15), idx(4), 0)}
+	tests := []struct {
+		fill screen.Fill
+		top  int
+		want string
+	}{
+		{screen.FillNone, 2, "\x1b[0m\x1b[2J\x1b[3;1H\x1b[0;97;44mx\x1b[0;37;40m \x1b[0m"},
+		{screen.FillSpaces, 2, "\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;37;40m  \x1b[2;1H  " +
+			"\x1b[3;1H\x1b[0;97;44mx\x1b[0;37;40m \x1b[0m"},
+		{screen.FillSpaces, 0, "\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;97;44mx\x1b[0;37;40m " +
+			"\x1b[2;1H  \x1b[3;1H  \x1b[0m"},
+		{screen.FillErase, 2, "\x1b[0;37;40m\x1b[2J\x1b[3;1H\x1b[0;97;44mx\x1b[0;37;40m \x1b[0m"},
+	}
+	for _, tt := range tests {
+		page := screen.Page{Rows: []screen.Row{row}, Cols: 2, Height: 3, Top: tt.top, Normal: normal, Fill: tt.fill}
+		if got := string(AppendPage(nil, page, screen.Colors16)); got != tt.want {
+			t.Errorf("fill %s, top %d: AppendPage =\n%q\nwant\n%q", tt.fill, tt.top, got, tt.want)
+		}
+	}
+}
+
+// TestAppendPageErase: with fill = "erase", step 1 sends the reduced SGR of normal,
+// and a cell in normal after it needs no SGR (section 7.2).
+func TestAppendPageErase(t *testing.T) {
+	normal := screen.Style{Fg: rgb(255, 255, 255), Bg: rgb(0, 0, 0)}
+	page := screen.Page{
+		Rows: []screen.Row{{{Grapheme: "a", Style: normal}}}, Cols: 1, Height: 1, Normal: normal, Fill: screen.FillErase,
+	}
+	want := "\x1b[0;97;40m\x1b[2J\x1b[1;1Ha\x1b[0m"
+	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
+		t.Errorf("AppendPage = %q, want %q", got, want)
 	}
 }
 

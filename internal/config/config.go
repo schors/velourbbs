@@ -14,8 +14,9 @@ import (
 
 // Config is the settings of the BBS directory.
 type Config struct {
-	// Width is the default width limits of a screen (screens-toml, section 3.1).
-	Width screen.WidthLimits
+	// Layout is the default layout of a screen: the keys width, align, valign
+	// and fill of [screen] (screens-toml, section 3.1).
+	screen.Layout
 	// More is the text of the More row (screens-toml, section 3.1).
 	More string
 	// Theme is the base theme (screens-toml, section 3.2). It always has normal and more.

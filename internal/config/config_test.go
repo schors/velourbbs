@@ -39,6 +39,9 @@ func TestDefaults(t *testing.T) {
 	if cfg.Width != (screen.WidthLimits{Min: 40, Max: 80}) || cfg.More != "-- More --" {
 		t.Errorf("cfg = %+v", cfg)
 	}
+	if cfg.Align != screen.AlignCenter || cfg.VAlign != screen.VAlignTop || cfg.Fill != screen.FillNone {
+		t.Errorf("layout = %+v", cfg.Layout)
+	}
 	if len(cfg.Theme) != 2 || cfg.Theme["normal"] != style(t, "7/0") || cfg.Theme["more"] != style(t, "15/0") {
 		t.Errorf("theme = %v", cfg.Theme)
 	}
@@ -99,6 +102,34 @@ w = "term.cols"
 	}
 }
 
+// Each value of align, valign and fill (screens-toml, section 3.1).
+func TestLayout(t *testing.T) {
+	tests := []struct {
+		data string
+		want screen.Layout
+	}{
+		{`align = "left"`, screen.Layout{Align: screen.AlignLeft}},
+		{`align = "center"`, screen.Layout{Align: screen.AlignCenter}},
+		{`align = "right"`, screen.Layout{Align: screen.AlignRight}},
+		{`valign = "top"`, screen.Layout{VAlign: screen.VAlignTop}},
+		{`valign = "middle"`, screen.Layout{VAlign: screen.VAlignMiddle}},
+		{`valign = "bottom"`, screen.Layout{VAlign: screen.VAlignBottom}},
+		{`fill = "none"`, screen.Layout{Fill: screen.FillNone}},
+		{`fill = "spaces"`, screen.Layout{Fill: screen.FillSpaces}},
+		{`fill = "erase"`, screen.Layout{Fill: screen.FillErase}},
+	}
+	for _, tt := range tests {
+		cfg, ds := parseScreens([]byte("[screen]\n" + tt.data))
+		if len(ds) != 0 {
+			t.Errorf("%s: diags %q", tt.data, messages(ds))
+		}
+		tt.want.Width = defaultLayout.Width
+		if cfg.Layout != tt.want {
+			t.Errorf("%s: layout %+v, want %+v", tt.data, cfg.Layout, tt.want)
+		}
+	}
+}
+
 // A theme style takes the colours of normal, not its attributes.
 func TestNormalAttributes(t *testing.T) {
 	cfg, ds := parseScreens([]byte("[theme.default]\nnormal = \"2/3 bold\"\nx = \"5\"\n"))
@@ -116,6 +147,9 @@ func TestErrors(t *testing.T) {
 		`[screen]`,
 		`width = [80, 40]`,
 		`more = "a` + "\u200b" + `"`,
+		`align = "centre"`,
+		`valign = "Top"`,
+		`fill = ""`,
 		`[theme.default]`,
 		`Title = "1"`,
 		`normal = "7/0"`,
@@ -133,6 +167,9 @@ func TestErrors(t *testing.T) {
 	cfg, ds := parseScreens([]byte(data))
 	want := []string{
 		`screens/screens.toml:1:1: screen.width: width [80, 40] is not in 1 <= min <= max <= 255`,
+		`screens/screens.toml:1:1: screen.align: invalid value "centre", want "left", "center" or "right"`,
+		`screens/screens.toml:1:1: screen.valign: invalid value "Top", want "top", "middle" or "bottom"`,
+		`screens/screens.toml:1:1: screen.fill: invalid value "", want "none", "spaces" or "erase"`,
 		`screens/screens.toml:1:1: screen.more: zero-width grapheme U+200B`,
 		`screens/screens.toml:1:1: menu.start: invalid screen name "Main"`,
 		`screens/screens.toml:1:1: theme.default: invalid style name "Title"`,
@@ -148,7 +185,7 @@ func TestErrors(t *testing.T) {
 	if !ds.HasErrors() {
 		t.Error("HasErrors = false")
 	}
-	if cfg.Width != (screen.WidthLimits{Min: 40, Max: 80}) || cfg.More != "-- More --" || cfg.Start != "main" {
+	if cfg.Layout != defaultLayout || cfg.More != "-- More --" || cfg.Start != "main" {
 		t.Errorf("an invalid value replaced a default: %+v", cfg)
 	}
 	if cfg.SessionTheme(16)["normal"] != style(t, "7/0") || cfg.SessionTheme(16)["bad"] != style(t, "2/0") {
@@ -180,6 +217,7 @@ func TestTOMLErrors(t *testing.T) {
 		{"[screen]\nwidth = [1]", []string{`1:1: screen.width: must be an array of 2 integers`}},
 		{"[screen]\nwidth = [1, \"2\"]", []string{`2:13: screen.width: must be an array of integers`}},
 		{"[screen]\nmore = 1", []string{`2:8: screen.more: must be a string`}},
+		{"[screen]\nfill = 1", []string{`2:8: screen.fill: must be a string`}},
 		{"[screen]\nmore = \"\t\"", []string{`1:1: screen.more: control character U+0009`}},
 		{"[screen]\nwidth = ", []string{`2:8: expected value, not end of input`}},
 		{"[theme.default]\nprompt = \"14 bolt\"", []string{`1:1: theme.default.prompt: invalid style "14 bolt": unknown attribute "bolt"`}},
@@ -242,6 +280,8 @@ func TestExamples(t *testing.T) {
 [screen]
 width = [40, 100]
 more = "-- More --"
+valign = "middle"
+fill = "spaces"
 
 [theme.default]
 normal = "7/0"
@@ -278,6 +318,9 @@ output_timeout = 60
 	}
 	if cfg.SessionTheme(16)["title"] != style(t, "15/1 bold") || cfg.SessionTheme(256)["title"] != style(t, "15/4 bold") {
 		t.Errorf("title: 16 %v, 256 %v", cfg.SessionTheme(16)["title"], cfg.SessionTheme(256)["title"])
+	}
+	if cfg.VAlign != screen.VAlignMiddle || cfg.Fill != screen.FillSpaces {
+		t.Errorf("layout = %+v", cfg.Layout)
 	}
 	if cfg.SessionTheme(16)["prompt"] != style(t, "14/0") || cfg.Start != "welcome" || cfg.Telnet.Listen != ":2323" {
 		t.Errorf("cfg = %+v", cfg)

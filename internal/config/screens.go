@@ -11,7 +11,7 @@ import (
 
 // The defaults of screens-toml, sections 3.1 and 3.2.
 var (
-	defaultWidth     = screen.WidthLimits{Min: 40, Max: 80}
+	defaultLayout    = screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}
 	defaultMore      = "-- More --"
 	defaultNormal    = screen.Style{Fg: screen.IndexColour(7), Bg: screen.IndexColour(0)}
 	defaultMoreStyle = screen.StyleSpec{
@@ -22,8 +22,11 @@ var (
 // screensDoc is the plain decode of screens/screens.toml. A nil pointer is a key that is not set.
 type screensDoc struct {
 	Screen struct {
-		Width *[]int64 `toml:"width"`
-		More  *string  `toml:"more"`
+		Width  *[]int64 `toml:"width"`
+		Align  *string  `toml:"align"`
+		VAlign *string  `toml:"valign"`
+		Fill   *string  `toml:"fill"`
+		More   *string  `toml:"more"`
 	} `toml:"screen"`
 	Theme struct {
 		Default map[string]string `toml:"default"`
@@ -41,7 +44,7 @@ type screensDoc struct {
 // It gives at most screen.MaxFileDiags diagnostics (screen-render, section 3.1).
 func parseScreens(data []byte) (Config, screen.Diags) {
 	cfg := Config{
-		Width: defaultWidth, More: defaultMore, Fields: screen.Fields{}, Start: "main", Telnet: defaultTelnet,
+		Layout: defaultLayout, More: defaultMore, Fields: screen.Fields{}, Start: "main", Telnet: defaultTelnet,
 	}
 	fd := screen.FileDiags{File: ScreensFile}
 	var d screensDoc
@@ -55,14 +58,8 @@ func parseScreens(data []byte) (Config, screen.Diags) {
 	}
 	// Each other error has the position 1:1 (screen-render, section 3.1).
 	errorf := func(format string, args ...any) { fd.Errorf(1, 1, format, args...) }
-	if p := d.Screen.Width; p != nil {
-		w, err := screen.NewWidth(*p)
-		if err != nil {
-			errorf("screen.width: %v", err)
-		} else {
-			cfg.Width = w
-		}
-	}
+	cfg.Layout = screen.ParseLayoutKeys(d.Screen.Width, d.Screen.Align, d.Screen.VAlign, d.Screen.Fill,
+		func(key string, err error) { errorf("screen.%s: %v", key, err) }).Over(defaultLayout)
 	if p := d.Screen.More; p != nil {
 		if err := checkText(*p); err != nil {
 			errorf("screen.more: %v", err)
