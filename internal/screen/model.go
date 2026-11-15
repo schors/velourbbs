@@ -10,9 +10,10 @@ type Pos struct {
 // Screen is a screen after the load (sections 3 and 6).
 // The model is immutable after the load.
 type Screen struct {
-	Name  string
-	File  string
-	Width WidthLimits // width, else [screen] width (section 6.1)
+	Name string
+	File string
+	// Layout holds each key of the front matter, else of [screen] (sections 6.1 and 6.5).
+	Layout
 	Items []Item
 	Body  []Seg
 }

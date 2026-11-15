@@ -57,7 +57,7 @@ func dump(t *testing.T, files map[string]string, name string, cols, rows int, it
 	for n, data := range files {
 		fsys["screens/"+n] = &fstest.MapFile{Data: []byte(data)}
 	}
-	screens, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 40, Max: 80}, aliases)
+	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}, aliases)
 	if ds.HasErrors() {
 		t.Fatalf("diags: %v", ds)
 	}
@@ -69,7 +69,7 @@ func dump(t *testing.T, files map[string]string, name string, cols, rows int, it
 		env.Items[k] = true
 	}
 	var b strings.Builder
-	if err := screen.WriteDump(&b, rows, screen.Render(screens[name], env, theme, "-- More --")); err != nil {
+	if err := screen.WriteDump(&b, screen.Render(screens[name], env, theme, "-- More --")); err != nil {
 		t.Fatal(err)
 	}
 	return b.String()
@@ -125,6 +125,28 @@ func TestRender(t *testing.T) {
 		{"margin", map[string]string{
 			"main.bbt": "+++\nwidth = [8, 10]\n+++\n{!title}centred\n",
 		}, 21, 10, nil},
+		// align = "left" and "right": a left margin of 0 and of cols - W (section 6.1).
+		{"align-left", map[string]string{
+			"main.bbt": "+++\nwidth = [8, 10]\nalign = \"left\"\n+++\n{!title}left\n",
+		}, 21, 10, nil},
+		{"align-right", map[string]string{
+			"main.bbt": "+++\nwidth = [8, 10]\nalign = \"right\"\n+++\n{!title}right\n",
+		}, 21, 10, nil},
+		// valign = "middle" and "bottom": 3 rows of 10 start at the terminal rows 4 and 8 (section 6.5).
+		{"valign-middle", map[string]string{
+			"main.bbt": "+++\nwidth = [20, 20]\nvalign = \"middle\"\nfill = \"spaces\"\n+++\n" + strings.Repeat("row\n", 3),
+		}, 20, 10, nil},
+		{"valign-bottom", map[string]string{
+			"main.bbt": "+++\nwidth = [20, 20]\nvalign = \"bottom\"\nfill = \"erase\"\n+++\n" + strings.Repeat("row\n", 3),
+		}, 20, 10, nil},
+		// R = term.rows: the page starts at the terminal row 1 with each valign.
+		{"valign-full", map[string]string{
+			"main.bbt": "+++\nwidth = [20, 20]\nvalign = \"bottom\"\n+++\n" + strings.Repeat("row\n", 10),
+		}, 20, 10, nil},
+		// More than one page: each page starts at the terminal row 1.
+		{"valign-pages", map[string]string{
+			"main.bbt": "+++\nwidth = [20, 20]\nvalign = \"bottom\"\nfill = \"spaces\"\n+++\n" + strings.Repeat("row\n", 12),
+		}, 20, 10, nil},
 		// More rows than term.rows: pages of term.rows - 1 rows and the More row.
 		{"pages", map[string]string{
 			"main.bbt": "+++\nwidth = [20, 20]\n+++\n" + strings.Repeat("row\n", 12),
@@ -182,7 +204,7 @@ func TestRender(t *testing.T) {
 
 // The golden dump of the example equals the dump of screen-render, section 3.3.
 func TestRenderExampleDump(t *testing.T) {
-	want := `page 1 80x24
+	want := `page 1 80x24 fill none
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
 styles
@@ -201,7 +223,7 @@ styles
 func load(t *testing.T, main string) *screen.Screen {
 	t.Helper()
 	fsys := fstest.MapFS{"screens/main.bbt": {Data: []byte(main)}}
-	screens, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 40, Max: 80}, aliases)
+	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}, aliases)
 	if ds.HasErrors() {
 		t.Fatalf("diags: %v", ds)
 	}

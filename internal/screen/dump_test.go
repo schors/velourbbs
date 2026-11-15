@@ -26,12 +26,12 @@ func TestWriteDump(t *testing.T) {
 	normal := Style{Fg: IndexColour(7), Bg: IndexColour(0)}
 	title := Style{Fg: IndexColour(15), Bg: IndexColour(4), Attr: Bold}
 	cyan := Style{Fg: IndexColour(14), Bg: IndexColour(0)}
-	page := Page{Rows: []Row{row(80, "Welcome!", title, normal), row(80, "[G]oodbye", cyan, normal)}, Cols: 80}
+	page := Page{Rows: []Row{row(80, "Welcome!", title, normal), row(80, "[G]oodbye", cyan, normal)}, Cols: 80, Height: 24}
 	var b strings.Builder
-	if err := WriteDump(&b, 24, slices.Values([]Page{page})); err != nil {
+	if err := WriteDump(&b, slices.Values([]Page{page})); err != nil {
 		t.Fatal(err)
 	}
-	want := `page 1 80x24
+	want := `page 1 80x24 fill none
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
 styles
@@ -44,28 +44,28 @@ styles
 }
 
 // The second page has a screen area of 2 cells with a margin of 1:
-// the cells outside it are spaces in Fill.
+// the cells outside it are spaces in Normal. It starts at the terminal row 2 and fills with spaces.
 func TestWriteDumpPages(t *testing.T) {
 	normal := Style{Fg: IndexColour(7), Bg: IndexColour(0)}
 	wide := Style{Fg: IndexColour(11), Bg: IndexColour(0)}
 	pages := []Page{
-		{Rows: []Row{row(5, "中a", wide, normal), row(5, "", normal, normal)}, Cols: 5},
-		{Rows: []Row{row(2, "b", rgbStyle(), normal)}, Cols: 5, Margin: 1, Fill: normal},
+		{Rows: []Row{row(5, "中a", wide, normal), row(5, "", normal, normal)}, Cols: 5, Height: 3},
+		{Rows: []Row{row(2, "b", rgbStyle(), normal)}, Cols: 5, Height: 3, Top: 1, Margin: 1, Normal: normal, Fill: FillSpaces},
 	}
 	var b strings.Builder
-	if err := WriteDump(&b, 3, slices.Values(pages)); err != nil {
+	if err := WriteDump(&b, slices.Values(pages)); err != nil {
 		t.Fatal(err)
 	}
-	want := `page 1 5x3
+	want := `page 1 5x3 fill none
 |中a  |
 |     |
 styles
 1: 1-3 11/0, 4-5 7/0
 2: 1-5 7/0
-page 2 5x3
+page 2 5x3 fill spaces
 | b   |
 styles
-1: 1-1 7/0, 2-2 #102030/-, 3-5 7/0
+2: 1-1 7/0, 2-2 #102030/-, 3-5 7/0
 `
 	if b.String() != want {
 		t.Errorf("got\n%s\nwant\n%s", b.String(), want)

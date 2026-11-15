@@ -15,25 +15,29 @@ type Cell struct {
 // Row is one row of cells.
 type Row []Cell
 
-// Page is the rows that the terminal shows at one time (section 6.4).
+// Page is the rows that the terminal shows at one time (sections 6.4 and 6.5).
 // A row holds the cells of the screen area. Line gives the row at term.cols cells.
+// The terminal rows above and below the rows are the fill rows.
 type Page struct {
 	Rows   []Row
 	Cols   int   // term.cols
+	Height int   // term.rows
+	Top    int   // the fill rows above the rows: the first row is the terminal row Top + 1
 	Margin int   // the left margin of the screen area
-	Fill   Style // the style of the cells outside the screen area: normal
+	Normal Style // the style normal: the cells outside the screen area and the fill rows
+	Fill   Fill  // the cells of the fill rows
 }
 
 // Line gives row i at p.Cols cells in buf: each cell outside the screen area
-// is a space in p.Fill (section 6.2). It reuses the memory of buf.
+// is a space in p.Normal (section 6.2). It reuses the memory of buf.
 func (p Page) Line(i int, buf Row) Row {
 	buf = buf[:0]
 	for range p.Margin {
-		buf = append(buf, Cell{" ", p.Fill})
+		buf = append(buf, Cell{" ", p.Normal})
 	}
 	buf = append(buf, p.Rows[i]...)
 	for len(buf) < p.Cols {
-		buf = append(buf, Cell{" ", p.Fill})
+		buf = append(buf, Cell{" ", p.Normal})
 	}
 	return buf
 }

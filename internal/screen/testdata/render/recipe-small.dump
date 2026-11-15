@@ -1,4 +1,4 @@
-page 1 25x10
+page 1 25x10 fill none
 |small screen text that   |
 |wraps                    |
 styles

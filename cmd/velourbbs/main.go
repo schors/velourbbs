@@ -58,7 +58,7 @@ func run(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 func load(fsys fs.FS) (config.Config, map[string]*screen.Screen, screen.Diags) {
 	// Load also gives the defaults after an error, so the screens load with them.
 	cfg, ds := config.Load(fsys)
-	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Width, cfg.Fields)
+	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
 	ds = append(ds, sds...)
 	ds.Sort()
 	if ds.HasErrors() {

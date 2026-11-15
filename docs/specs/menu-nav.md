@@ -136,20 +136,20 @@ of [bbt-format](bbt-format.md), section 8:
 
 ```
 screen main
-page 1 80x25
+page 1 80x25 fill none
 ...
 key S
 screen sysinfo
-page 1 80x25
+page 1 80x25 fill none
 ...
 key X
 screen main
-page 1 80x25
+page 1 80x25 fill none
 ...
 key G
 logoff
 screen goodbye
-page 1 80x25
+page 1 80x25 fill none
 ...
 ```
 

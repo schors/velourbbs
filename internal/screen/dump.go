@@ -7,23 +7,22 @@ import (
 	"iter"
 )
 
-// WriteDump writes the cell dump of screen-render, section 3.3, of pages for a terminal of term.rows = rows.
-func WriteDump(w io.Writer, rows int, pages iter.Seq[Page]) error {
+// WriteDump writes the cell dump of screen-render, section 3.3, of pages.
+func WriteDump(w io.Writer, pages iter.Seq[Page]) error {
 	n := 0
 	for p := range pages {
 		n++
-		if err := WritePage(w, rows, n, p); err != nil {
+		if err := WritePage(w, n, p); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// WritePage writes the part of the cell dump for page n, 1-based, of a terminal
-// of term.rows = rows (screen-render, section 3.3).
-func WritePage(w io.Writer, rows, n int, p Page) error {
+// WritePage writes the part of the cell dump for page n, 1-based (screen-render, section 3.3).
+func WritePage(w io.Writer, n int, p Page) error {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "page %d %dx%d\n", n, p.Cols, rows)
+	fmt.Fprintf(&b, "page %d %dx%d fill %s\n", n, p.Cols, p.Height, p.Fill)
 	var line Row
 	for i := range p.Rows {
 		line = p.Line(i, line)
@@ -36,7 +35,7 @@ func WritePage(w io.Writer, rows, n int, p Page) error {
 	b.WriteString("styles\n")
 	for i := range p.Rows {
 		line = p.Line(i, line)
-		fmt.Fprintf(&b, "%d:", i+1)
+		fmt.Fprintf(&b, "%d:", p.Top+i+1) // the terminal row
 		sep := " "
 		for start := 0; start < len(line); {
 			end := start + 1

@@ -19,12 +19,12 @@ import (
 const MaxBodyLines = 10000
 
 // Load loads each screen of fsys/screens with the fragments and the art that it uses.
-// fsys is the BBS directory. theme (the base theme), width and fields come from
+// fsys is the BBS directory. theme (the base theme), layout and fields come from
 // screens/screens.toml. The load uses only the names of theme (bbt-format, section 7.3).
 // The map of screens by name is nil when the diagnostics have an error.
-func Load(fsys fs.FS, theme map[string]screen.Style, width screen.WidthLimits, fields screen.Fields) (map[string]*screen.Screen, screen.Diags) {
+func Load(fsys fs.FS, theme map[string]screen.Style, layout screen.Layout, fields screen.Fields) (map[string]*screen.Screen, screen.Diags) {
 	l := &loader{
-		fsys: fsys, theme: theme, width: width, fields: fields,
+		fsys: fsys, theme: theme, layout: layout, fields: fields,
 		diags: map[string]*screen.FileDiags{}, files: map[string]*file{}, arts: map[string]*screen.Art{},
 		missing: map[string]bool{}, reported: map[screen.Pos]bool{},
 	}
@@ -92,7 +92,7 @@ func Load(fsys fs.FS, theme map[string]screen.Style, width screen.WidthLimits, f
 type loader struct {
 	fsys   fs.FS
 	theme  map[string]screen.Style
-	width  screen.WidthLimits
+	layout screen.Layout // the layout of [screen]
 	fields screen.Fields // the aliases (section 4.2)
 	diags  map[string]*screen.FileDiags
 	files  map[string]*file       // nil for a file that cannot be read

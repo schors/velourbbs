@@ -1,0 +1,8 @@
+page 1 20x10 fill erase
+|row                 |
+|row                 |
+|row                 |
+styles
+8: 1-20 7/0
+9: 1-20 7/0
+10: 1-20 7/0

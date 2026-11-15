@@ -186,19 +186,31 @@ The TTYPE name in the log is filtered and cut as `term.type` (section 6).
 The host shows a page ([menu-nav](menu-nav.md), section 5) in this order:
 
 1. `ESC[0m ESC[2J`: reset the style and clear the terminal screen.
-2. For each row of the page: `ESC[<row>;1H`, then the cells of the row.
+   With `fill = "erase"`, the SGR of `normal` (sections 7.2 and 7.3) in place of `ESC[0m`:
+   the terminal clears the screen in the background of `normal`.
+2. For each terminal row from the top, with the terminal rows of [bbt-format](bbt-format.md),
+   section 6.5:
+   - a row of the page: `ESC[<row>;1H`, then the cells of the row;
+   - a fill row with `fill = "spaces"`: `ESC[<row>;1H`, then `term.cols` spaces in `normal`.
 3. `ESC[0m`.
 
 - A wide grapheme appears once. Its second cell gives no output.
 - Each row starts at its own position, so a page has no line ends
   and the terminal does not scroll.
+- A page writes the last cell of the last terminal row when its rows or its fill rows
+  with `fill = "spaces"` reach that row. The terminal of each target implementation
+  delays the wrap after the last column, so it does not scroll.
+  The terminfo entries `putty`, `teraterm` and `xterm` have `xenl`.
+- `fill = "erase"` needs bce. The terminfo entries `putty`, `teraterm` and `xterm` have `bce`.
+  In PuTTY, bce is a setting, on by default. GNU screen and tmux have no `bce`:
+  in them the fill rows have the default colours.
 
 ### 7.2. Styles
 
 Before a cell whose style differs from the style of the previous cell, the host sends
 `ESC[0;<params>m`, or `ESC[0m` when there are no parameters. After step 1 of section 7.1,
-the style is `default` colours without attributes. The parameters are the attributes,
-then the foreground, then the background:
+the style is `default` colours without attributes, or `normal` with `fill = "erase"`.
+The parameters are the attributes, then the foreground, then the background:
 
 | Item | Parameter |
 |---|---|

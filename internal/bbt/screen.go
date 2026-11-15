@@ -56,7 +56,7 @@ func (l *loader) errorf(u *unit, pos screen.Pos, warning bool, format string, ar
 }
 
 // screen does the screen pass: the limits of section 9, the includes,
-// the art inserts and the width limits. The file pass resolved the fields.
+// the art inserts and the layout. The file pass resolved the fields.
 // A screen with a front matter error resolves for the errors of its includes
 // and art inserts, and gives no model.
 func (l *loader) screen(u *unit) {
@@ -66,10 +66,7 @@ func (l *loader) screen(u *unit) {
 	}
 	u.frags = map[*file]fragment{}
 	u.resolving = map[*file]bool{}
-	u.s.Width = l.width
-	if u.fr.width != nil {
-		u.s.Width = *u.fr.width
-	}
+	u.s.Layout = u.fr.layout.Over(l.layout)
 	u.s.Body = l.resolve(u, u.f.body, true)
 	if u.over { // the body of a screen over the limit is not kept
 		u.s.Body, u.frags = nil, nil

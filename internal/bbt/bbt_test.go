@@ -54,7 +54,7 @@ func load(files map[string]string) (map[string]*screen.Screen, []string) {
 	for name, data := range files {
 		fsys["screens/"+name] = &fstest.MapFile{Data: []byte(data)}
 	}
-	screens, ds := bbt.Load(fsys, theme, defaultWidth, aliases)
+	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: defaultWidth}, aliases)
 	var msgs []string
 	for _, d := range ds {
 		msgs = append(msgs, d.String())
@@ -231,6 +231,12 @@ func TestFrontMatter(t *testing.T) {
 		{map[string]string{"s.bbt": "+++\nwidth = [0, 300]\n+++\n"},
 			[]string{`screens/s.bbt:2:1: width: width [0, 300] is not in 1 <= min <= max <= 255`}},
 		{map[string]string{"s.bbt": "+++\n\nwidth = [1]\n+++\n"}, []string{`screens/s.bbt:2:1: width: must be an array of 2 integers`}},
+		{map[string]string{"s.bbt": "+++\nalign = \"middle\"\nvalign = \"center\"\nfill = \"clear\"\n+++\n"}, []string{
+			`screens/s.bbt:2:1: align: invalid value "middle", want "left", "center" or "right"`,
+			`screens/s.bbt:2:1: valign: invalid value "center", want "top", "middle" or "bottom"`,
+			`screens/s.bbt:2:1: fill: invalid value "clear", want "none", "spaces" or "erase"`,
+		}},
+		{map[string]string{"s.bbt": "+++\nfill = 1\n+++\n"}, []string{`screens/s.bbt:2:8: fill: must be a string`}},
 		// The column counts code points.
 		{map[string]string{"s.bbt": "+++\nitem = [{ key = \"яя\", do = 1 }]\n+++\n"}, []string{`screens/s.bbt:2:28: item: invalid type`}},
 		// An alias of screens/screens.toml in when: a type error at 2:1.
@@ -494,6 +500,39 @@ func TestLimits(t *testing.T) {
 	}
 }
 
+// Each value of align, valign and fill in the front matter overrides the key of [screen].
+// A screen without the keys takes the keys of [screen] (section 3.2).
+func TestLayout(t *testing.T) {
+	base := screen.Layout{Width: defaultWidth, Align: screen.AlignRight, VAlign: screen.VAlignBottom, Fill: screen.FillErase}
+	tests := []struct {
+		front string
+		want  func(*screen.Layout)
+	}{
+		{"", func(*screen.Layout) {}},
+		{`align = "left"`, func(l *screen.Layout) { l.Align = screen.AlignLeft }},
+		{`align = "center"`, func(l *screen.Layout) { l.Align = screen.AlignCenter }},
+		{`align = "right"`, func(l *screen.Layout) { l.Align = screen.AlignRight }},
+		{`valign = "top"`, func(l *screen.Layout) { l.VAlign = screen.VAlignTop }},
+		{`valign = "middle"`, func(l *screen.Layout) { l.VAlign = screen.VAlignMiddle }},
+		{`valign = "bottom"`, func(l *screen.Layout) { l.VAlign = screen.VAlignBottom }},
+		{`fill = "none"`, func(l *screen.Layout) { l.Fill = screen.FillNone }},
+		{`fill = "spaces"`, func(l *screen.Layout) { l.Fill = screen.FillSpaces }},
+		{`fill = "erase"`, func(l *screen.Layout) { l.Fill = screen.FillErase }},
+	}
+	for _, tt := range tests {
+		fsys := fstest.MapFS{"screens/s.bbt": {Data: []byte("+++\n" + tt.front + "\n+++\nx\n")}}
+		screens, ds := bbt.Load(fsys, theme, base, aliases)
+		if len(ds) != 0 {
+			t.Fatalf("%q: diags %v", tt.front, ds)
+		}
+		want := base
+		tt.want(&want)
+		if got := screens["s"].Layout; got != want {
+			t.Errorf("%q: layout %+v, want %+v", tt.front, got, want)
+		}
+	}
+}
+
 func TestWidth(t *testing.T) {
 	// The art does not set the width limits (section 6.1).
 	screens := mustLoad(t, map[string]string{
@@ -513,7 +552,7 @@ func TestWidth(t *testing.T) {
 		"screens/x.ans": {Data: []byte(sauceArt("x", 50))},
 		"screens/y.ans": {Data: []byte(sauceArt("y", 132))},
 	}
-	screens, ds := bbt.Load(fsys, theme, screen.WidthLimits{Min: 20, Max: 60}, aliases)
+	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 60}}, aliases)
 	if w := screens["a"].Width; w != (screen.WidthLimits{Min: 20, Max: 60}) {
 		t.Errorf("[screen] width: %v", w)
 	}
@@ -583,7 +622,7 @@ func TestNotRegular(t *testing.T) {
 		"screens/dir/x.txt": {},
 		"screens/notes.txt": {Mode: fs.ModeNamedPipe},
 	}
-	_, ds := bbt.Load(fsys, theme, defaultWidth, aliases)
+	_, ds := bbt.Load(fsys, theme, screen.Layout{Width: defaultWidth}, aliases)
 	var got []string
 	for _, d := range ds {
 		got = append(got, d.String())
@@ -611,7 +650,7 @@ func FuzzLoad(f *testing.F) {
 			"screens/_f.bbt": {Data: frag},
 			"screens/a.ans":  {Data: []byte(sauceArt("{w}", 80))},
 		}
-		screens, ds := bbt.Load(fsys, theme, defaultWidth, aliases)
+		screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: defaultWidth}, aliases)
 		if ds.HasErrors() {
 			return
 		}

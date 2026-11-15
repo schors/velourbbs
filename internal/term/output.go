@@ -15,29 +15,58 @@ import (
 // gives the 256-colour rule and each other value gives the 16-colour rule (section 7.3).
 // The caller doubles IAC after it (section 4.3).
 func AppendPage(dst []byte, p screen.Page, colors int) []byte {
-	dst = append(dst, "\x1b[0m\x1b[2J"...)
 	var model, out screen.Style // the model style and the output style of the previous cell
-	var row screen.Row
-	for i := range p.Rows {
-		dst = append(dst, "\x1b["...)
-		dst = strconv.AppendInt(dst, int64(i+1), 10)
-		dst = append(dst, ";1H"...)
-		row = p.Line(i, row)
-		for _, c := range row {
-			if c.Grapheme == "" {
-				continue // the second cell of a wide grapheme
+	if p.Fill == screen.FillErase {
+		model, out = p.Normal, reduceStyle(p.Normal, colors)
+		dst = appendSGR(dst, out)
+	} else {
+		dst = append(dst, "\x1b[0m"...)
+	}
+	dst = append(dst, "\x1b[2J"...)
+	appendCell := func(c screen.Cell) {
+		if c.Style != model {
+			model = c.Style
+			if s := reduceStyle(model, colors); s != out {
+				out = s
+				dst = appendSGR(dst, out)
 			}
-			if c.Style != model {
-				model = c.Style
-				if s := reduceStyle(model, colors); s != out {
-					out = s
-					dst = appendSGR(dst, out)
-				}
-			}
-			dst = appendUTF8(dst, c.Grapheme)
+		}
+		dst = appendUTF8(dst, c.Grapheme)
+	}
+	fillRow := func(row int) {
+		if p.Fill != screen.FillSpaces {
+			return
+		}
+		dst = appendPos(dst, row)
+		for range p.Cols {
+			appendCell(screen.Cell{Grapheme: " ", Style: p.Normal})
 		}
 	}
+	// The terminal rows from the top (section 7.1, step 2).
+	for row := range p.Top {
+		fillRow(row + 1)
+	}
+	var line screen.Row
+	for i := range p.Rows {
+		dst = appendPos(dst, p.Top+i+1)
+		line = p.Line(i, line)
+		for _, c := range line {
+			if c.Grapheme != "" { // the second cell of a wide grapheme gives no output
+				appendCell(c)
+			}
+		}
+	}
+	for row := p.Top + len(p.Rows); row < p.Height; row++ {
+		fillRow(row + 1)
+	}
 	return append(dst, "\x1b[0m"...)
+}
+
+// appendPos appends ESC[<row>;1H.
+func appendPos(dst []byte, row int) []byte {
+	dst = append(dst, "\x1b["...)
+	dst = strconv.AppendInt(dst, int64(row), 10)
+	return append(dst, ";1H"...)
 }
 
 // appendUTF8 is the encoder of section 7.4. The model holds valid UTF-8
