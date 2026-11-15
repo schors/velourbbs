@@ -101,6 +101,19 @@ func TestIsIdent(t *testing.T) {
 	}
 }
 
+func TestIsName(t *testing.T) {
+	for _, s := range []string{"a", "main", "0", "main_wide", "a-b", "9x"} {
+		if !IsName(s) {
+			t.Errorf("IsName(%q) = false", s)
+		}
+	}
+	for _, s := range []string{"", "_a", "-a", "A", "aB", "a.b", "a b", "é"} {
+		if IsName(s) {
+			t.Errorf("IsName(%q) = true", s)
+		}
+	}
+}
+
 func TestNewWidth(t *testing.T) {
 	for _, a := range [][]int64{{1, 1}, {40, 80}, {255, 255}} {
 		if w, err := NewWidth(a); err != nil || w != (WidthLimits{int(a[0]), int(a[1])}) {

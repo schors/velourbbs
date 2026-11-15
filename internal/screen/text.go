@@ -78,3 +78,16 @@ func IsIdent(s string) bool {
 	}
 	return s != ""
 }
+
+// IsName reports whether s matches the name syntax [a-z0-9][a-z0-9_-]* (section 2):
+// a screen, a fragment or an art file.
+func IsName(s string) bool {
+	for i := range len(s) {
+		c := s[i]
+		ok := 'a' <= c && c <= 'z' || '0' <= c && c <= '9' || i > 0 && (c == '_' || c == '-')
+		if !ok {
+			return false
+		}
+	}
+	return s != ""
+}

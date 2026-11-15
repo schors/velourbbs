@@ -90,7 +90,11 @@ func Parse(data []byte) (Config, screen.Diags) {
 		}
 	}
 	if p := d.Menu.Start; p != nil {
-		cfg.Start = *p
+		if !screen.IsName(*p) {
+			errorf("menu.start: invalid screen name %q", *p)
+		} else {
+			cfg.Start = *p
+		}
 	}
 	cfg.Telnet = telnet(d.Telnet, errorf)
 	specs := map[string]screen.StyleSpec{}

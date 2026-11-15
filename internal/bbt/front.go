@@ -106,7 +106,7 @@ func parseAction(do string) (screen.Action, error) {
 		if !hasArg {
 			return screen.Action{}, errors.New("goto needs a screen name")
 		}
-		if !isName(arg) {
+		if !screen.IsName(arg) {
 			return screen.Action{}, fmt.Errorf("invalid screen name %q", arg)
 		}
 		return screen.Action{Op: screen.Goto, Screen: arg}, nil

@@ -12,9 +12,9 @@ The other specifications define the effect of a key and refer to this specificat
 ## 2. File
 
 - The BBS directory is the current directory of `velourbbs`. It holds `bbs.toml` and `screens/`.
-- `bbs.toml` must exist.
+- `bbs.toml` must exist and be a regular file.
 - The file is TOML 1.1 in UTF-8. The loader removes a BOM.
-- The file is at most 64 KB.
+- The file is at most 64 KB without the BOM.
 - Each table and each key is optional. A key that is not set has its default.
   An empty file gives the defaults.
 - An unknown table or key is an error.
@@ -81,6 +81,7 @@ section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), sectio
   only the form `<host>:<port>` and the port. `velourbbs serve` checks the host when it listens
   ([telnet-term](telnet-term.md), section 10).
 - An address is an IPv4 or IPv6 address. A prefix is an address with `/<bits>`.
+- An IPv6 address can have a zone `%<zone>`. The host ignores the zone. A prefix cannot have a zone.
 
 ## 4. Example
 
