@@ -1,0 +1,31 @@
++++
+[[item]]
+key = "ESC"
+do = "goto main"
+[[item]]
+key = "ENTER"
+do = "goto main"
++++
+
+  {!line}────────────────────────────────────────────────────────────────────────────{!}
+
+       {!title}Lamp{!}  {!orn}☼ {!dim}a BBS by lamplight{!}
+
+       Lamp is a small station for friends.
+       Come in, look around, stay a while.
+
+       The station runs on Velour BBS.
+       Its screens are plain text files.
+
+
+
+
+
+
+
+
+
+
+  {!line}────────────────────────────────────────────────────────────────────────────{!}
+
+    {!key}Esc Enter{!}  {!dim}back{!}

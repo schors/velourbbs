@@ -1,0 +1,34 @@
++++
+[[item]]
+key = "A"
+do = "goto about"
+[[item]]
+key = "T"
+do = "goto term"
+[[item]]
+key = "G"
+do = "logoff"
++++
+
+  {!line}────────────────────────────────────────────────────────────────────────────{!}
+
+       {!title}Lamp{!}  {!orn}☼ {!dim}a BBS by lamplight{!}
+
+       Good evening. It's quiet and warm here.
+       Pull up a chair by the lamp.
+
+
+         {!key}A{!}   About                                   {!dim}who we are{!}
+
+         {!key}T{!}   Your terminal                           {!dim}size and colours{!}
+
+         {!key}G{!}   Goodbye                                 {!dim}the lamp will wait{!}
+
+
+
+
+       {!dim}The light stays on till morning.{!}
+
+  {!line}────────────────────────────────────────────────────────────────────────────{!}
+
+    {!key}A T G{!}  {!dim}choose{!}
