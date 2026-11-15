@@ -3,7 +3,7 @@
 This specification defines the screen model, the render and the commands
 `velourbbs check` and `velourbbs preview`.
 Related parts: [bbt-format](bbt-format.md), [art-format](art-format.md), [bbs-toml](bbs-toml.md),
-[menu-nav](menu-nav.md) and [telnet-term](telnet-term.md).
+[screens-toml](screens-toml.md), [menu-nav](menu-nav.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
@@ -34,7 +34,7 @@ The host renders a screen page by page. A session holds one page in memory.
 
 ### 3.1. `velourbbs check`
 
-- `velourbbs check` reads `bbs.toml` and each file in `screens/`.
+- `velourbbs check` reads `bbs.toml`, `screens/screens.toml` and each screen file in `screens/`.
   It checks each screen with the fragments and the art that the screen uses.
 - It warns about a fragment or an art file that no screen uses.
   After the limit error of a body ([bbt-format](bbt-format.md), section 9),
@@ -43,8 +43,8 @@ The host renders a screen page by page. A session holds one page in memory.
   It writes them to the standard error. It exits with status 1 after an error.
 - One file gives at most 100 errors and warnings. Then it gives one error `too many diagnostics`.
   The loader drops the rest, and the load of the file goes on.
-- A TOML document (`bbs.toml` or a front matter) gives one syntax or type error;
-  else all unknown keys. Only a document without these gives its other errors.
+- A TOML document (`bbs.toml`, `screens/screens.toml` or a front matter) gives one syntax
+  or type error; else all unknown keys. Only a document without these gives its other errors.
 - A key that differs from a known key only in case is an unknown key. A table `[item]`
   in place of `[[item]]` gives `item: must be an array of tables` with the unknown keys.
   If a key that differs only in case has a type error, the document gives only
@@ -55,10 +55,10 @@ The host renders a screen page by page. A session holds one page in memory.
 - A key that differs only in case, `[item]` and a type error in a nested array
   have the position of the first line of the document.
 - Each other error of a TOML document has the position of the first line of the document:
-  1:1 in `bbs.toml`, 2:1 in a front matter. The message names the key. Examples: an invalid
-  style, item key, `do`, address or `width`, an integer out of its range, an invalid alias
-  or style name, an error of `when`, an error between keys, or between a key and another
-  file or screen.
+  1:1 in `bbs.toml` and `screens/screens.toml`, 2:1 in a front matter. The message names the key.
+  Examples: an invalid style, item key, `do`, address or `width`, an integer out of its range,
+  an invalid alias or style name, an error of `when`, an error between keys, or between a key
+  and another file or screen.
 - An error has the form `<file>:<row>:<col>: <message>`, with 1-based numbers.
   In a `.bbt` file, the column counts code points.
   For art, the row and the column are grid positions.
@@ -101,7 +101,7 @@ and writes its cell dump to the standard output.
 The cell dump is the golden file for the tests. It has one part for each page.
 This dump shows the screen `+++` `[[item]]` `key = "G"` `do = "logoff"` `+++`
 with the body `{!title}Welcome!{!}` and `{!14}[G]oodbye`, and the theme of
-[bbs-toml](bbs-toml.md), section 4:
+[screens-toml](screens-toml.md), section 4:
 
 ```
 page 1 80x24
@@ -118,8 +118,8 @@ styles
 - Each line of `styles` gives the row number and the runs of equal styles,
   in the syntax of [bbt-format](bbt-format.md), section 7.2, with 1-based columns.
   A run has the form `<first>-<last> <style>`, also for one column. Example: `5-5 7/0`.
-- The dump has the colours of the session theme of `term.colors` ([bbs-toml](bbs-toml.md),
-  section 3.2), before the reduction to `term.colors`.
+- The dump has the colours of the model with the session theme of `term.colors`
+  ([screens-toml](screens-toml.md), section 3.2), before the reduction to `term.colors`.
 - A page with a More row includes it as its last row.
 
 ## 4. Code

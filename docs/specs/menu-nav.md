@@ -3,7 +3,7 @@
 This specification defines the key match, the navigation of a session,
 the menu checks between screens of `velourbbs check` and the key sequences of `velourbbs preview`.
 [bbt-format](bbt-format.md), section 8, defines the menu items and the keys.
-Related parts: [bbs-toml](bbs-toml.md), [screen-render](screen-render.md) and [telnet-term](telnet-term.md).
+Related parts: [screens-toml](screens-toml.md), [screen-render](screen-render.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
@@ -62,7 +62,7 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
 
 ## 5. Session
 
-- The first screen is `[menu] start` ([bbs-toml](bbs-toml.md), section 3.4).
+- The first screen is `[menu] start` ([screens-toml](screens-toml.md), section 3.4).
 - The host shows a screen in these steps:
   1. Read `term.cols` and `term.rows`. A resize takes effect at the next screen.
   2. Evaluate the `when` of each item.
@@ -93,7 +93,8 @@ of [bbt-format](bbt-format.md), section 8.4. It also finds these errors:
   It starts with `item "<KEY>"`, with the key in upper case.
   An item without a valid key gives `item <n>`, the 1-based number of the item.
 - An error of a screen without items has the position 1:1.
-- An error of the start screen has the position 1:1 in `bbs.toml`.
+- An error of the start screen has the position 1:1 in `screens/screens.toml`,
+  also when the file is missing.
 - The checks of a `goto`, of a screen without items and of the start screen use all screens.
   `velourbbs check` does them only when the files have no other errors.
 
@@ -105,7 +106,7 @@ screens/main.bbt:2:1: item 2: key: invalid key "?"
 screens/main.bbt:2:1: item "S": key: duplicate key
 screens/main.bbt:2:1: item 3: key is missing
 screens/about.bbt:1:1: screen has no items
-bbs.toml:1:1: menu: start: unknown screen "mian"
+screens/screens.toml:1:1: menu: start: unknown screen "mian"
 ```
 
 ## 7. `velourbbs preview --keys`

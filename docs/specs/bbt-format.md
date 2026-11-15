@@ -1,8 +1,9 @@
 # BBT format
 
 This specification defines the BBT files and the layout of a screen.
-Related parts: [art-format](art-format.md), [bbs-toml](bbs-toml.md),
-[screen-render](screen-render.md), [menu-nav](menu-nav.md) and [telnet-term](telnet-term.md).
+Related parts: [art-format](art-format.md), [screens-toml](screens-toml.md),
+[bbs-toml](bbs-toml.md), [screen-render](screen-render.md), [menu-nav](menu-nav.md)
+and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
@@ -17,6 +18,7 @@ The limits of section 9 catch mistakes, for example a file that is too large.
 | `screens/<name>.bbt` | A "screen": a "BBS template" that the host shows. Section 3. |
 | `screens/_<name>.bbt` | A "fragment": a BBS template that an include inserts. Section 3.4. |
 | `screens/<name>.ans` | ANSI art in the flat form: [art-format](art-format.md). |
+| `screens/screens.toml` | Settings of the screens: [screens-toml](screens-toml.md). |
 | `bbs.toml` | Host settings: [bbs-toml](bbs-toml.md). |
 
 - `<name>` matches `[a-z0-9][a-z0-9_-]*`. Example: `main_wide`.
@@ -131,7 +133,8 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 
 ### 4.2. Aliases
 
-- `[fields]` in `bbs.toml` maps an alias to a registry path: [bbs-toml](bbs-toml.md), section 3.3.
+- `[fields]` in `screens/screens.toml` maps an alias to a registry path:
+  [screens-toml](screens-toml.md), section 3.3.
 - An alias is valid in each screen, fragment and art. Short aliases let art have short fields.
 
 ### 4.3. Values
@@ -172,7 +175,7 @@ string  = '"' { any character except '"' and '}' } '"' ;
 
 - The "render width" W is `term.cols`, clamped to the "width limits" `[min, max]`.
 - The width limits are `width` in the front matter, else `[screen] width`
-  ([bbs-toml](bbs-toml.md), section 3.1).
+  ([screens-toml](screens-toml.md), section 3.1).
 - When `term.cols` > W, the "screen area" has a left margin of `(term.cols - W) / 2` cells,
   rounded down.
 - When `term.cols` < `min`, the host renders at W = `min` and cuts each row at `term.cols`.
@@ -214,7 +217,7 @@ The body gives rows in source order:
 - A screen has no height limit.
 - When a screen has more rows than `term.rows`, the host shows it in pages of `term.rows - 1` rows.
   After each page except the last, the host shows the "More row" ([menu-nav](menu-nav.md), section 5).
-- The More row is `[screen] more` ([bbs-toml](bbs-toml.md), section 3.1),
+- The More row is `[screen] more` ([screens-toml](screens-toml.md), section 3.1),
   in the theme style `more`, at the left edge of the screen area.
   The host cuts it at the screen area.
 
@@ -243,9 +246,11 @@ attr   = "bold" | "underline" | "blink" ;
 
 ### 7.3. Theme and style tokens
 
-- `[theme]` in `bbs.toml` maps a style name to a style. A depth theme replaces styles
-  for one `term.colors`: [bbs-toml](bbs-toml.md), section 3.2.
-- `{!<name>}` sets the whole theme style `<name>`. A name that is not in `[theme]` is an error.
+- The theme in `screens/screens.toml` maps a style name to a style. A depth theme replaces
+  styles for one `term.colors`: [screens-toml](screens-toml.md), section 3.2.
+- A theme style is a style of the session theme of the `term.colors` of the terminal.
+- `{!<name>}` sets the whole theme style `<name>`. A name that is not a name of the theme
+  is an error.
 - `{!14}`, `{!14/1}` and `{!/1}` set only the colours that they name.
   The other colour and the attributes stay. A style token cannot have attributes.
 - `{!}` sets the theme style `normal`.

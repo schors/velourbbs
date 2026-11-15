@@ -142,5 +142,5 @@ Check these with gopher-lua at the chosen version:
 
 Other:
 
-6. Do the aliases of `bbs.toml` apply in mod screens and in `print`?
+6. Do the aliases of `screens/screens.toml` apply in mod screens and in `print`?
    A field without a dot in mod art then means what the host defines.

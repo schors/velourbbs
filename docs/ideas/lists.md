@@ -46,7 +46,8 @@ The user pages through the list and selects a row.
 
 ## Example
 
-`screens/msglist.ans` (the frame continues for 15 rows), with `[fields]` of `bbs.toml` `n = "page.n"`,
+`screens/msglist.ans` (the frame continues for 15 rows),
+with `[fields]` of `screens/screens.toml` `n = "page.n"`,
 `c = "page.count"` and `m = "row.mark"`:
 
 ```
@@ -68,7 +69,7 @@ A `.bbt` text list:
 ## Open questions
 
 1. How `<list>` in `{#each <list>}` names the `data` of the screen.
-   A name without a dot shares the names of the aliases in `bbs.toml`.
+   A name without a dot shares the names of the aliases in `screens/screens.toml`.
 2. Fields in art of other authors. Now the sysop writes field tokens into the art file (art-format, section 4).
    The other option: art as a background, `art = "main"` in the front matter,
    and fields over the art at a row and a column.

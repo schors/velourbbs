@@ -213,7 +213,7 @@ The import writes the grid in the flat form ([art-format](art-format.md)):
 4. 0x1A and the SAUCE record (SAUCE 00) with a COMNT block when there are comments.
 
 After the write, the import reads its output by [art-format](art-format.md), sections 2 and 3.
-The fields of art-format, section 4, need `bbs.toml`, so `velourbbs check` checks them.
+The fields of art-format, section 4, need `screens/screens.toml`, so `velourbbs check` checks them.
 When that grid differs from the grid of the play, it is an error at the first different cell.
 Example: two regional indicators in two cells join into one flag grapheme.
 An output over the file limit ([art-format](art-format.md), section 5) is an error.

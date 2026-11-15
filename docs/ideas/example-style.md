@@ -1,6 +1,6 @@
 # Idea: example style and the light BBS
 
-Backlog. It uses the depth themes of [bbs-toml](../specs/bbs-toml.md), section 3.2.
+Backlog. It uses the depth themes of [screens-toml](../specs/screens-toml.md), section 3.2.
 [bbt-guide](bbt-guide.md) and [setup-guide](setup-guide.md) build this BBS.
 
 ## Goal
