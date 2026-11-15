@@ -39,11 +39,39 @@ The other specifications define the effect of a key and refer to this specificat
 `[theme]` maps a style name to a style in the syntax of [bbt-format](bbt-format.md),
 section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), section 7.3.
 
-- A name matches `[a-z][a-z0-9_]*`. Each value is a string.
+- A style name matches `[a-z][a-z0-9_]*`. Its value is a string.
 - The theme always has `normal` and `more`. Their defaults are `7/0` and `15/0`.
-- A theme style without a foreground or a background takes it from `normal`.
-  `normal` takes it from `7/0`.
+- A style of the session theme without a foreground or a background takes it
+  from `normal` of the session theme. `normal` takes it from `7/0`.
 - The effect of `normal` and `more`: [bbt-format](bbt-format.md), sections 6.2, 6.4 and 7.3.
+
+A "depth theme" is the table `[theme.16]` or `[theme.256]`. It gives other styles
+for one colour depth `term.colors` ([telnet-term](telnet-term.md), section 6).
+
+- Besides the style names, `[theme]` can have the tables `16` and `256`.
+- A name and a value of a depth theme have the rules of a name and a value of `[theme]`.
+  Each name must also be a name of `[theme]`. A depth theme has no defaults.
+- When `term.colors` has a depth theme, the session theme is `[theme]` with each style
+  of the depth theme in place of the style with the same name.
+  Else the session theme is `[theme]`.
+- Errors ([screen-render](screen-render.md), section 3.1): a value of the wrong type,
+  for example `prompt = 14`, `16 = "7/0"` or `[theme.16.x]`, is a type error.
+  Another table in `[theme]`, for example `[theme.32]`, is an unknown key.
+
+Example:
+
+```toml
+[theme]
+normal = "#c0c0c0/#101020"
+title  = "#60a0d0 bold"
+
+[theme.16]
+normal = "7/0"
+title  = "15 bold"
+```
+
+With 16 colours, `title` is `15/0 bold`. With 256 colours, it is `#60a0d0/#101020 bold`,
+and the host reduces it ([telnet-term](telnet-term.md), section 7.3).
 
 ### 3.3. `[fields]`
 
@@ -95,6 +123,9 @@ normal = "7/0"
 title  = "15/4 bold"
 prompt = "14"
 
+[theme.16]
+title = "15/1 bold"
+
 [fields]
 w = "term.cols"
 
@@ -117,4 +148,4 @@ output_timeout = 60
 
 | Package | Content |
 |---|---|
-| `internal/config` | The parse of `bbs.toml` and the checks of section 3. |
+| `internal/config` | The parse of `bbs.toml`, the checks of section 3 and the theme of each depth. |

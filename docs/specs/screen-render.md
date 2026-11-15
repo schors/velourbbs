@@ -118,7 +118,8 @@ styles
 - Each line of `styles` gives the row number and the runs of equal styles,
   in the syntax of [bbt-format](bbt-format.md), section 7.2, with 1-based columns.
   A run has the form `<first>-<last> <style>`, also for one column. Example: `5-5 7/0`.
-- The dump has the colours of the model, before the reduction to `term.colors`.
+- The dump has the colours of the session theme of `term.colors` ([bbs-toml](bbs-toml.md),
+  section 3.2), before the reduction to `term.colors`.
 - A page with a More row includes it as its last row.
 
 ## 4. Code

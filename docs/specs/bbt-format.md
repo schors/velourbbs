@@ -243,8 +243,9 @@ attr   = "bold" | "underline" | "blink" ;
 
 ### 7.3. Theme and style tokens
 
-- `[theme]` in `bbs.toml` maps a style name to a style: [bbs-toml](bbs-toml.md), section 3.2.
-- `{!<name>}` sets the whole theme style `<name>`. An unknown name is an error.
+- `[theme]` in `bbs.toml` maps a style name to a style. A depth theme replaces styles
+  for one `term.colors`: [bbs-toml](bbs-toml.md), section 3.2.
+- `{!<name>}` sets the whole theme style `<name>`. A name that is not in `[theme]` is an error.
 - `{!14}`, `{!14/1}` and `{!/1}` set only the colours that they name.
   The other colour and the attributes stay. A style token cannot have attributes.
 - `{!}` sets the theme style `normal`.
