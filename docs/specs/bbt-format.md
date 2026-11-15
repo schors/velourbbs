@@ -57,6 +57,9 @@ The front matter is TOML 1.1. An unknown key is an error.
 | Key | Type | Meaning |
 |---|---|---|
 | `width` | array of 2 integers | `[min, max]`, with 1 <= `min` <= `max` <= 255. Section 6.1. |
+| `align` | string | The horizontal position: `"left"`, `"center"` or `"right"`. Section 6.1. |
+| `valign` | string | The vertical position: `"top"`, `"middle"` or `"bottom"`. Section 6.5. |
+| `fill` | string | The fill rows: `"none"`, `"spaces"` or `"erase"`. Section 6.5. |
 | `[[item]]` | array of tables | Menu items with `key`, `do` and an optional `when`. Section 8. |
 
 Example:
@@ -176,8 +179,10 @@ string  = '"' { any character except '"' and '}' } '"' ;
 - The "render width" W is `term.cols`, clamped to the "width limits" `[min, max]`.
 - The width limits are `width` in the front matter, else `[screen] width`
   ([screens-toml](screens-toml.md), section 3.1).
-- When `term.cols` > W, the "screen area" has a left margin of `(term.cols - W) / 2` cells,
-  rounded down.
+  The same rule gives `align`, `valign` and `fill`.
+- When `term.cols` > W, the "screen area" has a left margin of `term.cols - W` cells
+  with `align = "right"`, `(term.cols - W) / 2` cells, rounded down, with `"center"`,
+  and 0 cells with `"left"`.
 - When `term.cols` < `min`, the host renders at W = `min` and cuts each row at `term.cols`.
 - A screen with art of width `a` for smaller terminals has `width = [40, a]` and this body:
 
@@ -199,7 +204,8 @@ The body gives rows in source order:
   The host cuts the art at W. `velourbbs check` warns when the art is wider than `max`.
 - A cut of a row at W or at `term.cols` through a wide grapheme leaves a space in its style.
 - Each other source line gives one or more rows (section 6.3). An empty line gives an empty row.
-- Each cell that the screen does not draw is a space in the theme style `normal`.
+- Each cell of a row of a page that the screen does not draw is a space in the theme style `normal`.
+  Section 6.5 gives the cells of the other terminal rows.
 
 ### 6.3. Text wrap
 
@@ -220,6 +226,20 @@ The body gives rows in source order:
 - The More row is `[screen] more` ([screens-toml](screens-toml.md), section 3.1),
   in the theme style `more`, at the left edge of the screen area.
   The host cuts it at the screen area.
+
+### 6.5. Vertical position and fill
+
+- A screen of R rows with R < `term.rows` has one page. Its first row is the terminal row
+  1 with `valign = "top"`, `(term.rows - R) / 2`, rounded down, plus 1 with `"middle"`,
+  and `term.rows - R + 1` with `"bottom"`.
+- Each other page starts at the terminal row 1.
+- The terminal rows above and below the rows of a page are the "fill rows".
+  `fill` gives their cells:
+  - `"none"`: the default colours of the terminal;
+  - `"spaces"`: a space in the theme style `normal`;
+  - `"erase"`: the background of `normal`. The host clears the terminal screen in it
+    ([telnet-term](telnet-term.md), section 7.1). A terminal without "background colour erase"
+    (bce) shows its default colours.
 
 ## 7. Colours and styles
 

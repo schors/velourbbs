@@ -50,6 +50,7 @@ Each BBS directory has these files:
 [screen]
 width = [80, 80]
 more = "    more ∙ any key"        # ru: "    ещё ∙ любая клавиша"
+fill = "spaces"
 
 [theme.default]
 normal = "#e9dccb/#2a201d"
@@ -97,7 +98,8 @@ more   = "8"
 - PuTTY does not show `bold` on the indexes 16–255. So `title` differs from the text by its colour.
 - 16 colours are grey: black, dark grey, light grey and white.
 - `max = 80` keeps the screen 80 columns wide. On a wider terminal the host centres it,
-  and the margins have the ground colour. At 132x43 the screen is the same 80-column screen.
+  and the margins have the ground colour. At 132x43 the screen is the same 80-column screen
+  at the top, and the rows below it have the ground colour.
 - `min = 80` keeps the layout on a narrower terminal: the host cuts the rows and does not wrap them
   ([bbt-format](bbt-format.md), section 6.1).
 
@@ -118,10 +120,10 @@ Columns and rows are 1-based in the screen area of 80 columns.
 
 - Each screen has rows 1–5: row 1 empty, the hairline, row 3 empty, the name with the ornament
   and the tagline, row 5 empty.
-- A screen has 23 rows. Empty source lines fill the rows between the content and the hairline of row 21.
-  Rows 20 and 22 are empty.
-- On a 24-row terminal, row 24 keeps the colours of the terminal. On a taller terminal,
-  each row below row 23 keeps them: [screen-fill](../ideas/screen-fill.md).
+- A screen has 23 rows, `goodbye` has 21. Empty source lines fill the rows between the content
+  and the hairline of row 21. Row 20 is empty. On a screen with a key row, row 22 is empty.
+- The rows of the terminal below the screen are spaces in `normal`: `fill = "spaces"`
+  ([bbt-format](bbt-format.md), section 6.5).
 - A space between two parts in one style keeps the style. Examples: `{!key}A T G{!}`,
   `{!orn}☼ {!dim}a BBS by lamplight{!}`.
 - Each other cell is `normal`.
@@ -196,7 +198,7 @@ Items: `ESC` `goto main`, `ENTER` `goto main`. The key row is `Esc Enter  back`.
 
 No items. Rows 1–5 and the hairline of row 21 as in section 5.
 Row 6 is the farewell in `title`. Row 7 is the last line in `normal`.
-Rows 22 and 23 are empty. There is no key row.
+The hairline is the last row. There is no key row.
 
 ## 7. Texts
 
@@ -230,7 +232,5 @@ Rows 22 and 23 are empty. There is no key row.
 
 ## 9. Not in this specification
 
-- The rows below a screen on a terminal with more than 23 rows, and vertical centring:
-  [screen-fill](../ideas/screen-fill.md).
 - ANSI pictures of the example screens for the guides. `velourbbs preview` gives a cell dump only.
 - The texts of the guides.

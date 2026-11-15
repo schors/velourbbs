@@ -28,8 +28,12 @@ The other specifications define the effect of a key and refer to this specificat
 |---|---|---|---|
 | `width` | array of 2 integers | `[40, 80]` | The width limits `[min, max]` of a screen without `width` in its front matter: [bbt-format](bbt-format.md), section 6.1. |
 | `more` | string | `"-- More --"` | The text of the More row: [bbt-format](bbt-format.md), section 6.4. |
+| `align` | string | `"center"` | The horizontal position of a screen: [bbt-format](bbt-format.md), section 6.1. |
+| `valign` | string | `"top"` | The vertical position of a screen: [bbt-format](bbt-format.md), section 6.5. |
+| `fill` | string | `"none"` | The fill rows: [bbt-format](bbt-format.md), section 6.5. |
 
-- `width` has the rules of `width` in the front matter ([bbt-format](bbt-format.md), section 3.2).
+- `width`, `align`, `valign` and `fill` have the rules of the front matter keys
+  ([bbt-format](bbt-format.md), section 3.2).
 - `more` cannot have a control character, a grapheme of width 0 or a grapheme
   of more than 32 bytes ([bbt-format](bbt-format.md), section 2.1).
 
@@ -91,6 +95,8 @@ and the host reduces it ([telnet-term](telnet-term.md), section 7.3).
 [screen]
 width = [40, 100]
 more = "-- More --"
+valign = "middle"
+fill = "spaces"
 
 [theme.default]
 normal = "7/0"

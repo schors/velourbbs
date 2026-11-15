@@ -22,6 +22,7 @@ The host renders a screen by these rules of [bbt-format](bbt-format.md):
 - the rows of the body and of the art: section 6.2;
 - the text wrap: section 6.3;
 - the pages and the More row: section 6.4;
+- the vertical position and the fill rows: section 6.5;
 - the cells and the styles: section 7.
 
 The host renders a screen page by page. A session holds one page in memory.
@@ -100,11 +101,11 @@ and writes its cell dump to the standard output.
 
 The cell dump is the golden file for the tests. It has one part for each page.
 This dump shows the screen `+++` `[[item]]` `key = "G"` `do = "logoff"` `+++`
-with the body `{!title}Welcome!{!}` and `{!14}[G]oodbye`, and the theme of
-[screens-toml](screens-toml.md), section 4:
+with the body `{!title}Welcome!{!}` and `{!14}[G]oodbye`, the theme of
+[screens-toml](screens-toml.md), section 4, and the other keys of `[screen]` at their defaults:
 
 ```
-page 1 80x24
+page 1 80x24 fill none
 |Welcome!                                                                        |
 |[G]oodbye                                                                       |
 styles
@@ -112,10 +113,11 @@ styles
 2: 1-9 14/0, 10-80 7/0
 ```
 
-- The first line gives the page number and the terminal size.
+- The first line gives the page number, the terminal size and the value of `fill`
+  ([bbt-format](bbt-format.md), section 6.5).
 - Each rendered row of the page is between two `|`. A wide grapheme appears once
   and takes 2 columns.
-- Each line of `styles` gives the row number and the runs of equal styles,
+- Each line of `styles` gives the terminal row number and the runs of equal styles,
   in the syntax of [bbt-format](bbt-format.md), section 7.2, with 1-based columns.
   A run has the form `<first>-<last> <style>`, also for one column. Example: `5-5 7/0`.
 - The dump has the colours of the model with the session theme of `term.colors`
