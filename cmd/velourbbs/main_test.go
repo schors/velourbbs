@@ -119,6 +119,21 @@ screens/screens.toml:3:5: fields.r: must be a string
 	}
 }
 
+// A style token checks its name against the base theme, also with a depth theme.
+func TestCheckDepthTheme(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml":             {},
+		"screens/screens.toml": {Data: []byte("[theme.default]\ntitle = \"1\"\n[theme.16]\ntitle = \"2\"\n")},
+		"screens/main.bbt":     {Data: []byte("+++\n[[item]]\nkey = \"g\"\ndo = \"logoff\"\n+++\n{!title}a{!x}\n")},
+	}
+	var out, errOut bytes.Buffer
+	status := run([]string{"check"}, fsys, &out, &errOut)
+	want := "screens/main.bbt:6:10: unknown style \"x\"\n"
+	if errOut.String() != want || status != exitError {
+		t.Errorf("stderr %q, status %d; want %q, status %d", errOut.String(), status, want, exitError)
+	}
+}
+
 func TestCheckNoConfig(t *testing.T) {
 	fsys := fstest.MapFS{"screens/main.bbt": {Data: []byte("Hello\n")}}
 	var out, errOut bytes.Buffer
@@ -142,6 +157,17 @@ func TestPreview(t *testing.T) {
 |[G]oodbye                                                                       |
 styles
 1: 1-8 15/4 bold, 9-80 7/0
+2: 1-9 14/0, 10-80 7/0
+`,
+	}, {
+		// With 16 colours, title comes from [theme.16].
+		name: "depth theme",
+		args: []string{"main", "--set", "term.colors=16"},
+		want: `page 1 80x24
+|Welcome!                                                                        |
+|[G]oodbye                                                                       |
+styles
+1: 1-8 15/1 bold, 9-80 7/0
 2: 1-9 14/0, 10-80 7/0
 `,
 	}, {

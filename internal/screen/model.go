@@ -55,16 +55,17 @@ type Field struct {
 	Right bool
 }
 
-// SetStyle is a style token (section 7.3).
+// SetStyle is a style token (section 7.3). A theme style token has only Name:
+// the render takes its style from the session theme. A colour token has only Spec.
 type SetStyle struct {
-	Spec  StyleSpec
-	Whole bool // a theme style: it also sets the attributes
+	Spec StyleSpec
+	Name string
 }
 
-// Apply gives the style after the token from the current style.
-func (s SetStyle) Apply(cur Style) Style {
-	if s.Whole {
-		cur = Style{}
+// Apply gives the style after the token from the current style cur and the session theme.
+func (s SetStyle) Apply(cur Style, theme map[string]Style) Style {
+	if s.Name != "" {
+		return theme[s.Name]
 	}
 	return s.Spec.Over(cur)
 }

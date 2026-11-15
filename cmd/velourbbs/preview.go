@@ -77,7 +77,7 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 	env, _ := menu.Enabled(s, term)
-	if err := screen.WriteDump(stdout, term.Rows, screen.Render(s, env, cfg.Theme, cfg.More)); err != nil {
+	if err := screen.WriteDump(stdout, term.Rows, screen.Render(s, env, cfg.SessionTheme(term.Colors), cfg.More)); err != nil {
 		_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		return exitError
 	}

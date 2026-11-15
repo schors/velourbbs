@@ -235,3 +235,52 @@ func TestRunNoEvents(t *testing.T) {
 		t.Errorf("log %q, want %q", ft.log, want)
 	}
 }
+
+// styleTerm is a Terminal with the term.colors colors. It keeps the style of the first cell
+// of the last page and sends the key G once.
+type styleTerm struct {
+	colors int
+	style  string
+	sent   bool
+}
+
+func (f *styleTerm) Term() screen.Term {
+	return screen.Term{Type: "ansi", Cols: 80, Rows: 10, Charset: "utf-8", Colors: f.colors}
+}
+
+func (f *styleTerm) Key() (string, error) {
+	if f.sent {
+		return "", io.EOF
+	}
+	f.sent = true
+	return "G", nil
+}
+
+func (f *styleTerm) Page(p screen.Page) error {
+	f.style = p.Line(0, nil)[0].Style.String()
+	return nil
+}
+
+// The session renders with the session theme of the term.colors of the terminal.
+func TestRunSessionTheme(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml": {},
+		"screens/screens.toml": {Data: []byte(
+			"[theme.default]\ntitle = \"15/4 bold\"\n[theme.16]\ntitle = \"15/1 bold\"\n")},
+		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{!title}T\n")},
+	}
+	cfg, ds := config.Load(fsys)
+	ss, lds := bbt.Load(fsys, cfg.Theme, cfg.Width, cfg.Fields)
+	if ds = append(ds, lds...); len(ds) > 0 {
+		t.Fatalf("load: %v", ds)
+	}
+	for colors, want := range map[int]string{16: "15/1 bold", 256: "15/4 bold"} {
+		st := &styleTerm{colors: colors}
+		if err := Run(st, cfg, ss, "main"); err != nil {
+			t.Fatal(err)
+		}
+		if st.style != want {
+			t.Errorf("colors %d: style %s, want %s", colors, st.style, want)
+		}
+	}
+}

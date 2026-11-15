@@ -19,7 +19,8 @@ import (
 const MaxBodyLines = 10000
 
 // Load loads each screen of fsys/screens with the fragments and the art that it uses.
-// fsys is the BBS directory. theme, width and fields come from screens/screens.toml.
+// fsys is the BBS directory. theme (the base theme), width and fields come from
+// screens/screens.toml. The load uses only the names of theme (bbt-format, section 7.3).
 // The map of screens by name is nil when the diagnostics have an error.
 func Load(fsys fs.FS, theme map[string]screen.Style, width screen.WidthLimits, fields screen.Fields) (map[string]*screen.Screen, screen.Diags) {
 	l := &loader{

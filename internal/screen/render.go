@@ -7,14 +7,15 @@ const MaxRenderRows = 10000
 
 // Render renders the screen s for the terminal of env and gives its pages (section 6).
 // env.Term is in the ranges of section 4.1. env.Items holds the enabled items.
-// theme has the styles normal and more. more is the text of the More row.
+// theme is the session theme: it has normal, more and each name of the style tokens of s.
+// more is the text of the More row.
 // The render holds one page: it renders the next rows after the consumer takes a page.
 func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[Page] {
 	return func(yield func(Page) bool) {
 		cols := env.Term.Cols
 		w := min(max(cols, s.Width.Min), s.Width.Max)
 		r := &renderer{
-			env: env, normal: theme["normal"], w: w, cols: cols,
+			env: env, theme: theme, normal: theme["normal"], w: w, cols: cols,
 			area: min(w, cols), margin: max(cols-w, 0) / 2, height: env.Term.Rows,
 			values: map[Ref][]Grapheme{}, lead: true, yield: yield,
 		}
@@ -34,6 +35,7 @@ func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[P
 // (section 6.3): the buffers of a line have at most W cells.
 type renderer struct {
 	env    *Env
+	theme  map[string]Style // the session theme
 	normal Style
 	w      int // the render width W
 	cols   int // term.cols
@@ -80,7 +82,7 @@ func (r *renderer) walk(segs []Seg, cur Style) Style {
 		case Field:
 			r.field(seg, cur)
 		case SetStyle:
-			cur = seg.Apply(cur)
+			cur = seg.Apply(cur, r.theme)
 		case If:
 			if seg.Cond.Eval(r.env) {
 				cur = r.walk(seg.Then, cur)

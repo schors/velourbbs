@@ -93,7 +93,11 @@ func show(segs []screen.Seg) string {
 			}
 			out = append(out, "{"+s.Ref.String()+w+"}")
 		case screen.SetStyle:
-			out = append(out, "!"+s.Apply(base).String())
+			if s.Name != "" {
+				out = append(out, "!"+s.Name)
+			} else {
+				out = append(out, "!"+s.Spec.Over(base).String())
+			}
 		case screen.If:
 			out = append(out, "if("+show(s.Then)+")else("+show(s.Else)+")")
 		case screen.Include:
@@ -143,7 +147,7 @@ do = "goto about"
 	}}) {
 		t.Errorf("items %+v", s.Items)
 	}
-	want := `if(/b art100[])else(/b art64[term.cols]) /b !15/4 bold "Welcome! Your terminal has " {term.cols} " columns." / !14/0 "[A]bout [G]oodbye" /`
+	want := `if(/b art100[])else(/b art64[term.cols]) /b !title "Welcome! Your terminal has " {term.cols} " columns." / !prompt "[A]bout [G]oodbye" /`
 	if got := show(s.Body); got != want {
 		t.Errorf("body\n got %s\nwant %s", got, want)
 	}
@@ -164,7 +168,7 @@ func TestTokens(t *testing.T) {
 		{"", ``},
 		{"{term.type      }", `{term.type:17} /`},
 		{"{   term.cols}x", `{term.cols:14R} "x" /`},
-		{"{!}{!14}{!/3}{!title}", `!7/0 !14/2 underline !1/3 underline !15/4 bold /`},
+		{"{!}{!14}{!/3}{!title}", `!normal !14/2 underline !1/3 underline !title /`},
 		{"{#if term.cols > 1}a{#else}b{/if}c", `if("a")else("b") "c" /b`},
 		{"{#if term.cols > 1}\n{#if term.rows > 1}a{/if}\n{/if}", `if(/b if("a")else() /b)else() /b`},
 		{"{term.cols", `screens/s.bbt:1:1: token has no "}"`},
@@ -370,7 +374,7 @@ func TestIncludes(t *testing.T) {
 		"_b.bbt":   "{#if term.cols > 1}\nc\n{/if}\n",
 	})
 	body := screens["main"].Body
-	want := `!14/2 underline "a" / screens/_a.bbt(!15/4 bold {term.cols} / screens/_b.bbt(if(/b "c" /)else() /b)) "b" / screens/_a.bbt(!15/4 bold {term.cols} / screens/_b.bbt(if(/b "c" /)else() /b))`
+	want := `!14/2 underline "a" / screens/_a.bbt(!title {term.cols} / screens/_b.bbt(if(/b "c" /)else() /b)) "b" / screens/_a.bbt(!title {term.cols} / screens/_b.bbt(if(/b "c" /)else() /b))`
 	if got := show(body); got != want {
 		t.Errorf("body\n got %s\nwant %s", got, want)
 	}

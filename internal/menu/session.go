@@ -88,7 +88,7 @@ func (ss *session) show(s *screen.Screen) (map[string]screen.Item, error) {
 	}
 	env, items := Enabled(s, ss.t.Term())
 	first := true
-	for p := range screen.Render(s, env, ss.cfg.Theme, ss.cfg.More) {
+	for p := range screen.Render(s, env, ss.cfg.SessionTheme(env.Term.Colors), ss.cfg.More) {
 		if !first {
 			k, err := ss.t.Key()
 			if err != nil {
