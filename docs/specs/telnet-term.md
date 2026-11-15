@@ -2,7 +2,8 @@
 
 This specification defines the telnet server, the detection of the terminal at connect,
 the output of pages, the key decoder and the connection limits.
-Related parts: [bbt-format](bbt-format.md), [screen-render](screen-render.md) and [menu-nav](menu-nav.md).
+Related parts: [bbt-format](bbt-format.md), [bbs-toml](bbs-toml.md), [screen-render](screen-render.md)
+and [menu-nav](menu-nav.md).
 
 ## 1. Goal
 
@@ -85,7 +86,7 @@ The host keeps the state of each option for each side, as in RFC 1143:
 ### 4.3. Output
 
 - The host writes each reply to the client before it reads more input.
-  `output_timeout` (section 9.1) applies to each write.
+  `output_timeout` ([bbs-toml](bbs-toml.md), section 3.5) applies to each write.
 - IAC doubling runs after the encoder, because 0xFF is a character in some 8-bit charsets.
 - The host always sends CR LF as the line end.
 
@@ -104,7 +105,8 @@ The host keeps the state of each option for each side, as in RFC 1143:
   after `WILL NAWS` and for the first TTYPE name after `WILL TTYPE`.
   In step 4, the host waits for the reply to the charset probe.
 - A wait ends when all these replies arrive, or when no reply arrives for 1 s.
-- The PROXY protocol header and the probe end within `probe_timeout` (section 9.1)
+- The PROXY protocol header and the probe end within `probe_timeout`
+  ([bbs-toml](bbs-toml.md), section 3.5)
   from accept. Then the host decides with the replies that it has.
 - Keys that arrive during the probe go to the key queue.
 
@@ -282,6 +284,7 @@ The key decoder gives:
 ### 8.3. Key queue
 
 - The key queue holds at most 64 keys. The host drops a key when the queue is full.
+- After `idle_timeout` seconds without a key, the host disconnects.
 - The idle timeout starts at the end of the probe.
 - Keys reset the idle timeout, also a key that the full queue drops.
   NOP, NAWS and dropped input do not reset it.
@@ -290,37 +293,15 @@ The key decoder gives:
 
 ### 9.1. `bbs.toml`
 
-```
-[telnet]
-listen = ":2323"
-max_conns = 64
-max_conns_per_addr = 4
-max_connects_per_min = 10
-allow = ["192.0.2.10", "2001:db8::/48"]
-proxy = ["127.0.0.1"]
-idle_timeout = 600
-probe_timeout = 5
-output_timeout = 60
-```
-
-| Key | Default | Meaning |
-|---|---|---|
-| `listen` | `":2323"` | The TCP address of the server: `<host>:<port>`. The host can be empty. |
-| `max_conns` | 64 | The maximum number of connections, counted from accept. |
-| `max_conns_per_addr` | 4 | The maximum number of connections from one address. |
-| `max_connects_per_min` | 10 | The maximum number of connects from one address in 60 s. |
-| `allow` | `[]` | Addresses and prefixes without the address limits. |
-| `proxy` | `[]` | Addresses and prefixes of the PROXY protocol senders. |
-| `idle_timeout` | 600 | Seconds without a key until the host disconnects. |
-| `probe_timeout` | 5 | Seconds until the probe ends (section 5.1). |
-| `output_timeout` | 60 | Seconds until a write must complete. Else the host disconnects. |
-
-- Each integer is from 1 to 1000000. The port of `listen` is from 1 to 65535.
-- An address is an IPv4 or IPv6 address. A prefix is an address with `/<bits>`.
-- `velourbbs check` checks `[telnet]` with the rules of [screen-render](screen-render.md), section 3.1.
+The keys of `[telnet]` are in [bbs-toml](bbs-toml.md), section 3.5.
 
 ### 9.2. Connection limits
 
+- `max_conns` limits the connections of the host. It counts a connection from accept.
+- The "address limits" are `max_conns_per_addr` and `max_connects_per_min`.
+  `max_conns_per_addr` limits the open connections of one address.
+  `max_connects_per_min` limits the connects of one address in 60 s.
+- An address in `allow` has no address limits. `max_conns` applies to it.
 - "One address" is one IPv4 address, or one IPv6 /64 prefix.
   An IPv4-mapped IPv6 address is the IPv4 address.
 - A connect that `max_conns` refuses does not count for the address limits.
@@ -381,7 +362,6 @@ output_timeout = 60
 | `internal/telnet` | The telnet parser, the option states and the subnegotiations. |
 | `internal/term` | The probe, the encoder, the colour reduction, the key decoder and the terminal of [menu-nav](menu-nav.md), section 8. |
 | `internal/server` | The listener, the limits, the PROXY protocol header and the sessions. |
-| `internal/config` | `[telnet]` in `bbs.toml`. |
 
 - `cmd/velourbbs` loads the screens and gives them to `internal/server`.
 

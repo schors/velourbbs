@@ -3,7 +3,7 @@
 This specification defines the key match, the navigation of a session,
 the menu checks between screens of `velourbbs check` and the key sequences of `velourbbs preview`.
 [bbt-format](bbt-format.md), section 8, defines the menu items and the keys.
-Related parts: [screen-render](screen-render.md) and [telnet-term](telnet-term.md).
+Related parts: [bbs-toml](bbs-toml.md), [screen-render](screen-render.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
@@ -62,8 +62,7 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
 
 ## 5. Session
 
-- The first screen is `main`. `[menu] start` in `bbs.toml` can set another name.
-  It matches the screen name of [bbt-format](bbt-format.md), section 2.
+- The first screen is `[menu] start` ([bbs-toml](bbs-toml.md), section 3.4).
 - The host shows a screen in these steps:
   1. Read `term.cols` and `term.rows`. A resize takes effect at the next screen.
   2. Evaluate the `when` of each item.
@@ -77,13 +76,6 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
 - A screen whose items are all disabled and that has no `ANY` item ignores all keys.
   The idle timeout of [telnet-term](telnet-term.md) ends such a session.
 - A hangup or the idle timeout ends the session at once, without `goodbye`.
-
-`bbs.toml` example:
-
-```
-[menu]
-start = "welcome"
-```
 
 ## 6. `velourbbs check`
 
@@ -164,7 +156,6 @@ page 1 80x25
 
 | Package | Content |
 |---|---|
-| `internal/config` | `[menu]` in `bbs.toml`. |
 | `internal/key` | The key names, the parse of `key` and the Russian layout map. |
 | `internal/bbt` | The parse of `key` and `do` and the checks of one file. |
 | `internal/menu` | The checks of section 6 between files, and the session of section 5 with a terminal interface. |

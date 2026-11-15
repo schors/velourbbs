@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// Telnet is the table [telnet] (telnet-term, section 9.1).
+// Telnet is the table [telnet] (bbs-toml, section 3.5).
 type Telnet struct {
 	// Listen is the TCP address of the server: <host>:<port>.
 	Listen string
@@ -29,7 +29,7 @@ type Telnet struct {
 	OutputTimeout time.Duration
 }
 
-// The defaults of telnet-term, section 9.1.
+// The defaults of bbs-toml, section 3.5.
 var defaultTelnet = Telnet{
 	Listen:            ":2323",
 	MaxConns:          64,

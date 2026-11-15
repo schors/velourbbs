@@ -2,7 +2,7 @@
 
 This specification defines the screen model, the render and the commands
 `velourbbs check` and `velourbbs preview`.
-Related parts: [bbt-format](bbt-format.md), [art-format](art-format.md),
+Related parts: [bbt-format](bbt-format.md), [art-format](art-format.md), [bbs-toml](bbs-toml.md),
 [menu-nav](menu-nav.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
@@ -67,7 +67,6 @@ The host renders a screen page by page. A session holds one page in memory.
   as a Go quoted string does. Example: a file name with ESC gives `\x1b`.
 - A check of a fragment or an art file can depend on the screen that uses it:
   on its items or its width limits. Such an error starts with `screen "<name>": `.
-- `bbs.toml` must exist.
 - The host runs the same checks at start. An error stops the start.
 
 Examples:
@@ -102,7 +101,7 @@ and writes its cell dump to the standard output.
 The cell dump is the golden file for the tests. It has one part for each page.
 This dump shows the screen `+++` `[[item]]` `key = "G"` `do = "logoff"` `+++`
 with the body `{!title}Welcome!{!}` and `{!14}[G]oodbye`, and the theme of
-[bbt-format](bbt-format.md), section 7.3:
+[bbs-toml](bbs-toml.md), section 4:
 
 ```
 page 1 80x24
