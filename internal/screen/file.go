@@ -9,7 +9,7 @@ import (
 )
 
 // MaxFileBytes is the size limit of a .bbt or an .ans file (section 9 and art-format, section 5).
-// ReadFile also reads bbs.toml; internal/tomlcheck has its smaller limit.
+// ReadFile also reads bbs.toml and screens/screens.toml; internal/tomlcheck has its smaller limit.
 const MaxFileBytes = 1 << 20
 
 // BOM is the UTF-8 byte order mark. The loaders remove it.

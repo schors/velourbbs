@@ -47,7 +47,7 @@ type WidthLimits struct {
 }
 
 // NewWidth gives the width limits of the TOML value a: an array of 2 integers.
-// bbs.toml and the front matter use it.
+// screens/screens.toml and the front matter use it.
 func NewWidth(a []int64) (WidthLimits, error) {
 	if len(a) != 2 {
 		return WidthLimits{}, errors.New("must be an array of 2 integers")

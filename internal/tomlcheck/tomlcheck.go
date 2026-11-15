@@ -1,4 +1,5 @@
-// Package tomlcheck decodes a TOML document of the host: bbs.toml or a front matter.
+// Package tomlcheck decodes a TOML document of the host: bbs.toml, screens/screens.toml
+// or a front matter.
 // It gives the errors of docs/specs/screen-render.md, section 3.1.
 //
 // go-toml v2 has two gaps that Decode closes:

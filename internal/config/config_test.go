@@ -2,9 +2,13 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/schors/velourbbs/internal/screen"
 )
@@ -26,8 +30,9 @@ func messages(ds screen.Diags) []string {
 	return s
 }
 
+// A missing screens/screens.toml gives the defaults with no diagnostics (screens-toml, section 2).
 func TestDefaults(t *testing.T) {
-	cfg, ds := Parse(nil)
+	cfg, ds := Load(fstest.MapFS{"bbs.toml": {}})
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
@@ -37,8 +42,13 @@ func TestDefaults(t *testing.T) {
 	if len(cfg.Theme) != 2 || cfg.Theme["normal"] != style(t, "7/0") || cfg.Theme["more"] != style(t, "15/0") {
 		t.Errorf("theme = %v", cfg.Theme)
 	}
-	if cfg.Start != "main" {
-		t.Errorf("start %q", cfg.Start)
+	if cfg.Start != "main" || len(cfg.Fields) != 0 || !reflect.DeepEqual(cfg.Telnet, defaultTelnet) {
+		t.Errorf("cfg = %+v", cfg)
+	}
+	for _, colors := range []int{16, 256, 16777216} {
+		if !reflect.DeepEqual(cfg.SessionTheme(colors), cfg.Theme) {
+			t.Errorf("SessionTheme(%d) = %v", colors, cfg.SessionTheme(colors))
+		}
 	}
 }
 
@@ -48,7 +58,7 @@ func TestParse(t *testing.T) {
 width = [64, 132]
 more = "[ ещё ]"
 
-[theme]
+[theme.default]
 normal = "14"
 title  = "15/4 bold"
 prompt = "/1"
@@ -60,7 +70,7 @@ more = "-/-"
 [fields]
 w = "term.cols"
 `
-	cfg, ds := Parse([]byte(data))
+	cfg, ds := parseScreens([]byte(data))
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
@@ -75,7 +85,7 @@ w = "term.cols"
 	}
 	want := map[string]string{
 		"normal": "14/0",      // the background from the default normal
-		"title":  "15/4 bold", // the example of bbs-toml, section 4
+		"title":  "15/4 bold", // the example of screens-toml, section 4
 		"prompt": "14/1",      // the foreground from normal
 		"more":   "-/-",
 	}
@@ -91,7 +101,7 @@ w = "term.cols"
 
 // A theme style takes the colours of normal, not its attributes.
 func TestNormalAttributes(t *testing.T) {
-	cfg, ds := Parse([]byte("[theme]\nnormal = \"2/3 bold\"\nx = \"5\"\n"))
+	cfg, ds := parseScreens([]byte("[theme.default]\nnormal = \"2/3 bold\"\nx = \"5\"\n"))
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
@@ -106,18 +116,31 @@ func TestErrors(t *testing.T) {
 		`[screen]`,
 		`width = [80, 40]`,
 		`more = "a` + "\u200b" + `"`,
-		`[theme]`,
+		`[theme.default]`,
 		`Title = "1"`,
 		`normal = "7/0"`,
+		`bad = "x"`,
+		`[theme.16]`,
+		`Title = "1"`,
+		`title = "1"`,
+		`bad = "2"`,
+		`normal = "1 bolt"`,
+		`[theme.256]`,
+		`more = "1"`,
 		`[menu]`,
 		`start = "Main"`,
 	}, "\n")
-	cfg, ds := Parse([]byte(data))
+	cfg, ds := parseScreens([]byte(data))
 	want := []string{
-		`bbs.toml:1:1: screen.width: width [80, 40] is not in 1 <= min <= max <= 255`,
-		`bbs.toml:1:1: screen.more: zero-width grapheme U+200B`,
-		`bbs.toml:1:1: menu.start: invalid screen name "Main"`,
-		`bbs.toml:1:1: theme: invalid style name "Title"`,
+		`screens/screens.toml:1:1: screen.width: width [80, 40] is not in 1 <= min <= max <= 255`,
+		`screens/screens.toml:1:1: screen.more: zero-width grapheme U+200B`,
+		`screens/screens.toml:1:1: menu.start: invalid screen name "Main"`,
+		`screens/screens.toml:1:1: theme.default: invalid style name "Title"`,
+		`screens/screens.toml:1:1: theme.default.bad: invalid style "x": invalid colour "x"`,
+		// A name with an invalid style is a name of the theme: bad gives no error in theme.16.
+		`screens/screens.toml:1:1: theme.16: invalid style name "Title"`,
+		`screens/screens.toml:1:1: theme.16.normal: invalid style "1 bolt": unknown attribute "bolt"`,
+		`screens/screens.toml:1:1: theme.16: unknown style "title"`,
 	}
 	if got := messages(ds); !slices.Equal(got, want) {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
@@ -128,6 +151,12 @@ func TestErrors(t *testing.T) {
 	if cfg.Width != (screen.WidthLimits{Min: 40, Max: 80}) || cfg.More != "-- More --" || cfg.Start != "main" {
 		t.Errorf("an invalid value replaced a default: %+v", cfg)
 	}
+	if cfg.SessionTheme(16)["normal"] != style(t, "7/0") || cfg.SessionTheme(16)["bad"] != style(t, "2/0") {
+		t.Errorf("theme.16 = %v", cfg.SessionTheme(16))
+	}
+	if cfg.SessionTheme(256)["more"] != style(t, "1/0") {
+		t.Errorf("theme.256 = %v", cfg.SessionTheme(256))
+	}
 }
 
 // A TOML document gives a syntax or type error; else all unknown keys;
@@ -137,50 +166,238 @@ func TestTOMLErrors(t *testing.T) {
 		data string
 		want []string
 	}{
-		{"screen = 1", []string{`bbs.toml:1:10: screen: must be a table`}},
-		{"theme = []", []string{`bbs.toml:1:9: theme: must be a table of strings`}},
-		{"menu = \"main\"", []string{`bbs.toml:1:8: menu: must be a table`}},
-		{"[menu]\nstart = 1", []string{`bbs.toml:2:9: menu.start: must be a string`}},
-		{"[screen]\nwidth = [1]", []string{`bbs.toml:1:1: screen.width: must be an array of 2 integers`}},
-		{"[screen]\nwidth = [1, \"2\"]", []string{`bbs.toml:2:13: screen.width: must be an array of integers`}},
-		{"[screen]\nmore = 1", []string{`bbs.toml:2:8: screen.more: must be a string`}},
-		{"[screen]\nmore = \"\t\"", []string{`bbs.toml:1:1: screen.more: control character U+0009`}},
-		{"[screen]\nwidth = ", []string{`bbs.toml:2:8: expected value, not end of input`}},
-		{"[theme]\nprompt = \"14 bolt\"", []string{`bbs.toml:1:1: theme.prompt: invalid style "14 bolt": unknown attribute "bolt"`}},
-		{"[theme]\nprompt = 14", []string{`bbs.toml:2:10: theme.prompt: must be a string`}},
-		{"a.b = 1", []string{`bbs.toml:1:1: unknown key "a.b"`}},
-		{"[TELNET]\nlisten = \":1\"", []string{`bbs.toml:1:1: unknown key "TELNET"`}},
-		{"[telnet]\nlisten = \":1\"\nLISTEN = \":2\"", []string{`bbs.toml:1:1: unknown key "telnet.LISTEN"`}},
-		{"\n[foo.bar]\nx = 1", []string{`bbs.toml:2:2: unknown key "foo.bar"`}},
+		{"screen = 1", []string{`1:10: screen: must be a table`}},
+		{"theme = []", []string{`1:9: theme: must be a table`}},
+		// In an inline table, the key ends at the table (screen-render, section 3.1).
+		{"theme = { default = 1 }", []string{`1:21: theme: invalid type`}},
+		{"[theme.default]\nx = 1", []string{`2:5: theme.default.x: must be a string`}},
+		{"[theme.16]\nx = 1", []string{`2:5: theme.16.x: must be a string`}},
+		{"[theme.32]\nx = \"1\"", []string{`1:2: unknown key "theme.32"`}},
+		{"[theme]\nnormal = \"1\"", []string{`2:1: unknown key "theme.normal"`}},
+		{"[telnet]\nlisten = \":1\"", []string{`1:2: unknown key "telnet"`}},
+		{"menu = \"main\"", []string{`1:8: menu: must be a table`}},
+		{"[menu]\nstart = 1", []string{`2:9: menu.start: must be a string`}},
+		{"[screen]\nwidth = [1]", []string{`1:1: screen.width: must be an array of 2 integers`}},
+		{"[screen]\nwidth = [1, \"2\"]", []string{`2:13: screen.width: must be an array of integers`}},
+		{"[screen]\nmore = 1", []string{`2:8: screen.more: must be a string`}},
+		{"[screen]\nmore = \"\t\"", []string{`1:1: screen.more: control character U+0009`}},
+		{"[screen]\nwidth = ", []string{`2:8: expected value, not end of input`}},
+		{"[theme.default]\nprompt = \"14 bolt\"", []string{`1:1: theme.default.prompt: invalid style "14 bolt": unknown attribute "bolt"`}},
+		{"a.b = 1", []string{`1:1: unknown key "a.b"`}},
+		{"[MENU]\nstart = \"x\"", []string{`1:1: unknown key "MENU"`}},
+		{"[menu]\nstart = \"x\"\nSTART = \"y\"", []string{`1:1: unknown key "menu.START"`}},
+		{"\n[foo.bar]\nx = 1", []string{`2:2: unknown key "foo.bar"`}},
 		// A type error comes before an unknown key, an unknown key before an other error.
-		{"[theme]\nx = \"bad\"\ny = 1\nz = \"bad\"", []string{`bbs.toml:3:5: theme.y: must be a string`}},
-		{"a = 1\n[theme]\nx = \"bad\"\nz = \"bad\"", []string{`bbs.toml:1:1: unknown key "a"`}},
-		{"[theme]\nx = \"bad\"\nz = \"bad\"", []string{
-			`bbs.toml:1:1: theme.x: invalid style "bad": invalid colour "bad"`,
-			`bbs.toml:1:1: theme.z: invalid style "bad": invalid colour "bad"`,
+		{"[theme.default]\nx = \"bad\"\ny = 1\nz = \"bad\"", []string{`3:5: theme.default.y: must be a string`}},
+		{"a = 1\n[theme.default]\nx = \"bad\"\nz = \"bad\"", []string{`1:1: unknown key "a"`}},
+		{"[theme.default]\nx = \"bad\"\nz = \"bad\"", []string{
+			`1:1: theme.default.x: invalid style "bad": invalid colour "bad"`,
+			`1:1: theme.default.z: invalid style "bad": invalid colour "bad"`,
 		}},
-		{"a = 1\n[screen]\nb = 2\nwidth = [1, 1]", []string{`bbs.toml:1:1: unknown key "a"`, `bbs.toml:3:1: unknown key "screen.b"`}},
-		{"[fields]\nw = 1", []string{`bbs.toml:2:5: fields.w: must be a string`}},
-		// Each invalid alias is an other error at 1:1 (bbs-toml, section 3.3).
+		{"a = 1\n[screen]\nb = 2\nwidth = [1, 1]", []string{`1:1: unknown key "a"`, `3:1: unknown key "screen.b"`}},
+		{"[fields]\nw = 1", []string{`2:5: fields.w: must be a string`}},
+		// Each invalid alias is an other error at 1:1 (screens-toml, section 3.3).
 		{"fields = { \"яя\" = \"term.cols\", and = \"term.rows\", k = \"item.A\", u = \"term.x\", v = \"w\" }", []string{
-			`bbs.toml:1:1: fields: alias "and" is a reserved word`,
-			`bbs.toml:1:1: fields: alias "k": "item.A" is valid only in {#if}`,
-			`bbs.toml:1:1: fields: alias "u": unknown field "term.x"`,
-			`bbs.toml:1:1: fields: alias "v": "w" is not a registry path`,
-			`bbs.toml:1:1: fields: invalid alias "яя"`,
+			`1:1: fields: alias "and" is a reserved word`,
+			`1:1: fields: alias "k": "item.A" is valid only in {#if}`,
+			`1:1: fields: alias "u": unknown field "term.x"`,
+			`1:1: fields: alias "v": "w" is not a registry path`,
+			`1:1: fields: invalid alias "яя"`,
 		}},
 	}
 	for _, tt := range tests {
-		_, ds := Parse([]byte(tt.data))
-		if got := messages(ds); !slices.Equal(got, tt.want) {
-			t.Errorf("Parse(%q) = %q, want %q", tt.data, got, tt.want)
+		_, ds := parseScreens([]byte(tt.data))
+		var want []string
+		for _, w := range tt.want {
+			want = append(want, ScreensFile+":"+w)
 		}
+		if got := messages(ds); !slices.Equal(got, want) {
+			t.Errorf("parseScreens(%q) = %q, want %q", tt.data, got, want)
+		}
+	}
+}
+
+// bbs.toml has only [telnet] (bbs-toml, section 2).
+func TestHostErrors(t *testing.T) {
+	tests := []struct{ data, want string }{
+		{"[screen]\nwidth = [40, 80]", `bbs.toml:1:2: unknown key "screen"`},
+		{"[theme]\ntitle = \"1\"", `bbs.toml:1:2: unknown key "theme"`},
+		{"[fields]\nw = \"term.cols\"", `bbs.toml:1:2: unknown key "fields"`},
+		{"[menu]\nstart = \"x\"", `bbs.toml:1:2: unknown key "menu"`},
+		{"[TELNET]\nlisten = \":1\"", `bbs.toml:1:1: unknown key "TELNET"`},
+		{"[telnet]\nlisten = \":1\"\nLISTEN = \":2\"", `bbs.toml:1:1: unknown key "telnet.LISTEN"`},
+		{"telnet = 1", `bbs.toml:1:10: telnet: must be a table`},
+	}
+	for _, tt := range tests {
+		_, ds := parseHost([]byte(tt.data))
+		if got := messages(ds); !slices.Equal(got, []string{tt.want}) {
+			t.Errorf("parseHost(%q) = %q, want %q", tt.data, got, tt.want)
+		}
+	}
+}
+
+// The examples of screens-toml, section 4, and of bbs-toml, section 4, give no diagnostics.
+func TestExamples(t *testing.T) {
+	screens := `
+[screen]
+width = [40, 100]
+more = "-- More --"
+
+[theme.default]
+normal = "7/0"
+title  = "15/4 bold"
+prompt = "14"
+
+[theme.16]
+title = "15/1 bold"
+
+[fields]
+w = "term.cols"
+
+[menu]
+start = "welcome"
+`
+	host := `
+[telnet]
+listen = ":2323"
+max_conns = 64
+max_conns_per_addr = 4
+max_connects_per_min = 10
+allow = ["192.0.2.10", "2001:db8::/48"]
+proxy = ["127.0.0.1"]
+idle_timeout = 600
+probe_timeout = 5
+output_timeout = 60
+`
+	cfg, ds := Load(fstest.MapFS{
+		"bbs.toml":             {Data: []byte(host)},
+		"screens/screens.toml": {Data: []byte(screens)},
+	})
+	if len(ds) != 0 {
+		t.Fatalf("diags: %q", messages(ds))
+	}
+	if cfg.SessionTheme(16)["title"] != style(t, "15/1 bold") || cfg.SessionTheme(256)["title"] != style(t, "15/4 bold") {
+		t.Errorf("title: 16 %v, 256 %v", cfg.SessionTheme(16)["title"], cfg.SessionTheme(256)["title"])
+	}
+	if cfg.SessionTheme(16)["prompt"] != style(t, "14/0") || cfg.Start != "welcome" || cfg.Telnet.Listen != ":2323" {
+		t.Errorf("cfg = %+v", cfg)
+	}
+}
+
+// The example of screens-toml, section 3.2.
+func TestDepthTheme(t *testing.T) {
+	data := `
+[theme.default]
+normal = "#c0c0c0/#101020"
+title  = "#60a0d0 bold"
+
+[theme.16]
+normal = "7/0"
+title  = "15 bold"
+`
+	cfg, ds := parseScreens([]byte(data))
+	if len(ds) != 0 {
+		t.Fatalf("diags: %q", messages(ds))
+	}
+	want := map[int]string{
+		16:       "15/0 bold",
+		256:      "#60a0d0/#101020 bold",
+		16777216: "#60a0d0/#101020 bold",
+	}
+	for colors, text := range want {
+		if got := cfg.SessionTheme(colors)["title"]; got != style(t, text) {
+			t.Errorf("title at %d = %v, want %s", colors, got, text)
+		}
+	}
+	if cfg.Theme["title"] != style(t, "#60a0d0/#101020 bold") {
+		t.Errorf("base title = %v", cfg.Theme["title"])
+	}
+}
+
+// A style of the session theme takes its colours from normal of the session theme.
+// A depth theme can set normal and more without [theme.default].
+func TestDepthNormal(t *testing.T) {
+	data := `
+[theme.default]
+title  = "/4 bold"
+prompt = "14"
+
+[theme.256]
+normal = "#203040/#405060"
+more   = "1"
+`
+	cfg, ds := parseScreens([]byte(data))
+	if len(ds) != 0 {
+		t.Fatalf("diags: %q", messages(ds))
+	}
+	want := map[string]string{
+		"normal": "#203040/#405060",
+		"more":   "1/#405060",
+		"title":  "#203040/4 bold",
+		"prompt": "14/#405060",
+	}
+	th := cfg.SessionTheme(256)
+	if len(th) != len(want) {
+		t.Errorf("theme.256 = %v", th)
+	}
+	for name, text := range want {
+		if got := th[name]; got != style(t, text) {
+			t.Errorf("%s = %v, want %s", name, got, text)
+		}
+	}
+	if cfg.Theme["title"] != style(t, "7/4 bold") || cfg.Theme["more"] != style(t, "15/0") {
+		t.Errorf("base theme = %v", cfg.Theme)
+	}
+}
+
+// Load reads both files (screens-toml, section 2).
+func TestLoad(t *testing.T) {
+	tests := []struct {
+		fsys fstest.MapFS
+		want []string
+	}{
+		{fstest.MapFS{"screens/screens.toml": {Data: []byte("[menu]\nstart = \"x\"\n")}}, []string{
+			"bbs.toml:1:1: open bbs.toml: file does not exist",
+		}},
+		{fstest.MapFS{"bbs.toml": {}, "screens/screens.toml/x": {}}, []string{
+			"screens/screens.toml:1:1: not a regular file",
+		}},
+		{fstest.MapFS{"bbs.toml": {Data: []byte("x = 1")}, "screens/screens.toml": {Data: []byte("y = 1")}}, []string{
+			`screens/screens.toml:1:1: unknown key "y"`,
+			`bbs.toml:1:1: unknown key "x"`,
+		}},
+	}
+	for _, tt := range tests {
+		_, ds := Load(tt.fsys)
+		if got := messages(ds); !slices.Equal(got, tt.want) {
+			t.Errorf("Load = %q, want %q", got, tt.want)
+		}
+	}
+}
+
+// A dangling symlink at screens/screens.toml exists and is not a regular file
+// (screens-toml, section 2).
+func TestLoadDanglingLink(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "bbs.toml"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, "screens"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("missing.toml", filepath.Join(dir, "screens", "screens.toml")); err != nil {
+		t.Fatal(err)
+	}
+	_, ds := Load(os.DirFS(dir))
+	want := []string{"screens/screens.toml:1:1: not a regular file"}
+	if got := messages(ds); !slices.Equal(got, want) {
+		t.Errorf("Load = %q, want %q", got, want)
 	}
 }
 
 // The loader removes a BOM (bbt-format, section 2).
 func TestBOM(t *testing.T) {
-	cfg, ds := Parse([]byte("\ufeff[menu]\nstart = \"x\"\n"))
+	cfg, ds := parseScreens([]byte("\ufeff[menu]\nstart = \"x\"\n"))
 	if len(ds) != 0 || cfg.Start != "x" {
 		t.Errorf("start %q, diags %q", cfg.Start, messages(ds))
 	}
@@ -191,10 +408,10 @@ func TestDiagLimit(t *testing.T) {
 	for i := range 2 * screen.MaxFileDiags {
 		fmt.Fprintf(&b, "k%d = 1\n", i)
 	}
-	_, ds := Parse([]byte(b.String()))
+	_, ds := parseScreens([]byte(b.String()))
 	got := messages(ds)
-	if len(got) != screen.MaxFileDiags+1 || got[0] != `bbs.toml:1:1: unknown key "k0"` ||
-		got[len(got)-1] != "bbs.toml:101:1: too many diagnostics" {
+	if len(got) != screen.MaxFileDiags+1 || got[0] != `screens/screens.toml:1:1: unknown key "k0"` ||
+		got[len(got)-1] != "screens/screens.toml:101:1: too many diagnostics" {
 		t.Errorf("%d diags, first %q, last %q", len(got), got[0], got[len(got)-1])
 	}
 }

@@ -53,18 +53,11 @@ func run(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	return exitUsage
 }
 
-// load reads bbs.toml and the screens of fsys and does the menu checks.
-// A missing bbs.toml is an error.
+// load reads bbs.toml, screens/screens.toml and the screens of fsys and does the menu checks.
 // The screens are nil when the diagnostics have an error.
 func load(fsys fs.FS) (config.Config, map[string]*screen.Screen, screen.Diags) {
-	var ds screen.Diags
-	data, err := screen.ReadFile(fsys, config.File)
-	if err != nil {
-		ds.Errorf(config.File, 1, 1, "%v", err)
-	}
-	// Parse also gives the defaults when the read fails, so the screens load with them.
-	cfg, cds := config.Parse(data)
-	ds = append(ds, cds...)
+	// Load also gives the defaults after an error, so the screens load with them.
+	cfg, ds := config.Load(fsys)
 	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Width, cfg.Fields)
 	ds = append(ds, sds...)
 	ds.Sort()

@@ -28,7 +28,7 @@ type frontDoc struct {
 }
 
 // parseFront parses the front matter lines. The first line of lines is line 2 of the file.
-// fields is the aliases of bbs.toml. The result is nil when the front matter has an error.
+// fields is the aliases of screens/screens.toml. The result is nil when the front matter has an error.
 func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *front {
 	var doc frontDoc
 	errs := tomlcheck.Decode([]byte(strings.Join(lines, "\n")), &doc)

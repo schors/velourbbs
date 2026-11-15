@@ -12,7 +12,7 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// aliases is the [fields] of bbs.toml in the tests: w is term.cols.
+// aliases is the [fields] of screens/screens.toml in the tests: w is term.cols.
 var aliases = func() screen.Fields {
 	r, err := screen.NewAlias("w", "term.cols")
 	if err != nil {
@@ -271,7 +271,7 @@ func TestFields(t *testing.T) {
 			`a.ans:3:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16`},
 		{"two backgrounds", "{\x1b[41m w}", "[]",
 			`a.ans:1:1: token "{ w}" changes the background: 0 at col 1, 1 at col 2`},
-		// The aliases of bbs.toml resolve the path once, at the load.
+		// The aliases of screens/screens.toml resolve the path once, at the load.
 		{"unknown field", "{x} {item.A} {term.rows}", "[]",
 			"a.ans:1:1: unknown field \"x\"\na.ans:1:5: field \"item.A\" is valid only in {#if}"},
 		{"unknown field and two backgrounds", "{\x1b[41m x}", "[]",

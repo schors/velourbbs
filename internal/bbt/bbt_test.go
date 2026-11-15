@@ -27,7 +27,7 @@ var (
 		"normal": style("7/0"), "more": style("15/0"), "title": style("15/4 bold"), "prompt": style("14/0"),
 	}
 	defaultWidth = screen.WidthLimits{Min: 40, Max: 80}
-	// aliases is the [fields] of bbs.toml in the tests.
+	// aliases is the [fields] of screens/screens.toml in the tests.
 	aliases = screen.Fields{"w": alias("w", "term.cols"), "t": alias("t", "term.type")}
 )
 
@@ -229,11 +229,11 @@ func TestFrontMatter(t *testing.T) {
 		{map[string]string{"s.bbt": "+++\n\nwidth = [1]\n+++\n"}, []string{`screens/s.bbt:2:1: width: must be an array of 2 integers`}},
 		// The column counts code points.
 		{map[string]string{"s.bbt": "+++\nitem = [{ key = \"яя\", do = 1 }]\n+++\n"}, []string{`screens/s.bbt:2:28: item: invalid type`}},
-		// An alias of bbs.toml in when: a type error at 2:1.
+		// An alias of screens/screens.toml in when: a type error at 2:1.
 		{map[string]string{"s.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\nwhen = \"t > 1\"\n+++\n"},
 			[]string{`screens/s.bbt:2:1: item "A": when: string field "term.type" takes a string, found an integer`}},
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ndo = 1\nx = \"y\"\n+++\n"}, []string{`screens/s.bbt:5:6: item.do: must be a string`}},
-		// The aliases are in bbs.toml: [fields] in a front matter is an unknown key (section 3.2).
+		// The aliases are in screens/screens.toml: [fields] in a front matter is an unknown key (section 3.2).
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ny = 1\nx = 2\n+++\n"}, []string{
 			`screens/s.bbt:2:2: unknown key "fields"`,
 			`screens/s.bbt:5:1: unknown key "item.y"`,
@@ -374,7 +374,7 @@ func TestIncludes(t *testing.T) {
 	if got := show(body); got != want {
 		t.Errorf("body\n got %s\nwant %s", got, want)
 	}
-	// An alias of bbs.toml means the same in each screen, fragment and art.
+	// An alias of screens/screens.toml means the same in each screen, fragment and art.
 	screens = mustLoad(t, map[string]string{
 		"s.bbt": "{>_f}", "t.bbt": "{>_f}\n{>a.ans}", "_f.bbt": "{w}\n{#if t == \"x\"}{/if}\n{>a.ans}", "a.ans": sauceArt("{t}", 80),
 	})
@@ -503,7 +503,7 @@ func TestWidth(t *testing.T) {
 		t.Errorf("b: %v", w)
 	}
 
-	// A screen without width takes [screen] width of bbs.toml.
+	// A screen without width takes [screen] width of screens/screens.toml.
 	fsys := fstest.MapFS{
 		"screens/a.bbt": {Data: []byte("{>x.ans}\n{>y.ans}")},
 		"screens/x.ans": {Data: []byte(sauceArt("x", 50))},
