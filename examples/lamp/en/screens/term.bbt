@@ -1,0 +1,31 @@
++++
+[[item]]
+key = "ESC"
+do = "goto main"
+[[item]]
+key = "ENTER"
+do = "goto main"
++++
+
+  {!line}────────────────────────────────────────────────────────────────────────────{!}
+
+       {!title}Lamp{!}  {!orn}☼ {!dim}a BBS by lamplight{!}
+
+       {!dim}Size{!}     {term.cols}×{term.rows}
+       {!dim}Colours{!}  {#if term.colors == 16777216}16 million{#else}{term.colors}{/if}
+       {!dim}Type{!}     {term.type}
+
+       This is how the station sees you.
+
+
+
+
+
+
+
+
+
+
+  {!line}────────────────────────────────────────────────────────────────────────────{!}
+
+    {!key}Esc Enter{!}  {!dim}back{!}
