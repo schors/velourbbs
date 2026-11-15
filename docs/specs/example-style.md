@@ -208,8 +208,8 @@ Rows 22 and 23 are empty. There is no key row.
 | `main`, items | About — who we are; Your terminal — size and colours; Goodbye — the lamp will wait | О станции — кто мы; Твой терминал — размер и цвета; До свидания — лампа подождёт |
 | `main`, row 19 | The light stays on till morning. | Свет горит до утра. |
 | `main`, key row | choose | выбор |
-| `about` | Lamp is a small station for friends. / Come in, look around, stay a while. / (empty) / The station runs on Velour BBS. / Its screens are plain text files. | Лампа — маленькая станция для своих. / Заходи, осмотрись, посиди немного. / (пусто) / Станция работает на Velour BBS. / Её экраны — простые текстовые файлы. |
-| `term`, labels | Size, Colours, Type | Размер, Цвета, Тип |
+| `about` | Lamp is a small station for friends. / Come in, look around, stay a while. / (empty) / The station runs on Velour BBS. / Its screens are plain text files. | «Лампа» — маленькая станция для друзей. / Заходи, осмотрись, посиди немного. / (пусто) / Станция работает на Velour BBS. / Её экраны — простые текстовые файлы. |
+| `term`, labels | Size, Colours, Type | Размер, Цветов, Тип |
 | `term`, 16777216 | 16 million | 16 млн |
 | `term`, row 10 | This is how the station sees you. | Так тебя видит станция. |
 | Key row of `about` and `term` | back | назад |

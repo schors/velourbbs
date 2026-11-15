@@ -17,7 +17,7 @@ func TestLamp(t *testing.T) {
 		{"goodbye", "80x24", "16"}, {"goodbye", "80x24", "256"}, {"goodbye", "80x24", "16777216"},
 		{"main", "80x25", "256"}, {"main", "132x43", "256"},
 	}
-	for _, lang := range []string{"en"} {
+	for _, lang := range []string{"en", "ru"} {
 		fsys := os.DirFS(filepath.Join("..", "..", "examples", "lamp", lang))
 		var out, errOut bytes.Buffer
 		if status := run([]string{"check"}, fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
