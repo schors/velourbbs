@@ -65,14 +65,14 @@ func TestCheck(t *testing.T) {
 			`screens/about.bbt:1:1: screen has no items`,
 		}},
 		{name: "no main", change: map[string][]string{"main": nil}, want: []string{
-			`bbs.toml:1:1: menu: start: unknown screen "main"`,
+			`screens/screens.toml:1:1: menu: start: unknown screen "main"`,
 			`screens/sysinfo.bbt:2:1: item "ANY": do: unknown screen "main"`,
 		}},
 		{name: "start unknown", start: "mian", want: []string{
-			`bbs.toml:1:1: menu: start: unknown screen "mian"`,
+			`screens/screens.toml:1:1: menu: start: unknown screen "mian"`,
 		}},
 		{name: "start without items", start: "goodbye", want: []string{
-			`bbs.toml:1:1: menu: start: screen "goodbye" has no items`,
+			`screens/screens.toml:1:1: menu: start: screen "goodbye" has no items`,
 		}},
 		{name: "start valid", start: "sysinfo"},
 	}

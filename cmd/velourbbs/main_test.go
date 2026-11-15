@@ -39,9 +39,9 @@ func TestCheckMenu(t *testing.T) {
 		main string // the front matter of screens/main.bbt
 		want string
 	}{
-		{"[[item]]\nkey = \"s\"\ndo = \"goto sysinf\"\n", `bbs.toml:1:1: menu: start: unknown screen "mian"
-screens/about.bbt:1:1: screen has no items
+		{"[[item]]\nkey = \"s\"\ndo = \"goto sysinf\"\n", `screens/about.bbt:1:1: screen has no items
 screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"
+screens/screens.toml:1:1: menu: start: unknown screen "mian"
 `},
 		{"[[item]]\nkey = \"s\"\ndo = \"logoff\"\n[[item]]\ndo = \"logoff\"\nkey = \"?\"\n", `screens/main.bbt:2:1: item 2: key: invalid key "?"
 `},
@@ -51,9 +51,10 @@ screens/main.bbt:2:1: item 3: key is missing
 	}
 	for _, tt := range tests {
 		fsys := fstest.MapFS{
-			"bbs.toml":          {Data: []byte("[menu]\nstart = \"mian\"\n")},
-			"screens/main.bbt":  {Data: []byte("+++\n" + tt.main + "+++\n")},
-			"screens/about.bbt": {Data: []byte("About\n")},
+			"bbs.toml":             {},
+			"screens/screens.toml": {Data: []byte("[menu]\nstart = \"mian\"\n")},
+			"screens/main.bbt":     {Data: []byte("+++\n" + tt.main + "+++\n")},
+			"screens/about.bbt":    {Data: []byte("About\n")},
 		}
 		var out, errOut bytes.Buffer
 		status := run([]string{"check"}, fsys, &out, &errOut)
@@ -70,7 +71,7 @@ func TestCheckValid(t *testing.T) {
 	}
 }
 
-// velourbbs check reports the errors of [telnet] (bbs-toml, section 3.5).
+// velourbbs check reports the errors of [telnet] (bbs-toml, section 3.1).
 func TestCheckTelnet(t *testing.T) {
 	fsys := fstest.MapFS{
 		"bbs.toml":         {Data: []byte("[telnet]\nmax_conns = 0\nallow = [\"x\"]\n")},
@@ -86,24 +87,25 @@ bbs.toml:1:1: telnet.allow: invalid address or prefix "x"
 	}
 }
 
-// The aliases of bbs.toml are valid in each screen. After a TOML error in bbs.toml,
+// The aliases of screens/screens.toml are valid in each screen. After a TOML error in the file,
 // each use of a lost alias gives an unknown field (bbt-format, section 4.2).
 func TestCheckAliases(t *testing.T) {
 	tests := []struct{ config, want string }{
 		{"[fields]\nw = \"term.cols\"\nr = \"term.rows\"\n", ""},
-		{"[fields]\nw = \"term.cols\"\nr = \"item.A\"\n", `bbs.toml:1:1: fields: alias "r": "item.A" is valid only in {#if}
-screens/_f.bbt:1:5: unknown field "r"
+		{"[fields]\nw = \"term.cols\"\nr = \"item.A\"\n", `screens/_f.bbt:1:5: unknown field "r"
+screens/screens.toml:1:1: fields: alias "r": "item.A" is valid only in {#if}
 `},
-		{"[fields]\nw = \"term.cols\"\nr = 1\n", `bbs.toml:3:5: fields.r: must be a string
-screens/_f.bbt:1:1: unknown field "w"
+		{"[fields]\nw = \"term.cols\"\nr = 1\n", `screens/_f.bbt:1:1: unknown field "w"
 screens/_f.bbt:1:5: unknown field "r"
+screens/screens.toml:3:5: fields.r: must be a string
 `},
 	}
 	for _, tt := range tests {
 		fsys := fstest.MapFS{
-			"bbs.toml":         {Data: []byte(tt.config)},
-			"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"g\"\ndo = \"logoff\"\n+++\n{>_f}\n")},
-			"screens/_f.bbt":   {Data: []byte("{w} {r}\n")},
+			"bbs.toml":             {},
+			"screens/screens.toml": {Data: []byte(tt.config)},
+			"screens/main.bbt":     {Data: []byte("+++\n[[item]]\nkey = \"g\"\ndo = \"logoff\"\n+++\n{>_f}\n")},
+			"screens/_f.bbt":       {Data: []byte("{w} {r}\n")},
 		}
 		var out, errOut bytes.Buffer
 		status := run([]string{"check"}, fsys, &out, &errOut)

@@ -10,7 +10,7 @@ import (
 )
 
 func TestTelnetDefaults(t *testing.T) {
-	cfg, ds := Parse([]byte("[telnet]\n"))
+	tn, ds := parseHost([]byte("[telnet]\n"))
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
@@ -18,8 +18,8 @@ func TestTelnetDefaults(t *testing.T) {
 		Listen: ":2323", MaxConns: 64, MaxConnsPerAddr: 4, MaxConnectsPerMin: 10,
 		IdleTimeout: 600 * time.Second, ProbeTimeout: 5 * time.Second, OutputTimeout: 60 * time.Second,
 	}
-	if !reflect.DeepEqual(cfg.Telnet, want) {
-		t.Errorf("Telnet = %+v, want %+v", cfg.Telnet, want)
+	if !reflect.DeepEqual(tn, want) {
+		t.Errorf("Telnet = %+v, want %+v", tn, want)
 	}
 }
 
@@ -37,7 +37,7 @@ idle_timeout = 3
 probe_timeout = 4
 output_timeout = 5
 `
-	cfg, ds := Parse([]byte(data))
+	tn, ds := parseHost([]byte(data))
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
@@ -54,16 +54,16 @@ output_timeout = 5
 		Proxy:       pp("127.0.0.1/32"),
 		IdleTimeout: 3 * time.Second, ProbeTimeout: 4 * time.Second, OutputTimeout: 5 * time.Second,
 	}
-	if !reflect.DeepEqual(cfg.Telnet, want) {
-		t.Errorf("Telnet =\n%+v\nwant\n%+v", cfg.Telnet, want)
+	if !reflect.DeepEqual(tn, want) {
+		t.Errorf("Telnet =\n%+v\nwant\n%+v", tn, want)
 	}
 }
 
 func TestTelnetListen(t *testing.T) {
 	for _, s := range []string{":1", ":65535", "[::1]:2323", "localhost:2323"} {
-		cfg, ds := Parse([]byte(`telnet.listen = "` + s + `"`))
-		if len(ds) != 0 || cfg.Telnet.Listen != s {
-			t.Errorf("listen %q: Listen %q, diags %q", s, cfg.Telnet.Listen, messages(ds))
+		tn, ds := parseHost([]byte(`telnet.listen = "` + s + `"`))
+		if len(ds) != 0 || tn.Listen != s {
+			t.Errorf("listen %q: Listen %q, diags %q", s, tn.Listen, messages(ds))
 		}
 	}
 }
@@ -99,14 +99,14 @@ func TestTelnetErrors(t *testing.T) {
 		)
 	}
 	for _, tt := range tests {
-		cfg, ds := Parse([]byte(tt.data))
+		tn, ds := parseHost([]byte(tt.data))
 		want := "bbs.toml:" + tt.want
 		if got := messages(ds); !slices.Equal(got, []string{want}) {
-			t.Errorf("Parse(%q) = %q, want %q", tt.data, got, want)
+			t.Errorf("parseHost(%q) = %q, want %q", tt.data, got, want)
 		}
 		// An invalid value keeps the default.
-		if !reflect.DeepEqual(cfg.Telnet, defaultTelnet) {
-			t.Errorf("Parse(%q): Telnet = %+v", tt.data, cfg.Telnet)
+		if !reflect.DeepEqual(tn, defaultTelnet) {
+			t.Errorf("parseHost(%q): Telnet = %+v", tt.data, tn)
 		}
 	}
 }

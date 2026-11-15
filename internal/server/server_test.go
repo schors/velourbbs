@@ -79,11 +79,12 @@ func start(t *testing.T, set func(*config.Telnet)) *testServer {
 // startWith starts a server as start. wrap, when it is not nil, changes the listener.
 func startWith(t *testing.T, set func(*config.Telnet), wrap func(net.Listener) net.Listener) *testServer {
 	t.Helper()
-	cfg, ds := config.Parse(nil)
 	fsys := fstest.MapFS{
+		"bbs.toml":            {},
 		"screens/main.bbt":    {Data: []byte(mainScreen)},
 		"screens/goodbye.bbt": {Data: []byte(goodbyeScreen)},
 	}
+	cfg, ds := config.Load(fsys)
 	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Width, cfg.Fields)
 	ds = menu.Check(cfg, screens, append(ds, sds...))
 	if ds.HasErrors() {

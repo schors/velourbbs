@@ -1,5 +1,5 @@
 // Package bbt loads the BBS templates of screens/ into the screen model of internal/screen.
-// The file pass parses each file once and resolves its fields with the aliases of bbs.toml.
+// The file pass parses each file once and resolves its fields with the aliases of screens/screens.toml.
 // The screen pass expands the includes and the art inserts of each screen.
 // Specification: docs/specs/bbt-format.md.
 package bbt
@@ -19,7 +19,7 @@ import (
 const MaxBodyLines = 10000
 
 // Load loads each screen of fsys/screens with the fragments and the art that it uses.
-// fsys is the BBS directory. theme, width and fields come from bbs.toml.
+// fsys is the BBS directory. theme, width and fields come from screens/screens.toml.
 // The map of screens by name is nil when the diagnostics have an error.
 func Load(fsys fs.FS, theme map[string]screen.Style, width screen.WidthLimits, fields screen.Fields) (map[string]*screen.Screen, screen.Diags) {
 	l := &loader{

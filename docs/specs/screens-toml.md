@@ -1,0 +1,114 @@
+# screens.toml
+
+This specification defines the screens settings file `screens/screens.toml`:
+each table and each key.
+Related parts: [bbt-format](bbt-format.md), [menu-nav](menu-nav.md),
+[telnet-term](telnet-term.md), [screen-render](screen-render.md) and [bbs-toml](bbs-toml.md).
+
+## 1. Goal
+
+The author of the screens reads each key of `screens/screens.toml` in this specification.
+The settings go with the screens: a copy of `screens/` keeps its look and its first screen.
+The other specifications define the effect of a key and refer to this specification.
+
+## 2. File
+
+- The file is `screens/screens.toml` in the BBS directory ([bbs-toml](bbs-toml.md), section 2).
+- The file is optional. A missing file gives the defaults.
+  A path that exists and is not a regular file is an error.
+- The rules of `bbs.toml` for the format, the size, the defaults, the unknown keys
+  and the form of the errors apply: [bbs-toml](bbs-toml.md), section 2.
+- A value that breaks a rule of section 3 is an error.
+
+## 3. Tables
+
+### 3.1. `[screen]`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `width` | array of 2 integers | `[40, 80]` | The width limits `[min, max]` of a screen without `width` in its front matter: [bbt-format](bbt-format.md), section 6.1. |
+| `more` | string | `"-- More --"` | The text of the More row: [bbt-format](bbt-format.md), section 6.4. |
+
+- `width` has the rules of `width` in the front matter ([bbt-format](bbt-format.md), section 3.2).
+- `more` cannot have a control character, a grapheme of width 0 or a grapheme
+  of more than 32 bytes ([bbt-format](bbt-format.md), section 2.1).
+
+### 3.2. `[theme]`
+
+The theme maps a style name to a style in the syntax of [bbt-format](bbt-format.md),
+section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), section 7.3.
+
+- `[theme]` has only the tables `default`, `16` and `256`.
+  `[theme.16]` and `[theme.256]` are the "depth themes". A depth theme gives other styles
+  for one colour depth `term.colors` ([telnet-term](telnet-term.md), section 6).
+- A style name matches `[a-z][a-z0-9_]*`. Its value is a string.
+- The "base theme" is `normal = "7/0"`, `more = "15/0"` and the styles of `[theme.default]`.
+  A style of `[theme.default]` replaces the style with the same name.
+  A "name of the theme" is a name of the base theme.
+  The effect of `normal` and `more`: [bbt-format](bbt-format.md), sections 6.2, 6.4 and 7.3.
+- Each name of a depth theme must be a name of the theme.
+- The "session theme" is the theme of one `term.colors`. It is the base theme
+  with each style of the depth theme of `term.colors` in place of the style with the same name.
+  When `term.colors` has no depth theme, the session theme is the base theme.
+- A style of the session theme without a foreground or a background takes it
+  from `normal` of the session theme. `normal` takes it from `7/0`.
+
+Example:
+
+```toml
+[theme.default]
+normal = "#c0c0c0/#101020"
+title  = "#60a0d0 bold"
+
+[theme.16]
+normal = "7/0"
+title  = "15 bold"
+```
+
+With 16 colours, `title` is `15/0 bold`. With 256 colours, it is `#60a0d0/#101020 bold`,
+and the host reduces it ([telnet-term](telnet-term.md), section 7.3).
+
+### 3.3. `[fields]`
+
+`[fields]` maps an alias to a registry path: [bbt-format](bbt-format.md), sections 4.1 and 4.2.
+
+- An alias matches `[a-z][a-z0-9_]*`. Each value is a string. The default `[fields]` is empty.
+- An alias cannot be `term`, `item`, `and`, `or` or `not`.
+- The path is a path of the registry with a dot. It cannot be `item.<KEY>`.
+
+### 3.4. `[menu]`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `start` | string | `"main"` | The name of the first screen of a session: [menu-nav](menu-nav.md), section 5. |
+
+- `start` matches the screen name of [bbt-format](bbt-format.md), section 2.
+- [menu-nav](menu-nav.md), section 6, has the checks of the start screen.
+
+## 4. Example
+
+```toml
+[screen]
+width = [40, 100]
+more = "-- More --"
+
+[theme.default]
+normal = "7/0"
+title  = "15/4 bold"
+prompt = "14"
+
+[theme.16]
+title = "15/1 bold"
+
+[fields]
+w = "term.cols"
+
+[menu]
+start = "welcome"
+```
+
+## 5. Code
+
+| Package | Content |
+|---|---|
+| `internal/config` | The parse of `screens/screens.toml`, the checks of section 3 and the session theme of each `term.colors`. |

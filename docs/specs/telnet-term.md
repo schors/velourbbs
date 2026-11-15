@@ -86,7 +86,7 @@ The host keeps the state of each option for each side, as in RFC 1143:
 ### 4.3. Output
 
 - The host writes each reply to the client before it reads more input.
-  `output_timeout` ([bbs-toml](bbs-toml.md), section 3.5) applies to each write.
+  `output_timeout` ([bbs-toml](bbs-toml.md), section 3.1) applies to each write.
 - IAC doubling runs after the encoder, because 0xFF is a character in some 8-bit charsets.
 - The host always sends CR LF as the line end.
 
@@ -106,7 +106,7 @@ The host keeps the state of each option for each side, as in RFC 1143:
   In step 4, the host waits for the reply to the charset probe.
 - A wait ends when all these replies arrive, or when no reply arrives for 1 s.
 - The PROXY protocol header and the probe end within `probe_timeout`
-  ([bbs-toml](bbs-toml.md), section 3.5)
+  ([bbs-toml](bbs-toml.md), section 3.1)
   from accept. Then the host decides with the replies that it has.
 - Keys that arrive during the probe go to the key queue.
 
@@ -293,7 +293,7 @@ The key decoder gives:
 
 ### 9.1. `bbs.toml`
 
-The keys of `[telnet]` are in [bbs-toml](bbs-toml.md), section 3.5.
+The keys of `[telnet]` are in [bbs-toml](bbs-toml.md), section 3.1.
 
 ### 9.2. Connection limits
 

@@ -25,12 +25,12 @@ func style(text string) screen.Style {
 	return spec.Over(screen.Style{})
 }
 
-// theme is the theme of the example of bbs-toml, section 4, with the default more style.
+// theme is the theme of the example of screens-toml, section 4, with the default more style.
 var theme = map[string]screen.Style{
 	"normal": style("7/0"), "more": style("15/0"), "title": style("15/4 bold"), "prompt": style("14/0"),
 }
 
-// aliases is the [fields] of bbs.toml in the tests.
+// aliases is the [fields] of screens/screens.toml in the tests.
 var aliases = screen.Fields{"w": alias("w", "term.cols"), "t": alias("t", "term.type")}
 
 func alias(name, path string) screen.Ref {

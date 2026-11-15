@@ -59,8 +59,8 @@ func TestServeCheckError(t *testing.T) {
 	fsys["screens/main.bbt"] = &fstest.MapFile{Data: []byte("Hello\n")}
 	var out, errOut bytes.Buffer
 	status := run([]string{"serve"}, fsys, &out, &errOut)
-	want := "bbs.toml:1:1: menu: start: screen \"main\" has no items\n" +
-		"screens/main.bbt:1:1: screen has no items\n"
+	want := "screens/main.bbt:1:1: screen has no items\n" +
+		"screens/screens.toml:1:1: menu: start: screen \"main\" has no items\n"
 	if out.String() != "" || errOut.String() != want || status != exitError {
 		t.Errorf("stdout %q, stderr %q, status %d; want stderr %q and status 1", out.String(), errOut.String(), status, want)
 	}

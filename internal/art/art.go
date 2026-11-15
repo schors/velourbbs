@@ -16,7 +16,7 @@ const MaxRows = 1000
 const errNotFlat = "not in the flat form, convert it with velourbbs art import"
 
 // Load reads the file name of fsys and parses it. name is also the file in the diagnostics.
-// fields is the aliases of bbs.toml (bbt-format, section 4.2).
+// fields is the aliases of screens/screens.toml (bbt-format, section 4.2).
 // The art is nil when the diagnostics have an error.
 func Load(fsys fs.FS, name string, fields screen.Fields) (*screen.Art, screen.Diags) {
 	data, err := screen.ReadFile(fsys, name)

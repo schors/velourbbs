@@ -44,7 +44,7 @@ func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags
 		}
 	}
 	if err := CheckTarget(screens, cfg.Start); err != nil {
-		fd(config.File).Errorf(1, 1, "menu: start: %v", err)
+		fd(config.ScreensFile).Errorf(1, 1, "menu: start: %v", err)
 	}
 	var out screen.Diags
 	for _, d := range files {

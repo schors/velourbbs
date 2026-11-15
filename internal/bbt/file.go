@@ -19,7 +19,7 @@ type file struct {
 
 // node is a body part after the file pass: screen.Text, screen.SetStyle, screen.Field,
 // lineEnd, *ifNode, include or artInsert. The file pass resolves the fields and
-// the conditions with the aliases of bbs.toml. The screen pass gives screen.Seg.
+// the conditions with the aliases of screens/screens.toml. The screen pass gives screen.Seg.
 type node any
 
 type lineEnd struct {
@@ -45,7 +45,7 @@ type artInsert struct {
 }
 
 // parseFile does the file pass (sections 3.1–3.4, 4 and 5). d.File is the file name.
-// theme and fields come from bbs.toml.
+// theme and fields come from screens/screens.toml.
 func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, fields screen.Fields, fragment bool) *file {
 	f := &file{name: d.File}
 	data = bytes.TrimPrefix(data, screen.BOM)

@@ -1,6 +1,6 @@
 # Idea: example style and the light BBS
 
-Backlog. It needs [theme-depth](theme-depth.md).
+Backlog. It uses the depth themes of [screens-toml](../specs/screens-toml.md), section 3.2.
 [bbt-guide](bbt-guide.md) and [setup-guide](setup-guide.md) build this BBS.
 
 ## Goal
@@ -12,7 +12,7 @@ The screens are pleasant to read.
 
 - The example style is not a second brandbook. It is the light BBS that the guides build.
   It does not use the [brandbook](../brand/brandbook.md).
-- It uses only what the engine can do, and [theme-depth](theme-depth.md).
+- It uses only what the engine can do.
 - Sizes: 80x24 and 80x25, with 23 rows on a screen, and 132x43.
 - Colours: truecolor, 256, and 16 as grey: black, dark grey, light grey and white.
 - One template for the three colour modes.

@@ -81,10 +81,10 @@ func (r Ref) isItem() bool { return r.term == 0 }
 // Fields maps an alias to its field (section 4.2).
 type Fields map[string]Ref
 
-// reserved are the names that an alias cannot have (bbs-toml, section 3.3).
+// reserved are the names that an alias cannot have (screens-toml, section 3.3).
 var reserved = []string{"term", "item", "and", "or", "not"}
 
-// NewAlias checks the alias name and its path against bbs-toml, section 3.3,
+// NewAlias checks the alias name and its path against screens-toml, section 3.3,
 // and gives the field of the path.
 func NewAlias(name, path string) (Ref, error) {
 	switch {

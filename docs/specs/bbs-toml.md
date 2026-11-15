@@ -1,8 +1,8 @@
 # bbs.toml
 
 This specification defines the host settings file `bbs.toml`: each table and each key.
-Related parts: [bbt-format](bbt-format.md), [menu-nav](menu-nav.md),
-[telnet-term](telnet-term.md) and [screen-render](screen-render.md).
+Related parts: [screens-toml](screens-toml.md), [telnet-term](telnet-term.md)
+and [screen-render](screen-render.md).
 
 ## 1. Goal
 
@@ -12,6 +12,7 @@ The other specifications define the effect of a key and refer to this specificat
 ## 2. File
 
 - The BBS directory is the current directory of `velourbbs`. It holds `bbs.toml` and `screens/`.
+- The settings of the screens are in `screens/screens.toml`: [screens-toml](screens-toml.md).
 - `bbs.toml` must exist and be a regular file.
 - The file is TOML 1.1 in UTF-8. The loader removes a BOM.
 - The file is at most 64 KB without the BOM.
@@ -23,46 +24,7 @@ The other specifications define the effect of a key and refer to this specificat
 
 ## 3. Tables
 
-### 3.1. `[screen]`
-
-| Key | Type | Default | Meaning |
-|---|---|---|---|
-| `width` | array of 2 integers | `[40, 80]` | The width limits `[min, max]` of a screen without `width` in its front matter: [bbt-format](bbt-format.md), section 6.1. |
-| `more` | string | `"-- More --"` | The text of the More row: [bbt-format](bbt-format.md), section 6.4. |
-
-- `width` has the rules of `width` in the front matter ([bbt-format](bbt-format.md), section 3.2).
-- `more` cannot have a control character, a grapheme of width 0 or a grapheme
-  of more than 32 bytes ([bbt-format](bbt-format.md), section 2.1).
-
-### 3.2. `[theme]`
-
-`[theme]` maps a style name to a style in the syntax of [bbt-format](bbt-format.md),
-section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), section 7.3.
-
-- A name matches `[a-z][a-z0-9_]*`. Each value is a string.
-- The theme always has `normal` and `more`. Their defaults are `7/0` and `15/0`.
-- A theme style without a foreground or a background takes it from `normal`.
-  `normal` takes it from `7/0`.
-- The effect of `normal` and `more`: [bbt-format](bbt-format.md), sections 6.2, 6.4 and 7.3.
-
-### 3.3. `[fields]`
-
-`[fields]` maps an alias to a registry path: [bbt-format](bbt-format.md), sections 4.1 and 4.2.
-
-- An alias matches `[a-z][a-z0-9_]*`. Each value is a string. The default `[fields]` is empty.
-- An alias cannot be `term`, `item`, `and`, `or` or `not`.
-- The path is a path of the registry with a dot. It cannot be `item.<KEY>`.
-
-### 3.4. `[menu]`
-
-| Key | Type | Default | Meaning |
-|---|---|---|---|
-| `start` | string | `"main"` | The name of the first screen of a session: [menu-nav](menu-nav.md), section 5. |
-
-- `start` matches the screen name of [bbt-format](bbt-format.md), section 2.
-- [menu-nav](menu-nav.md), section 6, has the checks of the start screen.
-
-### 3.5. `[telnet]`
+### 3.1. `[telnet]`
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
@@ -86,21 +48,6 @@ section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), sectio
 ## 4. Example
 
 ```toml
-[screen]
-width = [40, 100]
-more = "-- More --"
-
-[theme]
-normal = "7/0"
-title  = "15/4 bold"
-prompt = "14"
-
-[fields]
-w = "term.cols"
-
-[menu]
-start = "welcome"
-
 [telnet]
 listen = ":2323"
 max_conns = 64
