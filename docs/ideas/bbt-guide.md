@@ -15,6 +15,7 @@ The artist and the screen author learn to write screens without the specificatio
 - The guide is in English and Russian. English is the source, Russian is a translation.
   Change both in the same commit.
 - An example BBS will exist as a separate issue. The guide takes it into account.
+- The example BBS and the examples of the guide follow the [brandbook](../brand/brandbook.md).
 
 ## Open questions
 

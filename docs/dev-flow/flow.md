@@ -31,6 +31,7 @@ or of the current stage for a `dev` issue.
 |---|---|---|
 | `docs/ideas/` | yes | Idea descriptions. The backlog of `dev` issues. |
 | `docs/specs/` | yes | Designs and specifications (SDD). |
+| `docs/brand/` | yes | Brandbook and its example screens. |
 | `.ai/issues.md` | no | Index of issues. Template: [template-issues.md](template-issues.md). |
 | `.ai/artifacts/` | no | Artifacts for more than one issue, or for no issue yet. |
 | `.ai/issues/<id>/` | no | One issue. |
