@@ -65,37 +65,88 @@ func CountWords(s string) int {
 // A line break is a space. src is the Markdown text of n.
 func InlineText(n ast.Node, src []byte) string {
 	var b strings.Builder
-	_ = ast.Walk(n, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
-		if !entering {
-			return ast.WalkContinue, nil
+	walkInline(n, src, func(kind inlineKind, text, _ string) {
+		switch kind {
+		case inlineText:
+			b.WriteString(text)
+		case inlineSoft, inlineHard:
+			b.WriteByte(' ')
 		}
-		switch n := n.(type) {
-		case *ast.Text:
-			b.WriteString(n.Value.Value(src))
-			if n.SoftLineBreak() || n.HardLineBreak() {
-				b.WriteByte(' ')
-			}
-		case *ast.CodeSpan:
-			b.WriteString(n.Value.Value(src))
-			return ast.WalkSkipChildren, nil
-		case *ast.AutoLink:
-			b.WriteString(n.Label.Value(src))
-		case *ast.RawHTML:
-			if v := n.Value.Value(src); !strings.HasPrefix(v, "<!--") {
-				b.WriteString(strings.ReplaceAll(v, "\n", " "))
-			}
-		}
-		return ast.WalkContinue, nil
 	})
 	return b.String()
 }
 
+// inlineKind is the kind of an event of walkInline.
+type inlineKind int
+
+const (
+	inlineText    inlineKind = iota // a text in a style
+	inlineSoft                      // a soft line break
+	inlineHard                      // a hard line break
+	inlineLinkEnd                   // the end of a link or an image: the text is its address
+)
+
+// walkInline walks the inline elements of the block n (file-view, section 5.5).
+// It gives each text with the theme style of the innermost element with a style,
+// or "" for the style of the block. An HTML comment gives nothing.
+// A line break in an inline HTML is a space.
+func walkInline(n ast.Node, src []byte, yield func(kind inlineKind, text, style string)) {
+	var walk func(n ast.Node, style string)
+	walk = func(n ast.Node, style string) {
+		for c := n.FirstChild(); c != nil; c = c.NextSibling() {
+			switch c := c.(type) {
+			case *ast.Text:
+				yield(inlineText, c.Value.Value(src), style)
+				switch {
+				case c.HardLineBreak():
+					yield(inlineHard, "", style)
+				case c.SoftLineBreak():
+					yield(inlineSoft, "", style)
+				}
+			case *ast.CodeSpan:
+				yield(inlineText, c.Value.Value(src), "md_code")
+			case *ast.Strong:
+				walk(c, "md_strong")
+			case *ast.Emphasis:
+				walk(c, "md_em")
+			case *ast.Link:
+				walk(c, "md_link")
+				yield(inlineLinkEnd, c.Destination.Value(src), "md_link")
+			case *ast.Image:
+				walk(c, "md_link")
+				yield(inlineLinkEnd, c.Destination.Value(src), "md_link")
+			case *ast.AutoLink:
+				yield(inlineText, c.Label.Value(src), "md_link")
+			case *ast.RawHTML:
+				if v := c.Value.Value(src); !strings.HasPrefix(v, "<!--") {
+					yield(inlineText, strings.ReplaceAll(v, "\n", " "), style)
+				}
+			default:
+				walk(c, style)
+			}
+		}
+	}
+	walk(n, "")
+}
+
 // HTMLText gives the text of the HTML block n that shows (file-view, section 5.2):
-// the text as written; for a comment, only the text after its "-->".
+// the text as written; for a comment, only the text after its "-->" without the comments in it.
 func HTMLText(n *ast.HTMLBlock, src []byte) string {
 	text := n.Value.Str(src)
 	if n.HTMLBlockKind == ast.HTMLBlockKind2 {
 		_, after, _ := strings.Cut(text, "-->")
+		// The line after the comment can have more comments.
+		for {
+			i := strings.Index(after, "<!--")
+			if i < 0 {
+				break
+			}
+			j := strings.Index(after[i:], "-->")
+			if j < 0 {
+				break
+			}
+			after = after[:i] + after[i+j+3:]
+		}
 		return after
 	}
 	return text

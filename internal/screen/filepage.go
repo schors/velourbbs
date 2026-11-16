@@ -21,20 +21,28 @@ type FileRow struct {
 	Break bool
 	Keep  bool // a heading row: on one file page with the next row that is not Sep
 	Sep   bool // an empty row between blocks: a file page does not start with it
+	// NewSection marks the first row of a heading of level 1 or 2, and Section is its text.
+	NewSection bool
+	Section    string
 }
 
 // FileLayout gives the rows of a content file from the restart point from.
 type FileLayout func(from int) iter.Seq[FileRow]
 
 // FilePage is a file page: the N rows after the first Skip rows from the restart point From.
+// Section is file.section: the text of the last heading of level 1 or 2
+// at or before the first row of the page (file-view, section 3.4).
 type FilePage struct {
 	From, Skip, N int
+	Section       string
 }
 
-// filePos is the position of a file row: its restart point and the rows before it from that point.
+// filePos is the position of a file row: its restart point, the rows before it from that point
+// and the section at the row.
 type filePos struct {
 	from, skip int
 	sep        bool
+	section    string
 }
 
 // SplitPages splits the rows of l into file pages of at most h rows
@@ -43,6 +51,7 @@ type filePos struct {
 func SplitPages(l FileLayout, h int) []FilePage {
 	s := splitter{h: h, pages: []FilePage{{}}}
 	var pos filePos
+	section := ""
 	count := 0
 	for row := range l(0) {
 		if count == MaxFileRows {
@@ -53,7 +62,10 @@ func SplitPages(l FileLayout, h int) []FilePage {
 		} else {
 			pos = filePos{from: row.From}
 		}
-		pos.sep = row.Sep
+		if row.NewSection {
+			section = row.Section
+		}
+		pos.sep, pos.section = row.Sep, section
 		count++
 		s.add(row, pos)
 	}
@@ -117,7 +129,7 @@ func (s *splitter) place(pos filePos) {
 		p = &s.pages[len(s.pages)-1]
 	}
 	if p.N == 0 {
-		p.From, p.Skip = pos.from, pos.skip
+		p.From, p.Skip, p.Section = pos.from, pos.skip, pos.section
 	}
 	p.N++
 }
