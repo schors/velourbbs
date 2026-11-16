@@ -3,6 +3,9 @@
 key = "A"
 do = "goto about"
 [[item]]
+key = "R"
+do = "goto texts"
+[[item]]
 key = "T"
 do = "goto term"
 [[item]]
@@ -16,15 +19,15 @@ do = "logoff"
 
          {!key}A{!}   About                                   {!dim}who we are{!}
 
+         {!key}R{!}   Reading room                            {!dim}stories by the lamp{!}
+
          {!key}T{!}   Your terminal                           {!dim}size and colours{!}
 
          {!key}G{!}   Goodbye                                 {!dim}the lamp will wait{!}
-
-
 
 
        {!dim}The light stays on till morning.{!}
 
   {!line}────────────────────────────────────────────────────────────────────────────{!}
 
-    {!key}A T G{!}  {!dim}choose{!}
+    {!key}A R T G{!}  {!dim}choose{!}

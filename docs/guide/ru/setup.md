@@ -62,7 +62,11 @@ sudo chmod -R a+rX /srv/velourbbs
 | `screens/main.bbt` | Первый экран: меню. |
 | `screens/about.bbt` | Текст о BBS. |
 | `screens/term.bbt` | Значения терминала. |
+| `screens/texts.bbt` | Список текстов читальни. |
+| `screens/reader.bbt` | Экран, который показывает текст из списка. |
 | `screens/goodbye.bbt` | Экран после конца сеанса. |
+| `content/lamp.md` | Текст в Markdown: короткая история ламп. |
+| `content/rules.txt` | Простой текст: правила станции. |
 
 Как менять экраны, читай в [руководстве по BBT](bbt.md).
 
@@ -229,7 +233,7 @@ velourbbs preview main --keys A,ESC,G
 sudo velourbbs art import art/logo.ans screens/logo.ans
 ```
 
-Подробно: задача 7 [руководства по BBT](bbt.md).
+Подробно: задача 8 [руководства по BBT](bbt.md).
 
 ### `velourbbs serve`
 
@@ -257,7 +261,7 @@ time=2026-11-16T09:42:51.231Z level=INFO msg=close addr=127.0.0.1 reason=logoff 
 
 1. В `/srv/velourbbs` выполни `velourbbs serve`. Она пишет строку `listen`.
 2. Подключи telnet-клиент к хосту, порт 2323, например `telnet localhost 2323`.
-   Клиент показывает экран `main`: шапку «Лампа» и меню `A T G`.
+   Клиент показывает экран `main`: шапку «Лампа» и меню `A R T G`.
    Нажми `G`, чтобы завершить сеанс.
 3. Останови сервер клавишами Ctrl+C. Раздел 5 использует порт 2323.
 

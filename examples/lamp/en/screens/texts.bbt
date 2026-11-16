@@ -1,0 +1,32 @@
++++
+[[item]]
+key = "1"
+do = "goto reader"
+args = { file = "lamp.md" }
+[[item]]
+key = "2"
+do = "goto reader"
+args = { file = "rules.txt" }
+[[item]]
+key = "ESC"
+do = "goto main"
++++
+{>_head}
+       The texts of the station.
+       Pick one and read it by the lamp.
+
+
+         {!key}1{!}   How the lamps were lit                  {!dim}a short history{!}
+
+         {!key}2{!}   Station rules                           {!dim}read them once{!}
+
+
+
+
+
+
+
+
+  {!line}────────────────────────────────────────────────────────────────────────────{!}
+
+    {!key}1 2{!}  {!dim}choose{!}   {!key}Esc{!}  {!dim}back{!}

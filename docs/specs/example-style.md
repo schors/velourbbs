@@ -299,8 +299,8 @@ At 80x24:
   So page 1 has no `B`, and the last page has no `Space`.
 - The empty last line of the source gives the empty row 24. Without it, the file area
   has 12 rows and the hairline moves to row 22.
-- When `term.rows` is less than 14, the host cuts the page ([file-view](file-view.md), section 3.2):
-  the key row is not visible.
+- When `term.rows` is less than 14, the host cuts the page ([file-view](file-view.md), section 3.2).
+  When it is less than 13, the key row is not visible.
 
 `content/lamp.md`:
 
