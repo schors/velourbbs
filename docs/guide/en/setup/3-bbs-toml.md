@@ -1,0 +1,99 @@
+# 3. `bbs.toml`
+
+`bbs.toml` holds the table `[bbs]`: the name of the BBS, and the table `[telnet]`:
+the settings of the telnet server.
+Each key is optional. A key that is not set has its default. An empty file gives the defaults.
+
+## The name
+
+`name` of `[bbs]` is the name of the BBS. A screen shows it in the field `bbs.name`.
+The default is `"Kind Brothers BBS"`.
+
+## The address
+
+`listen` is the TCP address of the server: `<host>:<port>`. The default is `":2323"`.
+
+- An empty host: the server listens on all addresses of the host: `":2323"`.
+- One address: the server listens only on this address, for example `"192.0.2.1:2323"`.
+  Use it when the host has more than one address and the BBS must use only one.
+
+`velourbbs check` checks only the form of `listen` and the port.
+`velourbbs serve` checks the address when it starts. If the host does not have
+the address, `velourbbs serve` stops.
+
+## The connection limits
+
+| Key | Default | What it does | When to change it |
+|---|---|---|---|
+| `max_conns` | 64 | The maximum number of connections. | More users connect at the same time. Then also change the limits of section 5. |
+| `max_conns_per_addr` | 4 | The maximum number of connections from one address. | Many users share one address, for example behind NAT. |
+| `max_connects_per_min` | 10 | The maximum number of connects from one address in 60 s. | A client connects again many times. |
+| `allow` | `[]` | Addresses and prefixes without the address limits. | One address must have more connections, for example a known NAT. |
+
+- "One address" is one IPv4 address, or one IPv6 /64 prefix.
+- `max_conns` applies also to the addresses in `allow`.
+- A connection over a limit gets the line `Too many connections. Try again later.`
+  Then the server closes it.
+
+Example:
+
+```toml
+[telnet]
+allow = ["192.0.2.10", "2001:db8::/48"]
+```
+
+## The PROXY protocol
+
+`proxy` holds the addresses and prefixes of the proxies that send the PROXY protocol header.
+The default is `[]`: the server reads no header.
+Set it when a proxy, for example HAProxy, sends the connections to the BBS.
+Then the log and the limits use the address of the client, not the address of the proxy.
+
+- The server reads the header only from the addresses in `proxy`.
+- A connection from an address in `proxy` without a valid header closes without output.
+  So, if `proxy` holds `127.0.0.1`, a telnet client on the same host cannot connect
+  to `127.0.0.1`.
+- The proxy must send the header at the connect. AWS NLB waits for the data of the client
+  by default. Then it does not work.
+
+Example:
+
+```toml
+[telnet]
+proxy = ["127.0.0.1"]
+```
+
+## The timeouts
+
+| Key | Default | What it does | When to change it |
+|---|---|---|---|
+| `idle_timeout` | 600 | Seconds without a key until the server disconnects. | Users read long screens. |
+| `probe_timeout` | 5 | Seconds from the connect until the server knows the terminal. | Clients have a slow link. |
+| `output_timeout` | 60 | Seconds until a write must complete. Else the server disconnects. | Clients have a slow link. |
+
+## An example file
+
+This file has the defaults. It sets each key except `allow` and `proxy`:
+
+```toml
+[bbs]
+name = "Kind Brothers BBS"
+
+[telnet]
+listen = ":2323"
+max_conns = 64
+max_conns_per_addr = 4
+max_connects_per_min = 10
+idle_timeout = 600
+probe_timeout = 5
+output_timeout = 60
+```
+
+Write it to `/srv/velourbbs/bbs.toml`. Then change the values that you need.
+After each change, run `sudo chmod -R a+rX /srv/velourbbs` and `velourbbs check`.
+
+Full rules: [bbs-toml](../../../specs/bbs-toml.md), sections 3.1 and 3.2.
+
+## Result
+
+`velourbbs check` gives no output.
