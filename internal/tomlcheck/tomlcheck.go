@@ -34,18 +34,41 @@ type Error struct {
 	Msg       string
 }
 
+// RuneCol gives the column of e in code points. data is the document of e.
+func (e Error) RuneCol(data []byte) int {
+	off, ok := lineStart(data, e.Line)
+	if !ok || e.Line < 1 {
+		return e.Col
+	}
+	line := data[off:]
+	if i := bytes.IndexByte(line, '\n'); i >= 0 {
+		line = line[:i]
+	}
+	return utf8.RuneCount(line[:min(max(e.Col-1, 0), len(line))]) + 1
+}
+
+// lineStart gives the offset of the 1-based line in data.
+func lineStart(data []byte, line int) (int, bool) {
+	off := 0
+	for range line - 1 {
+		i := bytes.IndexByte(data[off:], '\n')
+		if i < 0 {
+			return 0, false
+		}
+		off += i + 1
+	}
+	return off, true
+}
+
 // Decode decodes data into shape, a pointer to a struct.
 // shape has a field with a plain type for each key: string, int64, a slice, a map, a struct.
 // Decode gives the first of these: an error of the size, of the syntax or of a type;
 // all unknown keys and tables in place of an array of tables.
 // The message of a type error starts with the dotted key path.
 func Decode(data []byte, shape any) []Error {
-	if len(data) > MaxBytes {
-		return []Error{{1, 1, fmt.Sprintf("TOML document is over %d bytes", MaxBytes)}}
-	}
-	var m map[string]any
-	if err := toml.Unmarshal(data, &m); err != nil {
-		return []Error{syntaxError(data, err)}
+	m, errs := Map(data)
+	if errs != nil {
+		return errs
 	}
 	t := reflect.TypeOf(shape)
 	err := toml.NewDecoder(bytes.NewReader(data)).DisallowUnknownFields().Decode(shape)
@@ -56,7 +79,6 @@ func Decode(data []byte, shape any) []Error {
 		}
 		// The key of the error matches a field only without case: exact reports it.
 	}
-	var errs []Error
 	if unknown != nil {
 		for _, e := range unknown.Errors {
 			line, col := e.Position()
@@ -65,6 +87,18 @@ func Decode(data []byte, shape any) []Error {
 	}
 	exact(t, m, nil, &errs)
 	return errs
+}
+
+// Map decodes data into a map. It gives the error of the size or of the syntax.
+func Map(data []byte) (map[string]any, []Error) {
+	if len(data) > MaxBytes {
+		return nil, []Error{{1, 1, fmt.Sprintf("TOML document is over %d bytes", MaxBytes)}}
+	}
+	var m map[string]any
+	if err := toml.Unmarshal(data, &m); err != nil {
+		return nil, []Error{syntaxError(data, err)}
+	}
+	return m, nil
 }
 
 // exact reports each key of the table m that matches a field of the struct type t
@@ -251,13 +285,9 @@ func describe(t reflect.Type) string {
 // fixRune puts the character at the position into msg in place of the rune
 // of its first byte, as go-toml prints it.
 func fixRune(msg string, data []byte, line, col int) string {
-	off := 0
-	for range line - 1 {
-		i := bytes.IndexByte(data[off:], '\n')
-		if i < 0 {
-			return msg
-		}
-		off += i + 1
+	off, ok := lineStart(data, line)
+	if !ok {
+		return msg
 	}
 	off += col - 1
 	if off < 0 || off >= len(data) || data[off] < utf8.RuneSelf {

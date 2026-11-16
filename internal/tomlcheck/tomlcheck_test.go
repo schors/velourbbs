@@ -131,3 +131,14 @@ func TestOtherError(t *testing.T) {
 		t.Errorf("typeError: got %+v, want %+v", got, want)
 	}
 }
+
+func TestRuneCol(t *testing.T) {
+	data := []byte("a = 1\nя = \"ё\" x\n")
+	for e, want := range map[Error]int{
+		{2, 11, ""}: 9, {2, 1, ""}: 1, {1, 5, ""}: 5, {3, 4, ""}: 1, {4, 4, ""}: 4, {0, 7, ""}: 7, {2, 99, ""}: 10,
+	} {
+		if got := e.RuneCol(data); got != want {
+			t.Errorf("%v: %d, want %d", e, got, want)
+		}
+	}
+}
