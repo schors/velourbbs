@@ -49,7 +49,7 @@ The guide has these tasks in this order. Each task ends with a check of the resu
 | 4. A menu with hotkeys | `[[item]]`, `key`, `do`, `goto` and `logoff`. The key row is text of the screen. The screen `goodbye`. `velourbbs preview --keys`. | `screens/main.bbt`, `screens/about.bbt`, `screens/goodbye.bbt` |
 | 5. Fields and conditions | The fields `term.*`, `{#if}` and `{#else}`. A fixed-width field. `when` and `item.<KEY>`. | `screens/term.bbt` |
 | 6. The colour depth | `[theme.256]` and `[theme.16]`. `velourbbs preview --set term.colors=<n>`. In `velourbbs serve`, the terminal type of the client gives the colour depth ([telnet-term](telnet-term.md), section 6). | `screens/screens.toml` |
-| 7. Art | Draw in an art editor and save in its form of [art-import](art-import.md), section 3. Keep the source in `src/` and edit only the source. The cycle: edit, `velourbbs art import`, `velourbbs check`. The art insert `{><name>.ans}`. A field in art: its token has one background and one foreground ([art-format](art-format.md), section 4). | `examples/art/bbs.toml`, `examples/art/screens/screens.toml`, `examples/art/screens/main.bbt` |
+| 7. Art | The ready art `screens/lamp.ans` and the art insert `{><name>.ans}`. A field in art: its token has one background and one foreground ([art-format](art-format.md), section 4). To change the art, use any editor. Convert the file of an art editor with `velourbbs art import` ([art-import](art-import.md), sections 2 and 3). | `examples/art/bbs.toml`, `examples/art/screens/screens.toml`, `examples/art/screens/main.bbt` |
 | 8. Errors | Examples of frequent errors of `velourbbs check` and their fixes. | — |
 
 - A task shows a part of a file as a snippet before it shows the whole file.
@@ -72,8 +72,7 @@ The guide has these tasks in this order. Each task ends with a check of the resu
 | File | Content |
 |---|---|
 | `examples/art/bbs.toml` | Empty. |
-| `examples/art/src/lamp.ans` | The source art in the form that Moebius saves: CP437, SAUCE. |
-| `examples/art/screens/lamp.ans` | The flat form: `velourbbs art import src/lamp.ans screens/lamp.ans`. |
+| `examples/art/screens/lamp.ans` | The art in the flat form ([art-format](art-format.md), section 1). |
 | `examples/art/screens/screens.toml` | The styles `normal` and `key`. |
 | `examples/art/screens/main.bbt` | The art insert, the key row `G  goodbye` and the item `G` `logoff`. |
 
@@ -86,8 +85,6 @@ The guide has these tasks in this order. Each task ends with a check of the resu
   It compares each file block with its file. A missing file is a failure.
 - A Go test in `cmd/velourbbs` checks `examples/art/`:
   - `velourbbs check` gives no output;
-  - `velourbbs art import src/lamp.ans <tmp>/lamp.ans` writes the bytes of `screens/lamp.ans`.
-    `<tmp>` is a temporary directory of the test;
   - `velourbbs preview main --size 80x24 --set term.colors=256` equals the golden file
     `cmd/velourbbs/testdata/art/main-80x24-256.dump`.
 - The golden dumps of Lamp do not change.
