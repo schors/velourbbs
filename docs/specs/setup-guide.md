@@ -15,8 +15,8 @@ systemd limits the memory, the threads and the open files of the host process.
 - The reader is the sysop.
 - The reader has a Linux host with systemd and root access.
 - The reader can edit a text file and run a command in a terminal.
-- The reader does not read the specifications. Each section refers to the sections
-  of the specifications for the full rules.
+- The reader does not read the specifications. A section refers to the sections
+  of the specifications that hold its full rules.
 - The reader does not write screens. The [BBT guide](bbt-guide.md) teaches the screens.
 
 ## 3. Files
@@ -43,7 +43,7 @@ The guide has these sections in this order. Each section ends with a check of th
 | 2. The BBS directory | Copy the example BBS Lamp to `/srv/velourbbs`. Its files: [example-style](example-style.md), section 3. Make the files readable and the directories readable and searchable for each user: `chmod -R a+rX /srv/velourbbs`. Run each `velourbbs` command in this directory ([bbs-toml](bbs-toml.md), section 2). For the screens, the guide refers to the BBT guide. | `velourbbs check` gives no output. |
 | 3. `bbs.toml` | The keys of `[telnet]` in groups: the address (`listen`), the connection limits (`max_conns`, `max_conns_per_addr`, `max_connects_per_min`, `allow`), the PROXY protocol (`proxy`) and the timeouts. For each group: what the keys do and when the sysop changes them. For `listen`, the guide shows only the host part: empty for all addresses, or one address. An example file without `proxy` and without `allow`. Full rules: [bbs-toml](bbs-toml.md), section 3.1. | `velourbbs check` gives no output. |
 | 4. The commands | One short part for each command, with the task of the sysop. `velourbbs check`: after each change, before a restart ([screen-render](screen-render.md), section 3.1). `velourbbs preview` and `velourbbs preview --keys`: look at a screen and test its keys without a telnet client ([screen-render](screen-render.md), section 3.2). `velourbbs art import`: convert art from an art editor. `velourbbs serve`: the log, the exit statuses, the stop, and the read of the files only at start ([telnet-term](telnet-term.md), section 10). For the details of `preview`, `preview --keys` and `art import`, the guide refers to tasks 1, 4 and 7 of the BBT guide. | `velourbbs serve` writes the `listen` line. A telnet client on port 2323 shows the screen `main`. |
-| 5. systemd | Install the unit to `/etc/systemd/system/velourbbs.service`. Start and enable it. Read the log with `journalctl -u velourbbs`. After a change of a file of the BBS directory: `chmod -R a+rX /srv/velourbbs`, `velourbbs check`, then `systemctl restart velourbbs`. After a change of the unit: `systemctl daemon-reload`, then `systemctl restart velourbbs`. The meaning of each line of the unit. The rules of section 5 for the limits. How to read the memory and its peak in `systemctl status velourbbs`. | `systemctl is-active velourbbs` gives `active`. The log has the `listen` line. A telnet client on port 2323 shows the screen `main`. |
+| 5. systemd | Install the unit to `/etc/systemd/system/velourbbs.service`. Start and enable it. Read the log with `journalctl -u velourbbs`. After a change of a file of the BBS directory: `chmod -R a+rX /srv/velourbbs`, `velourbbs check`, then `systemctl restart velourbbs`. After a change of the unit: `systemctl daemon-reload`, then `systemctl restart velourbbs`. The meaning of each line of the unit. The rules of section 5 for the limits. How to read the memory and its peak in `systemctl status velourbbs`. systemd 255 or later shows the peak. With an older systemd, the sysop reads the memory under load. | `systemctl is-active velourbbs` gives `active`. The log has the `listen` line. A telnet client on port 2323 shows the screen `main`. |
 
 - The server listens on the default port 2323. The guide does not show other ports.
 - With `Type=exec`, `systemctl start` and `systemctl restart` succeed also when
