@@ -3,6 +3,9 @@
 This specification defines the command `velourbbs art import`.
 It converts ANSI art to the flat form ([art-format](art-format.md)).
 
+The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
+[bbt-guide](bbt-guide.md), section 3.
+
 ## 1. Goal
 
 The sysop draws art in an art editor and saves it in the form of the editor.

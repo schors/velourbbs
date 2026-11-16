@@ -3,6 +3,9 @@
 This specification defines the art files `screens/<name>.ans` in the flat form.
 Related parts: [bbt-format](bbt-format.md) and [art-import](art-import.md).
 
+The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
+[bbt-guide](bbt-guide.md), section 3.
+
 ## 1. Flat form
 
 Art files are in the "flat form": UTF-8 graphemes, SGR, LF and SAUCE.

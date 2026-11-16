@@ -1,7 +1,7 @@
 # Example style
 
 This specification defines the style and the screens of the example BBS "Lamp".
-The guides build this BBS: [setup-guide](../ideas/setup-guide.md) and [bbt-guide](../ideas/bbt-guide.md).
+The guides build this BBS: [setup-guide](../ideas/setup-guide.md) and [bbt-guide](bbt-guide.md).
 Related parts: [bbt-format](bbt-format.md), [screens-toml](screens-toml.md),
 [screen-render](screen-render.md) and [telnet-term](telnet-term.md).
 
@@ -36,13 +36,14 @@ Each BBS directory has these files:
 |---|---|
 | `bbs.toml` | Empty. The defaults of [bbs-toml](bbs-toml.md). |
 | `screens/screens.toml` | The settings of section 4. |
+| `screens/_head.bbt` | The fragment with rows 1–5 of section 5. Each screen includes it. |
 | `screens/main.bbt` | The first screen: the menu. |
 | `screens/about.bbt` | The text about the BBS. |
 | `screens/term.bbt` | The values of the terminal. |
 | `screens/goodbye.bbt` | The screen after `logoff`. |
 
 - The two directories have the same layout, styles and keys. Only the texts differ (section 7).
-- The screens have no art, no fragments and no aliases.
+- The screens have no art and no aliases.
 
 ## 4. `screens/screens.toml`
 

@@ -5,6 +5,9 @@ the menu checks between screens of `velourbbs check` and the key sequences of `v
 [bbt-format](bbt-format.md), section 8, defines the menu items and the keys.
 Related parts: [screens-toml](screens-toml.md), [screen-render](screen-render.md) and [telnet-term](telnet-term.md).
 
+The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
+[bbt-guide](bbt-guide.md), section 3.
+
 ## 1. Goal
 
 A user goes from one screen to other screens with hotkeys and ends the session.
