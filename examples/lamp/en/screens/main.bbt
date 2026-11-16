@@ -9,11 +9,7 @@ do = "goto term"
 key = "G"
 do = "logoff"
 +++
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
-
-       {!title}Lamp{!}  {!orn}☼ {!dim}a BBS by lamplight{!}
-
+{>_head}
        Good evening. It's quiet and warm here.
        Pull up a chair by the lamp.
 

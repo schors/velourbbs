@@ -6,11 +6,7 @@ do = "goto main"
 key = "ENTER"
 do = "goto main"
 +++
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
-
-       {!title}Lamp{!}  {!orn}☼ {!dim}a BBS by lamplight{!}
-
+{>_head}
        {!dim}Size{!}     {term.cols}×{term.rows}
        {!dim}Colours{!}  {#if term.colors == 16777216}16 million{#else}{term.colors}{/if}
        {!dim}Type{!}     {term.type}

@@ -6,11 +6,7 @@ do = "goto main"
 key = "ENTER"
 do = "goto main"
 +++
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
-
-       {!title}Lamp{!}  {!orn}☼ {!dim}a BBS by lamplight{!}
-
+{>_head}
        Lamp is a small station for friends.
        Come in, look around, stay a while.
 

@@ -5,6 +5,9 @@ each table and each key.
 Related parts: [bbt-format](bbt-format.md), [menu-nav](menu-nav.md),
 [telnet-term](telnet-term.md), [screen-render](screen-render.md) and [bbs-toml](bbs-toml.md).
 
+The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
+[bbt-guide](bbt-guide.md), section 3.
+
 ## 1. Goal
 
 The author of the screens reads each key of `screens/screens.toml` in this specification.

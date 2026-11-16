@@ -6,11 +6,7 @@ do = "goto main"
 key = "ENTER"
 do = "goto main"
 +++
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
-
-       {!title}Лампа{!}  {!orn}☼ {!dim}BBS при свете лампы{!}
-
+{>_head}
        {!dim}Размер{!}   {term.cols}×{term.rows}
        {!dim}Цветов{!}   {#if term.colors == 16777216}16 млн{#else}{term.colors}{/if}
        {!dim}Тип{!}      {term.type}

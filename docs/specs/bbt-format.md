@@ -5,6 +5,9 @@ Related parts: [art-format](art-format.md), [screens-toml](screens-toml.md),
 [bbs-toml](bbs-toml.md), [screen-render](screen-render.md), [menu-nav](menu-nav.md)
 and [telnet-term](telnet-term.md).
 
+The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
+[bbt-guide](bbt-guide.md), section 3.
+
 ## 1. Goal
 
 A screen author reads the whole file format in this specification.
