@@ -344,7 +344,7 @@ are the same keys.
 | `key` | string | The key of the item. Section 8.1. |
 | `do` | string | The action. Section 8.3. |
 | `when` | string | Optional. A condition (section 5). |
-| `args` | inline table | Optional. The arguments of a `goto` (section 8.5). |
+| `args` | table | Optional. The arguments of a `goto` (section 8.5). |
 
 - An item is "enabled" when it has no `when` or its `when` is true.
   A disabled item counts as absent.
@@ -380,7 +380,8 @@ without items, the items of `goodbye` and the start screen. It also has the form
 
 ### 8.5. Arguments
 
-- `args` is an inline table of strings. Example: `args = { file = "gold.md" }`.
+- `args` is a table of strings: an inline table or the table `[item.args]`.
+  Example: `args = { file = "gold.md" }`.
 - A name matches `[a-z][a-z0-9_]*`. A value cannot have a control character or `{`.
 - The "arguments of a screen" are the names of the `arg.<name>` fields of the screen:
   in its body, its fragments, its art, its `when` and its `file`

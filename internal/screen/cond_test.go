@@ -10,6 +10,7 @@ func TestCondEval(t *testing.T) {
 	env := &Env{
 		Term:  Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16},
 		Items: map[string]bool{"A": true, "B": true},
+		Args:  map[string]string{"file": "gold.md"},
 	}
 	tests := []struct {
 		cond string
@@ -48,6 +49,9 @@ func TestCondEval(t *testing.T) {
 		{"item.A and item.C or item.B", true},  // (A and C) or B
 		{"item.C and item.A or item.C and item.B", false},
 		{"  item.A  and  not  item.C  ", true},
+		{`arg.file == "gold.md"`, true},
+		{`arg.file != "gold.md"`, false},
+		{`arg.other == ""`, true},
 	}
 	for _, tt := range tests {
 		c, err := ParseCond(tt.cond, fields, true)
@@ -139,5 +143,15 @@ func TestCondItems(t *testing.T) {
 		if !slices.Equal(got, tt.want) {
 			t.Errorf("%s: got %q, want %q", tt.name, got, tt.want)
 		}
+	}
+}
+
+func TestCondArgs(t *testing.T) {
+	c, err := ParseCond(`arg.a == "x" and term.cols > 1 or f != "" and item.A`, Fields{"f": {arg: "b"}}, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := c.Args(); !slices.Equal(got, []string{"a", "b"}) {
+		t.Errorf("got %q", got)
 	}
 }

@@ -171,7 +171,7 @@ func (s *Server) session(c net.Conn, accepted time.Time) (addr netip.Addr, reaso
 	if err != nil {
 		return addr, err.Error(), errors.Is(err, term.ErrNotUTF8)
 	}
-	if err := menu.Run(t, s.cfg, s.screens, s.cfg.Start); err != nil {
+	if err := menu.Run(t, s.cfg, s.screens, s.cfg.Start, nil); err != nil {
 		return addr, err.Error(), false
 	}
 	return addr, "logoff", true

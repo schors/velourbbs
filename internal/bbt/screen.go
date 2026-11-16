@@ -2,7 +2,9 @@ package bbt
 
 import (
 	"fmt"
+	"maps"
 	"path"
+	"slices"
 
 	"github.com/schors/velourbbs/internal/screen"
 )
@@ -23,6 +25,7 @@ type unit struct {
 	lines int
 	at    screen.Pos
 	over  bool
+	args  map[string]bool // the argument names of the screen (section 8.5)
 }
 
 // fragment is a fragment body, resolved for one screen, and its lines after includes.
@@ -66,6 +69,7 @@ func (l *loader) screen(u *unit) {
 	}
 	u.frags = map[*file]fragment{}
 	u.resolving = map[*file]bool{}
+	u.args = map[string]bool{}
 	u.s.Layout = u.fr.layout.Over(l.layout)
 	u.s.Body = l.resolve(u, u.f.body, true)
 	if u.over { // the body of a screen over the limit is not kept
@@ -73,7 +77,22 @@ func (l *loader) screen(u *unit) {
 		return
 	}
 	u.s.Items = u.fr.items
+	for _, it := range u.s.Items {
+		if it.When != nil {
+			u.addArgs(it.When.Args()...)
+		}
+	}
+	u.s.Args = slices.Sorted(maps.Keys(u.args))
 	u.done = !u.f.skip
+}
+
+// addArgs adds the argument names to the screen. It skips "", the name of a field that is not an argument.
+func (u *unit) addArgs(names ...string) {
+	for _, n := range names {
+		if n != "" {
+			u.args[n] = true
+		}
+	}
 }
 
 // add adds n lines to the body and checks MaxBodyLines.
@@ -100,6 +119,7 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 		case screen.SetStyle:
 			segs = append(segs, n)
 		case screen.Field:
+			u.addArgs(n.Ref.Arg())
 			segs = append(segs, n)
 		case lineEnd:
 			if top {
@@ -110,6 +130,7 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 		case *ifNode:
 			if n.cond != nil {
 				u.conds = append(u.conds, condAt{n.cond, n.pos})
+				u.addArgs(n.cond.Args()...)
 			}
 			then, els := l.resolve(u, n.then, top), l.resolve(u, n.els, top)
 			if n.cond != nil {
@@ -134,6 +155,9 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 			l.add(u, 1+a.Height)
 			if a.Width > u.s.Width.Max { // section 6.2
 				l.errorf(u, n.pos, true, "art %q is %d cells wide, max width is %d", path.Base(n.file), a.Width, u.s.Width.Max)
+			}
+			for _, f := range a.Fields {
+				u.addArgs(f.Ref.Arg())
 			}
 			segs = append(segs, screen.ArtInsert{Art: a})
 		}

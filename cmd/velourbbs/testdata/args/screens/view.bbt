@@ -1,0 +1,10 @@
++++
+[[item]]
+key = "N"
+do = "goto view"
+args = { f = "next.md" }
+[[item]]
+key = "Q"
+do = "goto main"
++++
+File {arg.f}

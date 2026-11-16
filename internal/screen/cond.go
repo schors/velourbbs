@@ -84,6 +84,19 @@ func (c *Cond) CheckItems(keys map[string]bool) []error {
 	return errs
 }
 
+// Args gives the argument names of the arg.<name> fields of c.
+func (c *Cond) Args() []string {
+	var names []string
+	for _, and := range c.or {
+		for _, t := range and {
+			if t.ref.arg != "" {
+				names = append(names, t.ref.arg)
+			}
+		}
+	}
+	return names
+}
+
 // Eval evaluates c with the values of env.
 func (c *Cond) Eval(env *Env) bool {
 	for _, and := range c.or {

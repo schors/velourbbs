@@ -16,6 +16,8 @@ type Screen struct {
 	Layout
 	Items []Item
 	Body  []Seg
+	// Args holds the sorted argument names of the screen (section 8.5).
+	Args []string
 }
 
 // Item is a menu item of the front matter. When is nil when the item has no when.
@@ -25,10 +27,11 @@ type Item struct {
 	When *Cond
 }
 
-// Action is the parsed do of an item (section 8.3).
+// Action is the parsed do of an item (section 8.3) and its args.
 type Action struct {
 	Op     Op
-	Screen string // the screen name of Goto
+	Screen string            // the screen name of Goto
+	Args   map[string]string // the args of Goto (section 8.5); nil without args
 }
 
 // Op is an action word of do.
