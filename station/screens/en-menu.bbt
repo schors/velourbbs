@@ -1,0 +1,69 @@
++++
+width = [80, 132]
+[[item]]
+key = "1"
+do = "goto en-texts"
+[[item]]
+key = "2"
+do = "goto en-about"
+[[item]]
+key = "ESC"
+do = "goto main"
+[[item]]
+key = "Q"
+do = "logoff"
++++
+{#if term.cols >= 132 and term.rows >= 43}
+
+
+{>_logo-132}
+
+
+              {!gold}01{!} {!emer}■{!}  {!ctl}Texts{!} {!frame}..............................................................{!} {!dim}Guides and features of Velour{!}
+
+              {!gold}02{!} {!gold}■{!}  {!ctl}About the station{!} {!frame}.....................................................{!} {!dim}A little about the station{!}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+              {!hi}1 2{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To entry{!}    {!hi}Q{!} {!ctl}Quit{!}
+{#else}
+
+{>_logo-80-4}
+
+    {!gold}01{!} {!emer}■{!}  {!ctl}Texts{!} {!frame}......................{!} {!dim}Guides and features of Velour{!}
+
+    {!gold}02{!} {!gold}■{!}  {!ctl}About the station{!} {!frame}.............{!} {!dim}A little about the station{!}
+
+
+
+
+
+
+
+
+
+
+
+    {!hi}1 2{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To entry{!}    {!hi}Q{!} {!ctl}Quit{!}
+{/if}

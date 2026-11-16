@@ -1,0 +1,62 @@
++++
+width = [80, 132]
+[[item]]
+key = "R"
+do = "goto ru-menu"
+[[item]]
+key = "E"
+do = "goto en-menu"
+[[item]]
+key = "Q"
+do = "logoff"
++++
+{#if term.cols >= 132 and term.rows >= 43}
+
+
+
+
+
+
+
+
+
+
+              {!dim}Добро пожаловать  ∙  Welcome{!}
+
+{>_logo-132}
+
+              {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Вечер, текст и немного золота
+                       Evening, text and a little gold
+
+
+
+
+
+
+
+
+
+
+
+
+
+                                                                  {!hi}R{!} {!ctl}Русский{!}    {!hi}E{!} {!ctl}English{!}    {!hi}Q{!} {!ctl}Отключиться / Disconnect{!}
+{#else}
+
+
+
+
+
+        {!dim}Добро пожаловать  ∙  Welcome{!}
+
+{>_logo-80-8}
+
+        {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Вечер, текст и немного золота
+                 Evening, text and a little gold
+
+
+
+
+
+                    {!hi}R{!} {!ctl}Русский{!}    {!hi}E{!} {!ctl}English{!}    {!hi}Q{!} {!ctl}Отключиться / Disconnect{!}
+{/if}
