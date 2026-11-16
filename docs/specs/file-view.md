@@ -21,6 +21,8 @@ The user pages forward and back. A Markdown file has theme styles and front matt
 - `<path>` is one or more segments separated with `/`. A segment matches `[A-Za-z0-9_][A-Za-z0-9_.-]*`.
   Example: `xfer/src/crc16.c`.
 - A content file that is not a regular file is an error.
+- The host follows a symlink in `<path>`: a symlink to a file or to a directory.
+  Its target can be outside the BBS directory.
 - The extension of the file gives its "kind". Case does not matter in the extension.
 
 | Extension | Kind |
@@ -359,6 +361,7 @@ content/gold.md:1:1: front matter: no end line "+++"
 - Golden cell dumps of `velourbbs preview` cover each kind at 80x24 and at 40x10,
   `lines`, `numbers` and `margin`, and `--keys` with each `page` action.
 - A test covers each error of section 7.
+- A test shows a content file through a symlink to a directory outside the BBS directory.
 - The BBT guide in English and Russian does not name `args` and `{arg.*}` as not in the MVP
   ([bbt-guide](bbt-guide.md), section 4).
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -9,6 +10,10 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/yuin/goldmark/v2/ast"
+	"github.com/yuin/goldmark/v2/extension"
+	"github.com/yuin/goldmark/v2/parser"
 )
 
 // The line before a file block: only a path in backticks and a colon (bbt-guide, section 4.1).
@@ -59,22 +64,96 @@ func checkFileBlocks(fsys fs.FS, md string) []string {
 	return problems
 }
 
+// The parts of each guide directory (bbt-guide, section 3.1; setup-guide, section 3).
+var guideParts = map[string][]string{
+	"bbt": {"1-bbs-directory.md", "2-first-screen.md", "3-header.md", "4-menu.md", "5-fields.md",
+		"6-colour-depth.md", "7-texts.md", "8-art.md", "9-errors.md", "README.md"},
+	"setup": {"1-program.md", "2-bbs-directory.md", "3-bbs-toml.md", "4-commands.md",
+		"5-systemd.md", "README.md"},
+}
+
+var guideLangs = []string{"en", "ru"}
+
+// checkPartHeadings gives the problems of the level-1 headings of the guide part md
+// (bbt-guide, section 3.1). It finds the headings with the parser of the file view.
+// Each problem starts with a line number.
+func checkPartHeadings(md string) []string {
+	src := []byte(md)
+	doc := parser.New(parser.WithExtensions(extension.NewTableParser())).Parse(src)
+	var problems []string
+	first := false
+	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
+		h, ok := n.(*ast.Heading)
+		if !entering || !ok || h.Level != 1 {
+			return ast.WalkContinue, nil
+		}
+		line := 1 + bytes.Count(src[:h.Pos()], []byte("\n"))
+		if line == 1 {
+			first = true
+		} else {
+			problems = append(problems, fmt.Sprintf("%d: other level-1 heading", line))
+		}
+		return ast.WalkSkipChildren, nil
+	})
+	if !first {
+		problems = append([]string{"1: no level-1 heading"}, problems...)
+	}
+	return problems
+}
+
 // TestGuideFileBlocks compares each file block of the guides with its file
 // (bbt-guide, section 6; setup-guide, section 6).
 func TestGuideFileBlocks(t *testing.T) {
 	root := os.DirFS("../..")
-	guides := []string{
-		"docs/guide/en/bbt.md", "docs/guide/ru/bbt.md",
-		"docs/guide/en/setup.md", "docs/guide/ru/setup.md",
-	}
-	for _, guide := range guides {
-		md, err := fs.ReadFile(root, guide)
-		if err != nil {
-			t.Error(err)
-			continue
+	for guide := range guideParts {
+		for _, lang := range guideLangs {
+			parts, err := fs.Glob(root, "docs/guide/"+lang+"/"+guide+"/*.md")
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, part := range parts {
+				md, err := fs.ReadFile(root, part)
+				if err != nil {
+					t.Error(err)
+					continue
+				}
+				for _, p := range checkFileBlocks(root, string(md)) {
+					t.Errorf("%s:%s", part, p)
+				}
+			}
 		}
-		for _, p := range checkFileBlocks(root, string(md)) {
-			t.Errorf("%s:%s", guide, p)
+	}
+}
+
+// TestGuideParts checks the parts of each guide in each language
+// (bbt-guide, section 6; setup-guide, section 3).
+func TestGuideParts(t *testing.T) {
+	root := os.DirFS("../..")
+	for guide, want := range guideParts {
+		for _, lang := range guideLangs {
+			dir := "docs/guide/" + lang + "/" + guide
+			entries, err := fs.ReadDir(root, dir)
+			if err != nil {
+				t.Error(err)
+				continue
+			}
+			var got []string
+			for _, e := range entries {
+				got = append(got, e.Name())
+			}
+			if !slices.Equal(got, want) {
+				t.Errorf("%s: parts %q, want %q", dir, got, want)
+			}
+			for _, name := range got {
+				md, err := fs.ReadFile(root, dir+"/"+name)
+				if err != nil {
+					t.Error(err)
+					continue
+				}
+				for _, p := range checkPartHeadings(string(md)) {
+					t.Errorf("%s/%s:%s", dir, name, p)
+				}
+			}
 		}
 	}
 }
@@ -103,6 +182,31 @@ func TestCheckFileBlocks(t *testing.T) {
 	}
 	for _, tt := range tests {
 		if got := checkFileBlocks(fsys, tt.md); !slices.Equal(got, tt.want) {
+			t.Errorf("%s: got %q, want %q", tt.name, got, tt.want)
+		}
+	}
+}
+
+func TestCheckPartHeadings(t *testing.T) {
+	tests := []struct {
+		name, md string
+		want     []string
+	}{
+		{"one heading", "# Title\n\n## Sub\n\ntext\n", nil},
+		{"heading in a code block", "# Title\n```\n# Code\n```\n", nil},
+		{"heading in a longer fence", "# Title\n````md\n```\n# Code\n```\n````\n", nil},
+		{"no heading", "text\n# Title\n", []string{"1: no level-1 heading", "2: other level-1 heading"}},
+		{"level-2 on line 1", "## Title\n", []string{"1: no level-1 heading"}},
+		{"second heading", "# Title\n\n# Other\n", []string{"3: other level-1 heading"}},
+		{"after a code block", "# Title\n```\nx\n```\n# Other\n", []string{"5: other level-1 heading"}},
+		{"setext", "# Title\n\nOther\n=====\n", []string{"3: other level-1 heading"}},
+		{"setext on line 1", "Title\n===\n", nil},
+		{"indented", "# Title\n\n   # Other\n", []string{"3: other level-1 heading"}},
+		{"empty", "# Title\n\n#\n", []string{"3: other level-1 heading"}},
+		{"in a list", "# Title\n\n- # Other\n", []string{"3: other level-1 heading"}},
+	}
+	for _, tt := range tests {
+		if got := checkPartHeadings(tt.md); !slices.Equal(got, tt.want) {
 			t.Errorf("%s: got %q, want %q", tt.name, got, tt.want)
 		}
 	}

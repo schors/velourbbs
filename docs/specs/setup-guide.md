@@ -24,12 +24,15 @@ systemd limits the memory, the threads and the open files of the host process.
 
 | Path | Content |
 |---|---|
-| `docs/guide/en/setup.md` | The guide in English. It is the source. |
-| `docs/guide/ru/setup.md` | The guide in Russian. It is a translation of the source. |
+| `docs/guide/en/setup/` | The guide in English, in parts. It is the source. |
+| `docs/guide/ru/setup/` | The guide in Russian. It is a translation of the source. |
 | `examples/deploy/velourbbs.service` | The systemd unit of section 5. |
 
-- The rules of [bbt-guide](bbt-guide.md), section 3, for a specification change
-  and for the two languages also apply to this guide.
+- The rules of [bbt-guide](bbt-guide.md), section 3, for a specification change,
+  for the two languages and for the parts (section 3.1) also apply to this guide.
+  Part `<n>` is section `<n>` of section 4.
+- The parts of this guide: `README.md`, `1-program.md`, `2-bbs-directory.md`, `3-bbs-toml.md`,
+  `4-commands.md`, `5-systemd.md`.
 - The English guide uses `examples/lamp/en/`. The Russian guide uses `examples/lamp/ru/`.
 - The guide shows `examples/deploy/velourbbs.service` as a file block
   ([bbt-guide](bbt-guide.md), section 4.1).
@@ -87,8 +90,8 @@ The unit has these lines:
 
 ## 6. Acceptance
 
-- The test `TestGuideFileBlocks` in `cmd/velourbbs` also reads `docs/guide/en/setup.md`
-  and `docs/guide/ru/setup.md`.
+- The test `TestGuideFileBlocks` in `cmd/velourbbs` also reads the parts
+  of `docs/guide/en/setup/` and `docs/guide/ru/setup/`.
 - `examples/deploy/velourbbs.service` has the lines of section 5 and no other lines.
 - `systemd-analyze verify` gives no error for a copy of `examples/deploy/velourbbs.service`
   whose `ExecStart` has the path of a built `velourbbs`.

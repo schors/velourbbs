@@ -23,8 +23,8 @@ The guide is in the MVP.
 
 | Path | Content |
 |---|---|
-| `docs/guide/en/bbt.md` | The guide in English. It is the source. |
-| `docs/guide/ru/bbt.md` | The guide in Russian. It is a translation of the source. |
+| `docs/guide/en/bbt/` | The guide in English, in parts (section 3.1). It is the source. |
+| `docs/guide/ru/bbt/` | The guide in Russian. It is a translation of the source. |
 | `examples/lamp/<lang>/` | The example BBS Lamp: [example-style](example-style.md). |
 | `examples/art/` | The art example of section 5. |
 
@@ -36,6 +36,22 @@ The guide is in the MVP.
   The guide does not show the `.ans` files.
 - The guide shows each screen as plain text, as [example-style](example-style.md), section 6.
   It names the styles of the text in words.
+
+### 3.1. Parts
+
+A guide is a directory of Markdown files, the "parts".
+
+| Part | Content |
+|---|---|
+| `README.md` | The introduction and the list of the other parts with links. In this guide, also the features not in the MVP. |
+| `<n>-<slug>.md` | Task `<n>` of section 4. |
+
+- The parts of this guide: `1-bbs-directory.md`, `2-first-screen.md`, `3-header.md`,
+  `4-menu.md`, `5-fields.md`, `6-colour-depth.md`, `7-texts.md`, `8-art.md`, `9-errors.md`.
+- The first line of a part is a level-1 heading: its title. Outside the code blocks,
+  a part has no other level-1 heading.
+- Both languages have the same parts.
+- A relative link is relative to the part file. A link to a task of a guide goes to its part.
 
 ## 4. Tasks
 
@@ -89,8 +105,10 @@ The guide has these tasks in this order. Each task ends with a check of the resu
 
 ## 6. Acceptance
 
-- A Go test in `cmd/velourbbs` reads `docs/guide/en/bbt.md` and `docs/guide/ru/bbt.md`.
+- A Go test in `cmd/velourbbs` reads each part of `docs/guide/en/bbt/` and `docs/guide/ru/bbt/`.
   It compares each file block with its file. A missing file is a failure.
+- The test checks the parts of each guide: the list of section 3.1, the same parts
+  in both languages, and the level-1 heading rule.
 - A Go test in `cmd/velourbbs` checks `examples/art/`:
   - `velourbbs check` gives no output;
   - `velourbbs preview main --size 80x24 --set term.colors=256` equals the golden file
