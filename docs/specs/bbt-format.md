@@ -3,7 +3,7 @@
 This specification defines the BBT files and the layout of a screen.
 Related parts: [art-format](art-format.md), [screens-toml](screens-toml.md),
 [bbs-toml](bbs-toml.md), [screen-render](screen-render.md), [menu-nav](menu-nav.md),
-[file-view](file-view.md) and [telnet-term](telnet-term.md).
+[file-view](file-view.md), [session-fields](session-fields.md) and [telnet-term](telnet-term.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -134,6 +134,7 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `item.<KEY>` | boolean | True when the item with the key `<KEY>` exists and is enabled (section 8.2). |
 | `arg.<name>` | string | The argument `<name>` of the screen (section 8.5). |
 | `file.*`, `meta.<key>` | — | The fields of a file screen: [file-view](file-view.md), section 3.4. |
+| `session.*`, `bbs.*` | — | The fields of the session and of the BBS: [session-fields](session-fields.md), section 2. |
 
 - A path matches `[a-z][a-z0-9_]*(\.[A-Za-z0-9_]+)?`. A path without a dot is an alias.
 - [telnet-term](telnet-term.md) gives the `term.*` values.

@@ -1,6 +1,6 @@
 # Idea: update fields on an open screen
 
-Backlog. It extends [session-fields](session-fields.md).
+Backlog. It extends [session-fields](../specs/session-fields.md).
 
 ## Goal
 
@@ -9,7 +9,7 @@ without a move to another screen.
 
 ## Decisions
 
-- Not in the first version of [session-fields](session-fields.md). The change is too large.
+- Not in the first version of [session-fields](../specs/session-fields.md). The change is too large.
 
 ## Open questions
 
