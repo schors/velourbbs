@@ -64,7 +64,7 @@ The front matter is TOML 1.1. An unknown key is an error.
 | `align` | string | The horizontal position: `"left"`, `"center"` or `"right"`. Section 6.1. |
 | `valign` | string | The vertical position: `"top"`, `"middle"` or `"bottom"`. Section 6.5. |
 | `fill` | string | The fill rows: `"none"`, `"spaces"` or `"erase"`. Section 6.5. |
-| `file`, `lines`, `numbers` | — | The file of a file screen: [file-view](file-view.md), section 3. |
+| `file`, `lines`, `numbers`, `margin` | — | The file of a file screen: [file-view](file-view.md), section 3. |
 | `[[item]]` | array of tables | Menu items with `key`, `do`, an optional `when` and optional `args`. Section 8. |
 
 Example:

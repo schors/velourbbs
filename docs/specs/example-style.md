@@ -3,7 +3,7 @@
 This specification defines the style and the screens of the example BBS "Lamp".
 The guides build this BBS: [setup-guide](setup-guide.md) and [bbt-guide](bbt-guide.md).
 Related parts: [bbt-format](bbt-format.md), [screens-toml](screens-toml.md),
-[screen-render](screen-render.md) and [telnet-term](telnet-term.md).
+[screen-render](screen-render.md), [telnet-term](telnet-term.md) and [file-view](file-view.md).
 
 ## 1. Goal
 
@@ -40,7 +40,11 @@ Each BBS directory has these files:
 | `screens/main.bbt` | The first screen: the menu. |
 | `screens/about.bbt` | The text about the BBS. |
 | `screens/term.bbt` | The values of the terminal. |
+| `screens/texts.bbt` | The list of the texts of the reading room. |
+| `screens/reader.bbt` | The file screen: it shows a text of the list. |
 | `screens/goodbye.bbt` | The screen after `logoff`. |
+| `content/lamp.md` | A Markdown text: a short history of the lamps (section 6.6). |
+| `content/rules.txt` | A plain text: the rules of the station (section 6.6). |
 
 - The two directories have the same layout, styles and keys. Only the texts differ (section 7).
 - The screens have no art and no aliases.
@@ -61,6 +65,16 @@ title  = "#f7c7a3 bold"
 key    = "#ffb088 bold"
 orn    = "#f2a27e"
 more   = "#9e8a7c"
+md_h1     = "#f7c7a3 bold"
+md_h2     = "#f2a27e"
+md_h3     = "#d9b99b"
+md_strong = "#f7c7a3 bold"
+md_em     = "#d9b99b"
+md_code   = "#c8b88a"
+md_link   = "#d9b99b underline"
+md_mark   = "#f2a27e"
+md_frame  = "#8a6a5c"
+md_dim    = "#9e8a7c"
 
 [theme.256]
 normal = "223/235"
@@ -70,6 +84,16 @@ title  = "230 bold"
 key    = "216 bold"
 orn    = "216"
 more   = "137"
+md_h1     = "230 bold"
+md_h2     = "216"
+md_h3     = "180"
+md_strong = "230 bold"
+md_em     = "180"
+md_code   = "144"
+md_link   = "180 underline"
+md_mark   = "216"
+md_frame  = "95"
+md_dim    = "137"
 
 [theme.16]
 normal = "7/0"
@@ -79,25 +103,46 @@ title  = "15 bold"
 key    = "15 bold"
 orn    = "7"
 more   = "8"
+md_h1     = "15 bold"
+md_h2     = "15"
+md_h3     = "15"
+md_strong = "15 bold"
+md_em     = "7"
+md_code   = "15"
+md_link   = "15 underline"
+md_mark   = "7"
+md_frame  = "8"
+md_dim    = "8"
 ```
 
 | Style | Use | Truecolor | 256 | 16 |
 |---|---|---|---|---|
 | `normal` | The ground, the text, the labels of the menu items | `#e9dccb` on `#2a201d` | 223 on 235 | 7 on 0 |
-| `dim` | The tagline, the notes of the menu items, the closing line of `main`, the labels of `term`, the words of the key row | `#9e8a7c` | 137 | 8 |
+| `dim` | The tagline, the notes of the menu items, the closing line of `main`, the labels of `term`, row 7 of `reader`, the words of the key row | `#9e8a7c` | 137 | 8 |
 | `line` | The two hairlines | `#8a6a5c` | 95 | 8 |
-| `title` | The name of the BBS, the farewell of `goodbye` | `#f7c7a3` bold | 230 bold | 15 bold |
+| `title` | The name of the BBS, the farewell of `goodbye`, the title of `reader` | `#f7c7a3` bold | 230 bold | 15 bold |
 | `key` | The keys | `#ffb088` bold | 216 bold | 15 bold |
 | `orn` | The ornament `☼` | `#f2a27e` | 216 | 7 |
 | `more` | The More row | `#9e8a7c` | 137 | 8 |
+| `md_h1`, `md_strong` | Heading of level 1, strong emphasis: as `title` | `#f7c7a3` bold | 230 bold | 15 bold |
+| `md_h2` | Heading of level 2: as `orn` | `#f2a27e` | 216 | 15 |
+| `md_h3` | Heading of level 3 to 6: as `md_em` | `#d9b99b` | 180 | 15 |
+| `md_mark` | List marker, quote bar, break: as `orn` | `#f2a27e` | 216 | 7 |
+| `md_em` | Emphasis, the text of a quote | `#d9b99b` | 180 | 7 |
+| `md_code` | Code | `#c8b88a` | 144 | 15 |
+| `md_link` | Link text: as `md_em`, underlined. It differs from `key`: a link is not a key | `#d9b99b` underline | 180 underline | 15 underline |
+| `md_frame` | Inner list marker, code bar, table rule: as `line` | `#8a6a5c` | 95 | 8 |
+| `md_dim` | Note, cut mark: as `dim` | `#9e8a7c` | 137 | 8 |
 
 - 256 colours is the main mode: PuTTY and Tera Term get it ([telnet-term](telnet-term.md), section 6).
   `[theme.256]` gives hand-picked indexes. The reduction of the truecolor values gives
   the neutral greys 253 and 235 and rose notes, and loses the warmth.
 - The xterm palette has no warm colour near `#2a201d`, so the ground in 256 colours is the grey 235.
   The cream text 223 keeps the warmth.
-- PuTTY does not show `bold` on the indexes 16–255. So `title` differs from the text by its colour.
+- PuTTY does not show `bold` on the indexes 16–255. So `title` differs from the text by its colour,
+  and `md_h1` and `md_h2` have different colours.
 - 16 colours are grey: black, dark grey, light grey and white.
+  With 16 colours, emphasis looks as the text.
 - `max = 80` keeps the screen 80 columns wide. On a wider terminal the host centres it,
   and the margins have the ground colour. At 132x43 the screen is the same 80-column screen
   at the top, and the rows below it have the ground colour.
@@ -116,13 +161,15 @@ Columns and rows are 1-based in the screen area of 80 columns.
 | Ornament and tagline | Row 4, after the name and 2 spaces: `☼ <tagline>` | `orn`, `dim` |
 | Text | Rows 6–19, from column 8 | `normal` |
 | Menu item | Key at column 10, label at column 14, note at column 54 | `key`, `normal`, `dim` |
-| Key row | Row 23, from column 5: the keys, 2 spaces, one word | `key`, `dim` |
+| Key row | Row 23, from column 5: the keys, 2 spaces, one word. Groups of a key row have 3 spaces between them | `key`, `dim` |
+| File area | `reader`: from row 9, columns 8–78 (section 6.6) | `md_*`, `normal` |
 | More row | The last row of a page, from column 5 | `more` |
 
 - Each screen has rows 1–5: row 1 empty, the hairline, row 3 empty, the name with the ornament
   and the tagline, row 5 empty.
-- A screen has 23 rows, `goodbye` has 21. Empty source lines fill the rows between the content
-  and the hairline of row 21. Row 20 is empty. On a screen with a key row, row 22 is empty.
+- A screen has 23 rows, `goodbye` has 21. `reader` has 24 rows at 80x24 (section 6.6).
+  Empty source lines fill the rows between the content and the hairline of row 21.
+  Row 20 is empty. On a screen with a key row, row 22 is empty.
 - The rows of the terminal below the screen are spaces in `normal`: `fill = "spaces"`
   ([bbt-format](bbt-format.md), section 6.5).
 - A space between two parts in one style keeps the style. Examples: `{!key}A T G{!}`,
@@ -133,7 +180,7 @@ Columns and rows are 1-based in the screen area of 80 columns.
 
 ### 6.1. `main`
 
-Items: `A` `goto about`, `T` `goto term`, `G` `logoff`.
+Items: `A` `goto about`, `R` `goto texts`, `T` `goto term`, `G` `logoff`.
 
 ```text
 
@@ -147,21 +194,21 @@ Items: `A` `goto about`, `T` `goto term`, `G` `logoff`.
 
          A   About                                   who we are
 
+         R   Reading room                            stories by the lamp
+
          T   Your terminal                           size and colours
 
          G   Goodbye                                 the lamp will wait
-
-
 
 
        The light stays on till morning.
 
   ────────────────────────────────────────────────────────────────────────────
 
-    A T G  choose
+    A R T G  choose
 ```
 
-- Rows 10, 12 and 14 are the menu items. Row 19 is the closing line.
+- Rows 10, 12, 14 and 16 are the menu items. Row 19 is the closing line.
 
 ### 6.2. `about`
 
@@ -195,11 +242,78 @@ Items: `ESC` `goto main`, `ENTER` `goto main`. The key row is `Esc Enter  back`.
 - The colours row shows `16 million` for 16777216:
   `{#if term.colors == 16777216}16 million{#else}{term.colors}{/if}`.
 
-### 6.4. `goodbye`
+### 6.4. `texts`
+
+Items: `1` `goto reader` with `args = { file = "lamp.md" }`, `2` `goto reader`
+with `args = { file = "rules.txt" }`, `ESC` `goto main`.
+The key row is `1 2  choose   Esc  back`.
+
+```text
+       The texts of the station.
+       Pick one and read it by the lamp.
+
+
+         1   How the lamps were lit                  a short history
+
+         2   Station rules                           read them once
+```
+
+- These are rows 6–12. The menu items follow the grid of `main`.
+
+### 6.5. `goodbye`
 
 No items. Rows 1–5 and the hairline of row 21 as in section 5.
 Row 6 is the farewell in `title`. Row 7 is the last line in `normal`.
 The hairline is the last row. There is no key row.
+
+### 6.6. `reader`
+
+The file screen: `file = "{arg.file}"`, `margin = [7, 2]`
+([file-view](file-view.md), section 3).
+
+Items: `SPACE` `page next` with `when = "not file.last"`, `B` `page prev`
+with `when = "file.page > 1"`, `ESC` `goto texts`.
+
+At 80x24:
+
+```text
+       How the lamps were lit
+       Anna Lind  ∙  1 min  ∙  page 1/3
+
+       <the file area, rows 9-19>
+
+  ────────────────────────────────────────────────────────────────────────────
+
+    Space  next   Esc  list
+
+```
+
+- Rows 1–5 as in section 5. Row 6 is `{file.title}` in `title`. Row 7 is in `dim`:
+  the author, the reading time and the page. A file without `meta.author` has no author part:
+  `{#if meta.author != ""}{meta.author}  ∙  {/if}`.
+- Row 8 is empty. The file area follows: 11 rows at 80x24.
+- The rows below the file area: an empty row, the hairline, an empty row, the key row
+  and an empty row. So the hairline is row 21 and the key row is row 23 at 80x24.
+- The key row is `Space  next   B  prev   Esc  list`. It shows the group of `SPACE`
+  only when `item.SPACE` is true, and the group of `B` only when `item.B` is true.
+  So page 1 has no `B`, and the last page has no `Space`.
+- The empty last line of the source gives the empty row 24. Without it, the file area
+  has 12 rows and the hairline moves to row 22.
+- When `term.rows` is less than 14, the host cuts the page ([file-view](file-view.md), section 3.2):
+  the key row is not visible.
+
+`content/lamp.md`:
+
+- TOML front matter with `title` and `author`. `file.title` comes from `title`.
+- 2 or 3 pages at 80x24. Its text has no level-1 heading.
+- The English and the Russian file have the same blocks and the same page count at 80x24.
+- Paragraphs, 2 or 3 level-2 headings, a bullet list, a block quote, strong emphasis,
+  emphasis, a table with 3 columns, a thematic break and one link with a web address: it gets a note.
+
+`content/rules.txt`:
+
+- 5 to 7 short rules, one line each, and an empty line before the last line. One page at 80x24.
+- `file.title` is the file name `rules.txt`.
 
 ## 7. Texts
 
@@ -217,6 +331,13 @@ The hairline is the last row. There is no key row.
 | `term`, row 10 | This is how the station sees you. | Так тебя видит станция. |
 | Key row of `about` and `term` | back | назад |
 | `goodbye` | See you soon. / The lamp stays on for you. | До встречи. / Лампа будет гореть для тебя. |
+| `main`, item `R` | Reading room — stories by the lamp | Читальня — истории у лампы |
+| `texts`, rows 6–7 | The texts of the station. / Pick one and read it by the lamp. | Тексты станции. / Выбери и читай при лампе. |
+| `texts`, items | How the lamps were lit — a short history; Station rules — read them once | Как зажигали лампы — короткая история; Правила станции — прочти один раз |
+| `texts`, key row | choose, back | выбор, назад |
+| `reader`, row 7 | `min`, `page` | `мин`, `стр.` |
+| `reader`, key row | next, prev, list | дальше, пред., список |
+| `content/lamp.md` | Title "How the lamps were lit", author "Anna Lind" | Заголовок «Как зажигали лампы», автор «Анна Линд» |
 | More row | more ∙ any key | ещё ∙ любая клавиша |
 
 - In the Russian screens the values of `term` start at column 17 too.
@@ -227,7 +348,10 @@ The hairline is the last row. There is no key row.
 - A Go test in `cmd/velourbbs` runs `velourbbs check` in each BBS directory.
   It runs `velourbbs preview <screen> --size <size> --set term.colors=<n>` and compares
   the cell dump with the golden file `cmd/velourbbs/testdata/lamp/<lang>/<screen>-<size>-<n>.dump`:
-  - each screen at 80x24 with 16, 256 and 16777216 colours;
+  - each screen at 80x24 with 16, 256 and 16777216 colours.
+    `reader` has `--set arg.file=lamp.md`;
+  - `reader` with `--set arg.file=rules.txt` at 80x24 with 256 colours,
+    in the golden file `reader-rules-80x24-256.dump`;
   - `main` at 80x25 and at 132x43 with 256 colours.
 - Each screen matches the grid of section 5 at 80x24.
 

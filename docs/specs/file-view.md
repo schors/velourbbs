@@ -49,9 +49,13 @@ A "file screen" is a screen with the key `file` in its front matter.
 | `file` | string | The content file: a `<path>` of section 2, or exactly one token `{arg.<name>}`. |
 | `lines` | array of 2 integers | Optional. `[first, last]`: the part of the file, with 1 <= `first` <= `last`. |
 | `numbers` | boolean | Optional. True shows line numbers. The default is false. |
+| `margin` | array of 2 integers | Optional. `[left, right]`: the empty cells left and right of the file area (section 3.1). The default is `[0, 0]`. |
 
+- `lines`, `numbers` and `margin` are valid only in a file screen.
 - `lines` and `numbers` are valid only for a plain text or source file.
 - `last` must be at most the line count of the file.
+- `left` and `right` are at least 0. `left + right` must be less than `min` of the width limits
+  ([bbt-format](bbt-format.md), section 6.1).
 
 Example `screens/reader.bbt`:
 
@@ -92,6 +96,10 @@ args = { file = "gold.md" }
 - `{>file}` is the "file area". It must be the only content of its source line.
 - A file screen has exactly one `{>file}`, in its own body. A `{>file}` in a block,
   in a fragment or in a screen without `file` is an error.
+- The file area starts `left` cells after the left edge of the screen area.
+  The "area width" A is W − `left` − `right`. Sections 5 and 6 lay out the file at A:
+  in them, W is A.
+- The margin cells of a file row are spaces in `normal`.
 - The host can show each file that `file` names: the path of `file`, or each value
   of the argument `<name>` that a `goto` to the screen gives ([bbt-format](bbt-format.md), section 8.5).
 
@@ -100,7 +108,7 @@ args = { file = "gold.md" }
 - The rows of the body before `{>file}` are the "rows above". The rows after it are the "rows below".
 - The host renders the rows above and below with the fields of page 1, with `file.pages` equal to 1.
   The "area height" H is `term.rows` minus their rows, and at least 1.
-- The host lays out the file into rows of the render width W (sections 5 and 6).
+- The host lays out the file into rows of the area width A (sections 5 and 6).
   It splits the rows into "file pages" of at most H rows (section 5.6).
   A file page with fewer than H rows has empty rows after its rows, up to H.
 - Each file page gives one page of the screen: the rows above, the H rows of the file page
@@ -349,7 +357,7 @@ content/gold.md:1:1: front matter: no end line "+++"
   a Markdown file with each element of section 5 and both front matter forms,
   a plain text file and a source file.
 - Golden cell dumps of `velourbbs preview` cover each kind at 80x24 and at 40x10,
-  `lines` and `numbers`, and `--keys` with each `page` action.
+  `lines`, `numbers` and `margin`, and `--keys` with each `page` action.
 - A test covers each error of section 7.
 - The BBT guide in English and Russian does not name `args` and `{arg.*}` as not in the MVP
   ([bbt-guide](bbt-guide.md), section 4).
