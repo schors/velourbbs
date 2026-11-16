@@ -1857,6 +1857,28 @@ screens/x.bbt:1:1: screen has no items
 
 Each screen except `goodbye` needs at least one item. Add an item.
 
+### `content file ... does not exist`
+
+```
+screens/code.bbt:2:1: file: content file "src/lamp.c" does not exist
+screens/texts.bbt:2:1: item "1": args: file: content file "lmap.md" does not exist
+```
+
+- The screen `code` holds the snippet of task 7 ("A source file").
+  Its key `file` names `src/lamp.c`, and `content/src/lamp.c` does not exist.
+  Put the file at this path in `content/`, or correct the path.
+- The item `1` gives `goto reader` the file `lmap.md` in `args`, and the file is not in `content/`.
+  Correct the name in `args`.
+
+### `front matter: no end line`
+
+```
+content/lamp.md:1:1: front matter: no end line "+++"
+```
+
+The first line of the file is `+++`, and no other line is `+++`.
+Add the line `+++` after the last key of the front matter (task 7).
+
 ### `not in the flat form`
 
 ```
@@ -1886,7 +1908,8 @@ screens/about.bbt:10:8: unknown style "titel"
 3. Remove `{!titel}`. `velourbbs check` gives no output.
 
 Full rules: [screen-render](../../specs/screen-render.md), section 3.1,
-and [menu-nav](../../specs/menu-nav.md), section 6.
+[menu-nav](../../specs/menu-nav.md), section 6,
+and [file-view](../../specs/file-view.md), section 7.
 
 ## Not in the MVP
 
@@ -1900,7 +1923,10 @@ The BBS does not have these features yet:
 - `ask` and a field token in an `args` value;
 - punctuation keys, for example `?`;
 - a label of an item. The BBS does not print the text of an item;
+- the table of contents of a Markdown file, active links to other files,
+  and syntax colours of source files;
 - the display codes of other BBS programs: pipe codes, `@` codes and MCI codes.
   There is no converter.
 
-Full rules: [bbt-format](../../specs/bbt-format.md), section 10.
+Full rules: [bbt-format](../../specs/bbt-format.md), section 10,
+and [file-view](../../specs/file-view.md), section 12.
