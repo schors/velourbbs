@@ -42,22 +42,29 @@ func (noEvents) Screen(string) error         { return nil }
 func (noEvents) KeyEvent(string, bool) error { return nil }
 func (noEvents) Logoff() error               { return nil }
 
+// Values gives the values of the session and BBS fields (session-fields, section 2).
+// The session calls it once for each screen and for each page of a file screen.
+type Values func() screen.SessionValues
+
 // session is the state of Run.
 type session struct {
-	t   Terminal
-	ev  Events
-	cfg config.Config
+	t      Terminal
+	ev     Events
+	cfg    config.Config
+	values Values
 }
 
 // Run runs a session from the screen start with the arguments args until logoff (section 5).
 // screens is the result of a load without errors and of Check, start passes
-// CheckTarget and args pass CheckArgs. Run returns nil after logoff, else the first error of t unchanged.
-func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start string, args map[string]string) error {
+// CheckTarget and args pass CheckArgs. values gives the session and BBS fields.
+// Run returns nil after logoff, else the first error of t unchanged.
+func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start string, args map[string]string,
+	values Values) error {
 	ev, ok := t.(Events)
 	if !ok {
 		ev = noEvents{}
 	}
-	ss := &session{t: t, ev: ev, cfg: cfg}
+	ss := &session{t: t, ev: ev, cfg: cfg, values: values}
 	s := screens[start]
 	for {
 		it, err := ss.run(s, args)
@@ -92,7 +99,7 @@ func (ss *session) run(s *screen.Screen, args map[string]string) (screen.Item, e
 		return screen.Item{}, err
 	}
 	term := ss.t.Term()
-	v := newFileView(s, term, args, ss.cfg.SessionTheme(term.Colors))
+	v := newFileView(s, term, args, ss.cfg.SessionTheme(term.Colors), ss.values)
 	n := 1
 	for {
 		p, items := v.page(n)
@@ -123,7 +130,7 @@ func (ss *session) show(s *screen.Screen, args map[string]string) (map[string]sc
 	if err := ss.ev.Screen(s.Name); err != nil {
 		return nil, err
 	}
-	env, items := Enabled(s, ss.t.Term(), args, nil)
+	env, items := Enabled(s, screen.Env{Term: ss.t.Term(), Args: args, Session: ss.values()})
 	first := true
 	for p := range screen.Render(s, env, ss.cfg.SessionTheme(env.Term.Colors), ss.cfg.More) {
 		if !first {
@@ -143,16 +150,18 @@ func (ss *session) show(s *screen.Screen, args map[string]string) (map[string]sc
 	return items, nil
 }
 
-// Pages gives each page of the screen s for the terminal term with the arguments args:
-// the pages of the render, or each file page of a file screen. velourbbs preview uses it.
-func Pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[string]string) iter.Seq[screen.Page] {
+// Pages gives each page of the screen s for the terminal term with the arguments args
+// and the session and BBS fields sv: the pages of the render, or each file page of a file screen.
+// velourbbs preview uses it.
+func Pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[string]string,
+	sv screen.SessionValues) iter.Seq[screen.Page] {
 	theme := cfg.SessionTheme(term.Colors)
 	if s.FileScreen == nil {
-		env, _ := Enabled(s, term, args, nil)
+		env, _ := Enabled(s, screen.Env{Term: term, Args: args, Session: sv})
 		return screen.Render(s, env, theme, cfg.More)
 	}
 	return func(yield func(screen.Page) bool) {
-		v := newFileView(s, term, args, theme)
+		v := newFileView(s, term, args, theme, func() screen.SessionValues { return sv })
 		for n := 1; n <= len(v.pages); n++ {
 			if p, _ := v.page(n); !yield(p) {
 				return
@@ -169,21 +178,23 @@ type fileView struct {
 	args   map[string]string
 	theme  map[string]screen.Style
 	values screen.FileValues // the values of page 1 with file.pages 1
+	sv     Values
 	layout screen.FileLayout
 	pages  []screen.FilePage
 	h      int // the area height H
 }
 
 // newFileView lays out the file of the file screen s into file pages.
-func newFileView(s *screen.Screen, term screen.Term, args map[string]string, theme map[string]screen.Style) *fileView {
+func newFileView(s *screen.Screen, term screen.Term, args map[string]string, theme map[string]screen.Style,
+	sv Values) *fileView {
 	f := s.FileScreen
 	c := f.Content(args)
-	v := &fileView{s: s, term: term, args: args, theme: theme}
+	v := &fileView{s: s, term: term, args: args, theme: theme, sv: sv}
 	v.layout = screen.ContentLayout(f, c, s.RenderWidth(term.Cols), theme)
 	v.values = screen.FileValues{
 		Content: c, Page: 1, Pages: 1, Minutes: c.Minutes(f.First, f.Last), Section: screen.FirstSection(v.layout),
 	}
-	env, _ := Enabled(s, term, args, &v.values)
+	env, _ := Enabled(s, screen.Env{Term: term, Args: args, File: &v.values, Session: sv()})
 	v.h = max(1, term.Rows-screen.FrameRows(s, env, theme))
 	v.pages = screen.SplitPages(v.layout, v.h)
 	return v
@@ -195,23 +206,23 @@ func (v *fileView) page(n int) (screen.Page, map[string]screen.Item) {
 	p := v.pages[n-1]
 	values := v.values
 	values.Page, values.Pages, values.Section = n, len(v.pages), p.Section
-	env, items := Enabled(v.s, v.term, v.args, &values)
+	env, items := Enabled(v.s, screen.Env{Term: v.term, Args: v.args, File: &values, Session: v.sv()})
 	return screen.RenderFile(v.s, env, v.theme, screen.PageRows(v.layout, p, v.h), n), items
 }
 
-// Enabled evaluates the when of each item of s for the terminal term, the arguments args
-// and the values file of a file screen, else nil (bbt-format, section 8.2).
-// It gives the field values of the render and the enabled items by key.
-func Enabled(s *screen.Screen, term screen.Term, args map[string]string, file *screen.FileValues) (*screen.Env, map[string]screen.Item) {
-	env := &screen.Env{Term: term, Items: map[string]bool{}, Args: args, File: file}
+// Enabled evaluates the when of each item of s with the field values env without Items
+// (bbt-format, section 8.2). It gives the field values of the render with Items
+// and the enabled items by key.
+func Enabled(s *screen.Screen, env screen.Env) (*screen.Env, map[string]screen.Item) {
+	env.Items = map[string]bool{}
 	items := map[string]screen.Item{}
 	for _, it := range s.Items {
-		if it.When == nil || it.When.Eval(env) {
+		if it.When == nil || it.When.Eval(&env) {
 			items[it.Key] = it
 			env.Items[it.Key] = true
 		}
 	}
-	return env, items
+	return &env, items
 }
 
 // next waits for keys until one matches an enabled item (section 3.3)

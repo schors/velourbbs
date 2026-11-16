@@ -56,7 +56,8 @@ func TestDefaults(t *testing.T) {
 			t.Errorf("theme %s = %v, want %s", name, got, text)
 		}
 	}
-	if cfg.Start != "main" || len(cfg.Fields) != 0 || !reflect.DeepEqual(cfg.Telnet, defaultTelnet) {
+	if cfg.Start != "main" || len(cfg.Fields) != 0 || !reflect.DeepEqual(cfg.Telnet, defaultTelnet) ||
+		cfg.Time != "2006-01-02 15:04" || cfg.Name != "Kind Brothers BBS" {
 		t.Errorf("cfg = %+v", cfg)
 	}
 	for _, colors := range []int{16, 256, 16777216} {
@@ -266,7 +267,21 @@ func TestTOMLErrors(t *testing.T) {
 	}
 }
 
-// bbs.toml has only [telnet] (bbs-toml, section 2).
+// [screen] time and [bbs] name take any string (screens-toml, section 3.1, and bbs-toml, section 3.2).
+func TestTimeAndName(t *testing.T) {
+	cfg, ds := Load(fstest.MapFS{
+		"bbs.toml":             {Data: []byte("[bbs]\nname = \"\"\n")},
+		"screens/screens.toml": {Data: []byte("[screen]\ntime = \"02.01.2006 15:04\"\n")},
+	})
+	if len(ds) != 0 {
+		t.Fatalf("diags: %q", messages(ds))
+	}
+	if cfg.Time != "02.01.2006 15:04" || cfg.Name != "" {
+		t.Errorf("time %q, name %q", cfg.Time, cfg.Name)
+	}
+}
+
+// bbs.toml has only [bbs] and [telnet] (bbs-toml, section 2).
 func TestHostErrors(t *testing.T) {
 	tests := []struct{ data, want string }{
 		{"[screen]\nwidth = [40, 80]", `bbs.toml:1:2: unknown key "screen"`},
@@ -276,9 +291,11 @@ func TestHostErrors(t *testing.T) {
 		{"[TELNET]\nlisten = \":1\"", `bbs.toml:1:1: unknown key "TELNET"`},
 		{"[telnet]\nlisten = \":1\"\nLISTEN = \":2\"", `bbs.toml:1:1: unknown key "telnet.LISTEN"`},
 		{"telnet = 1", `bbs.toml:1:10: telnet: must be a table`},
+		{"[bbs]\nname = 1", `bbs.toml:2:8: bbs.name: must be a string`},
+		{"[bbs]\nnode = 1", `bbs.toml:2:1: unknown key "bbs.node"`},
 	}
 	for _, tt := range tests {
-		_, ds := parseHost([]byte(tt.data))
+		_, _, ds := parseHost([]byte(tt.data))
 		if got := messages(ds); !slices.Equal(got, []string{tt.want}) {
 			t.Errorf("parseHost(%q) = %q, want %q", tt.data, got, tt.want)
 		}
@@ -309,6 +326,9 @@ w = "term.cols"
 start = "welcome"
 `
 	host := `
+[bbs]
+name = "Kind Brothers BBS"
+
 [telnet]
 listen = ":2323"
 max_conns = 64
@@ -333,7 +353,8 @@ output_timeout = 60
 	if cfg.VAlign != screen.VAlignMiddle || cfg.Fill != screen.FillSpaces {
 		t.Errorf("layout = %+v", cfg.Layout)
 	}
-	if cfg.SessionTheme(16)["prompt"] != style(t, "14/0") || cfg.Start != "welcome" || cfg.Telnet.Listen != ":2323" {
+	if cfg.SessionTheme(16)["prompt"] != style(t, "14/0") || cfg.Start != "welcome" || cfg.Telnet.Listen != ":2323" ||
+		cfg.Name != "Kind Brothers BBS" {
 		t.Errorf("cfg = %+v", cfg)
 	}
 }

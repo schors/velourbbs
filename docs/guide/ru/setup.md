@@ -20,6 +20,10 @@ sudo install velourbbs /usr/local/bin/
 Первая команда создаёт файл `velourbbs`. Вторая команда копирует его
 в `/usr/local/bin/velourbbs`.
 
+Собирай в git-checkout тега релиза без изменений, например после `git checkout v1.2.0`.
+Тогда поле `bbs.version` показывает тег. Любая другая сборка даёт `dev`.
+Полные правила: [session-fields](../../specs/session-fields.md), раздел 3.4.
+
 ### Результат
 
 `velourbbs` без аргументов печатает usage:
@@ -78,9 +82,14 @@ velourbbs check
 
 ## 3. `bbs.toml`
 
-`bbs.toml` содержит таблицу `[telnet]`: настройки telnet-сервера.
+`bbs.toml` содержит таблицу `[bbs]`: имя BBS, и таблицу `[telnet]`: настройки telnet-сервера.
 Каждый ключ необязателен. Ключ, которого нет в файле, получает значение по умолчанию.
 Пустой файл даёт значения по умолчанию.
+
+### Имя
+
+`name` таблицы `[bbs]` — имя BBS. Экран показывает его в поле `bbs.name`.
+По умолчанию `"Kind Brothers BBS"`.
 
 ### Адрес
 
@@ -149,6 +158,9 @@ proxy = ["127.0.0.1"]
 Этот файл содержит значения по умолчанию. Он задаёт каждый ключ, кроме `allow` и `proxy`:
 
 ```toml
+[bbs]
+name = "Kind Brothers BBS"
+
 [telnet]
 listen = ":2323"
 max_conns = 64
@@ -162,7 +174,7 @@ output_timeout = 60
 Запиши его в `/srv/velourbbs/bbs.toml`. Затем измени нужные значения.
 После каждого изменения выполни `sudo chmod -R a+rX /srv/velourbbs` и `velourbbs check`.
 
-Полные правила: [bbs-toml](../../specs/bbs-toml.md), раздел 3.1.
+Полные правила: [bbs-toml](../../specs/bbs-toml.md), разделы 3.1 и 3.2.
 
 ### Результат
 

@@ -10,6 +10,8 @@ import (
 	"log/slog"
 	"net"
 	"net/netip"
+	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -27,6 +29,9 @@ const (
 	mainScreen    = "+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\nHello from main\n"
 	goodbyeScreen = "Goodbye!\n"
 )
+
+// testVersion is the field bbs.version of the test server.
+const testVersion = "v9.9.9"
 
 // tooMany is the line of section 9.2.
 const tooMany = "Too many connections. Try again later.\r\n"
@@ -79,11 +84,16 @@ func start(t *testing.T, set func(*config.Telnet)) *testServer {
 // startWith starts a server as start. wrap, when it is not nil, changes the listener.
 func startWith(t *testing.T, set func(*config.Telnet), wrap func(net.Listener) net.Listener) *testServer {
 	t.Helper()
-	fsys := fstest.MapFS{
+	return startFS(t, fstest.MapFS{
 		"bbs.toml":            {},
 		"screens/main.bbt":    {Data: []byte(mainScreen)},
 		"screens/goodbye.bbt": {Data: []byte(goodbyeScreen)},
-	}
+	}, set, wrap)
+}
+
+// startFS starts a server as startWith with the BBS directory fsys and the version testVersion.
+func startFS(t *testing.T, fsys fstest.MapFS, set func(*config.Telnet), wrap func(net.Listener) net.Listener) *testServer {
+	t.Helper()
 	cfg, ds := config.Load(fsys)
 	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
 	ds = menu.Check(cfg, screens, append(ds, sds...))
@@ -105,7 +115,7 @@ func startWith(t *testing.T, set func(*config.Telnet), wrap func(net.Listener) n
 	done := make(chan error, 1)
 	go func() {
 		log := slog.New(slog.NewJSONHandler(ts.log, &slog.HandlerOptions{ReplaceAttr: noRecordTime}))
-		done <- server.New(cfg, screens, log).Serve(ctx, ln)
+		done <- server.New(cfg, screens, log, testVersion).Serve(ctx, ln)
 	}()
 	var once sync.Once
 	var result error
@@ -513,5 +523,62 @@ func TestServeStop(t *testing.T) {
 	}
 	if _, err := net.Dial("tcp", ts.addr); err == nil {
 		t.Error("dial after the stop: no error")
+	}
+}
+
+// fieldsRow matches the row of fieldsScreen in the output. Each group is a field.
+var fieldsRow = regexp.MustCompile(`F\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|E`)
+
+// fieldsScreen shows each session and BBS field (session-fields, section 2).
+const fieldsScreen = "+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n" +
+	"F|{session.ip}|{session.online}|{bbs.name}|{bbs.version}|{bbs.sessions}|{bbs.time}|{bbs.uptime}|E\n"
+
+// fields reads from c until the row of fieldsScreen and gives its fields.
+// It checks bbs.time against the time before and after the read.
+func fields(t *testing.T, c net.Conn) []string {
+	t.Helper()
+	before := time.Now().Format("2006-01-02 15:04")
+	m := fieldsRow.FindStringSubmatch(readUntil(t, c, "|E", 1))
+	after := time.Now().Format("2006-01-02 15:04")
+	if m == nil {
+		t.Fatal("output has no row of the fields")
+	}
+	if m[6] != before && m[6] != after {
+		t.Errorf("bbs.time %q, want %q or %q", m[6], before, after)
+	}
+	return slices.Delete(m[1:], 5, 6)
+}
+
+// A screen shows each session and BBS field. session.ip is the address of the PROXY
+// protocol header. bbs.sessions counts the open sessions and not a connection
+// in the probe (session-fields, section 3).
+func TestServeFields(t *testing.T) {
+	ts := startFS(t, fstest.MapFS{
+		"bbs.toml":            {Data: []byte("[bbs]\nname = \"Test BBS\"\n")},
+		"screens/main.bbt":    {Data: []byte(fieldsScreen)},
+		"screens/goodbye.bbt": {Data: []byte(goodbyeScreen)},
+	}, proxyLocal, nil)
+	c1 := ts.dial(t)
+	write(t, c1, header("192.0.2.1")+wontReplies)
+	readUntil(t, c1, "\x1b[6n", 1)
+	write(t, c1, cprReply)
+	if got, want := fields(t, c1), []string{"192.0.2.1", "00:00", "Test BBS", testVersion, "1", "00:00"}; !slices.Equal(got, want) {
+		t.Errorf("session 1: fields %q, want %q", got, want)
+	}
+	// c2 stays in the probe: it does not answer the charset probe.
+	c2 := ts.dial(t)
+	write(t, c2, header("192.0.2.2")+wontReplies)
+	readUntil(t, c2, "\x1b[6n", 1)
+	c3 := ts.dial(t)
+	write(t, c3, header("192.0.2.3")+wontReplies)
+	readUntil(t, c3, "\x1b[6n", 1)
+	write(t, c3, cprReply)
+	if got, want := fields(t, c3), []string{"192.0.2.3", "00:00", "Test BBS", testVersion, "2", "00:00"}; !slices.Equal(got, want) {
+		t.Errorf("session 3: fields %q, want %q", got, want)
+	}
+	// c2 ends the probe after c3: its session is the third.
+	write(t, c2, cprReply)
+	if got := fields(t, c2); got[4] != "3" {
+		t.Errorf("session 2: bbs.sessions %q, want 3", got[4])
 	}
 }

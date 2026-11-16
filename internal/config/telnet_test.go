@@ -10,7 +10,7 @@ import (
 )
 
 func TestTelnetDefaults(t *testing.T) {
-	tn, ds := parseHost([]byte("[telnet]\n"))
+	tn, _, ds := parseHost([]byte("[telnet]\n"))
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
@@ -37,7 +37,7 @@ idle_timeout = 3
 probe_timeout = 4
 output_timeout = 5
 `
-	tn, ds := parseHost([]byte(data))
+	tn, _, ds := parseHost([]byte(data))
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
@@ -61,7 +61,7 @@ output_timeout = 5
 
 func TestTelnetListen(t *testing.T) {
 	for _, s := range []string{":1", ":65535", "[::1]:2323", "localhost:2323"} {
-		tn, ds := parseHost([]byte(`telnet.listen = "` + s + `"`))
+		tn, _, ds := parseHost([]byte(`telnet.listen = "` + s + `"`))
 		if len(ds) != 0 || tn.Listen != s {
 			t.Errorf("listen %q: Listen %q, diags %q", s, tn.Listen, messages(ds))
 		}
@@ -99,7 +99,7 @@ func TestTelnetErrors(t *testing.T) {
 		)
 	}
 	for _, tt := range tests {
-		tn, ds := parseHost([]byte(tt.data))
+		tn, _, ds := parseHost([]byte(tt.data))
 		want := "bbs.toml:" + tt.want
 		if got := messages(ds); !slices.Equal(got, []string{want}) {
 			t.Errorf("parseHost(%q) = %q, want %q", tt.data, got, want)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestLookupField(t *testing.T) {
@@ -44,6 +45,15 @@ func TestLookupField(t *testing.T) {
 		{path: "meta.x_2", want: "meta.x_2"},
 		{path: "meta.Author", err: `invalid meta key "Author"`},
 		{path: "meta", err: `unknown field "meta"`},
+		{path: "session.ip", want: "session.ip"},
+		{path: "session.online", want: "session.online"},
+		{path: "bbs.name", want: "bbs.name"},
+		{path: "bbs.version", want: "bbs.version"},
+		{path: "bbs.sessions", want: "bbs.sessions"},
+		{path: "bbs.time", want: "bbs.time"},
+		{path: "bbs.uptime", want: "bbs.uptime"},
+		{path: "session.node", err: `unknown field "session.node"`},
+		{path: "bbs", err: `unknown field "bbs"`},
 	}
 	for _, tt := range tests {
 		r, err := LookupField(tt.path, fields)
@@ -76,6 +86,9 @@ func TestNewAlias(t *testing.T) {
 		{name: "arg", path: "term.cols", err: `alias "arg" is a reserved word`},
 		{name: "file", path: "term.cols", err: `alias "file" is a reserved word`},
 		{name: "meta", path: "term.cols", err: `alias "meta" is a reserved word`},
+		{name: "session", path: "term.cols", err: `alias "session" is a reserved word`},
+		{name: "bbs", path: "term.cols", err: `alias "bbs" is a reserved word`},
+		{name: "s", path: "bbs.sessions"},
 		{name: "f", path: "arg.file"},
 		{name: "p", path: "file.page"},
 		{name: "a", path: "meta.author"},
@@ -107,6 +120,10 @@ func TestEnvText(t *testing.T) {
 			Content: &Content{Title: "Gold\x1b", Meta: map[string]string{"author": "Ann"}},
 			Page:    2, Pages: 3, Minutes: 4, Section: "Intro",
 		},
+		Session: SessionValues{
+			IP: "192.0.2.1", Online: "01:25", Name: "Kind\x1b BBS", Version: "v1.2.0",
+			Sessions: 3, Time: "2026-11-16 15:04", Uptime: "3d 04:17",
+		},
 	}
 	tests := []struct {
 		path, want string
@@ -125,6 +142,13 @@ func TestEnvText(t *testing.T) {
 		{"file.minutes", "4"},
 		{"meta.author", "Ann"},
 		{"meta.date", ""},
+		{"session.ip", "192.0.2.1"},
+		{"session.online", "01:25"},
+		{"bbs.name", "Kind BBS"},
+		{"bbs.version", "v1.2.0"},
+		{"bbs.sessions", "3"},
+		{"bbs.time", "2026-11-16 15:04"},
+		{"bbs.uptime", "3d 04:17"},
 	}
 	for _, tt := range tests {
 		r, err := LookupField(tt.path, nil)
@@ -156,8 +180,34 @@ func TestRefArg(t *testing.T) {
 			t.Errorf("%s: Arg %q, want %q", path, r.Arg(), want)
 		}
 	}
-	if r, _ := LookupField("arg.file", nil); r.Type() != TypeString {
-		t.Errorf("arg.file: type %v", r.Type())
+	for path, want := range map[string]Type{
+		"arg.file": TypeString, "session.ip": TypeString, "session.online": TypeString,
+		"bbs.name": TypeString, "bbs.version": TypeString, "bbs.sessions": TypeInt,
+		"bbs.time": TypeString, "bbs.uptime": TypeString,
+	} {
+		if r, _ := LookupField(path, nil); r.Type() != want {
+			t.Errorf("%s: type %v, want %v", path, r.Type(), want)
+		}
+	}
+}
+
+func TestFormatDuration(t *testing.T) {
+	tests := []struct {
+		d    time.Duration
+		want string
+	}{
+		{0, "00:00"},
+		{59 * time.Second, "00:00"},
+		{time.Minute, "00:01"},
+		{23*time.Hour + 59*time.Minute + 59*time.Second, "23:59"},
+		{24 * time.Hour, "1d 00:00"},
+		{3*24*time.Hour + 4*time.Hour + 17*time.Minute + 30*time.Second, "3d 04:17"},
+		{400 * 24 * time.Hour, "400d 00:00"},
+	}
+	for _, tt := range tests {
+		if got := FormatDuration(tt.d); got != tt.want {
+			t.Errorf("FormatDuration(%v) = %q, want %q", tt.d, got, tt.want)
+		}
 	}
 }
 

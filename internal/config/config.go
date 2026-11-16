@@ -23,10 +23,14 @@ type Config struct {
 	Theme map[string]screen.Style
 	// Fields maps an alias to its field (screens-toml, section 3.3).
 	Fields screen.Fields
+	// Time is the layout of the field bbs.time: the key time of [screen] (screens-toml, section 3.1).
+	Time string
 	// Start is the name of the first screen of a session (screens-toml, section 3.4).
 	Start string
 	// Telnet is the table [telnet] (bbs-toml, section 3.1).
 	Telnet Telnet
+	// Name is the name of the BBS: the key name of [bbs] (bbs-toml, section 3.2).
+	Name string
 
 	// depth maps a term.colors to its session theme, for each depth theme.
 	depth map[int]map[string]screen.Style
@@ -47,8 +51,14 @@ const (
 	ScreensFile = "screens/screens.toml"
 )
 
-// hostDoc is the plain decode of bbs.toml.
+// defaultName is the default of [bbs] name (bbs-toml, section 3.2).
+const defaultName = "Kind Brothers BBS"
+
+// hostDoc is the plain decode of bbs.toml. A nil pointer is a key that is not set.
 type hostDoc struct {
+	BBS struct {
+		Name *string `toml:"name"`
+	} `toml:"bbs"`
 	Telnet telnetDoc `toml:"telnet"`
 }
 
@@ -71,17 +81,17 @@ func Load(fsys fs.FS) (Config, screen.Diags) {
 		ds.Errorf(ScreensFile, 1, 1, "%v", err)
 	}
 	cfg, sds := parseScreens(data)
-	telnet, hds := parseHost(host)
-	cfg.Telnet = telnet
+	var hds screen.Diags
+	cfg.Telnet, cfg.Name, hds = parseHost(host)
 	ds = append(ds, sds...)
 	ds = append(ds, hds...)
 	return cfg, ds
 }
 
-// parseHost reads bbs.toml from data.
+// parseHost reads bbs.toml from data: the table [telnet] and the BBS name.
 // An unknown key is an error (bbs-toml, section 2).
 // It gives at most screen.MaxFileDiags diagnostics (screen-render, section 3.1).
-func parseHost(data []byte) (Telnet, screen.Diags) {
+func parseHost(data []byte) (Telnet, string, screen.Diags) {
 	fd := screen.FileDiags{File: File}
 	var d hostDoc
 	errs := tomlcheck.Decode(bytes.TrimPrefix(data, screen.BOM), &d)
@@ -89,9 +99,13 @@ func parseHost(data []byte) (Telnet, screen.Diags) {
 		fd.Errorf(e.Line, e.Col, "%s", e.Msg)
 	}
 	if len(errs) > 0 {
-		return defaultTelnet, fd.Diags
+		return defaultTelnet, defaultName, fd.Diags
+	}
+	name := defaultName
+	if d.BBS.Name != nil {
+		name = *d.BBS.Name
 	}
 	// Each other error has the position 1:1 (screen-render, section 3.1).
 	errorf := func(format string, args ...any) { fd.Errorf(1, 1, format, args...) }
-	return telnet(d.Telnet, errorf), fd.Diags
+	return telnet(d.Telnet, errorf), name, fd.Diags
 }

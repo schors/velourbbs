@@ -9,6 +9,9 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"regexp"
+	"runtime/debug"
+	"strings"
 
 	"github.com/schors/velourbbs/internal/bbt"
 	"github.com/schors/velourbbs/internal/config"
@@ -70,6 +73,26 @@ func load(fsys fs.FS) (config.Config, map[string]*screen.Screen, screen.Diags) {
 		screens = nil
 	}
 	return cfg, screens, ds
+}
+
+// pseudoVersion matches the end of a pseudo-version (session-fields, section 3.4).
+var pseudoVersion = regexp.MustCompile(`[0-9]{14}-[0-9a-f]{12}$`)
+
+// version gives the field bbs.version from the build info of the binary (session-fields, section 3.4).
+func version() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return versionOf("")
+	}
+	return versionOf(info.Main.Version)
+}
+
+// versionOf gives the module version v when it is a tag, else "dev".
+func versionOf(v string) string {
+	if v == "" || v == "(devel)" || strings.Contains(v, "+") || pseudoVersion.MatchString(v) {
+		return "dev"
+	}
+	return v
 }
 
 // writeDiags writes each diagnostic on its own line.

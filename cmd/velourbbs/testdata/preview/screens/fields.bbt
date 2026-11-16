@@ -1,0 +1,6 @@
++++
+[[item]]
+key = "G"
+do = "goto main"
++++
+F|{session.ip}|{session.online}|{bbs.name}|{bbs.version}|{bbs.sessions}|{bbs.time}|{bbs.uptime}|E
