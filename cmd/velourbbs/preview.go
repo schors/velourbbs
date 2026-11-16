@@ -27,7 +27,8 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	fl.Usage = func() { _, _ = io.WriteString(stderr, usage) }
 	fl.Func("size", "", func(v string) error { return parseSize(v, &term) })
 	colorsSet := false
-	fl.Func("set", "", func(v string) error { return setField(v, &term, &colorsSet) })
+	argVals := map[string]string{} // the arguments of --set arg.<name>
+	fl.Func("set", "", func(v string) error { return setField(v, &term, &colorsSet, argVals) })
 	var keys []string
 	session := false
 	fl.Func("keys", "", func(v string) error {
@@ -64,19 +65,26 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	if ds.HasErrors() {
 		return exitError
 	}
+	s, ok := screens[name]
 	if session {
 		if err := menu.CheckTarget(screens, name); err != nil {
 			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 			return exitUsage
 		}
-		return runKeys(&keysTerm{term: term, keys: keys, w: stdout}, cfg, screens, name, stderr)
-	}
-	s, ok := screens[name]
-	if !ok {
+	} else if !ok {
 		_, _ = fmt.Fprintf(stderr, "velourbbs preview: unknown screen %q\n", name)
 		return exitUsage
 	}
-	env, _ := menu.Enabled(s, term)
+	if errs := menu.CheckArgs(s, argVals); len(errs) > 0 {
+		for _, err := range errs {
+			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
+		}
+		return exitUsage
+	}
+	if session {
+		return runKeys(&keysTerm{term: term, keys: keys, w: stdout}, cfg, screens, name, argVals, stderr)
+	}
+	env, _ := menu.Enabled(s, term, argVals)
 	if err := screen.WriteDump(stdout, screen.Render(s, env, cfg.SessionTheme(term.Colors), cfg.More)); err != nil {
 		_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		return exitError
@@ -107,13 +115,20 @@ func decimal(s string) (int, error) {
 	return strconv.Atoi(s)
 }
 
-// setField sets term.type or term.colors of t from "<path>=<value>".
+// setField sets term.type or term.colors of t, or an argument of args, from "<path>=<value>".
 // term.type also gives term.colors, unless colorsSet: an explicit term.colors overrides it.
-func setField(v string, t *screen.Term, colorsSet *bool) error {
+func setField(v string, t *screen.Term, colorsSet *bool, args map[string]string) error {
 	path, value, ok := strings.Cut(v, "=")
+	name, isArg := strings.CutPrefix(path, "arg.")
 	switch {
 	case !ok:
 		return fmt.Errorf("expected <path>=<value>")
+	case isArg:
+		if err := screen.CheckArg(name, value); err != nil {
+			return err
+		}
+		args[name] = value
+		return nil
 	case path == "term.type":
 		typ, colors := term.TypeColors(value)
 		t.Type = typ
@@ -129,7 +144,7 @@ func setField(v string, t *screen.Term, colorsSet *bool) error {
 		t.Colors, *colorsSet = n, true
 		return nil
 	}
-	return fmt.Errorf("cannot set %q: only term.type and term.colors", path)
+	return fmt.Errorf("cannot set %q: only term.type, term.colors and arg.<name>", path)
 }
 
 // parseKeys parses the key list of --keys (menu-nav, section 7). An element is a key name
@@ -201,10 +216,10 @@ func (t *keysTerm) Logoff() error {
 }
 
 // runKeys runs the session of velourbbs preview --keys from the screen start
-// and gives the exit status. The end of the key list ends the session.
+// with the arguments args and gives the exit status. The end of the key list ends the session.
 // A key after the end of the session at logoff is an error.
-func runKeys(t *keysTerm, cfg config.Config, screens map[string]*screen.Screen, start string, stderr io.Writer) int {
-	err := menu.Run(t, cfg, screens, start)
+func runKeys(t *keysTerm, cfg config.Config, screens map[string]*screen.Screen, start string, args map[string]string, stderr io.Writer) int {
+	err := menu.Run(t, cfg, screens, start, args)
 	switch {
 	case errors.Is(err, errNoKeys):
 		return 0

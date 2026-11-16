@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -102,14 +103,14 @@ func lines(n int) string {
 	return b.String()
 }
 
-// load loads the screens of files with the changes of change. An empty value removes a file.
+// load loads the screens of files with the changes of change. A new name adds a file.
+// An empty value removes a file.
 func load(t *testing.T, change map[string]string) map[string]*screen.Screen {
 	t.Helper()
+	files := maps.Clone(sessionFiles)
+	maps.Copy(files, change)
 	fsys := fstest.MapFS{}
-	for name, data := range sessionFiles {
-		if v, ok := change[name]; ok {
-			data = v
-		}
+	for name, data := range files {
 		if data != "" {
 			fsys["screens/"+name+".bbt"] = &fstest.MapFile{Data: []byte(data)}
 		}
@@ -193,6 +194,47 @@ func TestRun(t *testing.T) {
 			"key X", "page: 10",
 		},
 	}, {
+		// The goto gives its args to the screen. A goto to the current screen
+		// with other args shows it with the new values.
+		name: "arguments",
+		change: map[string]string{
+			"main": `+++
+[[item]]
+key = "1"
+do = "goto view"
+args = { f = "gold.md" }
+[[item]]
+key = "2"
+do = "goto view"
+args = { f = "silver.md" }
++++
+Main
+`,
+			"view": `+++
+[[item]]
+key = "N"
+do = "goto view"
+args = { f = "next.md" }
+[[item]]
+key = "Q"
+do = "goto main"
+when = 'arg.f != "next.md"'
++++
+File {arg.f}
+`,
+		},
+		cols: []int{80},
+		keys: []string{"1", "Q", "2", "N", "Q"},
+		want: []string{
+			"screen main", "page: Main",
+			"key 1", "screen view", "page: File gold.md",
+			"key Q", "screen main", "page: Main",
+			"key 2", "screen view", "page: File silver.md",
+			"key N", "screen view", "page: File next.md",
+			"key Q ignored",
+		},
+		wantErr: io.EOF,
+	}, {
 		name:   "logoff without goodbye",
 		change: map[string]string{"goodbye": ""},
 		cols:   []int{80},
@@ -203,7 +245,7 @@ func TestRun(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ss := load(t, tt.change)
 			ft := &fakeTerm{cols: tt.cols, keys: slices.Clone(tt.keys)}
-			err := Run(eventsTerm{ft}, config.Config{More: "-- More --"}, ss, "main")
+			err := Run(eventsTerm{ft}, config.Config{More: "-- More --"}, ss, "main", nil)
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("error %v, want %v", err, tt.wantErr)
 			}
@@ -218,7 +260,7 @@ func TestRun(t *testing.T) {
 func TestRunTermError(t *testing.T) {
 	errClosed := errors.New("closed")
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"G"}, pageErr: errClosed}
-	err := Run(ft, config.Config{}, load(t, nil), "main")
+	err := Run(ft, config.Config{}, load(t, nil), "main", nil)
 	if !errors.Is(err, errClosed) || len(ft.log) != 1 {
 		t.Errorf("error %v, log %q; want %v after one page", err, ft.log, errClosed)
 	}
@@ -227,7 +269,7 @@ func TestRunTermError(t *testing.T) {
 // A terminal without Events gets the pages only.
 func TestRunNoEvents(t *testing.T) {
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"L", "S", "B", "G", "X"}}
-	if err := Run(ft, config.Config{More: "-- More --"}, load(t, nil), "main"); err != nil {
+	if err := Run(ft, config.Config{More: "-- More --"}, load(t, nil), "main", nil); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"page: [S]ystem [G]oodbye", "page: 1", "page: 10", "page: [S]ystem [G]oodbye", "page: Bye"}
@@ -276,7 +318,7 @@ func TestRunSessionTheme(t *testing.T) {
 	}
 	for colors, want := range map[int]string{16: "15/1 bold", 256: "15/4 bold"} {
 		st := &styleTerm{colors: colors}
-		if err := Run(st, cfg, ss, "main"); err != nil {
+		if err := Run(st, cfg, ss, "main", nil); err != nil {
 			t.Fatal(err)
 		}
 		if st.style != want {

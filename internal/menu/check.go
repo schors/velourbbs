@@ -11,8 +11,8 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// Check does the checks of section 6 between files: the goto actions, the screens
-// without items and the start screen. screens is the result of a load without errors.
+// Check does the checks of section 6 between files: the goto actions and their args,
+// the screens without items, the start screen and the arguments of goodbye. screens is the result of a load without errors.
 // Check adds the errors to ds with the limit of screen.MaxFileDiags for each file
 // and gives the sorted diagnostics.
 func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags) screen.Diags {
@@ -33,18 +33,27 @@ func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags
 		if len(s.Items) == 0 && name != "goodbye" {
 			fd(s.File).Errorf(1, 1, "screen has no items")
 		}
+		if name == "goodbye" && len(s.Args) > 0 {
+			fd(s.File).Errorf(1, 1, "the goodbye screen cannot have arguments")
+		}
 		for _, it := range s.Items {
 			if it.Do.Op != screen.Goto {
 				continue
 			}
+			// An error between an item and another screen has the position 2:1.
 			if err := CheckTarget(screens, it.Do.Screen); err != nil {
-				// An error between an item and another screen has the position 2:1.
 				fd(s.File).Errorf(2, 1, "item %q: do: %v", it.Key, err)
+				continue
+			}
+			for _, err := range CheckArgs(screens[it.Do.Screen], it.Do.Args) {
+				fd(s.File).Errorf(2, 1, "item %q: args: %v", it.Key, err)
 			}
 		}
 	}
 	if err := CheckTarget(screens, cfg.Start); err != nil {
 		fd(config.ScreensFile).Errorf(1, 1, "menu: start: %v", err)
+	} else if len(screens[cfg.Start].Args) > 0 {
+		fd(config.ScreensFile).Errorf(1, 1, "menu: start: screen %q has arguments", cfg.Start)
 	}
 	var out screen.Diags
 	for _, d := range files {
@@ -52,6 +61,23 @@ func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags
 	}
 	out.Sort()
 	return out
+}
+
+// CheckArgs reports each argument of s that args does not give
+// and each name of args that is not an argument of s (bbt-format, section 8.5).
+func CheckArgs(s *screen.Screen, args map[string]string) []error {
+	var errs []error
+	for _, name := range s.Args {
+		if _, ok := args[name]; !ok {
+			errs = append(errs, fmt.Errorf("missing argument %q of screen %q", name, s.Name))
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(args)) {
+		if !slices.Contains(s.Args, name) {
+			errs = append(errs, fmt.Errorf("screen %q has no argument %q", s.Name, name))
+		}
+	}
+	return errs
 }
 
 // CheckTarget checks the screen of a goto or of the start: it must exist and have items.

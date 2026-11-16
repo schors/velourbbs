@@ -7,7 +7,7 @@ import (
 )
 
 func TestLookupField(t *testing.T) {
-	fields := Fields{"w": {term: termCols}}
+	fields := Fields{"w": {term: termCols}, "f": {arg: "file"}}
 	tests := []struct {
 		path, want, err string
 	}{
@@ -26,6 +26,12 @@ func TestLookupField(t *testing.T) {
 		{path: "term.a.b", err: `invalid field path "term.a.b"`},
 		{path: "", err: `invalid field path ""`},
 		{path: "item.S", err: `field "item.S" is valid only in {#if}`},
+		{path: "arg.file", want: "arg.file"},
+		{path: "arg.f_2", want: "arg.f_2"},
+		{path: "f", want: "arg.file"},
+		{path: "arg.File", err: `invalid argument name "File"`},
+		{path: "arg.2f", err: `invalid argument name "2f"`},
+		{path: "arg", err: `unknown field "arg"`},
 	}
 	for _, tt := range tests {
 		r, err := LookupField(tt.path, fields)
@@ -55,6 +61,11 @@ func TestNewAlias(t *testing.T) {
 		{name: "and", path: "term.cols", err: `alias "and" is a reserved word`},
 		{name: "or", path: "term.cols", err: `alias "or" is a reserved word`},
 		{name: "not", path: "term.cols", err: `alias "not" is a reserved word`},
+		{name: "arg", path: "term.cols", err: `alias "arg" is a reserved word`},
+		{name: "file", path: "term.cols", err: `alias "file" is a reserved word`},
+		{name: "meta", path: "term.cols", err: `alias "meta" is a reserved word`},
+		{name: "f", path: "arg.file"},
+		{name: "f", path: "arg.File", err: `alias "f": invalid argument name "File"`},
 		{name: "w", path: "x", err: `alias "w": "x" is not a registry path`},
 		{name: "w", path: "term.colours", err: `alias "w": unknown field "term.colours"`},
 		{name: "w", path: "item.S", err: `alias "w": "item.S" is valid only in {#if}`},
@@ -75,7 +86,10 @@ func TestNewAlias(t *testing.T) {
 }
 
 func TestEnvText(t *testing.T) {
-	env := &Env{Term: Term{Type: "xterm\x1b[31m", Cols: 132, Rows: -1, Charset: "utf-8", Colors: 256}}
+	env := &Env{
+		Term: Term{Type: "xterm\x1b[31m", Cols: 132, Rows: -1, Charset: "utf-8", Colors: 256},
+		Args: map[string]string{"file": "gold\x07.md"},
+	}
 	tests := []struct {
 		path, want string
 	}{
@@ -84,6 +98,8 @@ func TestEnvText(t *testing.T) {
 		{"term.rows", "-1"},
 		{"term.charset", "utf-8"},
 		{"term.colors", "256"},
+		{"arg.file", "gold.md"},
+		{"arg.other", ""},
 	}
 	for _, tt := range tests {
 		r, err := LookupField(tt.path, nil)
@@ -103,6 +119,46 @@ func text(gs []Grapheme) string {
 		b.WriteString(g.Text)
 	}
 	return b.String()
+}
+
+func TestRefArg(t *testing.T) {
+	for path, want := range map[string]string{"arg.file": "file", "term.cols": "", "item.S": ""} {
+		r, err := resolve(path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Arg() != want {
+			t.Errorf("%s: Arg %q, want %q", path, r.Arg(), want)
+		}
+	}
+	if r, _ := LookupField("arg.file", nil); r.Type() != TypeString {
+		t.Errorf("arg.file: type %v", r.Type())
+	}
+}
+
+func TestCheckArg(t *testing.T) {
+	tests := []struct {
+		name, value, err string
+	}{
+		{"file", "gold.md", ""},
+		{"f_2", "", ""},
+		{"file", "dir/золото.md}", ""},
+		{"File", "x", `invalid argument name "File"`},
+		{"2f", "x", `invalid argument name "2f"`},
+		{"", "x", `invalid argument name ""`},
+		{"file", "{arg.x}", `file: value has "{"`},
+		{"file", "a\tb", "file: value has a control character"},
+		{"file", "a\x7fb", "file: value has a control character"},
+		{"file", "a\u0085b", "file: value has a control character"},
+		{"file", "a\u202ab", "file: value has a control character"},
+		{"file", "a\u2066b", "file: value has a control character"},
+	}
+	for _, tt := range tests {
+		err := CheckArg(tt.name, tt.value)
+		if got := fmt.Sprint(err); err == nil && tt.err != "" || err != nil && got != tt.err {
+			t.Errorf("%q=%q: error %v, want %q", tt.name, tt.value, err, tt.err)
+		}
+	}
 }
 
 func TestTermCheck(t *testing.T) {

@@ -3,7 +3,8 @@
 This specification defines the screens settings file `screens/screens.toml`:
 each table and each key.
 Related parts: [bbt-format](bbt-format.md), [menu-nav](menu-nav.md),
-[telnet-term](telnet-term.md), [screen-render](screen-render.md) and [bbs-toml](bbs-toml.md).
+[telnet-term](telnet-term.md), [screen-render](screen-render.md), [bbs-toml](bbs-toml.md)
+and [file-view](file-view.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -49,7 +50,8 @@ section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), sectio
   `[theme.16]` and `[theme.256]` are the "depth themes". A depth theme gives other styles
   for one colour depth `term.colors` ([telnet-term](telnet-term.md), section 6).
 - A style name matches `[a-z][a-z0-9_]*`. Its value is a string.
-- The "base theme" is `normal = "7/0"`, `more = "15/0"` and the styles of `[theme.default]`.
+- The "base theme" is `normal = "7/0"`, `more = "15/0"`, the `md_*` styles of
+  [file-view](file-view.md), section 4, and the styles of `[theme.default]`.
   A style of `[theme.default]` replaces the style with the same name.
   A "name of the theme" is a name of the base theme.
   The effect of `normal` and `more`: [bbt-format](bbt-format.md), sections 6.2, 6.4 and 7.3.
@@ -80,7 +82,10 @@ and the host reduces it ([telnet-term](telnet-term.md), section 7.3).
 `[fields]` maps an alias to a registry path: [bbt-format](bbt-format.md), sections 4.1 and 4.2.
 
 - An alias matches `[a-z][a-z0-9_]*`. Each value is a string. The default `[fields]` is empty.
-- An alias cannot be `term`, `item`, `and`, `or` or `not`.
+- An alias cannot be `term`, `item`, `arg`, `file`, `meta`, `and`, `or` or `not`.
+- A field token with an alias is a field token with its path. So an alias to `arg.<name>`
+  gives an argument of the screen ([bbt-format](bbt-format.md), section 8.5), and an alias to a field
+  of a file screen is valid only in a file screen ([file-view](file-view.md), section 3.4).
 - The path is a path of the registry with a dot. It cannot be `item.<KEY>`.
 
 ### 3.4. `[menu]`

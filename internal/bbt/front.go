@@ -3,6 +3,8 @@ package bbt
 import (
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -24,9 +26,10 @@ type frontDoc struct {
 	VAlign *string  `toml:"valign"`
 	Fill   *string  `toml:"fill"`
 	Item   []struct {
-		Key  *string `toml:"key"`
-		Do   *string `toml:"do"`
-		When *string `toml:"when"`
+		Key  *string            `toml:"key"`
+		Do   *string            `toml:"do"`
+		When *string            `toml:"when"`
+		Args *map[string]string `toml:"args"`
 	} `toml:"item"`
 }
 
@@ -78,6 +81,17 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 			errorf("%s: do: %v", label, err)
 		} else {
 			item.Do = a
+		}
+		if it.Args != nil {
+			if item.Do.Op != 0 && item.Do.Op != screen.Goto { // Op 0: the do has an error
+				errorf("%s: args: only goto takes arguments", label)
+			}
+			for _, name := range slices.Sorted(maps.Keys(*it.Args)) {
+				if err := screen.CheckArg(name, (*it.Args)[name]); err != nil {
+					errorf("%s: args: %v", label, err)
+				}
+			}
+			item.Do.Args = *it.Args
 		}
 		if it.When != nil {
 			c, err := screen.ParseCond(*it.When, fields, false)

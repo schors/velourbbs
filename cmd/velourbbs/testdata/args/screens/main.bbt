@@ -1,0 +1,10 @@
++++
+[[item]]
+key = "1"
+do = "goto view"
+args = { f = "gold.md" }
+[[item]]
+key = "G"
+do = "logoff"
++++
+Main

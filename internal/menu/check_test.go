@@ -120,3 +120,42 @@ func TestCheckLimit(t *testing.T) {
 		t.Errorf("first %q, last %q, no limit error", got[0], got[len(got)-1])
 	}
 }
+
+// The args of a goto must equal the arguments of the target. The start screen
+// and goodbye cannot have arguments (section 6).
+func TestCheckArgs(t *testing.T) {
+	goto_ := func(key, target string, args map[string]string) screen.Item {
+		return screen.Item{Key: key, Do: screen.Action{Op: screen.Goto, Screen: target, Args: args}}
+	}
+	ss := map[string]*screen.Screen{
+		"main": {Name: "main", File: "screens/main.bbt", Items: []screen.Item{
+			goto_("1", "view", map[string]string{"f": "a", "n": "1"}),
+			goto_("2", "view", map[string]string{"f": "a"}),
+			goto_("3", "view", nil),
+			goto_("4", "view", map[string]string{"f": "a", "n": "1", "x": "y"}),
+			goto_("5", "main", map[string]string{"x": "y"}),
+			goto_("6", "none", map[string]string{"x": "y"}),
+		}},
+		"view": {Name: "view", File: "screens/view.bbt", Args: []string{"f", "n"},
+			Items: []screen.Item{goto_("Q", "main", map[string]string{})}},
+		"goodbye": {Name: "goodbye", File: "screens/goodbye.bbt", Args: []string{"x"}},
+	}
+	want := []string{
+		`screens/goodbye.bbt:1:1: the goodbye screen cannot have arguments`,
+		`screens/main.bbt:2:1: item "2": args: missing argument "n" of screen "view"`,
+		`screens/main.bbt:2:1: item "3": args: missing argument "f" of screen "view"`,
+		`screens/main.bbt:2:1: item "3": args: missing argument "n" of screen "view"`,
+		`screens/main.bbt:2:1: item "4": args: screen "view" has no argument "x"`,
+		`screens/main.bbt:2:1: item "5": args: screen "main" has no argument "x"`,
+		`screens/main.bbt:2:1: item "6": do: unknown screen "none"`,
+	}
+	got := messages(Check(config.Config{Start: "main"}, ss, nil))
+	if !slices.Equal(got, want) {
+		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+
+	got = messages(Check(config.Config{Start: "view"}, ss, nil))
+	if !slices.Contains(got, `screens/screens.toml:1:1: menu: start: screen "view" has arguments`) {
+		t.Errorf("start view: got\n%s", strings.Join(got, "\n"))
+	}
+}

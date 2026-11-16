@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io/fs"
+	"reflect"
 	"slices"
 	"strings"
 	"testing"
@@ -142,7 +143,7 @@ do = "goto about"
 	if s.Width != (screen.WidthLimits{Min: 64, Max: 100}) {
 		t.Errorf("width %v", s.Width)
 	}
-	if !slices.Equal(s.Items, []screen.Item{{
+	if !reflect.DeepEqual(s.Items, []screen.Item{{
 		Key: "A", Do: screen.Action{Op: screen.Goto, Screen: "about"},
 	}}) {
 		t.Errorf("items %+v", s.Items)
@@ -298,7 +299,7 @@ when = "w > 80"
 		{Key: "ESC", Do: screen.Action{Op: screen.Goto, Screen: "main"}},
 		{Key: "ANY", Do: screen.Action{Op: screen.Logoff}},
 	}
-	if !slices.Equal(got, want) {
+	if !reflect.DeepEqual(got, want) {
 		t.Errorf("items %+v, want %+v", got, want)
 	}
 }
@@ -338,6 +339,37 @@ func TestItemErrors(t *testing.T) {
 		{[]string{`key = "a"`, `when = "term.cols >"`}, []string{
 			`screens/s.bbt:2:1: item "A": do is missing`,
 			`screens/s.bbt:2:1: item "A": when: expected an integer or a string, found end of condition`,
+		}},
+		// The args errors of section 8.4 are other errors at 2:1. A type error has its position.
+		{[]string{`key = "A"`, `do = "logoff"`, `args = { file = "a.md" }`}, []string{
+			`screens/s.bbt:2:1: item "A": args: only goto takes arguments`,
+		}},
+		{[]string{`key = "A"`, `do = "x"`, `args = { file = "a.md" }`}, []string{
+			`screens/s.bbt:2:1: item "A": do: unknown action "x"`,
+		}},
+		{[]string{`key = "A"`, `do = "x"`, `args = { File = "{" }`}, []string{
+			`screens/s.bbt:2:1: item "A": do: unknown action "x"`,
+			`screens/s.bbt:2:1: item "A": args: invalid argument name "File"`,
+		}},
+		{[]string{`key = "A"`, `do = "logoff"`, `args = { f = "\u202e" }`}, []string{
+			`screens/s.bbt:2:1: item "A": args: only goto takes arguments`,
+			`screens/s.bbt:2:1: item "A": args: f: value has a control character`,
+		}},
+		{[]string{`key = "A"`, `do = "goto r"`, `args = { File = "a.md", 2f = "b", "a-b" = "c" }`}, []string{
+			`screens/s.bbt:2:1: item "A": args: invalid argument name "2f"`,
+			`screens/s.bbt:2:1: item "A": args: invalid argument name "File"`,
+			`screens/s.bbt:2:1: item "A": args: invalid argument name "a-b"`,
+		}},
+		{[]string{`key = "A"`, `do = "goto r"`, `args = { a = "{arg.a}", b = "x\ty", c = "x\u0085" }`}, []string{
+			`screens/s.bbt:2:1: item "A": args: a: value has "{"`,
+			`screens/s.bbt:2:1: item "A": args: b: value has a control character`,
+			`screens/s.bbt:2:1: item "A": args: c: value has a control character`,
+		}},
+		{[]string{`key = "A"`, `do = "goto r"`, `args = { file = 1 }`}, []string{
+			`screens/s.bbt:5:17: item.args: must be a table of strings`,
+		}},
+		{[]string{`key = "A"`, `do = "goto r"`, `args = "file"`}, []string{
+			`screens/s.bbt:5:8: item.args: must be a table of strings`,
 		}},
 	}
 	for _, tt := range tests {
@@ -611,6 +643,66 @@ func TestItemPaths(t *testing.T) {
 	}
 }
 
+func TestItemArgs(t *testing.T) {
+	screens := mustLoad(t, map[string]string{"s.bbt": `+++
+[[item]]
+key = "1"
+do = "goto r"
+args = { file = "gold.md", n = "" }
+[[item]]
+key = "2"
+do = "goto r"
+[item.args]
+file = "золото.md"
+[[item]]
+key = "3"
+do = "goto r"
++++
+`})
+	var got []map[string]string
+	for _, it := range screens["s"].Items {
+		got = append(got, it.Do.Args)
+	}
+	want := []map[string]string{{"file": "gold.md", "n": ""}, {"file": "золото.md"}, nil}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("args %q, want %q", got, want)
+	}
+}
+
+// The arguments of a screen come from its body, its fragments, its art,
+// its {#if} and its when, also through an alias (section 8.5).
+func TestScreenArgs(t *testing.T) {
+	fsys := fstest.MapFS{
+		"screens/s.bbt": {Data: []byte(`+++
+[[item]]
+key = "A"
+do = "logoff"
+when = 'arg.w == "1"'
++++
+{arg.body} {f}
+{#if arg.cond == "x"}{/if}
+{>_frag}
+{>a.ans}
+{>_frag}
+`)},
+		"screens/_frag.bbt": {Data: []byte("{arg.frag}\n")},
+		"screens/a.ans":     {Data: []byte(sauceArt("{arg.art}", 10))},
+		"screens/t.bbt":     {Data: []byte("+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{term.cols}\n")},
+	}
+	fields := screen.Fields{"f": alias("f", "arg.alias")}
+	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: defaultWidth}, fields)
+	if ds.HasErrors() {
+		t.Fatalf("diags %v", ds)
+	}
+	want := []string{"alias", "art", "body", "cond", "frag", "w"}
+	if got := screens["s"].Args; !slices.Equal(got, want) {
+		t.Errorf("args %q, want %q", got, want)
+	}
+	if got := screens["t"].Args; len(got) != 0 {
+		t.Errorf("t: args %q", got)
+	}
+}
+
 // An unused .bbt or .ans file that is not a regular file is an error (section 2).
 func TestNotRegular(t *testing.T) {
 	fsys := fstest.MapFS{
@@ -660,7 +752,7 @@ func FuzzLoad(f *testing.F) {
 		checkSegs(t, screens["s"].Body)
 		env, _ := menu.Enabled(screens["s"], screen.Term{
 			Type: "ansi", Cols: screen.MinCols, Rows: screen.MinRows, Charset: "utf-8", Colors: screen.Colors16,
-		})
+		}, nil)
 		for range screen.Render(screens["s"], env, theme, "more") {
 		}
 	})

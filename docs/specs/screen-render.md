@@ -3,7 +3,8 @@
 This specification defines the screen model, the render and the commands
 `velourbbs check` and `velourbbs preview`.
 Related parts: [bbt-format](bbt-format.md), [art-format](art-format.md), [bbs-toml](bbs-toml.md),
-[screens-toml](screens-toml.md), [menu-nav](menu-nav.md) and [telnet-term](telnet-term.md).
+[screens-toml](screens-toml.md), [menu-nav](menu-nav.md), [file-view](file-view.md)
+and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
@@ -21,7 +22,8 @@ The host renders a screen by these rules of [bbt-format](bbt-format.md):
 - the render width and the screen area: section 6.1;
 - the rows of the body and of the art: section 6.2;
 - the text wrap: section 6.3;
-- the pages and the More row: section 6.4;
+- the pages and the More row: section 6.4; the pages of a file screen:
+  [file-view](file-view.md), section 3.2;
 - the vertical position and the fill rows: section 6.5;
 - the cells and the styles: section 7.
 
@@ -36,7 +38,8 @@ The host renders a screen page by page. A session holds one page in memory.
 ### 3.1. `velourbbs check`
 
 - `velourbbs check` reads `bbs.toml`, `screens/screens.toml` and each screen file in `screens/`.
-  It checks each screen with the fragments and the art that the screen uses.
+  It checks each screen with the fragments, the art and the content files that the screen uses
+  ([file-view](file-view.md), section 7).
 - It warns about a fragment or an art file that no screen uses.
   After the limit error of a body ([bbt-format](bbt-format.md), section 9),
   the warning can be false: the load does not read the rest of the screen.
@@ -87,8 +90,12 @@ and writes its cell dump to the standard output.
 - It does the checks of `velourbbs check` first. After an error it writes no dump
   and exits with status 1.
 - The default size is 80x24. `--size` is the only way to set the size.
-- `--set` sets `term.type` or `term.colors`. Example: `--set term.colors=256`.
+- `--set` sets `term.type`, `term.colors` or `arg.<name>`. Example: `--set term.colors=256`.
   The defaults are `xterm` and 256. `term.charset` is `utf-8`.
+- Each argument of the screen needs `--set arg.<name>=<value>`
+  ([bbt-format](bbt-format.md), section 8.5). A missing argument, another argument and
+  an invalid value are invalid arguments. A content file of a value has the checks of
+  [file-view](file-view.md), section 7. After an error, the command writes no dump and exits with status 1.
 - `--set term.type` applies the rules of [telnet-term](telnet-term.md), section 6:
   it cleans the name, cuts it and makes it lower case. An empty name gives `ansi`.
   The name gives `term.colors`. `--set term.colors` overrides it, in each order of the options.
@@ -100,6 +107,7 @@ and writes its cell dump to the standard output.
 ### 3.3. Cell dump
 
 The cell dump is the golden file for the tests. It has one part for each page.
+A file screen has one part for each file page ([file-view](file-view.md), section 3.2).
 This dump shows the screen `+++` `[[item]]` `key = "G"` `do = "logoff"` `+++`
 with the body `{!title}Welcome!{!}` and `{!14}[G]oodbye`, the theme of
 [screens-toml](screens-toml.md), section 4, and the other keys of `[screen]` at their defaults:
@@ -113,7 +121,7 @@ styles
 2: 1-9 14/0, 10-80 7/0
 ```
 
-- The first line gives the page number, the terminal size and the value of `fill`
+- The first line gives the page number (`file.page` on a file screen), the terminal size and the value of `fill`
   ([bbt-format](bbt-format.md), section 6.5).
 - Each rendered row of the page is between two `|`. A wide grapheme appears once
   and takes 2 columns.

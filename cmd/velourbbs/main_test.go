@@ -282,8 +282,8 @@ func TestPreviewErrors(t *testing.T) {
 		{"preview", []string{"main", "--size", "80x101"}, "velourbbs preview: term.rows is 101, must be from 10 to 100", exitUsage},
 		{"preview", []string{"main", "--size", "+80x25"}, `invalid value "+80x25" for flag -size: cols: "+80" is not a decimal number`, exitUsage},
 		{"preview", []string{"main", "--size", "80"}, `invalid value "80" for flag -size: rows: "" is not a decimal number`, exitUsage},
-		{"preview", []string{"main", "--set", "term.cols=100"}, `invalid value "term.cols=100" for flag -set: cannot set "term.cols": only term.type and term.colors`, exitUsage},
-		{"preview", []string{"main", "--set", "term.charset=koi8-r"}, `invalid value "term.charset=koi8-r" for flag -set: cannot set "term.charset": only term.type and term.colors`, exitUsage},
+		{"preview", []string{"main", "--set", "term.cols=100"}, `invalid value "term.cols=100" for flag -set: cannot set "term.cols": only term.type, term.colors and arg.<name>`, exitUsage},
+		{"preview", []string{"main", "--set", "term.charset=koi8-r"}, `invalid value "term.charset=koi8-r" for flag -set: cannot set "term.charset": only term.type, term.colors and arg.<name>`, exitUsage},
 		{"preview", []string{"main", "--set", "term.colors=17"}, "velourbbs preview: term.colors is 17, must be 16, 256 or 16777216", exitUsage},
 		{"preview", []string{"main", "--set", "term.type"}, `invalid value "term.type" for flag -set: expected <path>=<value>`, exitUsage},
 		{"preview", []string{"nope"}, `velourbbs preview: unknown screen "nope"`, exitUsage},
@@ -298,6 +298,13 @@ func TestPreviewErrors(t *testing.T) {
 		{"keys", []string{"main", "--keys", "AB"}, `invalid value "AB" for flag -keys: invalid key "AB"`, exitUsage},
 		{"keys", []string{"goodbye", "--keys", "S"}, `velourbbs preview: screen "goodbye" has no items`, exitUsage},
 		{"keys", []string{"nope", "--keys", ""}, `velourbbs preview: unknown screen "nope"`, exitUsage},
+		{"args", []string{"view"}, `velourbbs preview: missing argument "f" of screen "view"`, exitUsage},
+		{"args", []string{"view", "--keys", "Q"}, `velourbbs preview: missing argument "f" of screen "view"`, exitUsage},
+		{"args", []string{"view", "--set", "arg.f=a", "--set", "arg.y=1"}, `velourbbs preview: screen "view" has no argument "y"`, exitUsage},
+		{"args", []string{"main", "--set", "arg.f=a"}, `velourbbs preview: screen "main" has no argument "f"`, exitUsage},
+		{"args", []string{"view", "--set", "arg.f={x"}, `invalid value "arg.f={x" for flag -set: f: value has "{"`, exitUsage},
+		{"args", []string{"view", "--set", "arg.f=a\tb"}, "invalid value \"arg.f=a\\tb\" for flag -set: f: value has a control character", exitUsage},
+		{"args", []string{"view", "--set", "arg.F=a"}, `invalid value "arg.F=a" for flag -set: invalid argument name "F"`, exitUsage},
 		{"check", []string{"main"}, `screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100`, exitError},
 	}
 	for _, tt := range tests {
@@ -363,6 +370,24 @@ func TestPreviewKeys(t *testing.T) {
 					out, errOut, status, tt.want, tt.errOut, tt.status)
 			}
 		})
+	}
+}
+
+// --set arg.<name> gives the arguments of the screen (screen-render, section 3.2).
+// A second --set of one name replaces the value.
+func TestPreviewArgs(t *testing.T) {
+	out, errOut, status := runIn(t, "args", "preview", "view", "--set", "arg.f=x", "--set", "arg.f=gold.md", "--size", "40x10")
+	if want := page(40, 10, "File gold.md"); out != want || errOut != "" || status != 0 {
+		t.Errorf("stdout:\n%s\nstderr %q, status %d; want stdout:\n%s", out, errOut, status, want)
+	}
+
+	out, errOut, status = runIn(t, "args", "preview", "view", "--set", "arg.f=a.md", "--size", "40x10", "--keys", "N,Q,1")
+	want := "screen view\n" + page(40, 10, "File a.md") +
+		"key N\nscreen view\n" + page(40, 10, "File next.md") +
+		"key Q\nscreen main\n" + page(40, 10, "Main") +
+		"key 1\nscreen view\n" + page(40, 10, "File gold.md")
+	if out != want || errOut != "" || status != 0 {
+		t.Errorf("--keys: stdout:\n%s\nstderr %q, status %d; want stdout:\n%s", out, errOut, status, want)
 	}
 }
 

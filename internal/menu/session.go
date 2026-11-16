@@ -47,10 +47,10 @@ type session struct {
 	cfg config.Config
 }
 
-// Run runs a session from the screen start until logoff (section 5).
-// screens is the result of a load without errors and of Check, and start passes
-// CheckTarget. Run returns nil after logoff, else the first error of t unchanged.
-func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start string) error {
+// Run runs a session from the screen start with the arguments args until logoff (section 5).
+// screens is the result of a load without errors and of Check, start passes
+// CheckTarget and args pass CheckArgs. Run returns nil after logoff, else the first error of t unchanged.
+func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start string, args map[string]string) error {
 	ev, ok := t.(Events)
 	if !ok {
 		ev = noEvents{}
@@ -58,7 +58,7 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 	ss := &session{t: t, ev: ev, cfg: cfg}
 	s := screens[start]
 	for {
-		items, err := ss.show(s)
+		items, err := ss.show(s, args)
 		if err != nil {
 			return err
 		}
@@ -67,26 +67,26 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 			return err
 		}
 		if it.Do.Op == screen.Goto {
-			s = screens[it.Do.Screen]
+			s, args = screens[it.Do.Screen], it.Do.Args
 			continue
 		}
 		if err := ev.Logoff(); err != nil {
 			return err
 		}
 		if g, ok := screens["goodbye"]; ok {
-			_, err = ss.show(g)
+			_, err = ss.show(g, nil)
 		}
 		return err
 	}
 }
 
-// show shows the screen s: it renders s and shows its pages (section 5).
+// show shows the screen s with the arguments args: it renders s and shows its pages (section 5).
 // After each page with a More row, it waits for any key. It gives the enabled items.
-func (ss *session) show(s *screen.Screen) (map[string]screen.Item, error) {
+func (ss *session) show(s *screen.Screen, args map[string]string) (map[string]screen.Item, error) {
 	if err := ss.ev.Screen(s.Name); err != nil {
 		return nil, err
 	}
-	env, items := Enabled(s, ss.t.Term())
+	env, items := Enabled(s, ss.t.Term(), args)
 	first := true
 	for p := range screen.Render(s, env, ss.cfg.SessionTheme(env.Term.Colors), ss.cfg.More) {
 		if !first {
@@ -106,10 +106,10 @@ func (ss *session) show(s *screen.Screen) (map[string]screen.Item, error) {
 	return items, nil
 }
 
-// Enabled evaluates the when of each item of s for the terminal term (bbt-format, section 8.2).
-// It gives the field values of the render and the enabled items by key.
-func Enabled(s *screen.Screen, term screen.Term) (*screen.Env, map[string]screen.Item) {
-	env := &screen.Env{Term: term, Items: map[string]bool{}}
+// Enabled evaluates the when of each item of s for the terminal term and the arguments args
+// (bbt-format, section 8.2). It gives the field values of the render and the enabled items by key.
+func Enabled(s *screen.Screen, term screen.Term, args map[string]string) (*screen.Env, map[string]screen.Item) {
+	env := &screen.Env{Term: term, Items: map[string]bool{}, Args: args}
 	items := map[string]screen.Item{}
 	for _, it := range s.Items {
 		if it.When == nil || it.When.Eval(env) {

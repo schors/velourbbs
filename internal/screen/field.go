@@ -31,7 +31,7 @@ func (t Type) String() string {
 	return "type " + strconv.Itoa(int(t))
 }
 
-// termField is a term.* field of the registry. The zero value is item.<KEY>.
+// termField is a term.* field of the registry. The zero value is item.<KEY> or arg.<name>.
 type termField uint8
 
 const (
@@ -54,35 +54,45 @@ var termFields = [...]struct {
 	termColors:  {"term.colors", TypeInt},
 }
 
-// Ref is a resolved field path: a term.* field or item.<KEY>.
+// Ref is a resolved field path: a term.* field, item.<KEY> or arg.<name>.
 type Ref struct {
 	term termField
 	key  string // the <KEY> of item.<KEY>, in upper case
+	arg  string // the <name> of arg.<name>
 }
 
 // Type gives the type of the field.
 func (r Ref) Type() Type {
-	if r.isItem() {
+	switch {
+	case r.isItem():
 		return TypeBool
+	case r.arg != "":
+		return TypeString
 	}
 	return termFields[r.term].typ
 }
 
 // String gives the registry path.
 func (r Ref) String() string {
-	if r.isItem() {
+	switch {
+	case r.isItem():
 		return "item." + r.key
+	case r.arg != "":
+		return "arg." + r.arg
 	}
 	return termFields[r.term].path
 }
 
-func (r Ref) isItem() bool { return r.term == 0 }
+// Arg gives the <name> of arg.<name>, else "".
+func (r Ref) Arg() string { return r.arg }
+
+func (r Ref) isItem() bool { return r.term == 0 && r.arg == "" }
 
 // Fields maps an alias to its field (section 4.2).
 type Fields map[string]Ref
 
 // reserved are the names that an alias cannot have (screens-toml, section 3.3).
-var reserved = []string{"term", "item", "and", "or", "not"}
+var reserved = []string{"term", "item", "arg", "file", "meta", "and", "or", "not"}
 
 // NewAlias checks the alias name and its path against screens-toml, section 3.3,
 // and gives the field of the path.
@@ -133,6 +143,11 @@ func resolve(path string, fields Fields) (Ref, error) {
 		}
 	} else if head == "item" {
 		return Ref{key: key.Upper(tail)}, nil
+	} else if head == "arg" {
+		if !IsIdent(tail) {
+			return Ref{}, fmt.Errorf("invalid argument name %q", tail)
+		}
+		return Ref{arg: tail}, nil
 	}
 	for i, f := range termFields {
 		if i > 0 && f.path == path {
@@ -194,10 +209,27 @@ func (t Term) Check() error {
 	return nil
 }
 
+// CheckArg checks the name and the value of an argument (section 8.5).
+func CheckArg(name, value string) error {
+	if !IsIdent(name) {
+		return fmt.Errorf("invalid argument name %q", name)
+	}
+	for _, r := range value {
+		switch {
+		case r == '{':
+			return fmt.Errorf("%s: value has \"{\"", name)
+		case IsControl(r):
+			return fmt.Errorf("%s: value has a control character", name)
+		}
+	}
+	return nil
+}
+
 // Env holds the field values of one render.
 type Env struct {
 	Term  Term
-	Items map[string]bool // the keys of the enabled items
+	Items map[string]bool   // the keys of the enabled items
+	Args  map[string]string // the arguments of the screen (section 8.5)
 }
 
 // value gives the value of r: a bool, an int or a string.
@@ -213,6 +245,9 @@ func (e *Env) value(r Ref) any {
 		return e.Term.Charset
 	case termColors:
 		return e.Term.Colors
+	}
+	if r.arg != "" {
+		return e.Args[r.arg]
 	}
 	return e.Items[r.key]
 }
