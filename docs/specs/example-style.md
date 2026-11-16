@@ -1,7 +1,7 @@
 # Example style
 
 This specification defines the style and the screens of the example BBS "Lamp".
-The guides build this BBS: [setup-guide](../ideas/setup-guide.md) and [bbt-guide](bbt-guide.md).
+The guides build this BBS: [setup-guide](setup-guide.md) and [bbt-guide](bbt-guide.md).
 Related parts: [bbt-format](bbt-format.md), [screens-toml](screens-toml.md),
 [screen-render](screen-render.md) and [telnet-term](telnet-term.md).
 
