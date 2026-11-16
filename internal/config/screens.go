@@ -153,9 +153,23 @@ func styles(t map[string]string, key string, names map[string]bool, depth bool,
 	}
 }
 
-// baseSpecs gives the defaults of the base theme: normal and more.
+// mdStyles is the md_* styles of the base theme (file-view, section 4).
+var mdStyles = map[string]string{
+	"md_h1": "15 bold", "md_h2": "15 bold", "md_h3": "15", "md_strong": "15 bold", "md_em": "14",
+	"md_code": "10", "md_link": "14 underline", "md_mark": "11", "md_frame": "8", "md_dim": "8",
+}
+
+// baseSpecs gives the defaults of the base theme: normal, more and the md_* styles.
 func baseSpecs() map[string]screen.StyleSpec {
-	return map[string]screen.StyleSpec{"normal": {}, "more": defaultMoreStyle}
+	specs := map[string]screen.StyleSpec{"normal": {}, "more": defaultMoreStyle}
+	for name, text := range mdStyles {
+		spec, err := screen.ParseStyle(text)
+		if err != nil {
+			panic("config: md style " + name + ": " + err.Error())
+		}
+		specs[name] = spec
+	}
+	return specs
 }
 
 // resolve gives the theme of the styles specs. A style without a colour takes it from normal;

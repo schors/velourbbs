@@ -42,8 +42,19 @@ func TestDefaults(t *testing.T) {
 	if cfg.Align != screen.AlignCenter || cfg.VAlign != screen.VAlignTop || cfg.Fill != screen.FillNone {
 		t.Errorf("layout = %+v", cfg.Layout)
 	}
-	if len(cfg.Theme) != 2 || cfg.Theme["normal"] != style(t, "7/0") || cfg.Theme["more"] != style(t, "15/0") {
+	// The base theme of screens-toml, section 3.2, with the md_* styles of file-view, section 4.
+	want := map[string]string{
+		"normal": "7/0", "more": "15/0", "md_h1": "15/0 bold", "md_h2": "15/0 bold", "md_h3": "15/0",
+		"md_strong": "15/0 bold", "md_em": "14/0", "md_code": "10/0", "md_link": "14/0 underline",
+		"md_mark": "11/0", "md_frame": "8/0", "md_dim": "8/0",
+	}
+	if len(cfg.Theme) != len(want) {
 		t.Errorf("theme = %v", cfg.Theme)
+	}
+	for name, text := range want {
+		if got := cfg.Theme[name]; got != style(t, text) {
+			t.Errorf("theme %s = %v, want %s", name, got, text)
+		}
 	}
 	if cfg.Start != "main" || len(cfg.Fields) != 0 || !reflect.DeepEqual(cfg.Telnet, defaultTelnet) {
 		t.Errorf("cfg = %+v", cfg)
@@ -92,7 +103,7 @@ w = "term.cols"
 		"prompt": "14/1",      // the foreground from normal
 		"more":   "-/-",
 	}
-	if len(cfg.Theme) != len(want) {
+	if len(cfg.Theme) != len(want)+len(mdStyles) {
 		t.Errorf("theme = %v", cfg.Theme)
 	}
 	for name, text := range want {
@@ -380,7 +391,7 @@ more   = "1"
 		"prompt": "14/#405060",
 	}
 	th := cfg.SessionTheme(256)
-	if len(th) != len(want) {
+	if len(th) != len(want)+len(mdStyles) {
 		t.Errorf("theme.256 = %v", th)
 	}
 	for name, text := range want {

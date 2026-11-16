@@ -1,0 +1,26 @@
++++
+[[item]]
+key = "1"
+do = "goto reader"
+args = { file = "gold.md" }
+[[item]]
+key = "2"
+do = "goto reader"
+args = { file = "notes.md" }
+[[item]]
+key = "3"
+do = "goto reader"
+args = { file = "plain.txt" }
+[[item]]
+key = "4"
+do = "goto reader"
+args = { file = "xfer/crc16.c" }
+[[item]]
+key = "5"
+do = "goto code"
+[[item]]
+key = "G"
+do = "logoff"
++++
+Texts
+1 Gold  2 Notes  3 Plain  4 Source  5 Code  G Goodbye

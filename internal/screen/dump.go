@@ -9,20 +9,18 @@ import (
 
 // WriteDump writes the cell dump of screen-render, section 3.3, of pages.
 func WriteDump(w io.Writer, pages iter.Seq[Page]) error {
-	n := 0
 	for p := range pages {
-		n++
-		if err := WritePage(w, n, p); err != nil {
+		if err := WritePage(w, p); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-// WritePage writes the part of the cell dump for page n, 1-based (screen-render, section 3.3).
-func WritePage(w io.Writer, n int, p Page) error {
+// WritePage writes the part of the cell dump for the page p (screen-render, section 3.3).
+func WritePage(w io.Writer, p Page) error {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "page %d %dx%d fill %s\n", n, p.Cols, p.Height, p.Fill)
+	fmt.Fprintf(&b, "page %d %dx%d fill %s\n", p.Num, p.Cols, p.Height, p.Fill)
 	var line Row
 	for i := range p.Rows {
 		line = p.Line(i, line)

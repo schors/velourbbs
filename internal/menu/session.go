@@ -1,6 +1,8 @@
 package menu
 
 import (
+	"iter"
+
 	"github.com/schors/velourbbs/internal/config"
 	"github.com/schors/velourbbs/internal/key"
 	"github.com/schors/velourbbs/internal/screen"
@@ -58,11 +60,7 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 	ss := &session{t: t, ev: ev, cfg: cfg}
 	s := screens[start]
 	for {
-		items, err := ss.show(s, args)
-		if err != nil {
-			return err
-		}
-		it, err := ss.next(items)
+		it, err := ss.run(s, args)
 		if err != nil {
 			return err
 		}
@@ -80,13 +78,52 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 	}
 }
 
-// show shows the screen s with the arguments args: it renders s and shows its pages (section 5).
-// After each page with a More row, it waits for any key. It gives the enabled items.
+// run shows the screen s with the arguments args and gives the item that leaves it.
+// A page action of a file screen shows its page and waits for keys again (section 5.1).
+func (ss *session) run(s *screen.Screen, args map[string]string) (screen.Item, error) {
+	if s.FileScreen == nil {
+		items, err := ss.show(s, args)
+		if err != nil {
+			return screen.Item{}, err
+		}
+		return ss.next(items)
+	}
+	if err := ss.ev.Screen(s.Name); err != nil {
+		return screen.Item{}, err
+	}
+	term := ss.t.Term()
+	v := newFileView(s, term, args, ss.cfg.SessionTheme(term.Colors))
+	n := 1
+	for {
+		p, items := v.page(n)
+		if err := ss.t.Page(p); err != nil {
+			return screen.Item{}, err
+		}
+		it, err := ss.next(items)
+		if err != nil || !it.Do.Op.IsPage() {
+			return it, err
+		}
+		switch it.Do.Op {
+		case screen.PageNext:
+			n = min(n+1, len(v.pages))
+		case screen.PagePrev:
+			n = max(n-1, 1)
+		case screen.PageFirst:
+			n = 1
+		case screen.PageLast:
+			n = len(v.pages)
+		}
+	}
+}
+
+// show shows the screen s, not a file screen, with the arguments args: it renders s
+// and shows its pages (section 5). After each page with a More row, it waits for any key.
+// It gives the enabled items.
 func (ss *session) show(s *screen.Screen, args map[string]string) (map[string]screen.Item, error) {
 	if err := ss.ev.Screen(s.Name); err != nil {
 		return nil, err
 	}
-	env, items := Enabled(s, ss.t.Term(), args)
+	env, items := Enabled(s, ss.t.Term(), args, nil)
 	first := true
 	for p := range screen.Render(s, env, ss.cfg.SessionTheme(env.Term.Colors), ss.cfg.More) {
 		if !first {
@@ -106,10 +143,67 @@ func (ss *session) show(s *screen.Screen, args map[string]string) (map[string]sc
 	return items, nil
 }
 
-// Enabled evaluates the when of each item of s for the terminal term and the arguments args
-// (bbt-format, section 8.2). It gives the field values of the render and the enabled items by key.
-func Enabled(s *screen.Screen, term screen.Term, args map[string]string) (*screen.Env, map[string]screen.Item) {
-	env := &screen.Env{Term: term, Items: map[string]bool{}, Args: args}
+// Pages gives each page of the screen s for the terminal term with the arguments args:
+// the pages of the render, or each file page of a file screen. velourbbs preview uses it.
+func Pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[string]string) iter.Seq[screen.Page] {
+	theme := cfg.SessionTheme(term.Colors)
+	if s.FileScreen == nil {
+		env, _ := Enabled(s, term, args, nil)
+		return screen.Render(s, env, theme, cfg.More)
+	}
+	return func(yield func(screen.Page) bool) {
+		v := newFileView(s, term, args, theme)
+		for n := 1; n <= len(v.pages); n++ {
+			if p, _ := v.page(n); !yield(p) {
+				return
+			}
+		}
+	}
+}
+
+// fileView is a file screen laid out for one terminal size (section 5.1, step 1,
+// and file-view, section 3.2). It holds the first row of each file page, not the rows.
+type fileView struct {
+	s      *screen.Screen
+	term   screen.Term
+	args   map[string]string
+	theme  map[string]screen.Style
+	values screen.FileValues // the values of page 1 with file.pages 1
+	layout screen.FileLayout
+	pages  []screen.FilePage
+	h      int // the area height H
+}
+
+// newFileView lays out the file of the file screen s into file pages.
+func newFileView(s *screen.Screen, term screen.Term, args map[string]string, theme map[string]screen.Style) *fileView {
+	f := s.FileScreen
+	c := f.Content(args)
+	v := &fileView{s: s, term: term, args: args, theme: theme}
+	v.layout = screen.ContentLayout(f, c, s.RenderWidth(term.Cols), theme)
+	v.values = screen.FileValues{
+		Content: c, Page: 1, Pages: 1, Minutes: c.Minutes(f.First, f.Last), Section: screen.FirstSection(v.layout),
+	}
+	env, _ := Enabled(s, term, args, &v.values)
+	v.h = max(1, term.Rows-screen.FrameRows(s, env, theme))
+	v.pages = screen.SplitPages(v.layout, v.h)
+	return v
+}
+
+// page renders the page n, 1-based, with the fields of this page, and gives its enabled items
+// (section 5.1, step 2).
+func (v *fileView) page(n int) (screen.Page, map[string]screen.Item) {
+	p := v.pages[n-1]
+	values := v.values
+	values.Page, values.Pages, values.Section = n, len(v.pages), p.Section
+	env, items := Enabled(v.s, v.term, v.args, &values)
+	return screen.RenderFile(v.s, env, v.theme, screen.PageRows(v.layout, p, v.h), n), items
+}
+
+// Enabled evaluates the when of each item of s for the terminal term, the arguments args
+// and the values file of a file screen, else nil (bbt-format, section 8.2).
+// It gives the field values of the render and the enabled items by key.
+func Enabled(s *screen.Screen, term screen.Term, args map[string]string, file *screen.FileValues) (*screen.Env, map[string]screen.Item) {
+	env := &screen.Env{Term: term, Items: map[string]bool{}, Args: args, File: file}
 	items := map[string]screen.Item{}
 	for _, it := range s.Items {
 		if it.When == nil || it.When.Eval(env) {

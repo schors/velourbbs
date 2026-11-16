@@ -1,5 +1,7 @@
 package screen
 
+import "fmt"
+
 // Pos is the position of a token in a file. Line and Col are 1-based.
 // Col counts code points (screen-render, section 3.1).
 type Pos struct {
@@ -18,6 +20,44 @@ type Screen struct {
 	Body  []Seg
 	// Args holds the sorted argument names of the screen (section 8.5).
 	Args []string
+	// FileScreen is the file of a file screen (file-view, section 3), else nil.
+	FileScreen *FileSpec
+}
+
+// FileSpec is the file of a file screen: the keys file, lines and numbers (file-view, section 3).
+type FileSpec struct {
+	Path string // the content path of file, else ""
+	Arg  string // the <name> of a file "{arg.<name>}", else ""
+	// First and Last are the key lines; 0 and 0 without lines.
+	First, Last int
+	Numbers     bool
+	NumbersKey  bool // the key numbers is set
+	// Contents holds each content file that the screen can show, by its path (file-view, section 3.1).
+	Contents map[string]*Content
+}
+
+// Content gives the content file that the screen shows with the arguments args.
+func (f *FileSpec) Content(args map[string]string) *Content {
+	if f.Arg != "" {
+		return f.Contents[args[f.Arg]]
+	}
+	return f.Contents[f.Path]
+}
+
+// Check checks the keys lines and numbers against the content c of the file p (file-view, section 3).
+// It gives each error.
+func (f *FileSpec) Check(p string, c *Content) []error {
+	var errs []error
+	switch {
+	case c.Kind == Markdown && f.First > 0:
+		errs = append(errs, fmt.Errorf("lines: %q is a Markdown file", p))
+	case f.Last > len(c.Lines):
+		errs = append(errs, fmt.Errorf("lines: last line %d is after the end of %q (%d lines)", f.Last, p, len(c.Lines)))
+	}
+	if c.Kind == Markdown && f.NumbersKey {
+		errs = append(errs, fmt.Errorf("numbers: %q is a Markdown file", p))
+	}
+	return errs
 }
 
 // Item is a menu item of the front matter. When is nil when the item has no when.
@@ -41,9 +81,16 @@ type Op uint8
 const (
 	Goto Op = iota + 1
 	Logoff
+	PageNext
+	PagePrev
+	PageFirst
+	PageLast
 )
 
-// Seg is one segment of a body: Text, Field, SetStyle, If, Include, ArtInsert or LineEnd.
+// IsPage reports whether o is a page action (file-view, section 3.3).
+func (o Op) IsPage() bool { return o >= PageNext }
+
+// Seg is one segment of a body: Text, Field, SetStyle, If, Include, ArtInsert, FileArea or LineEnd.
 // Blocks can start and end inside a line, so If holds segments, not lines.
 type Seg interface{ seg() }
 
@@ -92,6 +139,10 @@ type ArtInsert struct {
 	Art *Art
 }
 
+// FileArea is the file area {>file} of a file screen (file-view, section 3.1).
+// It is a segment of the body of the screen file, outside the blocks.
+type FileArea struct{}
+
 // LineEnd ends a source line. Block is true when the line has a block token:
 // such a line gives no row when it has only spaces after the evaluation (section 6.2).
 type LineEnd struct {
@@ -104,4 +155,5 @@ func (SetStyle) seg()  {}
 func (If) seg()        {}
 func (Include) seg()   {}
 func (ArtInsert) seg() {}
+func (FileArea) seg()  {}
 func (LineEnd) seg()   {}

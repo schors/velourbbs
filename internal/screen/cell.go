@@ -19,6 +19,7 @@ type Row []Cell
 // A row holds the cells of the screen area. Line gives the row at term.cols cells.
 // The terminal rows above and below the rows are the fill rows.
 type Page struct {
+	Num    int // the page number from 1: file.page on a file screen (screen-render, section 3.3)
 	Rows   []Row
 	Cols   int   // term.cols
 	Height int   // term.rows

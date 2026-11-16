@@ -7,7 +7,7 @@ import (
 )
 
 func TestLookupField(t *testing.T) {
-	fields := Fields{"w": {term: termCols}, "f": {arg: "file"}}
+	fields := Fields{"w": {kind: refTerm, term: termCols}, "f": {kind: refArg, name: "file"}}
 	tests := []struct {
 		path, want, err string
 	}{
@@ -32,6 +32,18 @@ func TestLookupField(t *testing.T) {
 		{path: "arg.File", err: `invalid argument name "File"`},
 		{path: "arg.2f", err: `invalid argument name "2f"`},
 		{path: "arg", err: `unknown field "arg"`},
+		{path: "file.title", want: "file.title"},
+		{path: "file.page", want: "file.page"},
+		{path: "file.pages", want: "file.pages"},
+		{path: "file.section", want: "file.section"},
+		{path: "file.minutes", want: "file.minutes"},
+		{path: "file.last", err: `field "file.last" is boolean, valid only in a condition`},
+		{path: "file.author", err: `unknown field "file.author"`},
+		{path: "file", err: `unknown field "file"`},
+		{path: "meta.author", want: "meta.author"},
+		{path: "meta.x_2", want: "meta.x_2"},
+		{path: "meta.Author", err: `invalid meta key "Author"`},
+		{path: "meta", err: `unknown field "meta"`},
 	}
 	for _, tt := range tests {
 		r, err := LookupField(tt.path, fields)
@@ -65,6 +77,8 @@ func TestNewAlias(t *testing.T) {
 		{name: "file", path: "term.cols", err: `alias "file" is a reserved word`},
 		{name: "meta", path: "term.cols", err: `alias "meta" is a reserved word`},
 		{name: "f", path: "arg.file"},
+		{name: "p", path: "file.page"},
+		{name: "a", path: "meta.author"},
 		{name: "f", path: "arg.File", err: `alias "f": invalid argument name "File"`},
 		{name: "w", path: "x", err: `alias "w": "x" is not a registry path`},
 		{name: "w", path: "term.colours", err: `alias "w": unknown field "term.colours"`},
@@ -89,6 +103,10 @@ func TestEnvText(t *testing.T) {
 	env := &Env{
 		Term: Term{Type: "xterm\x1b[31m", Cols: 132, Rows: -1, Charset: "utf-8", Colors: 256},
 		Args: map[string]string{"file": "gold\x07.md"},
+		File: &FileValues{
+			Content: &Content{Title: "Gold\x1b", Meta: map[string]string{"author": "Ann"}},
+			Page:    2, Pages: 3, Minutes: 4, Section: "Intro",
+		},
 	}
 	tests := []struct {
 		path, want string
@@ -100,6 +118,13 @@ func TestEnvText(t *testing.T) {
 		{"term.colors", "256"},
 		{"arg.file", "gold.md"},
 		{"arg.other", ""},
+		{"file.title", "Gold"},
+		{"file.page", "2"},
+		{"file.pages", "3"},
+		{"file.section", "Intro"},
+		{"file.minutes", "4"},
+		{"meta.author", "Ann"},
+		{"meta.date", ""},
 	}
 	for _, tt := range tests {
 		r, err := LookupField(tt.path, nil)
@@ -183,5 +208,27 @@ func TestTermCheck(t *testing.T) {
 		if got := fmt.Sprint(err); err == nil && tt.err != "" || err != nil && got != tt.err {
 			t.Errorf("%+v: error %v, want %q", term, err, tt.err)
 		}
+	}
+}
+
+func TestFileLast(t *testing.T) {
+	c, err := ParseCond("not file.last and file.page > 1", nil, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		page, pages int
+		want        bool
+	}{{1, 3, false}, {2, 3, true}, {3, 3, false}, {1, 1, false}} {
+		env := &Env{File: &FileValues{Content: &Content{}, Page: tt.page, Pages: tt.pages}}
+		if got := c.Eval(env); got != tt.want {
+			t.Errorf("page %d of %d: got %v, want %v", tt.page, tt.pages, got, tt.want)
+		}
+	}
+	if got := c.FileField(); got != "file.last" {
+		t.Errorf("FileField: got %q", got)
+	}
+	if c, _ := ParseCond("term.cols > 1 or arg.x == \"\"", nil, false); c.FileField() != "" {
+		t.Errorf("FileField of no file field: %q", c.FileField())
 	}
 }

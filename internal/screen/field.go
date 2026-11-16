@@ -31,7 +31,7 @@ func (t Type) String() string {
 	return "type " + strconv.Itoa(int(t))
 }
 
-// termField is a term.* field of the registry. The zero value is item.<KEY> or arg.<name>.
+// termField is a term.* field of the registry.
 type termField uint8
 
 const (
@@ -42,7 +42,7 @@ const (
 	termColors
 )
 
-// termFields is the registry of section 4.1 without item.<KEY>.
+// termFields is the term.* fields of the registry of section 4.1.
 var termFields = [...]struct {
 	path string
 	typ  Type
@@ -54,39 +54,95 @@ var termFields = [...]struct {
 	termColors:  {"term.colors", TypeInt},
 }
 
-// Ref is a resolved field path: a term.* field, item.<KEY> or arg.<name>.
+// fileField is a file.* field of a file screen (file-view, section 3.4).
+type fileField uint8
+
+const (
+	fileTitle fileField = iota + 1
+	filePage
+	filePages
+	fileLast
+	fileSection
+	fileMinutes
+)
+
+// fileFields is the file.* fields of file-view, section 3.4.
+var fileFields = [...]struct {
+	path string
+	typ  Type
+}{
+	fileTitle:   {"file.title", TypeString},
+	filePage:    {"file.page", TypeInt},
+	filePages:   {"file.pages", TypeInt},
+	fileLast:    {"file.last", TypeBool},
+	fileSection: {"file.section", TypeString},
+	fileMinutes: {"file.minutes", TypeInt},
+}
+
+// refKind is the kind of a field.
+type refKind uint8
+
+const (
+	refTerm refKind = iota + 1
+	refItem
+	refArg
+	refFile
+	refMeta
+)
+
+// Ref is a resolved field path: a term.* field, item.<KEY>, arg.<name>,
+// a file.* field or meta.<key>.
 type Ref struct {
+	kind refKind
 	term termField
-	key  string // the <KEY> of item.<KEY>, in upper case
-	arg  string // the <name> of arg.<name>
+	file fileField
+	name string // the <KEY> of item.<KEY> in upper case, the <name> of arg.<name>, the <key> of meta.<key>
 }
 
 // Type gives the type of the field.
 func (r Ref) Type() Type {
-	switch {
-	case r.isItem():
+	switch r.kind {
+	case refTerm:
+		return termFields[r.term].typ
+	case refItem:
 		return TypeBool
-	case r.arg != "":
+	case refFile:
+		return fileFields[r.file].typ
+	case refArg, refMeta:
 		return TypeString
 	}
-	return termFields[r.term].typ
+	return 0
 }
 
 // String gives the registry path.
 func (r Ref) String() string {
-	switch {
-	case r.isItem():
-		return "item." + r.key
-	case r.arg != "":
-		return "arg." + r.arg
+	switch r.kind {
+	case refTerm:
+		return termFields[r.term].path
+	case refItem:
+		return "item." + r.name
+	case refArg:
+		return "arg." + r.name
+	case refFile:
+		return fileFields[r.file].path
+	case refMeta:
+		return "meta." + r.name
 	}
-	return termFields[r.term].path
+	return ""
 }
 
 // Arg gives the <name> of arg.<name>, else "".
-func (r Ref) Arg() string { return r.arg }
+func (r Ref) Arg() string {
+	if r.kind == refArg {
+		return r.name
+	}
+	return ""
+}
 
-func (r Ref) isItem() bool { return r.term == 0 && r.arg == "" }
+// IsFile reports whether r is a field of a file screen: file.* or meta.<key> (file-view, section 3.4).
+func (r Ref) IsFile() bool { return r.kind == refFile || r.kind == refMeta }
+
+func (r Ref) isItem() bool { return r.kind == refItem }
 
 // Fields maps an alias to its field (section 4.2).
 type Fields map[string]Ref
@@ -115,13 +171,19 @@ func NewAlias(name, path string) (Ref, error) {
 	return r, nil
 }
 
-// LookupField resolves the path of a field token. item.<KEY> is an error.
+// LookupField resolves the path of a field token. item.<KEY> and file.last are errors:
+// a field token cannot show a boolean.
 func LookupField(path string, fields Fields) (Ref, error) {
 	r, err := resolve(path, fields)
-	if err == nil && r.isItem() {
+	switch {
+	case err != nil:
+		return Ref{}, err
+	case r.isItem():
 		return Ref{}, fmt.Errorf("field %q is valid only in {#if}", path)
+	case r.Type() == TypeBool:
+		return Ref{}, fmt.Errorf("field %q is boolean, valid only in a condition", path)
 	}
-	return r, err
+	return r, nil
 }
 
 // IsPath reports whether s matches the path syntax of section 4.1:
@@ -141,17 +203,30 @@ func resolve(path string, fields Fields) (Ref, error) {
 		if r, ok := fields[path]; ok {
 			return r, nil
 		}
-	} else if head == "item" {
-		return Ref{key: key.Upper(tail)}, nil
-	} else if head == "arg" {
-		if !IsIdent(tail) {
-			return Ref{}, fmt.Errorf("invalid argument name %q", tail)
+	} else {
+		switch head {
+		case "item":
+			return Ref{kind: refItem, name: key.Upper(tail)}, nil
+		case "arg":
+			if !IsIdent(tail) {
+				return Ref{}, fmt.Errorf("invalid argument name %q", tail)
+			}
+			return Ref{kind: refArg, name: tail}, nil
+		case "meta":
+			if !IsIdent(tail) {
+				return Ref{}, fmt.Errorf("invalid meta key %q", tail)
+			}
+			return Ref{kind: refMeta, name: tail}, nil
 		}
-		return Ref{arg: tail}, nil
 	}
 	for i, f := range termFields {
 		if i > 0 && f.path == path {
-			return Ref{term: termField(i)}, nil
+			return Ref{kind: refTerm, term: termField(i)}, nil
+		}
+	}
+	for i, f := range fileFields {
+		if i > 0 && f.path == path {
+			return Ref{kind: refFile, file: fileField(i)}, nil
 		}
 	}
 	return Ref{}, fmt.Errorf("unknown field %q", path)
@@ -230,10 +305,28 @@ type Env struct {
 	Term  Term
 	Items map[string]bool   // the keys of the enabled items
 	Args  map[string]string // the arguments of the screen (section 8.5)
+	File  *FileValues       // the values of a file screen, else nil
+}
+
+// FileValues holds the values of the fields of a file screen for one page (file-view, section 3.4).
+type FileValues struct {
+	Content              *Content
+	Page, Pages, Minutes int
+	Section              string
 }
 
 // value gives the value of r: a bool, an int or a string.
 func (e *Env) value(r Ref) any {
+	switch r.kind {
+	case refItem:
+		return e.Items[r.name]
+	case refArg:
+		return e.Args[r.name]
+	case refMeta:
+		return e.File.Content.Meta[r.name]
+	case refFile:
+		return e.File.value(r.file)
+	}
 	switch r.term {
 	case termType:
 		return e.Term.Type
@@ -243,13 +336,25 @@ func (e *Env) value(r Ref) any {
 		return e.Term.Rows
 	case termCharset:
 		return e.Term.Charset
-	case termColors:
-		return e.Term.Colors
 	}
-	if r.arg != "" {
-		return e.Args[r.arg]
+	return e.Term.Colors
+}
+
+// value gives the value of the file.* field f.
+func (v *FileValues) value(f fileField) any {
+	switch f {
+	case fileTitle:
+		return v.Content.Title
+	case filePage:
+		return v.Page
+	case filePages:
+		return v.Pages
+	case fileLast:
+		return v.Page == v.Pages
+	case fileSection:
+		return v.Section
 	}
-	return e.Items[r.key]
+	return v.Minutes
 }
 
 // Text gives the graphemes of a field token: an integer in decimal,

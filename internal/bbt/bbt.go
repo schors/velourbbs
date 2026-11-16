@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/schors/velourbbs/internal/art"
+	"github.com/schors/velourbbs/internal/content"
 	"github.com/schors/velourbbs/internal/screen"
 )
 
@@ -26,7 +27,7 @@ func Load(fsys fs.FS, theme map[string]screen.Style, layout screen.Layout, field
 	l := &loader{
 		fsys: fsys, theme: theme, layout: layout, fields: fields,
 		diags: map[string]*screen.FileDiags{}, files: map[string]*file{}, arts: map[string]*screen.Art{},
-		missing: map[string]bool{}, reported: map[screen.Pos]bool{},
+		missing: map[string]bool{}, reported: map[screen.Pos]bool{}, contents: map[string]loaded{},
 	}
 	entries, err := fs.ReadDir(fsys, "screens")
 	if err != nil {
@@ -50,6 +51,7 @@ func Load(fsys fs.FS, theme map[string]screen.Style, layout screen.Layout, field
 	for _, u := range units {
 		l.screen(u)
 	}
+	l.gotoFiles(units)
 	l.checkItems(units)
 	for _, e := range entries {
 		name := path.Join("screens", e.Name())
@@ -102,6 +104,14 @@ type loader struct {
 	// reported holds the include and art insert positions with an error:
 	// the screens that use a fragment report its errors once.
 	reported map[screen.Pos]bool
+	contents map[string]loaded // the content files by path
+}
+
+// loaded is the result of the load of a content file: the content, else nil, and the error
+// of the whole file.
+type loaded struct {
+	c   *screen.Content
+	err error
 }
 
 // fd gives the diagnostics of the file name.
@@ -162,4 +172,78 @@ func (l *loader) errorOnce(pos screen.Pos, format string, args ...any) {
 
 func errorAt(d *screen.FileDiags, pos screen.Pos, format string, args ...any) {
 	d.Errorf(pos.Line, pos.Col, "%s", fmt.Sprintf(format, args...))
+}
+
+// content loads the content file p once (file-view, section 2). Its errors in the file
+// appear once. The error is an error of the whole file; the caller reports it.
+// The content is nil after an error.
+func (l *loader) content(p string) (*screen.Content, error) {
+	if r, ok := l.contents[p]; ok {
+		return r.c, r.err
+	}
+	c, ds, err := content.Load(l.fsys, p)
+	for _, d := range ds {
+		l.fd(d.File).Diags = append(l.fd(d.File).Diags, d)
+	}
+	l.contents[p] = loaded{c, err}
+	return c, err
+}
+
+// literalFile loads the content file of the key file of the screen u (file-view, section 7).
+func (l *loader) literalFile(u *unit, f *screen.FileSpec) {
+	pos := screen.Pos{File: u.f.name, Line: 2, Col: 1}
+	c, err := l.content(f.Path)
+	if err != nil {
+		l.errorf(u, pos, false, "file: %v", err)
+		return
+	}
+	if c == nil { // the errors are in the content file
+		return
+	}
+	errs := f.Check(f.Path, c)
+	for _, err := range errs {
+		l.errorf(u, pos, false, "%v", err)
+	}
+	if len(errs) == 0 {
+		f.Contents[f.Path] = c
+	}
+}
+
+// gotoFiles loads the content file of each goto to a file screen with {arg.<name>}.
+// An error is an error of the item with the goto (file-view, section 7).
+// The menu checks report a goto to a screen that does not exist and a missing argument.
+func (l *loader) gotoFiles(units []*unit) {
+	byName := map[string]*unit{}
+	for _, u := range units {
+		byName[u.s.Name] = u
+	}
+	for _, u := range units {
+		if !u.done {
+			continue
+		}
+		for _, it := range u.s.Items {
+			t := byName[it.Do.Screen]
+			if it.Do.Op != screen.Goto || t == nil || !t.done || t.s.FileScreen == nil || t.s.FileScreen.Arg == "" {
+				continue
+			}
+			f := t.s.FileScreen
+			p, ok := it.Do.Args[f.Arg]
+			if !ok {
+				continue
+			}
+			c, err := l.content(p)
+			var errs []error
+			if err != nil {
+				errs = []error{err}
+			} else if c != nil {
+				errs = f.Check(p, c)
+			}
+			for _, err := range errs {
+				l.fd(u.f.name).Errorf(2, 1, "item %q: args: %s: %v", it.Key, f.Arg, err)
+			}
+			if c != nil && len(errs) == 0 {
+				f.Contents[p] = c
+			}
+		}
+	}
 }

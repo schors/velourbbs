@@ -3,6 +3,7 @@
 package content
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"path"
@@ -49,15 +50,22 @@ func KindOf(p string) screen.ContentKind {
 	return screen.Source
 }
 
-// Load loads the content file p, a valid <path>, from fsys.
-// The error is an error of the whole file: it does not exist, it is not a regular file,
-// it is over the size limit, or the read failed. The caller reports it (section 7).
+// Load loads the content file p from fsys.
+// The error is an error of the whole file: an invalid path, the file does not exist,
+// it is not a regular file, it is over the size limit, or the read failed.
+// The caller reports it (section 7).
 // The diagnostics are the errors in the file, with the file name content/<p>.
 // The content is nil after an error.
 func Load(fsys fs.FS, p string) (*screen.Content, screen.Diags, error) {
-	data, err := screen.ReadFile(fsys, Dir+"/"+p)
-	if err != nil {
+	if err := CheckPath(p); err != nil {
 		return nil, nil, err
+	}
+	data, err := screen.ReadFile(fsys, Dir+"/"+p)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return nil, nil, fmt.Errorf("content file %q does not exist", p)
+	case err != nil:
+		return nil, nil, fmt.Errorf("content file %q: %w", p, err)
 	}
 	d := &screen.FileDiags{File: Dir + "/" + p}
 	lines, _ := screen.SplitLines(d, data)

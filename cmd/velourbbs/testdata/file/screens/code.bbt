@@ -1,0 +1,17 @@
++++
+file = "xfer/crc16.c"
+lines = [3, 22]
+numbers = true
+[[item]]
+key = "P"
+do = "page prev"
+[[item]]
+key = "N"
+do = "page next"
+[[item]]
+key = "Q"
+do = "goto main"
++++
+{file.title} {file.page}/{file.pages}
+{>file}
+[P]rev [N]ext [Q]uit

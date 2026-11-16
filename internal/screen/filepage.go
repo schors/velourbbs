@@ -153,3 +153,23 @@ func PageRows(l FileLayout, p FilePage, h int) []Row {
 	}
 	return append(rows, make([]Row, h-len(rows))...)
 }
+
+// ContentLayout gives the layout of the content c of the file screen f in rows of w cells:
+// MarkdownLayout or TextLayout by the kind of c (file-view, sections 5 and 6).
+func ContentLayout(f *FileSpec, c *Content, w int, theme map[string]Style) FileLayout {
+	if c.Kind == Markdown {
+		return MarkdownLayout(c, w, theme)
+	}
+	return TextLayout(c, f.First, f.Last, f.Numbers, w, theme)
+}
+
+// FirstSection gives file.section of page 1 of l: page 1 starts at the first row of l
+// (file-view, section 3.4).
+func FirstSection(l FileLayout) string {
+	next, stop := iter.Pull(l(0))
+	defer stop()
+	if row, ok := next(); ok && row.NewSection {
+		return row.Section
+	}
+	return ""
+}
