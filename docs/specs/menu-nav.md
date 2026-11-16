@@ -103,6 +103,7 @@ of [bbt-format](bbt-format.md), section 8.4. It also finds these errors:
 - a `goto` to a screen without items, for example `goodbye`;
 - a screen without items, except `goodbye`;
 - items in `goodbye`;
+- a file screen as `goodbye` ([file-view](file-view.md), section 3);
 - a start screen that does not exist or has no items;
 - a `goto` whose `args` differ from the arguments of the target screen
   ([bbt-format](bbt-format.md), section 8.5);

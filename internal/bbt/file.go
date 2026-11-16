@@ -16,10 +16,21 @@ type file struct {
 	body  []node
 }
 
-// node is a body part after the file pass: screen.Text, screen.SetStyle, screen.Field,
-// lineEnd, *ifNode, include or artInsert. The file pass resolves the fields and
+// node is a body part after the file pass: screen.Text, screen.SetStyle, field,
+// lineEnd, *ifNode, include, artInsert or fileArea. The file pass resolves the fields and
 // the conditions with the aliases of screens/screens.toml. The screen pass gives screen.Seg.
 type node any
+
+// field is a field token and its position.
+type field struct {
+	pos screen.Pos
+	f   screen.Field
+}
+
+// fileArea is the file area {>file} of a file screen (file-view, section 3.1).
+type fileArea struct {
+	pos screen.Pos
+}
 
 type lineEnd struct {
 	row   int
@@ -72,7 +83,7 @@ func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, 
 		}
 		first = end + 1
 	}
-	s := scanner{d: d, theme: theme, fields: fields}
+	s := scanner{d: d, theme: theme, fields: fields, fragment: fragment}
 	for i := first; i < len(lines); i++ {
 		s.line(i+1, lines[i])
 	}
@@ -83,11 +94,13 @@ func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, 
 
 // scanner reads the body lines into a tree of nodes and checks the block balance.
 type scanner struct {
-	d      *screen.FileDiags
-	theme  map[string]screen.Style // the base theme: only its names
-	fields screen.Fields
-	root   []node
-	open   []*ifNode
+	d        *screen.FileDiags
+	theme    map[string]screen.Style // the base theme: only its names
+	fields   screen.Fields
+	fragment bool
+	root     []node
+	open     []*ifNode
+	area     bool // the file has a {>file}
 }
 
 func (s *scanner) add(n node) {
@@ -291,12 +304,15 @@ func (s *scanner) field(pos screen.Pos, c string) {
 	if lead+trail > 0 {
 		f.Width = utf8.RuneCountInString(c) + 2
 	}
-	s.add(f)
+	s.add(field{pos, f})
 }
 
 // insert gives the node of an include or an art insert. c is the token content after "{".
 func (s *scanner) insert(pos screen.Pos, c string) node {
 	name := c[1:]
+	if name == "file" {
+		return s.fileArea(pos)
+	}
 	if base, ok := strings.CutSuffix(name, ".ans"); ok && screen.IsName(base) {
 		return artInsert{pos: pos, file: "screens/" + name}
 	}
@@ -307,6 +323,23 @@ func (s *scanner) insert(pos screen.Pos, c string) node {
 		s.d.Errorf(pos.Line, pos.Col, "include %q: a fragment name starts with \"_\"", name)
 	} else {
 		s.d.Errorf(pos.Line, pos.Col, "invalid include %q", "{"+c+"}")
+	}
+	return nil
+}
+
+// fileArea gives the node of {>file} (file-view, section 3.1). The screen pass checks
+// that the screen is a file screen.
+func (s *scanner) fileArea(pos screen.Pos) node {
+	switch {
+	case s.fragment:
+		s.d.Errorf(pos.Line, pos.Col, "{>file} in a fragment")
+	case len(s.open) > 0:
+		s.d.Errorf(pos.Line, pos.Col, "{>file} in a block")
+	case s.area:
+		s.d.Errorf(pos.Line, pos.Col, "second {>file}")
+	default:
+		s.area = true
+		return fileArea{pos}
 	}
 	return nil
 }

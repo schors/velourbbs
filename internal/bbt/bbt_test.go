@@ -109,6 +109,8 @@ func show(segs []screen.Seg) string {
 				refs = append(refs, f.Ref.String())
 			}
 			out = append(out, fmt.Sprintf("art%d%v", s.Art.Width, refs))
+		case screen.FileArea:
+			out = append(out, "{>file}")
 		case screen.LineEnd:
 			if s.Block {
 				out = append(out, "/b")
@@ -752,7 +754,7 @@ func FuzzLoad(f *testing.F) {
 		checkSegs(t, screens["s"].Body)
 		env, _ := menu.Enabled(screens["s"], screen.Term{
 			Type: "ansi", Cols: screen.MinCols, Rows: screen.MinRows, Charset: "utf-8", Colors: screen.Colors16,
-		}, nil)
+		}, nil, nil)
 		for range screen.Render(screens["s"], env, theme, "more") {
 		}
 	})

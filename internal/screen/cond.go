@@ -76,7 +76,7 @@ func (c *Cond) CheckItems(keys map[string]bool) []error {
 	var errs []error
 	for _, and := range c.or {
 		for _, t := range and {
-			if t.ref.isItem() && !keys[t.ref.key] {
+			if t.ref.isItem() && !keys[t.ref.name] {
 				errs = append(errs, fmt.Errorf("unknown field %q", t.ref.String()))
 			}
 		}
@@ -89,12 +89,24 @@ func (c *Cond) Args() []string {
 	var names []string
 	for _, and := range c.or {
 		for _, t := range and {
-			if t.ref.arg != "" {
-				names = append(names, t.ref.arg)
+			if t.ref.kind == refArg {
+				names = append(names, t.ref.name)
 			}
 		}
 	}
 	return names
+}
+
+// FileField gives the path of the first field of a file screen in c, else "" (file-view, section 3.4).
+func (c *Cond) FileField() string {
+	for _, and := range c.or {
+		for _, t := range and {
+			if t.ref.IsFile() {
+				return t.ref.String()
+			}
+		}
+	}
+	return ""
 }
 
 // Eval evaluates c with the values of env.

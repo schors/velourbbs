@@ -1,7 +1,6 @@
 package content
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"maps"
@@ -62,13 +61,12 @@ func TestLoadFileErrors(t *testing.T) {
 		"content/max.txt":   {Data: []byte(strings.Repeat("a", screen.MaxFileBytes))},
 		"content/over.txt":  {Data: []byte(strings.Repeat("a", screen.MaxFileBytes+1))},
 	}
-	if _, _, err := Load(fsys, "none.md"); !errors.Is(err, fs.ErrNotExist) {
-		t.Errorf("missing: %v", err)
-	}
 	for p, want := range map[string]string{
-		"dir":      "not a regular file",
-		"fifo.txt": "not a regular file",
-		"over.txt": "file is over 1048576 bytes",
+		"none.md":  `content file "none.md" does not exist`,
+		"dir":      `content file "dir": not a regular file`,
+		"fifo.txt": `content file "fifo.txt": not a regular file`,
+		"over.txt": `content file "over.txt": file is over 1048576 bytes`,
+		"../a.txt": `invalid content path "../a.txt"`,
 	} {
 		if _, _, err := Load(fsys, p); err == nil || err.Error() != want {
 			t.Errorf("%s: %v, want %q", p, err, want)

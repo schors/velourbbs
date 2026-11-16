@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/schors/velourbbs/internal/content"
 	"github.com/schors/velourbbs/internal/key"
 	"github.com/schors/velourbbs/internal/screen"
 	"github.com/schors/velourbbs/internal/tomlcheck"
@@ -16,15 +17,19 @@ import (
 type front struct {
 	layout screen.LayoutKeys
 	items  []screen.Item
+	file   *screen.FileSpec // the keys of a file screen, else nil (file-view, section 3)
 }
 
 // frontDoc is the plain decode of a front matter. A nil pointer is a key that is not set.
 type frontDoc struct {
-	Width  *[]int64 `toml:"width"`
-	Align  *string  `toml:"align"`
-	VAlign *string  `toml:"valign"`
-	Fill   *string  `toml:"fill"`
-	Item   []struct {
+	Width   *[]int64 `toml:"width"`
+	Align   *string  `toml:"align"`
+	VAlign  *string  `toml:"valign"`
+	Fill    *string  `toml:"fill"`
+	File    *string  `toml:"file"`
+	Lines   *[]int64 `toml:"lines"`
+	Numbers *bool    `toml:"numbers"`
+	Item    []struct {
 		Key  *string            `toml:"key"`
 		Do   *string            `toml:"do"`
 		When *string            `toml:"when"`
@@ -53,6 +58,7 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 	}
 	fr := &front{layout: screen.ParseLayoutKeys(doc.Width, doc.Align, doc.VAlign, doc.Fill,
 		func(key string, err error) { errorf("%s: %v", key, err) })}
+	fr.file = parseFileKeys(&doc, errorf)
 	seen := map[string]bool{}
 	for i, it := range doc.Item {
 		// The label of menu-nav, section 6: the valid key, else the number.
@@ -74,6 +80,8 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 			errorf("%s: do is missing", label)
 		} else if a, err := parseAction(*it.Do); err != nil {
 			errorf("%s: do: %v", label, err)
+		} else if a.Op.IsPage() && doc.File == nil {
+			errorf("%s: do: %q is valid only in a file screen", label, *it.Do)
 		} else {
 			item.Do = a
 		}
@@ -92,6 +100,8 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 			c, err := screen.ParseCond(*it.When, fields, false)
 			if err != nil {
 				errorf("%s: when: %v", label, err)
+			} else if f := c.FileField(); f != "" && doc.File == nil {
+				errorf("%s: when: field %q is valid only in a file screen", label, f)
 			}
 			item.When = c
 		}
@@ -101,6 +111,47 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 		return nil
 	}
 	return fr
+}
+
+// parseFileKeys parses the keys file, lines and numbers (file-view, section 3).
+// It gives nil without file.
+func parseFileKeys(doc *frontDoc, errorf func(format string, args ...any)) *screen.FileSpec {
+	if doc.File == nil {
+		if doc.Lines != nil {
+			errorf("lines: the screen has no file")
+		}
+		if doc.Numbers != nil {
+			errorf("numbers: the screen has no file")
+		}
+		return nil
+	}
+	f := &screen.FileSpec{Contents: map[string]*screen.Content{}}
+	v := *doc.File
+	if token, ok := strings.CutPrefix(v, "{"); ok {
+		name, ok := strings.CutPrefix(strings.TrimSuffix(token, "}"), "arg.")
+		if !ok || !strings.HasSuffix(token, "}") || !screen.IsIdent(name) {
+			errorf("file: invalid token %q, want a content path or {arg.<name>}", v)
+		}
+		f.Arg = name
+	} else if err := content.CheckPath(v); err != nil {
+		errorf("file: %v", err)
+	} else {
+		f.Path = v
+	}
+	if p := doc.Lines; p != nil {
+		switch l := *p; {
+		case len(l) != 2:
+			errorf("lines: must be an array of 2 integers")
+		case l[0] < 1 || l[0] > l[1]:
+			errorf("lines: [%d, %d] is not in 1 <= first <= last", l[0], l[1])
+		default:
+			f.First, f.Last = int(l[0]), int(l[1])
+		}
+	}
+	if doc.Numbers != nil {
+		f.Numbers, f.NumbersKey = *doc.Numbers, true
+	}
+	return f
 }
 
 // parseAction parses the do of an item (section 8.3).
@@ -120,6 +171,16 @@ func parseAction(do string) (screen.Action, error) {
 			return screen.Action{}, errors.New("logoff takes no argument")
 		}
 		return screen.Action{Op: screen.Logoff}, nil
+	case "page":
+		if op, ok := pageOps[arg]; ok && hasArg {
+			return screen.Action{Op: op}, nil
+		}
+		return screen.Action{}, fmt.Errorf("invalid page action %q", do)
 	}
 	return screen.Action{}, fmt.Errorf("unknown action %q", word)
+}
+
+// pageOps is the page actions of file-view, section 3.3, by their word after "page".
+var pageOps = map[string]screen.Op{
+	"next": screen.PageNext, "prev": screen.PagePrev, "first": screen.PageFirst, "last": screen.PageLast,
 }

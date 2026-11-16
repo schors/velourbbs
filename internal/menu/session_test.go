@@ -326,3 +326,62 @@ func TestRunSessionTheme(t *testing.T) {
 		}
 	}
 }
+
+// A page action shows a page of the file screen and waits for keys again (section 5.1).
+// The items take the fields of the page. Each other action leaves the screen.
+func TestRunFile(t *testing.T) {
+	fsys := fstest.MapFS{
+		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"R\"\ndo = \"goto read\"\n" +
+			"args = { file = \"a.txt\" }\n+++\nMain\n")},
+		"screens/read.bbt": {Data: []byte(`+++
+file = "{arg.file}"
+[[item]]
+key = "N"
+do = "page next"
+when = "not file.last"
+[[item]]
+key = "P"
+do = "page prev"
+[[item]]
+key = "F"
+do = "page first"
+[[item]]
+key = "L"
+do = "page last"
+[[item]]
+key = "Q"
+do = "goto main"
++++
+{file.page}/{file.pages}{#if item.N} N{/if}
+{>file}
+`)},
+		"content/a.txt": {Data: []byte(lines(20))},
+	}
+	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
+	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
+	ds = Check(config.Config{Start: "main"}, ss, ds)
+	if len(ds) > 0 {
+		t.Fatalf("load: %v", ds)
+	}
+	// 10 rows: H is 9, so 20 lines give 3 pages.
+	ft := &fakeTerm{cols: []int{80}, keys: []string{"R", "N", "N", "N", "P", "P", "P", "L", "F", "Q"}}
+	err := Run(eventsTerm{ft}, config.Config{Start: "main"}, ss, "main", nil)
+	want := []string{
+		"screen main", "page: Main", "key R", "screen read", "page: 1/3 N",
+		"key N", "page: 2/3 N", "key N", "page: 3/3", "key N ignored",
+		"key P", "page: 2/3 N", "key P", "page: 1/3 N", "key P", "page: 1/3 N",
+		"key L", "page: 3/3", "key F", "page: 1/3 N", "key Q", "screen main", "page: Main",
+	}
+	if !errors.Is(err, io.EOF) || !slices.Equal(ft.log, want) {
+		t.Errorf("err %v, log:\n%s\nwant:\n%s", err, strings.Join(ft.log, "\n"), strings.Join(want, "\n"))
+	}
+
+	// Pages gives each file page.
+	var got []string
+	for p := range Pages(config.Config{}, ss["read"], ft.Term(), map[string]string{"file": "a.txt"}) {
+		got = append(got, fmt.Sprintf("%d:%d", p.Num, len(p.Rows)))
+	}
+	if want := []string{"1:10", "2:10", "3:10"}; !slices.Equal(got, want) {
+		t.Errorf("Pages %q, want %q", got, want)
+	}
+}

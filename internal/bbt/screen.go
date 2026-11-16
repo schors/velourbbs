@@ -26,6 +26,7 @@ type unit struct {
 	at    screen.Pos
 	over  bool
 	args  map[string]bool // the argument names of the screen (section 8.5)
+	area  bool            // the body has the file area
 }
 
 // fragment is a fragment body, resolved for one screen, and its lines after includes.
@@ -71,10 +72,20 @@ func (l *loader) screen(u *unit) {
 	u.resolving = map[*file]bool{}
 	u.args = map[string]bool{}
 	u.s.Layout = u.fr.layout.Over(l.layout)
+	u.s.FileScreen = u.fr.file
 	u.s.Body = l.resolve(u, u.f.body, true)
 	if u.over { // the body of a screen over the limit is not kept
 		u.s.Body, u.frags = nil, nil
 		return
+	}
+	if f := u.s.FileScreen; f != nil {
+		if !u.area {
+			l.errorf(u, screen.Pos{File: u.f.name, Line: 2, Col: 1}, false, "file: the body has no {>file}")
+		}
+		u.addArgs(f.Arg)
+		if f.Path != "" {
+			l.literalFile(u, f)
+		}
 	}
 	u.s.Items = u.fr.items
 	for _, it := range u.s.Items {
@@ -118,9 +129,19 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 			segs = append(segs, n)
 		case screen.SetStyle:
 			segs = append(segs, n)
-		case screen.Field:
-			u.addArgs(n.Ref.Arg())
-			segs = append(segs, n)
+		case field:
+			l.checkFileField(u, n.pos, n.f.Ref.String(), n.f.Ref.IsFile())
+			u.addArgs(n.f.Ref.Arg())
+			segs = append(segs, n.f)
+		case fileArea:
+			u.at = n.pos
+			l.add(u, 1)
+			if u.s.FileScreen == nil {
+				l.errorf(u, n.pos, false, "{>file} in a screen without file")
+				continue
+			}
+			u.area = true
+			segs = append(segs, screen.FileArea{})
 		case lineEnd:
 			if top {
 				u.at = screen.Pos{File: u.f.name, Line: n.row, Col: 1}
@@ -131,6 +152,8 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 			if n.cond != nil {
 				u.conds = append(u.conds, condAt{n.cond, n.pos})
 				u.addArgs(n.cond.Args()...)
+				f := n.cond.FileField()
+				l.checkFileField(u, n.pos, f, f != "")
 			}
 			then, els := l.resolve(u, n.then, top), l.resolve(u, n.els, top)
 			if n.cond != nil {
@@ -157,12 +180,21 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 				l.errorf(u, n.pos, true, "art %q is %d cells wide, max width is %d", path.Base(n.file), a.Width, u.s.Width.Max)
 			}
 			for _, f := range a.Fields {
+				l.checkFileField(u, screen.Pos{File: n.file, Line: f.Row, Col: f.Col}, f.Ref.String(), f.Ref.IsFile())
 				u.addArgs(f.Ref.Arg())
 			}
 			segs = append(segs, screen.ArtInsert{Art: a})
 		}
 	}
 	return segs
+}
+
+// checkFileField reports the field path at pos when isFile and the screen is not a file screen
+// (file-view, section 3.4).
+func (l *loader) checkFileField(u *unit, pos screen.Pos, path string, isFile bool) {
+	if isFile && u.s.FileScreen == nil {
+		l.errorf(u, pos, false, "field %q is valid only in a file screen", path)
+	}
 }
 
 // include resolves the fragment of n once for the screen. The include counts
@@ -208,6 +240,9 @@ func (l *loader) checkItems(units []*unit) {
 		}
 		if u.s.Name == "goodbye" && len(u.s.Items) > 0 {
 			l.fd(u.f.name).Errorf(2, 1, "the goodbye screen cannot have items")
+		}
+		if u.s.Name == "goodbye" && u.s.FileScreen != nil {
+			l.fd(u.f.name).Errorf(2, 1, "file: the goodbye screen cannot be a file screen")
 		}
 		keys := map[string]bool{}
 		for _, it := range u.s.Items {

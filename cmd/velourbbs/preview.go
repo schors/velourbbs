@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"maps"
 	"strconv"
 	"strings"
 	"unicode"
 
 	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/content"
 	"github.com/schors/velourbbs/internal/key"
 	"github.com/schors/velourbbs/internal/menu"
 	"github.com/schors/velourbbs/internal/screen"
@@ -81,15 +83,49 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		}
 		return exitUsage
 	}
+	if f := s.FileScreen; f != nil && f.Arg != "" && f.Contents[argVals[f.Arg]] == nil {
+		ns, status := argFile(fsys, s, argVals[f.Arg], stderr)
+		if ns == nil {
+			return status
+		}
+		screens = maps.Clone(screens)
+		s, screens[name] = ns, ns
+	}
 	if session {
 		return runKeys(&keysTerm{term: term, keys: keys, w: stdout}, cfg, screens, name, argVals, stderr)
 	}
-	env, _ := menu.Enabled(s, term, argVals)
-	if err := screen.WriteDump(stdout, screen.Render(s, env, cfg.SessionTheme(term.Colors), cfg.More)); err != nil {
+	if err := screen.WriteDump(stdout, menu.Pages(cfg, s, term, argVals)); err != nil {
 		_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		return exitError
 	}
 	return 0
+}
+
+// argFile loads the content file p of the argument of the file screen s with the checks
+// of file-view, section 7. It gives a copy of s that can show p, or nil and the exit status
+// after an error. The model of the load stays immutable.
+func argFile(fsys fs.FS, s *screen.Screen, p string, stderr io.Writer) (*screen.Screen, int) {
+	f := s.FileScreen
+	c, ds, err := content.Load(fsys, p)
+	writeDiags(stderr, ds)
+	var errs []error
+	if err != nil {
+		errs = []error{err}
+	} else if c != nil {
+		errs = f.Check(p, c)
+	}
+	for _, err := range errs {
+		_, _ = fmt.Fprintf(stderr, "velourbbs preview: arg.%s: %v\n", f.Arg, err)
+	}
+	if c == nil || len(errs) > 0 {
+		return nil, exitError
+	}
+	nf := *f
+	nf.Contents = maps.Clone(f.Contents)
+	nf.Contents[p] = c
+	ns := *s
+	ns.FileScreen = &nf
+	return &ns, 0
 }
 
 // parseSize sets the size of term from "<cols>x<rows>". term.Check checks the ranges.
@@ -177,7 +213,6 @@ type keysTerm struct {
 	term screen.Term
 	keys []string
 	w    io.Writer
-	page int // the number of the last page of the screen
 }
 
 func (t *keysTerm) Term() screen.Term { return t.term }
@@ -192,12 +227,10 @@ func (t *keysTerm) Key() (string, error) {
 }
 
 func (t *keysTerm) Page(p screen.Page) error {
-	t.page++
-	return screen.WritePage(t.w, t.page, p)
+	return screen.WritePage(t.w, p)
 }
 
 func (t *keysTerm) Screen(name string) error {
-	t.page = 0
 	_, err := fmt.Fprintf(t.w, "screen %s\n", name)
 	return err
 }

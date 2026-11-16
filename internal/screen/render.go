@@ -12,21 +12,8 @@ const MaxRenderRows = 10000
 // The render holds one page: it renders the next rows after the consumer takes a page.
 func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[Page] {
 	return func(yield func(Page) bool) {
-		cols := env.Term.Cols
-		w := min(max(cols, s.Width.Min), s.Width.Max)
-		margin := max(cols-w, 0) // align = "right" (section 6.1)
-		switch s.Align {
-		case AlignCenter:
-			margin /= 2
-		case AlignLeft:
-			margin = 0
-		}
-		r := &renderer{
-			env: env, theme: theme, normal: theme["normal"], w: w, cols: cols,
-			area: min(w, cols), margin: margin, height: env.Term.Rows, fill: s.Fill,
-			values: map[Ref][]Grapheme{}, yield: yield,
-		}
-		r.wrapper = newWrapper(w, r.addRow)
+		r := newRenderer(s, env, theme)
+		r.yield = yield
 		var moreCells []Cell
 		for g, gw := range Graphemes(more) {
 			moreCells = appendCell(moreCells, Grapheme{g, gw}, theme["more"])
@@ -47,6 +34,65 @@ func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[P
 		}
 		yield(p)
 	}
+}
+
+// FrameRows gives the count of the rows above and below the file area of the file screen s
+// (file-view, section 3.2). The count stops at MaxRenderRows.
+func FrameRows(s *Screen, env *Env, theme map[string]Style) int {
+	return renderFrame(s, env, theme).count
+}
+
+// RenderFile renders the page n of the file screen s (file-view, section 3.2): the rows above
+// the file area, the rows of file and the rows below. The page is cut at term.rows.
+// It starts at the terminal row 1. A row of file has at most W cells; a nil row is empty.
+func RenderFile(s *Screen, env *Env, theme map[string]Style, file []Row, n int) Page {
+	r := renderFrame(s, env, theme)
+	split := min(r.split, len(r.rows))
+	rows := make([]Row, 0, len(r.rows)+len(file))
+	rows = append(rows, r.rows[:split]...)
+	for _, cells := range file {
+		rows = append(rows, r.row(cells))
+	}
+	rows = append(rows, r.rows[split:]...)
+	p := r.page(rows[:min(len(rows), r.height)])
+	p.Num = n
+	return p
+}
+
+// renderFrame renders the rows of the body of the file screen s without pages.
+// It keeps the first term.rows rows and counts all rows.
+func renderFrame(s *Screen, env *Env, theme map[string]Style) *renderer {
+	r := newRenderer(s, env, theme)
+	r.frame = true
+	// A render that stops at MaxRenderRows before the file area puts the file rows after the kept rows.
+	r.split = MaxRenderRows
+	r.walk(s.Body, r.normal)
+	return r
+}
+
+// RenderWidth gives the render width W for cols columns (section 6.1).
+func (l Layout) RenderWidth(cols int) int {
+	return min(max(cols, l.Width.Min), l.Width.Max)
+}
+
+// newRenderer gives a renderer of s for the terminal of env.
+func newRenderer(s *Screen, env *Env, theme map[string]Style) *renderer {
+	cols := env.Term.Cols
+	w := s.RenderWidth(cols)
+	margin := max(cols-w, 0) // align = "right" (section 6.1)
+	switch s.Align {
+	case AlignCenter:
+		margin /= 2
+	case AlignLeft:
+		margin = 0
+	}
+	r := &renderer{
+		env: env, theme: theme, normal: theme["normal"], w: w, cols: cols,
+		area: min(w, cols), margin: margin, height: env.Term.Rows, fill: s.Fill,
+		values: map[Ref][]Grapheme{},
+	}
+	r.wrapper = newWrapper(w, r.addRow)
+	return r
 }
 
 // renderer holds the state of one render. Its wrapper lays out each source line as it comes
@@ -71,6 +117,11 @@ type renderer struct {
 	yield   func(Page) bool
 	stopped bool // the consumer stopped the render
 	done    bool // the render stops: the rows are at MaxRenderRows, or the consumer stopped
+	pages   int  // the pages so far
+
+	// The frame render of a file screen: no pages. rows keeps the first term.rows rows.
+	frame bool
+	split int // the rows before the file area
 
 	wrapper // the current source line
 }
@@ -98,6 +149,8 @@ func (r *renderer) walk(segs []Seg, cur Style) Style {
 			r.walk(seg.Body, cur) // the style before the include stays (section 3.4)
 		case ArtInsert:
 			r.art(seg) // the art does not change the style of the text (section 7.3)
+		case FileArea:
+			r.split = r.count
 		case LineEnd:
 			r.endLine(seg.Block)
 		}
@@ -162,6 +215,14 @@ func (r *renderer) addRow(cells []Cell) {
 	if r.done {
 		return
 	}
+	if r.frame {
+		if len(r.rows) < r.height {
+			r.rows = append(r.rows, r.row(cells))
+		}
+		r.count++
+		r.done = r.count == MaxRenderRows
+		return
+	}
 	r.rows = append(r.rows, r.row(cells))
 	r.count++
 	r.done = r.count == MaxRenderRows
@@ -178,9 +239,10 @@ func (r *renderer) addRow(cells []Cell) {
 	r.rows = r.rows[:copy(r.rows, r.rows[h:])]
 }
 
-// page gives a page of rows.
+// page gives the next page with rows.
 func (r *renderer) page(rows []Row) Page {
-	return Page{Rows: rows, Cols: r.cols, Height: r.height, Margin: r.margin, Normal: r.normal, Fill: r.fill}
+	r.pages++
+	return Page{Num: r.pages, Rows: rows, Cols: r.cols, Height: r.height, Margin: r.margin, Normal: r.normal, Fill: r.fill}
 }
 
 // row gives a row of the screen area with cells. It cuts cells at the screen area; a cut through a wide grapheme leaves a space in its style.

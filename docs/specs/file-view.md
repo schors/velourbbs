@@ -138,6 +138,7 @@ args = { file = "gold.md" }
 | `meta.<key>` | string | The front matter key `<key>` (section 5.1). Else empty. |
 
 - The fields of this section are valid only in a file screen.
+- `file.last` is valid only in a condition: a field token cannot show a boolean.
 - `<key>` matches `[a-z][a-z0-9_]*`.
 - The values follow [bbt-format](bbt-format.md), section 4.3.
 

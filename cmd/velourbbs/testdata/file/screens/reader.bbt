@@ -1,0 +1,26 @@
++++
+file = "{arg.file}"
+[[item]]
+key = "B"
+do = "page prev"
+when = "file.page > 1"
+[[item]]
+key = "SPACE"
+do = "page next"
+when = "not file.last"
+[[item]]
+key = "F"
+do = "page first"
+[[item]]
+key = "L"
+do = "page last"
+[[item]]
+key = "ESC"
+do = "goto main"
++++
+{!md_mark}■  {!}{file.section}
+{!md_h1}{file.title}
+{!md_dim}{meta.author}  ∙  {file.minutes} min
+{>file}
+{!md_frame}──────────────   {file.page}/{file.pages}   ──────────────
+{#if item.B}{!md_mark}B {!}Back    {/if}{#if item.SPACE}{!md_mark}Space {!}Next    {/if}{!md_mark}Esc {!}List

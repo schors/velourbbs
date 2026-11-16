@@ -26,7 +26,7 @@ func TestWriteDump(t *testing.T) {
 	normal := Style{Fg: IndexColour(7), Bg: IndexColour(0)}
 	title := Style{Fg: IndexColour(15), Bg: IndexColour(4), Attr: Bold}
 	cyan := Style{Fg: IndexColour(14), Bg: IndexColour(0)}
-	page := Page{Rows: []Row{row(80, "Welcome!", title, normal), row(80, "[G]oodbye", cyan, normal)}, Cols: 80, Height: 24}
+	page := Page{Num: 1, Rows: []Row{row(80, "Welcome!", title, normal), row(80, "[G]oodbye", cyan, normal)}, Cols: 80, Height: 24}
 	var b strings.Builder
 	if err := WriteDump(&b, slices.Values([]Page{page})); err != nil {
 		t.Fatal(err)
@@ -49,8 +49,8 @@ func TestWriteDumpPages(t *testing.T) {
 	normal := Style{Fg: IndexColour(7), Bg: IndexColour(0)}
 	wide := Style{Fg: IndexColour(11), Bg: IndexColour(0)}
 	pages := []Page{
-		{Rows: []Row{row(5, "中a", wide, normal), row(5, "", normal, normal)}, Cols: 5, Height: 3},
-		{Rows: []Row{row(2, "b", rgbStyle(), normal)}, Cols: 5, Height: 3, Top: 1, Margin: 1, Normal: normal, Fill: FillSpaces},
+		{Num: 1, Rows: []Row{row(5, "中a", wide, normal), row(5, "", normal, normal)}, Cols: 5, Height: 3},
+		{Num: 2, Rows: []Row{row(2, "b", rgbStyle(), normal)}, Cols: 5, Height: 3, Top: 1, Margin: 1, Normal: normal, Fill: FillSpaces},
 	}
 	var b strings.Builder
 	if err := WriteDump(&b, slices.Values(pages)); err != nil {
