@@ -4,7 +4,7 @@ Visual system of the text-mode screens of Velour BBS: gold lettering, bronze hai
 
 - Screens: 80x25 and 132x43; the station draws one row less than the terminal has.
 - Colour modes: truecolor, 256 colours, 16 colours (grey), mono.
-- Name: VELOUR. The Velour station, the guides and the example BBS follow this book.
+- Name: VELOUR. The home station follows this book. The example BBS Lamp does not. The copy rules (section 7) apply to screen text, not to the guides.
 
 Screens in this book are plain text, so they show layout but not colour. Every screen also exists as an ANSI file in four colour modes in `examples/` (see [Examples](#examples)). Person names, letters, posts and texts on the screens are design placeholders.
 
@@ -33,7 +33,7 @@ The screens of this book and the ANSI files show the same text. Change both toge
 
 
 
-    Enter Открыть    Esc Назад    Q Выход
+    Enter Открыть    Esc Ко входу    Q Выход
 
 ```
 
@@ -44,7 +44,7 @@ The screens of this book and the ANSI files show the same text. Change both toge
 3. **One gem per section.** Each section owns one jewel colour, shown only as a small `■`. It is the only colour outside gold and grey.
 4. **One column on a fixed edge.** Content hangs from column 4 at 80 and column 14 at 132. A wide screen adds a card beside the list; it never makes the reading line longer.
 5. **Keys where the hand expects them.** The bottom row: paging on the left, `B` before `Пробел`; actions flush right. `Esc` always says where it leads.
-6. **Four modes, one design.** Hierarchy is built from brightness first and hue second, so a screen still reads in 16 grey tones and in mono.
+6. **Four modes, one design.** Hierarchy is built from brightness first and hue second, so a screen still reads in the greys of the 16-colour mode and in mono.
 
 ## 2. Name and logotype
 
@@ -415,7 +415,9 @@ Kicker, title, meta, the opening lines with what was cut, the last comment, one 
 
 ## 7. Copy
 
-All screen text is Russian except addresses and the station name. Short lines, sentence case, no full stop after menu items and keys. The station does not invent facts: ports, hosts, dates and schedules come from the sysop or stay out.
+Screen text is in Russian or in English. Addresses and the station name stay as they are. Short lines, sentence case, no full stop after menu items and keys. The station does not invent facts: ports, hosts, dates and schedules come from the sysop or stay out.
+
+### Russian
 
 | Rule | Write | Not |
 |---|---|---|
@@ -429,6 +431,19 @@ All screen text is Russian except addresses and the station name. Short lines, s
 | Dates in words | `14 ноября`; in lists `14 ноя, 13:30` | `14.11` |
 | Meta joined by a dot | `3 минуты чтения  ∙  #дизайн` | `3 мин. \| #дизайн` |
 | Headings in sentence case | `Что пришло на смену` | `ЧТО ПРИШЛО НА СМЕНУ` |
+
+### English
+
+| Rule | Write | Not |
+|---|---|---|
+| The visitor is "you" | `Letters sent to you.` | `Letters for the user` |
+| Straight quotes, a hyphen, three dots | `"Next" - and so on...` | `“Next” — and so on…` |
+| Key, then a verb or a place | `Enter Read`, `Esc To list` | `[Enter] - read`, `ESC: back` |
+| Esc names where it goes | `Esc To menu`, `Esc To list` | `Esc Exit` |
+| Numbers agree with words; zero is a phrase | `1 comment`, `3 comments`, `no comments` | `comments: 0` |
+| Dates in words | `14 November`; in lists `14 Nov, 13:30` | `11/14` |
+| Meta joined by a dot | `3 min read  ∙  #design` | `3 min. \| #design` |
+| Headings in sentence case | `What came next` | `What Came Next` |
 
 ## 8. Screens
 
@@ -533,7 +548,7 @@ All screen text is Russian except addresses and the station name. Short lines, s
 
 
 
-    Enter Открыть    Esc Назад    Q Выход
+    Enter Открыть    Esc Ко входу    Q Выход
 
 ```
 
@@ -580,7 +595,7 @@ All screen text is Russian except addresses and the station name. Short lines, s
 
 
 
-              Enter Открыть    Esc Назад    Q Выход
+              Enter Открыть    Esc Ко входу    Q Выход
 
 ```
 
@@ -956,6 +971,28 @@ All screen text is Russian except addresses and the station name. Short lines, s
     B Назад    Пробел Дальше               K Написать    Esc К ленте
 
 ```
+
+## 9. Engine support
+
+The engine cannot show each element of this book yet. A screen of the home station uses only what the engine can show. The table gives each missing element and the specification or idea that would add it.
+
+| Element | Specification or idea |
+|---|---|
+| Messages (Сообщения) | [menu-actions](../ideas/menu-actions.md) (`call msg.*`), [lists](../ideas/lists.md) |
+| Files (Файлы) | [menu-actions](../ideas/menu-actions.md) (`call file.*`), [lists](../ideas/lists.md) |
+| Code (Код) and its tree | none yet |
+| Blog (Блог) | none yet |
+| Arrow-key selection and the selection mark | [menu-actions](../ideas/menu-actions.md) (marks), [lists](../ideas/lists.md) (row selection) |
+| The lead of the selection | none yet |
+| The card at 132 | none yet |
+| The reading screen at 132 | none yet. A file screen has one `margin` for each width ([file-view](../specs/file-view.md), section 3). |
+| The table of contents | [file-view](../ideas/file-view.md) idea |
+| The syntax colours | [file-view](../ideas/file-view.md) idea |
+| The mono mode | none yet ([telnet-term](../specs/telnet-term.md), section 13) |
+| Italic | none yet ([file-view](../specs/file-view.md), section 12) |
+| The title with its rule above the meta | none yet |
+| The first letter in `hi` | none yet |
+| The plural forms of the numbers | none yet |
 
 ## Examples
 
