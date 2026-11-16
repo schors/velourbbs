@@ -44,14 +44,19 @@ func FrameRows(s *Screen, env *Env, theme map[string]Style) int {
 
 // RenderFile renders the page n of the file screen s (file-view, section 3.2): the rows above
 // the file area, the rows of file and the rows below. The page is cut at term.rows.
-// It starts at the terminal row 1. A row of file has at most W cells; a nil row is empty.
+// It starts at the terminal row 1. A row of file has at most A cells, the area width
+// of file-view, section 3.1; a nil row is empty. The margin cells are spaces in normal.
 func RenderFile(s *Screen, env *Env, theme map[string]Style, file []Row, n int) Page {
 	r := renderFrame(s, env, theme)
 	split := min(r.split, len(r.rows))
 	rows := make([]Row, 0, len(r.rows)+len(file))
 	rows = append(rows, r.rows[:split]...)
+	left := make([]Cell, s.FileScreen.Left)
+	for i := range left {
+		left[i] = Cell{" ", r.normal}
+	}
 	for _, cells := range file {
-		rows = append(rows, r.row(cells))
+		rows = append(rows, r.row(append(left[:len(left):len(left)], cells...)))
 	}
 	rows = append(rows, r.rows[split:]...)
 	p := r.page(rows[:min(len(rows), r.height)])

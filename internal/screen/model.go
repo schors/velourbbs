@@ -24,7 +24,7 @@ type Screen struct {
 	FileScreen *FileSpec
 }
 
-// FileSpec is the file of a file screen: the keys file, lines and numbers (file-view, section 3).
+// FileSpec is the file of a file screen: the keys file, lines, numbers and margin (file-view, section 3).
 type FileSpec struct {
 	Path string // the content path of file, else ""
 	Arg  string // the <name> of a file "{arg.<name>}", else ""
@@ -32,8 +32,20 @@ type FileSpec struct {
 	First, Last int
 	Numbers     bool
 	NumbersKey  bool // the key numbers is set
+	// Left and Right are the key margin: the empty cells left and right of the file area;
+	// 0 and 0 without margin (file-view, section 3.1).
+	Left, Right int
 	// Contents holds each content file that the screen can show, by its path (file-view, section 3.1).
 	Contents map[string]*Content
+}
+
+// CheckMargin checks margin against the minimum minWidth of the width limits (file-view, section 3).
+func (f *FileSpec) CheckMargin(minWidth int) error {
+	// The compare does not add Left and Right: a large value does not overflow.
+	if f.Left >= minWidth || f.Right >= minWidth-f.Left {
+		return fmt.Errorf("margin: [%d, %d]: left + right is not less than the min width %d", f.Left, f.Right, minWidth)
+	}
+	return nil
 }
 
 // Content gives the content file that the screen shows with the arguments args.
