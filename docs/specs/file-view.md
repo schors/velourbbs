@@ -241,6 +241,7 @@ The base theme has these styles ([screens-toml](screens-toml.md), section 3.2):
 
 - A code row does not wrap. A TAB goes to the next multiple of 8 cells from the start of the line.
 - A row wider than its space is cut. Its last 3 cells are the "cut mark" `...` in `md_dim`.
+  When the space is less than 3 cells, the cut mark is cut to the space.
 
 ### 5.5. Inline elements
 
@@ -275,8 +276,9 @@ The base theme has these styles ([screens-toml](screens-toml.md), section 3.2):
   and without the line number.
 - `lines` shows only the lines from `first` to `last`.
 - `numbers` shows the line number of the file at the start of the first row of each line:
-  right-aligned to the width of the number `last`, else of the line count, in `md_dim`,
-  then one space. The other rows of a line have spaces there.
+  right-aligned to the width of the number `last`, else of the line count, then one space.
+  The other rows of a line have spaces there. This number column is in `md_dim`.
+  A number column wider than W / 2 is not shown.
 - An empty line gives an empty row. Empty rows at the start of a file page stay.
 
 ## 7. Errors
