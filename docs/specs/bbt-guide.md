@@ -74,7 +74,7 @@ The guide has these tasks in this order. Each task ends with a check of the resu
 | `examples/art/bbs.toml` | Empty. |
 | `examples/art/screens/lamp.ans` | The art in the flat form ([art-format](art-format.md), section 1). |
 | `examples/art/screens/screens.toml` | The styles `normal` and `key`. |
-| `examples/art/screens/main.bbt` | The art insert, the key row `G  goodbye` and the item `G` `logoff`. |
+| `examples/art/screens/main.bbt` | `width = [40, 40]`, `fill = "spaces"`, the art insert, the key row `G  goodbye` and the item `G` `logoff`. |
 
 - The art is a lamp, at most 40 columns and 12 rows. It has the field `{term.type}`.
 - The texts are in English.
