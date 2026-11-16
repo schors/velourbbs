@@ -61,7 +61,11 @@ The files of Lamp:
 | `screens/main.bbt` | The first screen: the menu. |
 | `screens/about.bbt` | The text about the BBS. |
 | `screens/term.bbt` | The values of the terminal. |
+| `screens/texts.bbt` | The list of the texts of the reading room. |
+| `screens/reader.bbt` | The screen that shows a text of the list. |
 | `screens/goodbye.bbt` | The screen after the end of the session. |
+| `content/lamp.md` | A text in Markdown: a short history of the lamps. |
+| `content/rules.txt` | A plain text: the rules of the station. |
 
 To change the screens, read the [BBT guide](bbt.md).
 
@@ -227,7 +231,7 @@ It converts a file of an art editor to the form that the BBS reads:
 sudo velourbbs art import art/logo.ans screens/logo.ans
 ```
 
-Details: task 7 of the [BBT guide](bbt.md).
+Details: task 8 of the [BBT guide](bbt.md).
 
 ### `velourbbs serve`
 
@@ -255,7 +259,7 @@ Full rules: [telnet-term](../../specs/telnet-term.md), section 10.
 
 1. In `/srv/velourbbs`, run `velourbbs serve`. It writes the `listen` line.
 2. Connect a telnet client to the host, port 2323, for example `telnet localhost 2323`.
-   The client shows the screen `main`: the header "Lamp" and the menu `A T G`.
+   The client shows the screen `main`: the header "Lamp" and the menu `A R T G`.
    Press `G` to end the session.
 3. Stop the server with Ctrl+C. Section 5 uses port 2323.
 

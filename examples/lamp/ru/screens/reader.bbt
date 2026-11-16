@@ -1,0 +1,25 @@
++++
+file = "{arg.file}"
+margin = [7, 2]
+[[item]]
+key = "SPACE"
+do = "page next"
+when = "not file.last"
+[[item]]
+key = "B"
+do = "page prev"
+when = "file.page > 1"
+[[item]]
+key = "ESC"
+do = "goto texts"
++++
+{>_head}
+       {!title}{file.title}{!}
+       {!dim}{#if meta.author != ""}{meta.author}  ∙  {/if}{file.minutes} мин  ∙  стр. {file.page}/{file.pages}{!}
+
+{>file}
+
+  {!line}────────────────────────────────────────────────────────────────────────────{!}
+
+    {#if item.SPACE}{!key}Space{!}  {!dim}дальше{!}   {/if}{#if item.B}{!key}B{!}  {!dim}пред.{!}   {/if}{!key}Esc{!}  {!dim}список{!}
+

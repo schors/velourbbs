@@ -10,18 +10,18 @@ page 1 80x24 fill spaces
 |                                                                                |
 |         A   About                                   who we are                 |
 |                                                                                |
+|         R   Reading room                            stories by the lamp        |
+|                                                                                |
 |         T   Your terminal                           size and colours           |
 |                                                                                |
 |         G   Goodbye                                 the lamp will wait         |
-|                                                                                |
-|                                                                                |
 |                                                                                |
 |                                                                                |
 |       The light stays on till morning.                                         |
 |                                                                                |
 |  ────────────────────────────────────────────────────────────────────────────  |
 |                                                                                |
-|    A T G  choose                                                               |
+|    A R T G  choose                                                             |
 styles
 1: 1-80 #e9dccb/#2a201d
 2: 1-2 #e9dccb/#2a201d, 3-78 #8a6a5c/#2a201d, 79-80 #e9dccb/#2a201d
@@ -34,15 +34,15 @@ styles
 9: 1-80 #e9dccb/#2a201d
 10: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-63 #9e8a7c/#2a201d, 64-80 #e9dccb/#2a201d
 11: 1-80 #e9dccb/#2a201d
-12: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-69 #9e8a7c/#2a201d, 70-80 #e9dccb/#2a201d
+12: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-72 #9e8a7c/#2a201d, 73-80 #e9dccb/#2a201d
 13: 1-80 #e9dccb/#2a201d
-14: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-71 #9e8a7c/#2a201d, 72-80 #e9dccb/#2a201d
+14: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-69 #9e8a7c/#2a201d, 70-80 #e9dccb/#2a201d
 15: 1-80 #e9dccb/#2a201d
-16: 1-80 #e9dccb/#2a201d
+16: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-71 #9e8a7c/#2a201d, 72-80 #e9dccb/#2a201d
 17: 1-80 #e9dccb/#2a201d
 18: 1-80 #e9dccb/#2a201d
 19: 1-7 #e9dccb/#2a201d, 8-39 #9e8a7c/#2a201d, 40-80 #e9dccb/#2a201d
 20: 1-80 #e9dccb/#2a201d
 21: 1-2 #e9dccb/#2a201d, 3-78 #8a6a5c/#2a201d, 79-80 #e9dccb/#2a201d
 22: 1-80 #e9dccb/#2a201d
-23: 1-4 #e9dccb/#2a201d, 5-9 #ffb088/#2a201d bold, 10-11 #e9dccb/#2a201d, 12-17 #9e8a7c/#2a201d, 18-80 #e9dccb/#2a201d
+23: 1-4 #e9dccb/#2a201d, 5-11 #ffb088/#2a201d bold, 12-13 #e9dccb/#2a201d, 14-19 #9e8a7c/#2a201d, 20-80 #e9dccb/#2a201d
