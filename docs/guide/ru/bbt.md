@@ -1858,6 +1858,28 @@ screens/x.bbt:1:1: screen has no items
 
 Каждому экрану, кроме `goodbye`, нужен хотя бы один пункт. Добавь пункт.
 
+### `content file ... does not exist`
+
+```
+screens/code.bbt:2:1: file: content file "src/lamp.c" does not exist
+screens/texts.bbt:2:1: item "1": args: file: content file "lmap.md" does not exist
+```
+
+- Экран `code` содержит сниппет из задачи 7 («Исходный код»).
+  Его ключ `file` называет `src/lamp.c`, а файла `content/src/lamp.c` нет.
+  Положи файл по этому пути в `content/` или исправь путь.
+- Пункт `1` передаёт `goto reader` файл `lmap.md` в `args`, а этого файла нет в `content/`.
+  Исправь имя в `args`.
+
+### `front matter: no end line`
+
+```
+content/lamp.md:1:1: front matter: no end line "+++"
+```
+
+Первая строка файла — `+++`, а другой строки `+++` нет.
+Добавь строку `+++` после последнего ключа front matter (задача 7).
+
 ### `not in the flat form`
 
 ```
@@ -1887,7 +1909,8 @@ screens/about.bbt:10:8: unknown style "titel"
 3. Удали `{!titel}`. `velourbbs check` ничего не выводит.
 
 Полные правила: [screen-render](../../specs/screen-render.md), раздел 3.1,
-и [menu-nav](../../specs/menu-nav.md), раздел 6.
+[menu-nav](../../specs/menu-nav.md), раздел 6,
+и [file-view](../../specs/file-view.md), раздел 7.
 
 ## Не в MVP
 
@@ -1901,7 +1924,10 @@ screens/about.bbt:10:8: unknown style "titel"
 - `ask` и токена поля в значении `args`;
 - клавиш со знаками препинания, например `?`;
 - подписи пункта. BBS не печатает текст пункта;
+- оглавления файла Markdown, активных ссылок на другие файлы
+  и цветов синтаксиса исходного кода;
 - кодов отображения других BBS-программ: pipe-кодов, `@`-кодов и MCI-кодов.
   Конвертера нет.
 
-Полные правила: [bbt-format](../../specs/bbt-format.md), раздел 10.
+Полные правила: [bbt-format](../../specs/bbt-format.md), раздел 10,
+и [file-view](../../specs/file-view.md), раздел 12.
