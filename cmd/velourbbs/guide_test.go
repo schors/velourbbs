@@ -59,11 +59,15 @@ func checkFileBlocks(fsys fs.FS, md string) []string {
 	return problems
 }
 
-// TestGuideFileBlocks compares each file block of the BBT guides with its file
-// (bbt-guide, section 6).
+// TestGuideFileBlocks compares each file block of the guides with its file
+// (bbt-guide, section 6; setup-guide, section 6).
 func TestGuideFileBlocks(t *testing.T) {
 	root := os.DirFS("../..")
-	for _, guide := range []string{"docs/guide/en/bbt.md", "docs/guide/ru/bbt.md"} {
+	guides := []string{
+		"docs/guide/en/bbt.md", "docs/guide/ru/bbt.md",
+		"docs/guide/en/setup.md", "docs/guide/ru/setup.md",
+	}
+	for _, guide := range guides {
 		md, err := fs.ReadFile(root, guide)
 		if err != nil {
 			t.Error(err)
