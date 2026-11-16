@@ -6,7 +6,6 @@ import (
 	"maps"
 	"slices"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/schors/velourbbs/internal/key"
 	"github.com/schors/velourbbs/internal/screen"
@@ -37,15 +36,11 @@ type frontDoc struct {
 // fields is the aliases of screens/screens.toml. The result is nil when the front matter has an error.
 func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *front {
 	var doc frontDoc
-	errs := tomlcheck.Decode([]byte(strings.Join(lines, "\n")), &doc)
+	data := []byte(strings.Join(lines, "\n"))
+	errs := tomlcheck.Decode(data, &doc)
 	for _, e := range errs {
 		// The line after "+++" and a column in code points.
-		col := e.Col
-		if 1 <= e.Line && e.Line <= len(lines) {
-			l := lines[e.Line-1]
-			col = utf8.RuneCountInString(l[:min(max(e.Col-1, 0), len(l))]) + 1
-		}
-		d.Errorf(e.Line+1, col, "%s", e.Msg)
+		d.Errorf(e.Line+1, e.RuneCol(data), "%s", e.Msg)
 	}
 	if len(errs) > 0 {
 		return nil

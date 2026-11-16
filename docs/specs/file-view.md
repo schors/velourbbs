@@ -146,7 +146,7 @@ args = { file = "gold.md" }
 - A "word" is a run of graphemes between spaces.
 - The host counts the words of the text of the file before the layout:
   - Markdown: the text of the blocks and the inline elements, without the front matter
-    and the addresses;
+    and the addresses of the links and images;
   - plain text and source: the lines that the screen shows (`lines`).
 - The reading time is the word count divided by 200, rounded up. It is at least 1.
 
@@ -186,7 +186,8 @@ The base theme has these styles ([screens-toml](screens-toml.md), section 3.2):
 - If the first line is `---`, the second line is not empty, and a `---` or `...` line follows,
   the lines up to it are YAML front matter. Else the file has no front matter.
 - A delimiter line can have spaces at its end.
-- A syntax error is an error. YAML front matter that is not a mapping is an error.
+- A syntax error is an error. A top-level key two times is an error.
+  YAML front matter that is not a mapping is an error. YAML front matter with only comments has no keys.
 - The front matter has no limit on its keys. A key that matches `[a-z][a-z0-9_]*` and has
   a scalar value gives the field `meta.<key>`. The value of the field:
 
@@ -282,7 +283,7 @@ The base theme has these styles ([screens-toml](screens-toml.md), section 3.2):
 
 Each of these is an error of `velourbbs check` ([screen-render](screen-render.md), section 3.1):
 
-- a content file that does not exist, or that a rule of section 2 forbids;
+- a content file that does not exist, that a rule of section 2 forbids, or that is over its limit (section 8);
 - an error of the content (section 2.1) or of the front matter (section 5.1),
   at its position in the content file;
 - an error of the file screen keys and of `{>file}` (sections 3 and 3.1);
@@ -292,6 +293,8 @@ Positions:
 
 - An error of a key of the screen has the position of the first line of its front matter
   ([screen-render](screen-render.md), section 3.1).
+- An error of a whole content file (it does not exist, it is not a regular file, it is over 1 MB)
+  is an error of the key `file`.
 - An error of a file that a `goto` gives is an error of the item with the `goto`:
   the position of the first line of the front matter of its screen,
   and the start `item "<KEY>": args: <name>: ` ([menu-nav](menu-nav.md), section 6).

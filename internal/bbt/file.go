@@ -1,7 +1,6 @@
 package bbt
 
 import (
-	"bytes"
 	"strings"
 	"unicode/utf8"
 
@@ -49,21 +48,10 @@ type artInsert struct {
 // The file pass uses only the names of theme.
 func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, fields screen.Fields, fragment bool) *file {
 	f := &file{name: d.File}
-	data = bytes.TrimPrefix(data, screen.BOM)
-	if n := screen.ValidPrefix(data); n < len(data) {
-		row := bytes.Count(data[:n], []byte("\n")) + 1
-		col := utf8.RuneCount(data[bytes.LastIndexByte(data[:n], '\n')+1:n]) + 1
-		d.Errorf(row, col, "invalid UTF-8")
+	lines, ok := screen.SplitLines(d, data)
+	if !ok {
 		f.skip = true
 		return f
-	}
-	lines := strings.Split(string(data), "\n")
-	last := len(lines) - 1 // the text after the last LF
-	for i := range last {
-		lines[i] = strings.TrimSuffix(lines[i], "\r") // a CR LF line end
-	}
-	if lines[last] == "" {
-		lines = lines[:last]
 	}
 	first := 0
 	if len(lines) > 0 && lines[0] == "+++" {
