@@ -3,7 +3,8 @@
 This specification defines the key match, the navigation of a session,
 the menu checks between screens of `velourbbs check` and the key sequences of `velourbbs preview`.
 [bbt-format](bbt-format.md), section 8, defines the menu items and the keys.
-Related parts: [screens-toml](screens-toml.md), [screen-render](screen-render.md) and [telnet-term](telnet-term.md).
+Related parts: [screens-toml](screens-toml.md), [screen-render](screen-render.md), [file-view](file-view.md)
+and [telnet-term](telnet-term.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -60,13 +61,15 @@ ESC has no implicit action.
 The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
 
 - `goto` to the current screen renders it again, for example after a resize.
+  With `args`, it shows the screen with the new arguments.
+- A `page` action shows a page of the current file screen (section 5.1).
 - `logoff` shows `screens/goodbye.bbt` if it exists. Then the host disconnects.
   The host does not wait for a key after the last page of `goodbye`.
 
 ## 5. Session
 
 - The first screen is `[menu] start` ([screens-toml](screens-toml.md), section 3.4).
-- The host shows a screen in these steps:
+- The host shows a screen in these steps. Section 5.1 has the steps of a file screen.
   1. Read `term.cols` and `term.rows`. A resize takes effect at the next screen.
   2. Evaluate the `when` of each item.
   3. Render the screen ([screen-render](screen-render.md), section 2).
@@ -80,6 +83,17 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
   The idle timeout of [telnet-term](telnet-term.md) ends such a session.
 - A hangup or the idle timeout ends the session at once, without `goodbye`.
 
+### 5.1. File screen
+
+The host shows a file screen ([file-view](file-view.md), section 3) in these steps:
+
+1. Read `term.cols` and `term.rows`. Lay out the file into file pages.
+   The size and the file pages stay until the next screen.
+2. For the current page, evaluate the `when` of each item, render the page and
+   clear the terminal screen and show it. The first page is page 1.
+3. Wait for keys and match them (section 3.3). A `page` action sets the current page
+   and continues at step 2. Each other action leaves the screen.
+
 ## 6. `velourbbs check`
 
 `velourbbs check` ([screen-render](screen-render.md), section 3.1) finds the item errors
@@ -89,7 +103,10 @@ of [bbt-format](bbt-format.md), section 8.4. It also finds these errors:
 - a `goto` to a screen without items, for example `goodbye`;
 - a screen without items, except `goodbye`;
 - items in `goodbye`;
-- a start screen that does not exist or has no items.
+- a start screen that does not exist or has no items;
+- a `goto` whose `args` differ from the arguments of the target screen
+  ([bbt-format](bbt-format.md), section 8.5);
+- arguments of the start screen or of `goodbye`.
 
 - An error in an item has the position of the first line
   of the front matter ([screen-render](screen-render.md), section 3.1).
@@ -121,11 +138,14 @@ It is the test harness for the navigation.
   of [bbt-format](bbt-format.md), section 8.1, except `ANY`, or one other printable character
   except the comma and the space.
   Example: `S,ы,ESC,G`. An empty list is valid.
-- `<name>` must be a valid start screen (section 6). Else it is an invalid argument.
+- `<name>` must be a valid start screen (section 6), except the rule on arguments.
+  Else it is an invalid argument. `--set arg.<name>` gives the arguments of the screen
+  ([screen-render](screen-render.md), section 3.2).
 - The other arguments of `velourbbs preview` ([screen-render](screen-render.md), section 3.2) apply.
 - The output has one part for each event:
   - `screen <name>` and the cell dump of the first page, when the host shows a screen;
   - the cell dump of the next page, after a key on a More row;
+  - the cell dump of the page, after a `page` action;
   - `key <key>` before each key. `key <key> ignored` for an ignored key;
   - `logoff` when an item runs `logoff`. The pages of `goodbye` follow it.
 - The output gives a key after the map of section 3.2. A letter, a digit or a key name
@@ -176,4 +196,4 @@ page 1 80x25 fill none
 
 - `gosub`, `back`, `top` and a navigation stack: [menu-actions](../ideas/menu-actions.md).
 - Typed command input.
-- The actions `page`, `run` and `call`. They need lists, Lua or built-ins.
+- `page` for lists, and the actions `run` and `call`. They need lists, Lua or built-ins.

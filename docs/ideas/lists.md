@@ -17,7 +17,7 @@ The user pages through the list and selects a row.
 | Fields | `row.*` for the fields of one row. `page.n`, `page.count` and `page.empty` for the page. |
 | Text list | `{#each <list>}...{/each}` in a BBS template: one line for each row of the page. |
 | Art list | The art row with `row.*` fields is the "list row". A screen has one list row. |
-| Paging | The action `page next\|prev\|first\|last`. |
+| Paging | The action `page next\|prev\|first\|last` of [file-view](../specs/file-view.md), section 3.3, also pages a list. |
 | Selection | `select = { do = "...", args = { id = "{row.id}" } }`. The cursor moves over list rows. Enter runs the action with the selected row. |
 | Conditions in a list row | Only display fields such as `row.mark`. |
 | Formats | There are no format filters. Each user sets the date and number formats. |
@@ -77,4 +77,4 @@ A `.bbt` text list:
 ## Dependencies
 
 - Lua providers come from [lua-mods](lua-mods.md).
-- `args` and `{arg.*}` come from [menu-actions](menu-actions.md).
+- `args` and `{arg.*}`: [bbt-format](../specs/bbt-format.md), section 8.5, and [menu-actions](menu-actions.md).

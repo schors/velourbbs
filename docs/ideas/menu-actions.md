@@ -21,6 +21,9 @@ arrow-key selection.
 
 ## Typed arguments
 
+[bbt-format](../specs/bbt-format.md), section 8.5, defines `args` of `goto` with literal values
+and `{arg.*}`. This idea adds the rest.
+
 - `do` is `<action>` or `<action> <target>`. Both parts are literals.
 - Each `args` value is a literal or exactly one `{<path>}` token.
 - The host puts the value into its argument slot as one opaque string.

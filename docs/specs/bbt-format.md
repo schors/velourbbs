@@ -2,8 +2,8 @@
 
 This specification defines the BBT files and the layout of a screen.
 Related parts: [art-format](art-format.md), [screens-toml](screens-toml.md),
-[bbs-toml](bbs-toml.md), [screen-render](screen-render.md), [menu-nav](menu-nav.md)
-and [telnet-term](telnet-term.md).
+[bbs-toml](bbs-toml.md), [screen-render](screen-render.md), [menu-nav](menu-nav.md),
+[file-view](file-view.md) and [telnet-term](telnet-term.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -23,6 +23,7 @@ The limits of section 9 catch mistakes, for example a file that is too large.
 | `screens/<name>.ans` | ANSI art in the flat form: [art-format](art-format.md). |
 | `screens/screens.toml` | Settings of the screens: [screens-toml](screens-toml.md). |
 | `bbs.toml` | Host settings: [bbs-toml](bbs-toml.md). |
+| `content/<path>` | A content file of a file screen: [file-view](file-view.md), section 2. |
 
 - `<name>` matches `[a-z0-9][a-z0-9_-]*`. Example: `main_wide`.
 - An `.ans` file is art only. Only an art insert in a BBS template shows it.
@@ -63,7 +64,8 @@ The front matter is TOML 1.1. An unknown key is an error.
 | `align` | string | The horizontal position: `"left"`, `"center"` or `"right"`. Section 6.1. |
 | `valign` | string | The vertical position: `"top"`, `"middle"` or `"bottom"`. Section 6.5. |
 | `fill` | string | The fill rows: `"none"`, `"spaces"` or `"erase"`. Section 6.5. |
-| `[[item]]` | array of tables | Menu items with `key`, `do` and an optional `when`. Section 8. |
+| `file`, `lines`, `numbers` | — | The file of a file screen: [file-view](file-view.md), section 3. |
+| `[[item]]` | array of tables | Menu items with `key`, `do`, an optional `when` and optional `args`. Section 8. |
 
 Example:
 
@@ -102,6 +104,7 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `{!<style>}` | Style change. Section 7.3. |
 | `{>_<name>}` | Include of `screens/_<name>.bbt`. Section 3.4. |
 | `{><name>.ans}` | Art insert of `screens/<name>.ans`. Sections 3.4 and 6.2. |
+| `{>file}` | The file area of a file screen: [file-view](file-view.md), section 3.1. |
 | `{@<id>}` `{/@}` | Reserved for marks. An error in the MVP. |
 
 - The width of a fixed-width field includes the braces. Example: `{term.type      }` is 17 cells.
@@ -113,7 +116,7 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 
 - An include or an art insert must be the only content of its source line.
 - An include inserts the body lines of the fragment in place of its line.
-- An include of a name without `_` is an error. A missing file is an error.
+- An include of a name without `_`, except `{>file}`, is an error. A missing file is an error.
 - Includes can nest. An include cycle is an error.
 - After an include, the style is the style before the include.
 
@@ -129,6 +132,8 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `term.charset` | string | Output charset, `utf-8` in the MVP. |
 | `term.colors` | integer | Colour depth: `16`, `256` or `16777216`. |
 | `item.<KEY>` | boolean | True when the item with the key `<KEY>` exists and is enabled (section 8.2). |
+| `arg.<name>` | string | The argument `<name>` of the screen (section 8.5). |
+| `file.*`, `meta.<key>` | — | The fields of a file screen: [file-view](file-view.md), section 3.4. |
 
 - A path matches `[a-z][a-z0-9_]*(\.[A-Za-z0-9_]+)?`. A path without a dot is an alias.
 - [telnet-term](telnet-term.md) gives the `term.*` values.
@@ -224,7 +229,8 @@ The body gives rows in source order:
 ### 6.4. Height
 
 - A screen has no height limit.
-- When a screen has more rows than `term.rows`, the host shows it in pages of `term.rows - 1` rows.
+- A file screen has its own pages: [file-view](file-view.md), section 3.2.
+- When another screen has more rows than `term.rows`, the host shows it in pages of `term.rows - 1` rows.
   After each page except the last, the host shows the "More row" ([menu-nav](menu-nav.md), section 5).
 - The More row is `[screen] more` ([screens-toml](screens-toml.md), section 3.1),
   in the theme style `more`, at the left edge of the screen area.
@@ -232,6 +238,7 @@ The body gives rows in source order:
 
 ### 6.5. Vertical position and fill
 
+- A file screen has its own rule: [file-view](file-view.md), section 3.2.
 - A screen of R rows with R < `term.rows` has one page. Its first row is the terminal row
   1 with `valign = "top"`, `(term.rows - R) / 2`, rounded down, plus 1 with `"middle"`,
   and `term.rows - R + 1` with `"bottom"`.
@@ -337,6 +344,7 @@ are the same keys.
 | `key` | string | The key of the item. Section 8.1. |
 | `do` | string | The action. Section 8.3. |
 | `when` | string | Optional. A condition (section 5). |
+| `args` | inline table | Optional. The arguments of a `goto` (section 8.5). |
 
 - An item is "enabled" when it has no `when` or its `when` is true.
   A disabled item counts as absent.
@@ -350,8 +358,9 @@ are the same keys.
 |---|---|
 | `goto <name>` | Show the screen `<name>`. |
 | `logoff` | End the session. |
+| `page next`, `page prev`, `page first`, `page last` | Show another page of a file screen: [file-view](file-view.md), section 3.3. |
 
-- The action words are lower case. `do` has no other spaces than the one space after `goto`.
+- The action words are lower case. `do` has no other spaces than the one space after `goto` or `page`.
 - `<name>` matches the screen name of section 2.
 - [menu-nav](menu-nav.md), section 4, defines how the host runs the actions.
 
@@ -363,10 +372,22 @@ Each of these is an error in a screen:
 - an invalid key;
 - a duplicate key in a menu, also `ANY`;
 - an invalid `do`: an unknown action, or a wrong argument of the action;
-- an `item.<KEY>` path without an item in the screen.
+- an `item.<KEY>` path without an item in the screen;
+- `args` with an action other than `goto`, an invalid argument name or an invalid value (section 8.5).
 
 [menu-nav](menu-nav.md), section 6, has the other menu errors: the `goto` targets, the screens
 without items, the items of `goodbye` and the start screen. It also has the form of the item errors.
+
+### 8.5. Arguments
+
+- `args` is an inline table of strings. Example: `args = { file = "gold.md" }`.
+- A name matches `[a-z][a-z0-9_]*`. A value cannot have a control character or `{`.
+- The "arguments of a screen" are the names of the `arg.<name>` fields of the screen:
+  in its body, its fragments, its art, its `when` and its `file`
+  ([file-view](file-view.md), section 3).
+- A `goto` gives exactly the arguments of its target screen. A missing argument
+  or another argument is an error.
+- The field `arg.<name>` gives the value of the `goto` that shows the screen.
 
 ## 9. Limits
 
@@ -390,7 +411,7 @@ without items, the items of `goodbye` and the start screen. It also has the form
 - Marks and arrow-key selection: [menu-actions](../ideas/menu-actions.md).
   The MVP selects items by hotkey only.
 - `require` (access checks). It needs users.
-- `args`, `ask` and `{arg.*}`.
+- `ask`, and a field token in an `args` value: [menu-actions](../ideas/menu-actions.md).
 - Punctuation keys, for example `?`.
 - A `label` for an item. The host does not print item text.
 
