@@ -154,9 +154,11 @@ func PageRows(l FileLayout, p FilePage, h int) []Row {
 	return append(rows, make([]Row, h-len(rows))...)
 }
 
-// ContentLayout gives the layout of the content c of the file screen f in rows of w cells:
-// MarkdownLayout or TextLayout by the kind of c (file-view, sections 5 and 6).
+// ContentLayout gives the layout of the content c of the file screen f at the render width w:
+// MarkdownLayout or TextLayout by the kind of c (file-view, sections 5 and 6),
+// in rows of the area width w - f.Left - f.Right (file-view, section 3.1).
 func ContentLayout(f *FileSpec, c *Content, w int, theme map[string]Style) FileLayout {
+	w -= f.Left + f.Right
 	if c.Kind == Markdown {
 		return MarkdownLayout(c, w, theme)
 	}

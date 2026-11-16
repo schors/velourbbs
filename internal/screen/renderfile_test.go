@@ -109,3 +109,44 @@ func TestRenderFile(t *testing.T) {
 		t.Errorf("fields: rows %q, want %q", texts(p), want)
 	}
 }
+
+// The key margin: the layout at the area width A and the margin cells in normal (file-view, section 3.1).
+func TestRenderFileMargin(t *testing.T) {
+	fsys := fstest.MapFS{
+		"screens/f.bbt": {Data: []byte("+++\nfile = \"a.txt\"\nmargin = [3, 2]\n+++\nTop\n{>file}\n")},
+		"content/a.txt": {Data: []byte("aaaa bbbb cccc dddd\n")},
+	}
+	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 20}}, nil)
+	if ds.HasErrors() {
+		t.Fatalf("diags: %v", ds)
+	}
+	s := screens["f"]
+	env := &screen.Env{Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Charset: "utf-8", Colors: 16}}
+
+	// W = 20, A = 20 - 3 - 2 = 15: the line of 19 cells wraps.
+	l := screen.ContentLayout(s.FileScreen, s.FileScreen.Contents["a.txt"], 20, theme)
+	rows := screen.PageRows(l, screen.FilePage{N: 2}, 2)
+	p := screen.RenderFile(s, env, theme, rows, 1)
+	if want := []string{"Top", "   aaaa bbbb cccc", "   dddd"}; !slices.Equal(texts(p), want) {
+		t.Errorf("rows %q, want %q", texts(p), want)
+	}
+
+	// The margin cells are spaces in normal; the file cells keep their style.
+	title := theme["title"]
+	file := []screen.Row{slices.Repeat([]screen.Cell{{Grapheme: "x", Style: title}}, 15), nil}
+	p = screen.RenderFile(s, env, theme, file, 1)
+	for i, row := range p.Rows[1:] {
+		if len(row) != 20 {
+			t.Fatalf("row %d: %d cells, want 20", i+1, len(row))
+		}
+		for j, c := range row {
+			want := screen.Cell{Grapheme: " ", Style: theme["normal"]}
+			if i == 0 && j >= 3 && j < 18 {
+				want = screen.Cell{Grapheme: "x", Style: title}
+			}
+			if c != want {
+				t.Errorf("row %d cell %d: %v, want %v", i+1, j+1, c, want)
+			}
+		}
+	}
+}

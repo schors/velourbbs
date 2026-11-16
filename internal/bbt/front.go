@@ -29,6 +29,7 @@ type frontDoc struct {
 	File    *string  `toml:"file"`
 	Lines   *[]int64 `toml:"lines"`
 	Numbers *bool    `toml:"numbers"`
+	Margin  *[]int64 `toml:"margin"`
 	Item    []struct {
 		Key  *string            `toml:"key"`
 		Do   *string            `toml:"do"`
@@ -113,8 +114,8 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 	return fr
 }
 
-// parseFileKeys parses the keys file, lines and numbers (file-view, section 3).
-// It gives nil without file.
+// parseFileKeys parses the keys file, lines, numbers and margin (file-view, section 3).
+// It gives nil without file. The loader checks margin against the width limits.
 func parseFileKeys(doc *frontDoc, errorf func(format string, args ...any)) *screen.FileSpec {
 	if doc.File == nil {
 		if doc.Lines != nil {
@@ -122,6 +123,9 @@ func parseFileKeys(doc *frontDoc, errorf func(format string, args ...any)) *scre
 		}
 		if doc.Numbers != nil {
 			errorf("numbers: the screen has no file")
+		}
+		if doc.Margin != nil {
+			errorf("margin: the screen has no file")
 		}
 		return nil
 	}
@@ -150,6 +154,16 @@ func parseFileKeys(doc *frontDoc, errorf func(format string, args ...any)) *scre
 	}
 	if doc.Numbers != nil {
 		f.Numbers, f.NumbersKey = *doc.Numbers, true
+	}
+	if p := doc.Margin; p != nil {
+		switch m := *p; {
+		case len(m) != 2:
+			errorf("margin: must be an array of 2 integers")
+		case m[0] < 0 || m[1] < 0:
+			errorf("margin: [%d, %d] has a value less than 0", m[0], m[1])
+		default:
+			f.Left, f.Right = int(m[0]), int(m[1])
+		}
 	}
 	return f
 }

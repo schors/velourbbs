@@ -162,6 +162,28 @@ func TestFileErrors(t *testing.T) {
 			`screens/i.bbt:2:8: file: must be a string`,
 		},
 	}, {
+		name: "margin",
+		files: map[string]string{
+			// The min width 40 of [screen] width, then 20 of the front matter.
+			"screens/a.bbt": reader("file = \"a.txt\"\nmargin = [20, 20]", "{>file}\n"),
+			"screens/b.bbt": reader("file = \"a.txt\"\nmargin = [40, 0]", "{>file}\n"),
+			"screens/c.bbt": reader("width = [20, 80]\nfile = \"a.txt\"\nmargin = [0, 20]", "{>file}\n"),
+			"screens/d.bbt": reader("file = \"a.txt\"\nmargin = [1]", "{>file}\n"),
+			"screens/e.bbt": reader("file = \"a.txt\"\nmargin = [2, -1]", "{>file}\n"),
+			"screens/f.bbt": reader("margin = [1, 1]", "Text\n"),
+			"screens/g.bbt": reader("file = \"a.txt\"\nmargin = [9223372036854775807, 9223372036854775807]", "{>file}\n"),
+			"content/a.txt": "a\n",
+		},
+		want: []string{
+			`screens/a.bbt:2:1: margin: [20, 20]: left + right is not less than the min width 40`,
+			`screens/b.bbt:2:1: margin: [40, 0]: left + right is not less than the min width 40`,
+			`screens/c.bbt:2:1: margin: [0, 20]: left + right is not less than the min width 20`,
+			`screens/d.bbt:2:1: margin: must be an array of 2 integers`,
+			`screens/e.bbt:2:1: margin: [2, -1] has a value less than 0`,
+			`screens/f.bbt:2:1: margin: the screen has no file`,
+			`screens/g.bbt:2:1: margin: [9223372036854775807, 9223372036854775807]: left + right is not less than the min width 40`,
+		},
+	}, {
 		name: "file area",
 		files: map[string]string{
 			"screens/a.bbt":     reader(`file = "a.txt"`, "Text\n"),
@@ -226,8 +248,10 @@ func TestFileContents(t *testing.T) {
 		"screens/texts.bbt": "+++\n[[item]]\nkey = \"1\"\ndo = \"goto reader\"\nargs = { file = \"a.txt\" }\n" +
 			"[[item]]\nkey = \"2\"\ndo = \"goto reader\"\nargs = { file = \"b/c.md\" }\n+++\nMenu\n",
 		"screens/code.bbt": reader("file = \"a.txt\"\nlines = [2, 3]\nnumbers = true", "Top\n{>file}\nBottom\n"),
-		"content/a.txt":    "1\n2\n3\n",
-		"content/b/c.md":   "# C\n",
+		// left + right = 39, less than the min width 40.
+		"screens/margin.bbt": reader("file = \"a.txt\"\nmargin = [3, 36]", "{>file}\n"),
+		"content/a.txt":      "1\n2\n3\n",
+		"content/b/c.md":     "# C\n",
 	})
 	if screens == nil {
 		t.Fatalf("diags:\n%s", strings.Join(msgs, "\n"))
@@ -245,6 +269,12 @@ func TestFileContents(t *testing.T) {
 	}
 	if got := show(screens["code"].Body); got != `"Top" / {>file} "Bottom" /` {
 		t.Errorf("code body %q", got)
+	}
+	if c.Left != 0 || c.Right != 0 {
+		t.Errorf("code margin [%d, %d], want [0, 0]", c.Left, c.Right)
+	}
+	if m := screens["margin"].FileScreen; m == nil || m.Left != 3 || m.Right != 36 {
+		t.Errorf("margin: %+v", m)
 	}
 	if screens["texts"].FileScreen != nil {
 		t.Error("texts is a file screen")

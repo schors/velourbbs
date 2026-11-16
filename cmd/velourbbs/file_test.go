@@ -27,6 +27,8 @@ var fileGoldens = []struct {
 	// lines and numbers.
 	{"code-80x24.dump", []string{"code"}},
 	{"code-40x10.dump", []string{"code", "--size", "40x10"}},
+	// margin: the layout at the area width and the margin cells in normal.
+	{"margin-40x10.dump", []string{"margin", "--size", "40x10"}},
 	// Each page action; page next on the last page and page prev on the first page
 	// show the page again. SPACE on the last page of reader is disabled.
 	{"keys-40x10.dump", []string{"main", "--size", "40x10", "--keys", "1,SPACE,B,L,SPACE,F,ESC,5,N,N,N,P,P,P,Q,G"}},

@@ -82,6 +82,9 @@ func (l *loader) screen(u *unit) {
 		if !u.area {
 			l.errorf(u, screen.Pos{File: u.f.name, Line: 2, Col: 1}, false, "file: the body has no {>file}")
 		}
+		if err := f.CheckMargin(u.s.Width.Min); err != nil {
+			l.errorf(u, screen.Pos{File: u.f.name, Line: 2, Col: 1}, false, "%v", err)
+		}
 		u.addArgs(f.Arg)
 		if f.Path != "" {
 			l.literalFile(u, f)

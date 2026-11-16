@@ -1,0 +1,15 @@
++++
+file = "xfer/crc16.c"
+lines = [3, 12]
+numbers = true
+margin = [3, 2]
+[[item]]
+key = "N"
+do = "page next"
+[[item]]
+key = "Q"
+do = "goto main"
++++
+{file.title} {file.page}/{file.pages}
+{>file}
+[N]ext [Q]uit
