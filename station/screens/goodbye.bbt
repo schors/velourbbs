@@ -1,0 +1,33 @@
++++
+width = [80, 132]
++++
+{#if term.cols >= 132 and term.rows >= 43}
+
+
+
+
+
+
+
+
+
+
+              {!dim}До встречи  ∙  See you{!}
+
+{>_logo-132}
+
+              {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Вечер, текст и немного золота
+                       Evening, text and a little gold
+{#else}
+
+
+
+
+
+        {!dim}До встречи  ∙  See you{!}
+
+{>_logo-80-8}
+
+        {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Вечер, текст и немного золота
+                 Evening, text and a little gold
+{/if}

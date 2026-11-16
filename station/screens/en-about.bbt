@@ -1,0 +1,73 @@
++++
+width = [80, 132]
+[[item]]
+key = "ESC"
+do = "goto en-menu"
++++
+{#if term.cols >= 132 and term.rows >= 43}
+
+              {!hi}V E L O U R{!}      {!dim}Texts{!}
+              {!gold}───────────{!frame}───────────────────────────────────────────────────────────────────────────────────────────{!} {!gold}■{!}
+
+
+              {!gold}■  About the station{!}
+
+              Velour is BBS software. Guests come in over telnet, and the screens
+              are text files of the sysop.
+
+              This is the home station of Velour. It runs on Velour and shows its
+              guides and features.
+
+              {!dim}Your address{!}        {session.ip}
+              {!dim}Time online{!}         {session.online}
+              {!dim}Velour version{!}      {bbs.version}
+              {!dim}Open sessions{!}       {bbs.sessions}
+              {!dim}Station uptime{!}      {bbs.uptime}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+              {!frame}────────────────────────────────────────────────────────────────────────────────────────────────────────{!}
+              {!hi}Esc{!} {!ctl}To menu{!}
+{#else}
+
+    {!hi}V E L O U R{!}      {!dim}Texts{!}
+    {!gold}───────────{!frame}───────────────────────────────────────────────────{!} {!gold}■{!}
+
+    {!gold}■  About the station{!}
+
+    Velour is BBS software. Guests come in over telnet, and the
+    screens are text files of the sysop.
+
+    This is the home station of Velour. It runs on Velour and shows
+    its guides and features.
+
+    {!dim}Your address{!}        {session.ip}
+    {!dim}Time online{!}         {session.online}
+    {!dim}Velour version{!}      {bbs.version}
+    {!dim}Open sessions{!}       {bbs.sessions}
+    {!dim}Station uptime{!}      {bbs.uptime}
+
+
+
+
+    {!frame}────────────────────────────────────────────────────────────────{!}
+    {!hi}Esc{!} {!ctl}To menu{!}
+{/if}
