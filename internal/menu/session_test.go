@@ -103,6 +103,9 @@ func lines(n int) string {
 	return b.String()
 }
 
+// noValues gives empty values of the session and BBS fields.
+func noValues() screen.SessionValues { return screen.SessionValues{} }
+
 // load loads the screens of files with the changes of change. A new name adds a file.
 // An empty value removes a file.
 func load(t *testing.T, change map[string]string) map[string]*screen.Screen {
@@ -245,7 +248,7 @@ File {arg.f}
 		t.Run(tt.name, func(t *testing.T) {
 			ss := load(t, tt.change)
 			ft := &fakeTerm{cols: tt.cols, keys: slices.Clone(tt.keys)}
-			err := Run(eventsTerm{ft}, config.Config{More: "-- More --"}, ss, "main", nil)
+			err := Run(eventsTerm{ft}, config.Config{More: "-- More --"}, ss, "main", nil, noValues)
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("error %v, want %v", err, tt.wantErr)
 			}
@@ -260,7 +263,7 @@ File {arg.f}
 func TestRunTermError(t *testing.T) {
 	errClosed := errors.New("closed")
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"G"}, pageErr: errClosed}
-	err := Run(ft, config.Config{}, load(t, nil), "main", nil)
+	err := Run(ft, config.Config{}, load(t, nil), "main", nil, noValues)
 	if !errors.Is(err, errClosed) || len(ft.log) != 1 {
 		t.Errorf("error %v, log %q; want %v after one page", err, ft.log, errClosed)
 	}
@@ -269,7 +272,7 @@ func TestRunTermError(t *testing.T) {
 // A terminal without Events gets the pages only.
 func TestRunNoEvents(t *testing.T) {
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"L", "S", "B", "G", "X"}}
-	if err := Run(ft, config.Config{More: "-- More --"}, load(t, nil), "main", nil); err != nil {
+	if err := Run(ft, config.Config{More: "-- More --"}, load(t, nil), "main", nil, noValues); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"page: [S]ystem [G]oodbye", "page: 1", "page: 10", "page: [S]ystem [G]oodbye", "page: Bye"}
@@ -318,7 +321,7 @@ func TestRunSessionTheme(t *testing.T) {
 	}
 	for colors, want := range map[int]string{16: "15/1 bold", 256: "15/4 bold"} {
 		st := &styleTerm{colors: colors}
-		if err := Run(st, cfg, ss, "main", nil); err != nil {
+		if err := Run(st, cfg, ss, "main", nil, noValues); err != nil {
 			t.Fatal(err)
 		}
 		if st.style != want {
@@ -365,7 +368,7 @@ do = "goto main"
 	}
 	// 10 rows: H is 9, so 20 lines give 3 pages.
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"R", "N", "N", "N", "P", "P", "P", "L", "F", "Q"}}
-	err := Run(eventsTerm{ft}, config.Config{Start: "main"}, ss, "main", nil)
+	err := Run(eventsTerm{ft}, config.Config{Start: "main"}, ss, "main", nil, noValues)
 	want := []string{
 		"screen main", "page: Main", "key R", "screen read", "page: 1/3 N",
 		"key N", "page: 2/3 N", "key N", "page: 3/3", "key N ignored",
@@ -378,10 +381,59 @@ do = "goto main"
 
 	// Pages gives each file page.
 	var got []string
-	for p := range Pages(config.Config{}, ss["read"], ft.Term(), map[string]string{"file": "a.txt"}) {
+	for p := range Pages(config.Config{}, ss["read"], ft.Term(), map[string]string{"file": "a.txt"}, screen.SessionValues{}) {
 		got = append(got, fmt.Sprintf("%d:%d", p.Num, len(p.Rows)))
 	}
 	if want := []string{"1:10", "2:10", "3:10"}; !slices.Equal(got, want) {
 		t.Errorf("Pages %q, want %q", got, want)
+	}
+}
+
+// The session takes the session and BBS fields once for each screen, before the when
+// of the items, and for each page of a file screen (session-fields, section 2).
+func TestRunValues(t *testing.T) {
+	fsys := fstest.MapFS{
+		"screens/main.bbt": {Data: []byte(`+++
+[[item]]
+key = "R"
+do = "goto read"
+when = "bbs.sessions == 1"
+[[item]]
+key = "Q"
+do = "goto main"
++++
+main {bbs.sessions}{#if item.R} R{/if}
+`)},
+		"screens/read.bbt": {Data: []byte(`+++
+file = "a.txt"
+[[item]]
+key = "N"
+do = "page next"
+[[item]]
+key = "Q"
+do = "goto main"
++++
+read {bbs.sessions} {file.page}
+{>file}
+`)},
+		"content/a.txt": {Data: []byte(lines(20))},
+	}
+	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
+	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
+	ds = Check(config.Config{Start: "main"}, ss, ds)
+	if len(ds) > 0 {
+		t.Fatalf("load: %v", ds)
+	}
+	// Each call gives the next count. The file screen takes one count for its layout.
+	n := 0
+	values := func() screen.SessionValues {
+		n++
+		return screen.SessionValues{Sessions: n}
+	}
+	ft := &fakeTerm{cols: []int{80}, keys: []string{"R", "N", "Q", "R"}}
+	err := Run(ft, config.Config{Start: "main"}, ss, "main", nil, values)
+	want := []string{"page: main 1 R", "page: read 3 1", "page: read 4 2", "page: main 5"}
+	if !errors.Is(err, io.EOF) || !slices.Equal(ft.log, want) {
+		t.Errorf("err %v, log %q, want %q", err, ft.log, want)
 	}
 }

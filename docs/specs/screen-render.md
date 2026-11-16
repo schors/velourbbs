@@ -3,8 +3,8 @@
 This specification defines the screen model, the render and the commands
 `velourbbs check` and `velourbbs preview`.
 Related parts: [bbt-format](bbt-format.md), [art-format](art-format.md), [bbs-toml](bbs-toml.md),
-[screens-toml](screens-toml.md), [menu-nav](menu-nav.md), [file-view](file-view.md)
-and [telnet-term](telnet-term.md).
+[screens-toml](screens-toml.md), [menu-nav](menu-nav.md), [file-view](file-view.md),
+[session-fields](session-fields.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
@@ -90,7 +90,8 @@ and writes its cell dump to the standard output.
 - It does the checks of `velourbbs check` first. After an error it writes no dump
   and exits with status 1.
 - The default size is 80x24. `--size` is the only way to set the size.
-- `--set` sets `term.type`, `term.colors` or `arg.<name>`. Example: `--set term.colors=256`.
+- `--set` sets `term.type`, `term.colors`, `arg.<name>` or a field of
+  [session-fields](session-fields.md), section 4. Example: `--set term.colors=256`.
   The defaults are `xterm` and 256. `term.charset` is `utf-8`.
 - Each argument of the screen needs `--set arg.<name>=<value>`
   ([bbt-format](bbt-format.md), section 8.5). A missing argument, another argument and

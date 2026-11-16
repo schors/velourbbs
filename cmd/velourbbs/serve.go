@@ -33,7 +33,7 @@ func serve(args []string, fsys fs.FS, stderr io.Writer) int {
 		log.Error("listen", "err", err)
 		return exitError
 	}
-	if err := server.New(cfg, screens, log).Serve(ctx, ln); err != nil {
+	if err := server.New(cfg, screens, log, version()).Serve(ctx, ln); err != nil {
 		log.Error("serve", "err", err)
 		return exitError
 	}

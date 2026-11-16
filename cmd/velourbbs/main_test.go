@@ -258,6 +258,21 @@ styles
 1: 1-30 7/0
 2: 1-30 7/0
 `,
+	}, {
+		// The values of session-fields, section 4. A test binary has no tag: bbs.version is dev.
+		name: "session fields",
+		args: []string{"fields"},
+		want: page(80, 24, "F|127.0.0.1|00:00|Kind Brothers BBS|dev|1|2006-01-02 15:04|00:00|E"),
+	}, {
+		name: "set session fields",
+		args: []string{"fields", "--set", "session.ip=2001:db8::1", "--set", "session.online=01:25",
+			"--set", "bbs.name=Мир BBS", "--set", "bbs.version=v1.2.0", "--set", "bbs.sessions=12",
+			"--set", "bbs.time=16.11.2026", "--set", "bbs.uptime=3d 04:17"},
+		want: page(80, 24, "F|2001:db8::1|01:25|Мир BBS|v1.2.0|12|16.11.2026|3d 04:17|E"),
+	}, {
+		name: "empty session fields",
+		args: []string{"fields", "--set", "session.ip=", "--set", "bbs.name=", "--set", "bbs.time="},
+		want: page(80, 24, "F||00:00||dev|1||00:00|E"),
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -282,10 +297,15 @@ func TestPreviewErrors(t *testing.T) {
 		{"preview", []string{"main", "--size", "80x101"}, "velourbbs preview: term.rows is 101, must be from 10 to 100", exitUsage},
 		{"preview", []string{"main", "--size", "+80x25"}, `invalid value "+80x25" for flag -size: cols: "+80" is not a decimal number`, exitUsage},
 		{"preview", []string{"main", "--size", "80"}, `invalid value "80" for flag -size: rows: "" is not a decimal number`, exitUsage},
-		{"preview", []string{"main", "--set", "term.cols=100"}, `invalid value "term.cols=100" for flag -set: cannot set "term.cols": only term.type, term.colors and arg.<name>`, exitUsage},
-		{"preview", []string{"main", "--set", "term.charset=koi8-r"}, `invalid value "term.charset=koi8-r" for flag -set: cannot set "term.charset": only term.type, term.colors and arg.<name>`, exitUsage},
+		{"preview", []string{"main", "--set", "term.cols=100"}, `invalid value "term.cols=100" for flag -set: cannot set "term.cols": only term.type, term.colors, arg.<name>, session.* and bbs.*`, exitUsage},
+		{"preview", []string{"main", "--set", "term.charset=koi8-r"}, `invalid value "term.charset=koi8-r" for flag -set: cannot set "term.charset": only term.type, term.colors, arg.<name>, session.* and bbs.*`, exitUsage},
 		{"preview", []string{"main", "--set", "term.colors=17"}, "velourbbs preview: term.colors is 17, must be 16, 256 or 16777216", exitUsage},
 		{"preview", []string{"main", "--set", "term.type"}, `invalid value "term.type" for flag -set: expected <path>=<value>`, exitUsage},
+		{"preview", []string{"fields", "--set", "bbs.name={x"}, `invalid value "bbs.name={x" for flag -set: bbs.name: value has "{"`, exitUsage},
+		{"preview", []string{"fields", "--set", "session.ip=a\tb"}, "invalid value \"session.ip=a\\tb\" for flag -set: session.ip: value has a control character", exitUsage},
+		{"preview", []string{"fields", "--set", "bbs.sessions=-1"}, `invalid value "bbs.sessions=-1" for flag -set: bbs.sessions: "-1" is not a decimal number`, exitUsage},
+		{"preview", []string{"fields", "--set", "bbs.sessions="}, `invalid value "bbs.sessions=" for flag -set: bbs.sessions: "" is not a decimal number`, exitUsage},
+		{"preview", []string{"fields", "--set", "session.node=1"}, `invalid value "session.node=1" for flag -set: cannot set "session.node": only term.type, term.colors, arg.<name>, session.* and bbs.*`, exitUsage},
 		{"preview", []string{"nope"}, `velourbbs preview: unknown screen "nope"`, exitUsage},
 		{"preview", []string{}, "velourbbs preview: expected one screen name", exitUsage},
 		{"preview", []string{"main", "term"}, "velourbbs preview: expected one screen name", exitUsage},
@@ -447,6 +467,25 @@ func TestUsage(t *testing.T) {
 		first, _, _ := strings.Cut(errOut, "\n")
 		if out != "" || first != tt.msg || !strings.Contains(errOut, "usage:") || status != exitUsage {
 			t.Errorf("%q: stdout %q, stderr %q, status %d; want %q, the usage and status 2", tt.args, out, errOut, status, tt.msg)
+		}
+	}
+}
+
+// The version is a tag or dev (session-fields, section 3.4).
+func TestVersionOf(t *testing.T) {
+	for v, want := range map[string]string{
+		"v1.2.0":                               "v1.2.0",
+		"v1.2.0-rc.1":                          "v1.2.0-rc.1",
+		"":                                     "dev",
+		"(devel)":                              "dev",
+		"v0.0.0-20261116150408-c31024543e47":   "dev",
+		"v1.2.1-0.20261116150408-c31024543e47": "dev",
+		"v1.2.0-rc.1.0.20261116150408-c31024543e47": "dev",
+		"v1.2.0+dirty": "dev",
+		"v0.0.0-20261116150408-c31024543e47+dirty": "dev",
+	} {
+		if got := versionOf(v); got != want {
+			t.Errorf("versionOf(%q) = %q, want %q", v, got, want)
 		}
 	}
 }

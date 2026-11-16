@@ -1,10 +1,12 @@
 package screen
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/schors/velourbbs/internal/key"
 )
@@ -79,6 +81,33 @@ var fileFields = [...]struct {
 	fileMinutes: {"file.minutes", TypeInt},
 }
 
+// sessionField is a session.* or bbs.* field (session-fields, section 2).
+type sessionField uint8
+
+const (
+	sessionIP sessionField = iota + 1
+	sessionOnline
+	bbsName
+	bbsVersion
+	bbsSessions
+	bbsTime
+	bbsUptime
+)
+
+// sessionFields is the session.* and bbs.* fields of session-fields, section 2.
+var sessionFields = [...]struct {
+	path string
+	typ  Type
+}{
+	sessionIP:     {"session.ip", TypeString},
+	sessionOnline: {"session.online", TypeString},
+	bbsName:       {"bbs.name", TypeString},
+	bbsVersion:    {"bbs.version", TypeString},
+	bbsSessions:   {"bbs.sessions", TypeInt},
+	bbsTime:       {"bbs.time", TypeString},
+	bbsUptime:     {"bbs.uptime", TypeString},
+}
+
 // refKind is the kind of a field.
 type refKind uint8
 
@@ -88,15 +117,17 @@ const (
 	refArg
 	refFile
 	refMeta
+	refSession
 )
 
 // Ref is a resolved field path: a term.* field, item.<KEY>, arg.<name>,
-// a file.* field or meta.<key>.
+// a file.* field, meta.<key>, or a session.* or bbs.* field.
 type Ref struct {
-	kind refKind
-	term termField
-	file fileField
-	name string // the <KEY> of item.<KEY> in upper case, the <name> of arg.<name>, the <key> of meta.<key>
+	kind    refKind
+	term    termField
+	file    fileField
+	session sessionField
+	name    string // the <KEY> of item.<KEY> in upper case, the <name> of arg.<name>, the <key> of meta.<key>
 }
 
 // Type gives the type of the field.
@@ -108,6 +139,8 @@ func (r Ref) Type() Type {
 		return TypeBool
 	case refFile:
 		return fileFields[r.file].typ
+	case refSession:
+		return sessionFields[r.session].typ
 	case refArg, refMeta:
 		return TypeString
 	}
@@ -125,6 +158,8 @@ func (r Ref) String() string {
 		return "arg." + r.name
 	case refFile:
 		return fileFields[r.file].path
+	case refSession:
+		return sessionFields[r.session].path
 	case refMeta:
 		return "meta." + r.name
 	}
@@ -148,7 +183,7 @@ func (r Ref) isItem() bool { return r.kind == refItem }
 type Fields map[string]Ref
 
 // reserved are the names that an alias cannot have (screens-toml, section 3.3).
-var reserved = []string{"term", "item", "arg", "file", "meta", "and", "or", "not"}
+var reserved = []string{"term", "item", "arg", "file", "meta", "session", "bbs", "and", "or", "not"}
 
 // NewAlias checks the alias name and its path against screens-toml, section 3.3,
 // and gives the field of the path.
@@ -229,6 +264,11 @@ func resolve(path string, fields Fields) (Ref, error) {
 			return Ref{kind: refFile, file: fileField(i)}, nil
 		}
 	}
+	for i, f := range sessionFields {
+		if i > 0 && f.path == path {
+			return Ref{kind: refSession, session: sessionField(i)}, nil
+		}
+	}
 	return Ref{}, fmt.Errorf("unknown field %q", path)
 }
 
@@ -289,12 +329,20 @@ func CheckArg(name, value string) error {
 	if !IsIdent(name) {
 		return fmt.Errorf("invalid argument name %q", name)
 	}
+	if err := CheckValue(value); err != nil {
+		return fmt.Errorf("%s: %w", name, err)
+	}
+	return nil
+}
+
+// CheckValue checks a value with the rules of an argument value (section 8.5).
+func CheckValue(value string) error {
 	for _, r := range value {
 		switch {
 		case r == '{':
-			return fmt.Errorf("%s: value has \"{\"", name)
+			return errors.New("value has \"{\"")
 		case IsControl(r):
-			return fmt.Errorf("%s: value has a control character", name)
+			return errors.New("value has a control character")
 		}
 	}
 	return nil
@@ -302,10 +350,30 @@ func CheckArg(name, value string) error {
 
 // Env holds the field values of one render.
 type Env struct {
-	Term  Term
-	Items map[string]bool   // the keys of the enabled items
-	Args  map[string]string // the arguments of the screen (section 8.5)
-	File  *FileValues       // the values of a file screen, else nil
+	Term    Term
+	Items   map[string]bool   // the keys of the enabled items
+	Args    map[string]string // the arguments of the screen (section 8.5)
+	File    *FileValues       // the values of a file screen, else nil
+	Session SessionValues
+}
+
+// SessionValues holds the values of the session.* and bbs.* fields (session-fields, section 2).
+// Online, Time and Uptime are the formatted values.
+type SessionValues struct {
+	IP, Online    string
+	Name, Version string
+	Sessions      int
+	Time, Uptime  string
+}
+
+// FormatDuration gives d in the duration form of session-fields, section 3.3:
+// "hh:mm", or "<d>d hh:mm" from 24 hours, rounded down to whole minutes.
+func FormatDuration(d time.Duration) string {
+	m := int64(d / time.Minute)
+	if days := m / (24 * 60); days > 0 {
+		return fmt.Sprintf("%dd %02d:%02d", days, m/60%24, m%60)
+	}
+	return fmt.Sprintf("%02d:%02d", m/60, m%60)
 }
 
 // FileValues holds the values of the fields of a file screen for one page (file-view, section 3.4).
@@ -326,6 +394,8 @@ func (e *Env) value(r Ref) any {
 		return e.File.Content.Meta[r.name]
 	case refFile:
 		return e.File.value(r.file)
+	case refSession:
+		return e.Session.value(r.session)
 	}
 	switch r.term {
 	case termType:
@@ -355,6 +425,25 @@ func (v *FileValues) value(f fileField) any {
 		return v.Section
 	}
 	return v.Minutes
+}
+
+// value gives the value of the session.* or bbs.* field f.
+func (v *SessionValues) value(f sessionField) any {
+	switch f {
+	case sessionIP:
+		return v.IP
+	case sessionOnline:
+		return v.Online
+	case bbsName:
+		return v.Name
+	case bbsVersion:
+		return v.Version
+	case bbsSessions:
+		return v.Sessions
+	case bbsTime:
+		return v.Time
+	}
+	return v.Uptime
 }
 
 // Text gives the graphemes of a field token: an integer in decimal,

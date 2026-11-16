@@ -3,8 +3,8 @@
 This specification defines the screens settings file `screens/screens.toml`:
 each table and each key.
 Related parts: [bbt-format](bbt-format.md), [menu-nav](menu-nav.md),
-[telnet-term](telnet-term.md), [screen-render](screen-render.md), [bbs-toml](bbs-toml.md)
-and [file-view](file-view.md).
+[telnet-term](telnet-term.md), [screen-render](screen-render.md), [bbs-toml](bbs-toml.md),
+[file-view](file-view.md) and [session-fields](session-fields.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -35,6 +35,7 @@ The other specifications define the effect of a key and refer to this specificat
 | `align` | string | `"center"` | The horizontal position of a screen: [bbt-format](bbt-format.md), section 6.1. |
 | `valign` | string | `"top"` | The vertical position of a screen: [bbt-format](bbt-format.md), section 6.5. |
 | `fill` | string | `"none"` | The fill rows: [bbt-format](bbt-format.md), section 6.5. |
+| `time` | string | `"2006-01-02 15:04"` | The layout of the Go package `time` for the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 
 - `width`, `align`, `valign` and `fill` have the rules of the front matter keys
   ([bbt-format](bbt-format.md), section 3.2).
@@ -82,7 +83,7 @@ and the host reduces it ([telnet-term](telnet-term.md), section 7.3).
 `[fields]` maps an alias to a registry path: [bbt-format](bbt-format.md), sections 4.1 and 4.2.
 
 - An alias matches `[a-z][a-z0-9_]*`. Each value is a string. The default `[fields]` is empty.
-- An alias cannot be `term`, `item`, `arg`, `file`, `meta`, `and`, `or` or `not`.
+- An alias cannot be `term`, `item`, `arg`, `file`, `meta`, `session`, `bbs`, `and`, `or` or `not`.
 - A field token with an alias is a field token with its path. So an alias to `arg.<name>`
   gives an argument of the screen ([bbt-format](bbt-format.md), section 8.5), and an alias to a field
   of a file screen is valid only in a file screen ([file-view](file-view.md), section 3.4).

@@ -9,6 +9,7 @@ import (
 	"maps"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/schors/velourbbs/internal/config"
@@ -19,18 +20,33 @@ import (
 	"github.com/schors/velourbbs/internal/term"
 )
 
+// previewTime is the default time of bbs.time in velourbbs preview (session-fields, section 4).
+var previewTime = time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC)
+
 // preview runs velourbbs preview (screen-render, section 3.2): it renders a screen and writes its cell dump
 // to stdout. With --keys, it runs a session (menu-nav, section 7).
 // The flags can come before and after the name.
 func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	term := screen.Term{Type: "xterm", Cols: 80, Rows: 24, Charset: "utf-8", Colors: screen.Colors256}
+	// The values of session-fields, section 4. bbs.name and bbs.time come from the config.
+	sv := screen.SessionValues{IP: "127.0.0.1", Online: "00:00", Version: version(), Sessions: 1, Uptime: "00:00"}
+	svSet := map[string]bool{} // the session and BBS fields of --set
 	fl := flag.NewFlagSet("velourbbs preview", flag.ContinueOnError)
 	fl.SetOutput(stderr)
 	fl.Usage = func() { _, _ = io.WriteString(stderr, usage) }
 	fl.Func("size", "", func(v string) error { return parseSize(v, &term) })
 	colorsSet := false
 	argVals := map[string]string{} // the arguments of --set arg.<name>
-	fl.Func("set", "", func(v string) error { return setField(v, &term, &colorsSet, argVals) })
+	fl.Func("set", "", func(v string) error {
+		path, value, ok := strings.Cut(v, "=")
+		if ok {
+			if set, err := setSession(&sv, path, value); set {
+				svSet[path] = true
+				return err
+			}
+		}
+		return setField(v, &term, &colorsSet, argVals)
+	})
 	var keys []string
 	session := false
 	fl.Func("keys", "", func(v string) error {
@@ -67,6 +83,12 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	if ds.HasErrors() {
 		return exitError
 	}
+	if !svSet["bbs.name"] {
+		sv.Name = cfg.Name
+	}
+	if !svSet["bbs.time"] {
+		sv.Time = previewTime.Format(cfg.Time)
+	}
 	s, ok := screens[name]
 	if session {
 		if err := menu.CheckTarget(screens, name); err != nil {
@@ -92,9 +114,9 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		s, screens[name] = ns, ns
 	}
 	if session {
-		return runKeys(&keysTerm{term: term, keys: keys, w: stdout}, cfg, screens, name, argVals, stderr)
+		return runKeys(&keysTerm{term: term, keys: keys, w: stdout}, cfg, screens, name, argVals, sv, stderr)
 	}
-	if err := screen.WriteDump(stdout, menu.Pages(cfg, s, term, argVals)); err != nil {
+	if err := screen.WriteDump(stdout, menu.Pages(cfg, s, term, argVals, sv)); err != nil {
 		_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		return exitError
 	}
@@ -180,7 +202,41 @@ func setField(v string, t *screen.Term, colorsSet *bool, args map[string]string)
 		t.Colors, *colorsSet = n, true
 		return nil
 	}
-	return fmt.Errorf("cannot set %q: only term.type, term.colors and arg.<name>", path)
+	return fmt.Errorf("cannot set %q: only term.type, term.colors, arg.<name>, session.* and bbs.*", path)
+}
+
+// setSession sets the session or BBS field path of sv to value (session-fields, section 4).
+// It reports whether path is such a field.
+func setSession(sv *screen.SessionValues, path, value string) (bool, error) {
+	var p *string
+	switch path {
+	case "bbs.sessions":
+		n, err := decimal(value)
+		if err != nil {
+			return true, fmt.Errorf("%s: %w", path, err)
+		}
+		sv.Sessions = n
+		return true, nil
+	case "session.ip":
+		p = &sv.IP
+	case "session.online":
+		p = &sv.Online
+	case "bbs.name":
+		p = &sv.Name
+	case "bbs.version":
+		p = &sv.Version
+	case "bbs.time":
+		p = &sv.Time
+	case "bbs.uptime":
+		p = &sv.Uptime
+	default:
+		return false, nil
+	}
+	if err := screen.CheckValue(value); err != nil {
+		return true, fmt.Errorf("%s: %w", path, err)
+	}
+	*p = value
+	return true, nil
 }
 
 // parseKeys parses the key list of --keys (menu-nav, section 7). An element is a key name
@@ -249,10 +305,11 @@ func (t *keysTerm) Logoff() error {
 }
 
 // runKeys runs the session of velourbbs preview --keys from the screen start
-// with the arguments args and gives the exit status. The end of the key list ends the session.
-// A key after the end of the session at logoff is an error.
-func runKeys(t *keysTerm, cfg config.Config, screens map[string]*screen.Screen, start string, args map[string]string, stderr io.Writer) int {
-	err := menu.Run(t, cfg, screens, start, args)
+// with the arguments args and the session and BBS fields sv, and gives the exit status.
+// The end of the key list ends the session. A key after the end of the session at logoff is an error.
+func runKeys(t *keysTerm, cfg config.Config, screens map[string]*screen.Screen, start string, args map[string]string,
+	sv screen.SessionValues, stderr io.Writer) int {
+	err := menu.Run(t, cfg, screens, start, args, func() screen.SessionValues { return sv })
 	switch {
 	case errors.Is(err, errNoKeys):
 		return 0

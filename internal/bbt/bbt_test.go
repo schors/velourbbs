@@ -752,9 +752,9 @@ func FuzzLoad(f *testing.F) {
 			t.Fatal("no screen without errors")
 		}
 		checkSegs(t, screens["s"].Body)
-		env, _ := menu.Enabled(screens["s"], screen.Term{
+		env, _ := menu.Enabled(screens["s"], screen.Env{Term: screen.Term{
 			Type: "ansi", Cols: screen.MinCols, Rows: screen.MinRows, Charset: "utf-8", Colors: screen.Colors16,
-		}, nil, nil)
+		}})
 		for range screen.Render(screens["s"], env, theme, "more") {
 		}
 	})

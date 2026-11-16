@@ -1,8 +1,8 @@
 # bbs.toml
 
 This specification defines the host settings file `bbs.toml`: each table and each key.
-Related parts: [screens-toml](screens-toml.md), [telnet-term](telnet-term.md)
-and [screen-render](screen-render.md).
+Related parts: [screens-toml](screens-toml.md), [telnet-term](telnet-term.md),
+[screen-render](screen-render.md) and [session-fields](session-fields.md).
 
 ## 1. Goal
 
@@ -45,9 +45,18 @@ The other specifications define the effect of a key and refer to this specificat
 - An address is an IPv4 or IPv6 address. A prefix is an address with `/<bits>`.
 - An IPv6 address can have a zone `%<zone>`. The host ignores the zone. A prefix cannot have a zone.
 
+### 3.2. `[bbs]`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `name` | string | `"Kind Brothers BBS"` | The name of the BBS: the field `bbs.name` of [session-fields](session-fields.md), section 2. |
+
 ## 4. Example
 
 ```toml
+[bbs]
+name = "Kind Brothers BBS"
+
 [telnet]
 listen = ":2323"
 max_conns = 64

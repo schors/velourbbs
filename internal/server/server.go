@@ -9,6 +9,7 @@ import (
 	"net/netip"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/schors/velourbbs/internal/config"
@@ -34,6 +35,10 @@ type Server struct {
 	log     *slog.Logger
 	limits  *Limits
 	to      term.Timeouts
+	version string    // the field bbs.version
+	started time.Time // the start of Serve: the start of the listen
+
+	sessions atomic.Int64 // the open sessions (session-fields, section 3.2)
 
 	mu      sync.Mutex
 	conns   map[net.Conn]struct{} // the open connections
@@ -43,10 +48,10 @@ type Server struct {
 }
 
 // New makes a server for the screens of a load without errors and of menu.Check.
-// log is the log of the server.
-func New(cfg config.Config, screens map[string]*screen.Screen, log *slog.Logger) *Server {
+// log is the log of the server. version is the field bbs.version (session-fields, section 3.4).
+func New(cfg config.Config, screens map[string]*screen.Screen, log *slog.Logger, version string) *Server {
 	return &Server{
-		cfg: cfg, screens: screens, log: log,
+		cfg: cfg, screens: screens, log: log, version: version,
 		limits: NewLimits(cfg.Telnet),
 		to: term.Timeouts{
 			Probe:  cfg.Telnet.ProbeTimeout,
@@ -62,6 +67,7 @@ func New(cfg config.Config, screens map[string]*screen.Screen, log *slog.Logger)
 // and returns nil. After an accept error, it waits acceptWait and accepts again.
 // When ln closes for another reason, Serve stops the same way and returns the error.
 func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
+	s.started = time.Now()
 	s.log.Info("listen", "addr", ln.Addr().String())
 	stop := func() {
 		_ = ln.Close()
@@ -171,10 +177,27 @@ func (s *Server) session(c net.Conn, accepted time.Time) (addr netip.Addr, reaso
 	if err != nil {
 		return addr, err.Error(), errors.Is(err, term.ErrNotUTF8)
 	}
-	if err := menu.Run(t, s.cfg, s.screens, s.cfg.Start, nil); err != nil {
+	// The session is open from here until the close (session-fields, section 3.2).
+	s.sessions.Add(1)
+	defer s.sessions.Add(-1)
+	if err := menu.Run(t, s.cfg, s.screens, s.cfg.Start, nil, s.values(addr, accepted)); err != nil {
 		return addr, err.Error(), false
 	}
 	return addr, "logoff", true
+}
+
+// values gives the session and BBS fields of the session with the client address addr
+// and the accept time accepted (session-fields, section 3).
+func (s *Server) values(addr netip.Addr, accepted time.Time) menu.Values {
+	ip := addr.WithZone("").String()
+	return func() screen.SessionValues {
+		now := time.Now()
+		return screen.SessionValues{
+			IP: ip, Online: screen.FormatDuration(now.Sub(accepted)),
+			Name: s.cfg.Name, Version: s.version, Sessions: int(s.sessions.Load()),
+			Time: now.Format(s.cfg.Time), Uptime: screen.FormatDuration(now.Sub(s.started)),
+		}
+	}
 }
 
 // readHeader reads the PROXY protocol header of c until accept + probe_timeout.

@@ -13,6 +13,7 @@ import (
 var (
 	defaultLayout    = screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}
 	defaultMore      = "-- More --"
+	defaultTime      = "2006-01-02 15:04"
 	defaultNormal    = screen.Style{Fg: screen.IndexColour(7), Bg: screen.IndexColour(0)}
 	defaultMoreStyle = screen.StyleSpec{
 		Fg: screen.IndexColour(15), Bg: screen.IndexColour(0), HasFg: true, HasBg: true,
@@ -27,6 +28,7 @@ type screensDoc struct {
 		VAlign *string  `toml:"valign"`
 		Fill   *string  `toml:"fill"`
 		More   *string  `toml:"more"`
+		Time   *string  `toml:"time"`
 	} `toml:"screen"`
 	Theme struct {
 		Default map[string]string `toml:"default"`
@@ -44,7 +46,8 @@ type screensDoc struct {
 // It gives at most screen.MaxFileDiags diagnostics (screen-render, section 3.1).
 func parseScreens(data []byte) (Config, screen.Diags) {
 	cfg := Config{
-		Layout: defaultLayout, More: defaultMore, Fields: screen.Fields{}, Start: "main", Telnet: defaultTelnet,
+		Layout: defaultLayout, More: defaultMore, Time: defaultTime, Fields: screen.Fields{}, Start: "main",
+		Telnet: defaultTelnet, Name: defaultName,
 	}
 	fd := screen.FileDiags{File: ScreensFile}
 	var d screensDoc
@@ -66,6 +69,9 @@ func parseScreens(data []byte) (Config, screen.Diags) {
 		} else {
 			cfg.More = *p
 		}
+	}
+	if p := d.Screen.Time; p != nil {
+		cfg.Time = *p
 	}
 	if p := d.Menu.Start; p != nil {
 		if !screen.IsName(*p) {

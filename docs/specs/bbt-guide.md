@@ -4,7 +4,7 @@ This specification defines the BBT guide: the guide to the screen files for the 
 and the screen author.
 Related parts: [bbt-format](bbt-format.md), [art-format](art-format.md),
 [art-import](art-import.md), [screens-toml](screens-toml.md), [menu-nav](menu-nav.md)
-[screen-render](screen-render.md), [telnet-term](telnet-term.md)
+[screen-render](screen-render.md), [telnet-term](telnet-term.md), [session-fields](session-fields.md)
 and [example-style](example-style.md).
 
 ## 1. Goal
@@ -47,7 +47,7 @@ The guide has these tasks in this order. Each task ends with a check of the resu
 | 2. The first screen | Text lines, empty lines, the style tokens `{!name}` and `{!}`, the theme `[theme.default]`, `[screen] width` and `fill`. The item `G` of task 1 stays until task 4. | — |
 | 3. The header | A fragment and an include. | `screens/_head.bbt` |
 | 4. A menu with hotkeys | `[[item]]`, `key`, `do`, `goto` and `logoff`. The key row is text of the screen. The screen `goodbye`. `velourbbs preview --keys`. | `screens/main.bbt`, `screens/about.bbt`, `screens/goodbye.bbt` |
-| 5. Fields and conditions | The fields `term.*`, `{#if}` and `{#else}`. A fixed-width field. `when` and `item.<KEY>`. | `screens/term.bbt` |
+| 5. Fields and conditions | The fields `term.*`, `{#if}` and `{#else}`. A snippet with the fields `session.*` and `bbs.*` and `[screen] time` ([session-fields](session-fields.md), section 2). A fixed-width field. `when` and `item.<KEY>`. | `screens/term.bbt` |
 | 6. The colour depth | `[theme.256]` and `[theme.16]`. `velourbbs preview --set term.colors=<n>`. In `velourbbs serve`, the terminal type of the client gives the colour depth ([telnet-term](telnet-term.md), section 6). | `screens/screens.toml` |
 | 7. Art | The ready art `screens/lamp.ans` and the art insert `{><name>.ans}`. A field in art: its token has one background and one foreground ([art-format](art-format.md), section 4). Draw new art in an art editor and convert it with `velourbbs art import` ([art-import](art-import.md), sections 2 and 3). | `examples/art/bbs.toml`, `examples/art/screens/screens.toml`, `examples/art/screens/main.bbt` |
 | 8. Errors | Examples of frequent errors of `velourbbs check` and their fixes. | — |
