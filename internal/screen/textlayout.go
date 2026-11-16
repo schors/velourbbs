@@ -20,7 +20,7 @@ func TextLayout(c *Content, first, last int, numbers bool, w int, theme map[stri
 	t := textLayout{lines: lines, start: start, source: c.Kind == Source,
 		normal: theme["normal"], code: theme["md_code"], dim: theme["md_dim"]}
 	if numbers {
-		// The number, then one space. The column is at most W / 2, as an indent (section 5.2).
+		// The number, then one space. The column is at most W / 2, as a prefix (section 5.2).
 		if nw := len(strconv.Itoa(top)) + 1; nw <= w/2 {
 			t.nw = nw
 		}
@@ -46,7 +46,7 @@ func (t textLayout) rows(from int) iter.Seq[FileRow] {
 			i       int    // the index of the line
 			lineRow bool   // the next row is the first row of the line i
 			row     []Cell // the number column and the cells of a row
-			gs      []Grapheme
+			lcs     []lineCell
 			stopped bool
 		)
 		emit := func(cells []Cell) {
@@ -62,14 +62,15 @@ func (t textLayout) rows(from int) iter.Seq[FileRow] {
 		var cells []Cell
 		for i = from; i < len(t.lines) && !stopped; i++ {
 			lineRow = true
-			gs = expandTabs(gs[:0], t.lines[i])
 			if t.source {
-				cells = codeRow(cells[:0], gs, t.w, t.code, t.dim)
+				lcs = expandTabs(lcs[:0], t.lines[i], t.code)
+				cells = cutRow(cells[:0], lcs, t.w, t.dim)
 				emit(cells)
 				continue
 			}
-			for _, g := range gs {
-				wr.add(lineCell{g, t.normal, g.Text == " "})
+			lcs = expandTabs(lcs[:0], t.lines[i], t.normal)
+			for _, c := range lcs {
+				wr.add(c)
 			}
 			wr.endLine(false)
 		}
@@ -95,50 +96,49 @@ func (t textLayout) number(cells []Cell, i int, first bool) []Cell {
 	return append(cells, Cell{" ", t.dim})
 }
 
-// expandTabs appends the graphemes of line to gs. A TAB becomes spaces up to the next
+// expandTabs appends the graphemes of line in style to lcs. A TAB becomes spaces up to the next
 // multiple of TabWidth cells from the start of the line (file-view, sections 5.4 and 6).
-func expandTabs(gs []Grapheme, line string) []Grapheme {
+// A space is a break space.
+func expandTabs(lcs []lineCell, line string, style Style) []lineCell {
 	col := 0
 	for g, w := range Graphemes(line) {
 		if g == "\t" {
 			w = TabWidth - col%TabWidth
 			for range w {
-				gs = append(gs, space)
+				lcs = append(lcs, lineCell{space, style, true})
 			}
 		} else {
-			gs = append(gs, Grapheme{g, w})
+			lcs = append(lcs, lineCell{Grapheme{g, w}, style, g == " "})
 		}
 		col += w
 	}
-	return gs
+	return lcs
 }
 
-// codeRow appends the code row of gs in width cells to cells (file-view, section 5.4).
-// A row wider than width keeps the graphemes in its first width - 3 cells,
-// pads the rest with spaces and ends with the cut mark "..." in dim.
+// cutRow appends the row of lcs in width cells to cells: a code row or a table row
+// (file-view, sections 5.3 and 5.4). A row wider than width keeps the graphemes in its first
+// width - 3 cells, pads the rest with spaces and ends with the cut mark "..." in dim.
 // When width is less than 3, the cut mark is cut to width.
-func codeRow(cells []Cell, gs []Grapheme, width int, code, dim Style) []Cell {
+func cutRow(cells []Cell, lcs []lineCell, width int, dim Style) []Cell {
 	total := 0
-	for _, g := range gs {
-		total += g.Width
+	for _, c := range lcs {
+		total += c.g.Width
 	}
 	keep := width
 	if total > width {
 		keep = max(width-3, 0)
 	}
-	used := 0
-	for _, g := range gs {
-		if used+g.Width > keep {
-			break
-		}
-		cells = appendCell(cells, g, code)
-		used += g.Width
+	used, i := 0, 0
+	for ; i < len(lcs) && used+lcs[i].g.Width <= keep; i++ {
+		cells = appendCell(cells, lcs[i].g, lcs[i].style)
+		used += lcs[i].g.Width
 	}
 	if total <= width {
 		return cells
 	}
+	// A cut wide grapheme leaves a space in its style.
 	for ; used < keep; used++ {
-		cells = append(cells, Cell{" ", code})
+		cells = append(cells, Cell{" ", lcs[i].style})
 	}
 	for range width - keep {
 		cells = append(cells, Cell{".", dim})

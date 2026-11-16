@@ -133,7 +133,7 @@ args = { file = "gold.md" }
 | `file.page` | integer | The number of the current page, from 1. |
 | `file.pages` | integer | The page count. |
 | `file.last` | boolean | True on the last page. |
-| `file.section` | string | The text of the last heading of level 1 or 2 at or before the first file row of the page. Else empty. |
+| `file.section` | string | The text of the last heading of level 1 or 2 that gives rows, at or before the first file row of the page. Else empty. |
 | `file.minutes` | integer | The reading time in minutes (section 3.5). |
 | `meta.<key>` | string | The front matter key `<key>` (section 5.1). Else empty. |
 
@@ -208,27 +208,29 @@ The base theme has these styles ([screens-toml](screens-toml.md), section 3.2):
 ### 5.2. Blocks
 
 - One empty row separates two blocks. Inside a tight list, the blocks of the list
-  have no empty row between them.
+  have no empty row between them. Inside a quote, the empty row has the bar.
 - A block that gives no rows does not take a separator.
 - Text wraps as [bbt-format](bbt-format.md), section 6.3. A soft line break is a space.
   A hard line break starts a new row. A TAB in text is a space.
-- The indent of a block is at most W / 2, rounded down.
+- The "prefix" of a row is the indent, the list markers and the bars before its text.
+  It is at most W / 2 cells, rounded down. A longer prefix keeps its last W / 2 cells.
+- A paragraph or a heading with no cells gives no rows. An empty list item gives one row with its marker.
 
 | Block | Rows |
 |---|---|
 | Paragraph | The text. |
 | Heading | The text in `md_h1`, `md_h2` or `md_h3`. |
-| Bullet list | Level 1: `∙` in `md_mark` at the indent 2. Level n > 1: `-` in `md_frame` at the indent 2 + 4 × (n − 1). One space follows the marker, then the text. |
+| Bullet list | The marker at the indent 2: at level 1 `∙` in `md_mark`, at level n > 1 `-` in `md_frame`. One space follows the marker, then the text. |
 | Ordered list | As a bullet list, with the number and `.` in place of the marker. The numbers of a list align right to the widest number. |
 | Block quote | `│` in `md_mark` and a space before each row. The content in `md_em`. |
 | Code block | `│` in `md_frame` and a space before each row. The code in `md_code`. Section 5.4. |
-| Thematic break | `∙   ∙   ∙` in `md_mark`. |
+| Thematic break | `∙   ∙   ∙` in `md_mark`, cut to the space. |
 | Table | Section 5.3. |
-| HTML block | The text as written, in `normal`. An HTML comment gives no rows, but the text after its `-->` shows. |
+| HTML block | The text as written, in `normal`. Each line wraps as a text line. An HTML comment gives no rows. The text after its `-->` shows when it is not only spaces. |
 | Link reference definition | No rows. |
 
 - A block inside a list item starts at the text of the item. A block inside a quote starts after the bar.
-- The "space" of a block is W minus its indent and the bars before it.
+- The "space" of a block is W minus its prefix.
 
 ### 5.3. Table
 
@@ -256,9 +258,10 @@ The base theme has these styles ([screens-toml](screens-toml.md), section 3.2):
 | Inline HTML | The text as written. An HTML comment gives no cells. |
 
 - A link or an image with an address that has a scheme, for example `https:`, has a note.
-  A note number is the number of the address in the order of the first link to it.
-- The "notes" are the rows after the last block: an empty row, then one row for each address:
-  `[<n>] <address>` in `md_dim`.
+  A note number is the number of the address in the order of the note numbers in the text.
+- The "notes" are the rows after the last block: an empty row, then for each address
+  `[<n>] <address>` in `md_dim`. The address wraps as text after `[<n>] `,
+  or from the start of the row when `[<n>] ` is wider than W / 2.
 - A link without a scheme, for example to another Markdown file, has no note.
 
 ### 5.6. Page breaks
