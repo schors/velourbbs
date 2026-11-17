@@ -38,7 +38,7 @@ const reasonShutdown = "shutdown"
 type connState struct {
 	t       *term.Terminal // the terminal of the open session; nil before the session
 	closing bool           // the connection is in its close
-	stopped bool           // the stop closed the connection before the session
+	stopped bool           // the stop closed the connection before the session, or stopped its session
 }
 
 // Server is the telnet server of section 10.
@@ -136,6 +136,7 @@ func (s *Server) stop() {
 		switch {
 		case st.closing:
 		case st.t != nil:
+			st.stopped = true
 			st.t.Stop()
 		default:
 			st.stopped = true
@@ -190,6 +191,13 @@ func (s *Server) open(c net.Conn, t *term.Terminal) bool {
 	return true
 }
 
+// stopped reports whether the stop stopped the session on c.
+func (s *Server) stopped(c net.Conn) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.conns[c].stopped
+}
+
 // handle runs the connection c and logs its end.
 func (s *Server) handle(c net.Conn) {
 	accepted := time.Now()
@@ -197,7 +205,7 @@ func (s *Server) handle(c net.Conn) {
 	s.mu.Lock()
 	st := s.conns[c]
 	st.closing = true
-	if st.stopped {
+	if st.stopped && st.t == nil {
 		reason, output = reasonShutdown, false
 	}
 	s.mu.Unlock()
@@ -265,6 +273,9 @@ func (s *Server) session(c net.Conn, accepted time.Time) (addr netip.Addr, reaso
 		// Without the screen shutdown, there is no output (menu-nav, section 5.2).
 		_, ok := s.screens["shutdown"]
 		return addr, reasonShutdown, ok && menu.Shutdown(t, s.cfg, s.screens, values) == nil
+	case err != nil && s.stopped(c):
+		// The close of step 3 ended a page of the session.
+		return addr, reasonShutdown, false
 	case err != nil:
 		return addr, err.Error(), false
 	}

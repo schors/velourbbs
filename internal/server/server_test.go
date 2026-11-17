@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"maps"
 	"net"
 	"net/netip"
 	"regexp"
@@ -575,10 +576,12 @@ func TestServeShutdown(t *testing.T) {
 }
 
 // stallListener gives connections whose writes wait until the close
-// after the stall starts.
+// after the stall starts. It closes stalled at the first write that waits.
 type stallListener struct {
 	net.Listener
-	stall atomic.Bool
+	stall   atomic.Bool
+	once    sync.Once
+	stalled chan struct{}
 }
 
 func (l *stallListener) Accept() (net.Conn, error) {
@@ -598,6 +601,7 @@ type stallConn struct {
 
 func (c *stallConn) Write(b []byte) (int, error) {
 	if c.l.stall.Load() {
+		c.l.once.Do(func() { close(c.l.stalled) })
 		<-c.closed
 		return 0, net.ErrClosed
 	}
@@ -615,7 +619,7 @@ func TestServeStopTime(t *testing.T) {
 	const stopTime = 300 * time.Millisecond
 	var l *stallListener
 	ts := startFS(t, shutdownFS, nil, func(ln net.Listener) net.Listener {
-		l = &stallListener{Listener: ln}
+		l = &stallListener{Listener: ln, stalled: make(chan struct{})}
 		return l
 	}, stopTime)
 	c := ts.dial(t)
@@ -690,4 +694,28 @@ func TestServeFields(t *testing.T) {
 	if got := fields(t, c2); got[4] != "3" {
 		t.Errorf("session 2: bbs.sessions %q, want 3", got[4])
 	}
+}
+
+// A session that writes a page when the stop starts gets the reason shutdown
+// after the close of step 3 (section 10.2).
+func TestServeStopPage(t *testing.T) {
+	const stopTime = 300 * time.Millisecond
+	fsys := maps.Clone(shutdownFS)
+	fsys["screens/main.bbt"] = &fstest.MapFile{Data: []byte(
+		"+++\n[[item]]\nkey = \"A\"\ndo = \"goto main\"\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\nHello from main\n")}
+	var l *stallListener
+	ts := startFS(t, fsys, nil, func(ln net.Listener) net.Listener {
+		l = &stallListener{Listener: ln, stalled: make(chan struct{})}
+		return l
+	}, stopTime)
+	c := ts.dial(t)
+	probe(t, c, wontReplies)
+	// The page of main after A waits: the client does not read.
+	l.stall.Store(true)
+	write(t, c, "a")
+	<-l.stalled
+	if err := ts.stop(); err != nil {
+		t.Fatal(err)
+	}
+	logRecord(t, ts, "close", "reason", "shutdown")
 }

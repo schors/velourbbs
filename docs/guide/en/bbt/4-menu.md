@@ -226,12 +226,25 @@ to each open session and ends the session. Tell the visitors that the BBS restar
        Call again soon.
 ```
 
-- `shutdown` has the rules of `goodbye`: no items, no arguments and no file.
+The two rows:
+
+```text
+       The lamp goes out for a minute.
+       Call again soon.
+```
+
+"The lamp goes out for a minute." is in the light peach `title` in bold.
+
+- `shutdown` has the rules of `goodbye`: no items and no arguments.
+  It is not a file screen: it has no key `file` (task 7).
 - The BBS shows only the first page of `shutdown`. It does not wait for a key.
 - Without `screens/shutdown.bbt`, the BBS ends the sessions with no text.
 - After 5 s, the BBS closes each connection that is still open.
 
 `velourbbs preview shutdown` shows the screen.
+
+Full rules: [menu-nav](../../../specs/menu-nav.md), section 5.2,
+and [telnet-term](../../../specs/telnet-term.md), section 10.2.
 
 ## Test the keys
 
