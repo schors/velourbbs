@@ -28,8 +28,8 @@ The limits of section 9 catch mistakes, for example a file that is too large.
 - `<name>` matches `[a-z0-9][a-z0-9_-]*`. Example: `main_wide`.
 - An `.ans` file is art only. Only an art insert in a BBS template shows it.
 - A `.bbt` or `.ans` file that is not a regular file is an error.
-- The first screen and the screen `goodbye` have special roles: [menu-nav](menu-nav.md),
-  sections 4 and 5.
+- The first screen and the screens `goodbye` and `shutdown` have special roles:
+  [menu-nav](menu-nav.md), sections 4 and 5.
 
 ### 2.1. Characters
 
@@ -377,7 +377,7 @@ Each of these is an error in a screen:
 - `args` with an action other than `goto`, an invalid argument name or an invalid value (section 8.5).
 
 [menu-nav](menu-nav.md), section 6, has the other menu errors: the `goto` targets, the screens
-without items, the items of `goodbye` and the start screen. It also has the form of the item errors.
+without items, the items of `goodbye` and `shutdown`, and the start screen. It also has the form of the item errors.
 
 ### 8.5. Arguments
 

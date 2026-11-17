@@ -26,7 +26,8 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 
 - `<lang>` is `ru` or `en`.
 - The symlink keeps one copy of the guides.
-- To deploy, copy the directory with the symlinks resolved: `cp -rL station/. /srv/velourbbs/`.
+- A version tag deploys the directory with the symlinks resolved ([release-deploy](release-deploy.md)).
+  To deploy by hand, copy it: `cp -rL station/. /srv/velourbbs/`.
   Then follow [part 2 of the setup guide](../guide/en/setup/2-bbs-directory.md)
   without its copy of Lamp, and the parts after it.
 
@@ -47,6 +48,7 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 | `<lang>-setup-read`, `<lang>-bbt-read`, `<lang>-text-read` | File screens of the argument `file` (section 3.4). | `SPACE` `page next`, `B` `page prev`, `ESC` back to the screen that opened it. |
 | `<lang>-about` | The section About the station (section 3.5). | `ESC` `goto <lang>-menu`. |
 | `goodbye` | The goodbye screen in both languages, with the repository address (section 3.5). | — |
+| `shutdown` | The restart notice in both languages: the station restarts, call again in a minute. | — |
 
 - The home BBS shows each part of a guide as one file. It does not copy the parts.
 - The texts follow the copy rules of the brandbook, section 7, for their language.
