@@ -23,6 +23,9 @@ type host struct {
 
 const stubSystemctl = `#!/bin/sh
 printf '%s\n' "$*" >>"$STUB_LOG"
+if [ "$2" = "${STUB_FAIL:-}" ]; then
+	exit 1
+fi
 if [ "$2" = is-active ]; then
 	printf '%s\n' "${STUB_STATE:-active}"
 	[ "${STUB_STATE:-active}" = active ]
@@ -148,8 +151,10 @@ func TestFirstDeploy(t *testing.T) {
 			t.Errorf("%s is missing", p)
 		}
 	}
-	if exists(h.path("incoming/v0.1.0")) {
-		t.Error("incoming/v0.1.0 is not removed")
+	for _, p := range []string{"incoming/v0.1.0", "socket-changed"} {
+		if exists(h.path(p)) {
+			t.Errorf("%s is not removed", p)
+		}
 	}
 	units := filepath.Join(h.home, ".config/systemd/user")
 	if got := readFile(t, filepath.Join(units, "velourbbs.socket")); !strings.Contains(got, "ListenStream=2323\n") {
@@ -205,6 +210,41 @@ func TestPortChangeRestartsSocket(t *testing.T) {
 	socket := filepath.Join(h.home, ".config/systemd/user/velourbbs.socket")
 	if got := readFile(t, socket); !strings.Contains(got, "ListenStream=2424\n") {
 		t.Errorf("installed socket unit:\n%s", got)
+	}
+}
+
+func TestSocketRestartAfterFailure(t *testing.T) {
+	h := newHost(t)
+	h.deploy("v0.1.0", "2323")
+	h.bundle("v0.2.0", "2424", 0)
+	if out, _, err := h.install("v0.2.0", "STUB_FAIL=daemon-reload"); err == nil {
+		t.Fatalf("install succeeded:\n%s", out)
+	}
+	calls := h.deploy("v0.2.0", "2424")
+
+	if !slices.Contains(calls, "--user restart velourbbs.socket") {
+		t.Errorf("calls:\n%s", strings.Join(calls, "\n"))
+	}
+	if exists(h.path("socket-changed")) {
+		t.Error("socket-changed is not removed")
+	}
+}
+
+func TestRedeployKeepsCurrentRelease(t *testing.T) {
+	h := newHost(t)
+	h.deploy("v0.1.0", "2323")
+	keep := h.path("releases/v0.1.0/station/keep")
+	h.write(keep, "", 0o644)
+	h.deploy("v0.1.0", "2323")
+
+	if !exists(keep) {
+		t.Error("the current release is replaced")
+	}
+	if got := h.current(); got != "releases/v0.1.0" {
+		t.Errorf("current = %q, want releases/v0.1.0", got)
+	}
+	if exists(h.path("incoming/v0.1.0")) {
+		t.Error("incoming/v0.1.0 is not removed")
 	}
 }
 

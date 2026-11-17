@@ -23,11 +23,6 @@ jobs:
     environment: home
     env:
       TAG: ${{ github.ref_name }}
-      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
-      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
-      DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
-      DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
-      BBS_PORT: ${{ vars.BBS_PORT }}
     steps:
       - name: Check the tag
         run: |
@@ -51,8 +46,15 @@ jobs:
             exit 1
           fi
 
+      # The settings are secrets: GitHub masks them in the log (section 4.1).
+      # Only the steps that use a setting get it.
       - name: Check the deploy settings
         env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          BBS_PORT: ${{ secrets.BBS_PORT }}
           KEY_SET: ${{ secrets.DEPLOY_SSH_KEY != '' }}
         run: |
           # The messages name the settings. They do not write their values.
@@ -64,7 +66,7 @@ jobs:
             [[ $1 =~ ^[1-9][0-9]{0,4}$ ]] && (($1 <= 65535))
           }
           for n in DEPLOY_HOST DEPLOY_USER DEPLOY_KNOWN_HOSTS BBS_PORT; do
-            if [[ -z ${!n} ]]; then fail "The setting $n is missing"; fi
+            if [[ -z ${!n} ]]; then fail "The secret $n is missing"; fi
           done
           if [[ $KEY_SET != true ]]; then fail "The secret DEPLOY_SSH_KEY is missing"; fi
           if ! port "$BBS_PORT"; then fail "BBS_PORT is not a port number"; fi
@@ -135,6 +137,7 @@ jobs:
       - name: Write the SSH files
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
           umask 077
           mkdir -p "$RUNNER_TEMP/ssh"
@@ -142,6 +145,11 @@ jobs:
           printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/known_hosts"
 
       - name: Deploy the home BBS
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_PORT: ${{ secrets.DEPLOY_SSH_PORT }}
+          BBS_PORT: ${{ secrets.BBS_PORT }}
         run: |
           d=$RUNNER_TEMP/ssh
           remote=(ssh -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$d/known_hosts"

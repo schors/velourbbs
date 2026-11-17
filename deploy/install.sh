@@ -31,14 +31,19 @@ next "check the station"
 (cd "$in/station" && ../velourbbs check)
 
 next "install releases/$tag"
-rm -rf "releases/$tag"
-mkdir -p "releases/$tag"
-mv "$in/velourbbs" "$in/station" "releases/$tag/"
+if [ "$(readlink current 2>/dev/null || true)" = "releases/$tag" ]; then
+	# A re-run of the current tag: the running release holds the same commit.
+	log "releases/$tag is current, it does not change"
+else
+	rm -rf "releases/$tag"
+	mkdir -p "releases/$tag"
+	mv "$in/velourbbs" "$in/station" "releases/$tag/"
+fi
 
 next "install the units"
-socket_changed=yes
-if cmp -s "$in/units/velourbbs.socket" "$units/velourbbs.socket"; then
-	socket_changed=no
+# The flag keeps the socket restart for a re-run after a failure before step 5.
+if ! cmp -s "$in/units/velourbbs.socket" "$units/velourbbs.socket"; then
+	touch socket-changed
 fi
 mkdir -p "$units"
 cp "$in/units/velourbbs.service" "$in/units/velourbbs.socket" "$units/"
@@ -49,11 +54,12 @@ next "point current to releases/$tag"
 ln -sfn "releases/$tag" current.new
 mv -T current.new current
 
-if [ "$socket_changed" = yes ]; then
+if [ -e socket-changed ]; then
 	next "restart the socket (the socket unit changed)"
 	systemctl --user restart velourbbs.socket
 	# A socket restart does not start a stopped service, as on the first deploy.
 	systemctl --user start velourbbs.service
+	rm socket-changed
 else
 	next "restart the service"
 	systemctl --user restart velourbbs.service
