@@ -234,18 +234,19 @@ func (l *loader) include(u *unit, n include, top bool) (body []screen.Seg, ok bo
 	return body, true
 }
 
-// checkItems checks that goodbye has no items and the item.<KEY> paths of each screen
-// against its own items (menu-nav, section 6, and bbt-format, section 8.4).
+// checkItems checks that goodbye and shutdown have no items and are not file screens,
+// and the item.<KEY> paths of each screen against its own items (menu-nav, section 6, and bbt-format, section 8.4).
 func (l *loader) checkItems(units []*unit) {
 	for _, u := range units {
 		if !u.done {
 			continue
 		}
-		if u.s.Name == "goodbye" && len(u.s.Items) > 0 {
-			l.fd(u.f.name).Errorf(2, 1, "the goodbye screen cannot have items")
+		end := u.s.Name == "goodbye" || u.s.Name == "shutdown"
+		if end && len(u.s.Items) > 0 {
+			l.fd(u.f.name).Errorf(2, 1, "the %s screen cannot have items", u.s.Name)
 		}
-		if u.s.Name == "goodbye" && u.s.FileScreen != nil {
-			l.fd(u.f.name).Errorf(2, 1, "file: the goodbye screen cannot be a file screen")
+		if end && u.s.FileScreen != nil {
+			l.fd(u.f.name).Errorf(2, 1, "file: the %s screen cannot be a file screen", u.s.Name)
 		}
 		keys := map[string]bool{}
 		for _, it := range u.s.Items {

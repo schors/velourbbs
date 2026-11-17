@@ -93,6 +93,9 @@ func TestServeSignal(t *testing.T) {
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
+		if !strings.Contains(errOut.String(), " source=bbs.toml\n") {
+			t.Errorf("%v: stderr %q, want source=bbs.toml in the listen line", sig, errOut.String())
+		}
 		p, err := os.FindProcess(os.Getpid())
 		if err != nil {
 			t.Fatal(err)

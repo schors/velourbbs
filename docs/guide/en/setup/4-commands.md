@@ -54,16 +54,17 @@ It starts the telnet server. The server listens on port 2323.
 
 - It does the checks of `velourbbs check` first. After an error, it exits with status 1.
 - If it cannot listen on the address of `listen`, it exits with status 1.
-- It writes the log to the standard error: a `listen` line with the address,
+- It writes the log to the standard error: a `listen` line with the address and its source,
   a line with the values of the terminal of each client, and a `close` line
   for each connection.
 - It reads the files only when it starts. After a change of a file, restart it.
-- Ctrl+C or SIGTERM stops it. It closes the connections and exits with status 0.
+- Ctrl+C or SIGTERM stops it. It shows the screen `shutdown` to each open session,
+  closes each connection after 5 s at most and exits with status 0.
 
 Example of the log:
 
 ```
-time=2026-11-16T09:42:48.905Z level=INFO msg=listen addr=[::]:2323
+time=2026-11-16T09:42:48.905Z level=INFO msg=listen addr=[::]:2323 source=bbs.toml
 time=2026-11-16T09:42:49.929Z level=INFO msg=probe addr=127.0.0.1 ttype=xterm-256color naws=80x24 cpr=1;2 type=xterm-256color cols=80 rows=24 charset=utf-8 colors=256 time=355.507µs
 time=2026-11-16T09:42:51.231Z level=INFO msg=close addr=127.0.0.1 reason=logoff time=1.30238633s
 ```

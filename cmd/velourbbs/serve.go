@@ -5,7 +5,6 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
@@ -28,12 +27,12 @@ func serve(args []string, fsys fs.FS, stderr io.Writer) int {
 	log := slog.New(slog.NewTextHandler(stderr, nil))
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	ln, err := net.Listen("tcp", cfg.Telnet.Listen)
+	ln, source, err := listen(cfg.Telnet.Listen)
 	if err != nil {
-		log.Error("listen", "err", err)
+		log.Error("listen", "source", source, "err", err)
 		return exitError
 	}
-	if err := server.New(cfg, screens, log, version()).Serve(ctx, ln); err != nil {
+	if err := server.New(cfg, screens, log, version()).Serve(ctx, ln, source); err != nil {
 		log.Error("serve", "err", err)
 		return exitError
 	}

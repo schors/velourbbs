@@ -437,3 +437,29 @@ read {bbs.sessions} {file.page}
 		t.Errorf("err %v, log %q, want %q", err, ft.log, want)
 	}
 }
+
+// Shutdown shows the first page of shutdown with the size of the terminal (section 5.2).
+func TestShutdown(t *testing.T) {
+	ss := load(t, map[string]string{"shutdown": "Restart {term.cols} {bbs.name}\n" + lines(12)})
+	ft := &fakeTerm{cols: []int{40}}
+	values := func() screen.SessionValues { return screen.SessionValues{Name: "Lamp"} }
+	if err := Shutdown(ft, config.Config{More: "-- More --"}, ss, values); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"page: Restart 40 Lamp"}; !slices.Equal(ft.log, want) {
+		t.Errorf("log %q, want %q", ft.log, want)
+	}
+
+	// Without the file, Shutdown shows nothing.
+	ft = &fakeTerm{cols: []int{40}}
+	if err := Shutdown(ft, config.Config{}, load(t, nil), noValues); err != nil || len(ft.log) > 0 {
+		t.Errorf("no shutdown: error %v, log %q; want no error and no page", err, ft.log)
+	}
+
+	// Shutdown gives the error of the terminal.
+	errClosed := errors.New("closed")
+	ft = &fakeTerm{cols: []int{40}, pageErr: errClosed}
+	if err := Shutdown(ft, config.Config{}, ss, values); !errors.Is(err, errClosed) {
+		t.Errorf("error %v, want %v", err, errClosed)
+	}
+}

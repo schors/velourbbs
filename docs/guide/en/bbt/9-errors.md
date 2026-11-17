@@ -87,7 +87,7 @@ screens/main.bbt:2:1: item "T": do: unknown screen "term"
 screens/x.bbt:1:1: screen has no items
 ```
 
-Each screen except `goodbye` needs at least one item. Add an item.
+Each screen except `goodbye` and `shutdown` needs at least one item. Add an item.
 
 ## `content file ... does not exist`
 

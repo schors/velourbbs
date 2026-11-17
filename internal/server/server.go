@@ -28,22 +28,36 @@ const lingerTime = time.Second
 // acceptWait is the time between an accept error and the next accept.
 const acceptWait = time.Second
 
+// stopTime is the longest time of the stop (section 10.2).
+const stopTime = 5 * time.Second
+
+// reasonShutdown is the reason in the close line of a connection that the stop ends.
+const reasonShutdown = "shutdown"
+
+// connState is the state of an open connection for the stop (section 10.2).
+type connState struct {
+	t       *term.Terminal // the terminal of the open session; nil before the session
+	closing bool           // the connection is in its close
+	stopped bool           // the stop closed the connection before the session, or stopped its session
+}
+
 // Server is the telnet server of section 10.
 type Server struct {
-	cfg     config.Config
-	screens map[string]*screen.Screen
-	log     *slog.Logger
-	limits  *Limits
-	to      term.Timeouts
-	version string    // the field bbs.version
-	started time.Time // the start of Serve: the start of the listen
+	cfg      config.Config
+	screens  map[string]*screen.Screen
+	log      *slog.Logger
+	limits   *Limits
+	to       term.Timeouts
+	version  string        // the field bbs.version
+	started  time.Time     // the start of Serve: the start of the listen
+	stopTime time.Duration // the longest time of the stop
 
 	sessions atomic.Int64 // the open sessions (session-fields, section 3.2)
 
 	mu      sync.Mutex
-	conns   map[net.Conn]struct{} // the open connections
-	closed  bool                  // the stop closed the connections
-	lingers int                   // the connections in the close after output
+	conns   map[net.Conn]*connState // the open connections
+	closed  bool                    // the stop started
+	lingers int                     // the connections in the close after output
 	wg      sync.WaitGroup
 }
 
@@ -58,28 +72,25 @@ func New(cfg config.Config, screens map[string]*screen.Screen, log *slog.Logger,
 			Idle:   cfg.Telnet.IdleTimeout,
 			Output: cfg.Telnet.OutputTimeout,
 		},
-		conns: map[net.Conn]struct{}{},
+		conns:    map[net.Conn]*connState{},
+		stopTime: stopTime,
 	}
 }
 
 // Serve accepts the connections of ln and runs a session for each one.
-// When ctx ends, it closes ln and the connections, waits for the sessions
-// and returns nil. After an accept error, it waits acceptWait and accepts again.
+// source is the source of ln in the listen line (section 10.1).
+// When ctx ends, it stops (section 10.2) and returns nil. After an accept error,
+// it waits acceptWait and accepts again.
 // When ln closes for another reason, Serve stops the same way and returns the error.
-func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
+func (s *Server) Serve(ctx context.Context, ln net.Listener, source string) error {
 	s.started = time.Now()
-	s.log.Info("listen", "addr", ln.Addr().String())
+	s.log.Info("listen", "addr", ln.Addr().String(), "source", source)
 	stop := func() {
 		_ = ln.Close()
-		s.mu.Lock()
-		s.closed = true
-		for c := range s.conns {
-			_ = c.Close()
-		}
-		s.mu.Unlock()
+		s.stop()
 	}
 	defer context.AfterFunc(ctx, stop)()
-	defer s.wg.Wait()
+	defer s.wait()
 	defer stop()
 	for {
 		c, err := ln.Accept()
@@ -111,6 +122,50 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener) error {
 	}
 }
 
+// stop does steps 1 and 2 of section 10.2 after the close of the listener:
+// it closes each connection before its session and stops each open session.
+// A connection in its close stays. Only the first call has an effect.
+func (s *Server) stop() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return
+	}
+	s.closed = true
+	for c, st := range s.conns {
+		switch {
+		case st.closing:
+		case st.t != nil:
+			st.stopped = true
+			st.t.Stop()
+		default:
+			st.stopped = true
+			_ = c.Close()
+		}
+	}
+}
+
+// wait waits for the connections. After stopTime, it closes each open connection
+// and waits again (section 10.2, step 3).
+func (s *Server) wait() {
+	done := make(chan struct{})
+	go func() {
+		s.wg.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+		return
+	case <-time.After(s.stopTime):
+	}
+	s.mu.Lock()
+	for c := range s.conns {
+		_ = c.Close()
+	}
+	s.mu.Unlock()
+	<-done
+}
+
 // add adds c to the open connections. It returns false after the stop.
 func (s *Server) add(c net.Conn) bool {
 	s.mu.Lock()
@@ -118,14 +173,42 @@ func (s *Server) add(c net.Conn) bool {
 	if s.closed {
 		return false
 	}
-	s.conns[c] = struct{}{}
+	s.conns[c] = &connState{}
 	return true
+}
+
+// open makes t the terminal of the session on c. It returns false after the stop:
+// the connection was in the probe, and the stop closes it.
+func (s *Server) open(c net.Conn, t *term.Terminal) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		s.conns[c].stopped = true
+		_ = c.Close()
+		return false
+	}
+	s.conns[c].t = t
+	return true
+}
+
+// stopped reports whether the stop stopped the session on c.
+func (s *Server) stopped(c net.Conn) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.conns[c].stopped
 }
 
 // handle runs the connection c and logs its end.
 func (s *Server) handle(c net.Conn) {
 	accepted := time.Now()
 	addr, reason, output := s.session(c, accepted)
+	s.mu.Lock()
+	st := s.conns[c]
+	st.closing = true
+	if st.stopped && st.t == nil {
+		reason, output = reasonShutdown, false
+	}
+	s.mu.Unlock()
 	s.close(c, output)
 	s.mu.Lock()
 	delete(s.conns, c)
@@ -177,10 +260,23 @@ func (s *Server) session(c net.Conn, accepted time.Time) (addr netip.Addr, reaso
 	if err != nil {
 		return addr, err.Error(), errors.Is(err, term.ErrNotUTF8)
 	}
+	if !s.open(c, t) {
+		return addr, reasonShutdown, false
+	}
 	// The session is open from here until the close (session-fields, section 3.2).
 	s.sessions.Add(1)
 	defer s.sessions.Add(-1)
-	if err := menu.Run(t, s.cfg, s.screens, s.cfg.Start, nil, s.values(addr, accepted)); err != nil {
+	values := s.values(addr, accepted)
+	err = menu.Run(t, s.cfg, s.screens, s.cfg.Start, nil, values)
+	switch {
+	case errors.Is(err, term.ErrStop):
+		// Without the screen shutdown, there is no output (menu-nav, section 5.2).
+		_, ok := s.screens["shutdown"]
+		return addr, reasonShutdown, ok && menu.Shutdown(t, s.cfg, s.screens, values) == nil
+	case err != nil && s.stopped(c):
+		// The close of step 3 ended a page of the session.
+		return addr, reasonShutdown, false
+	case err != nil:
 		return addr, err.Error(), false
 	}
 	return addr, "logoff", true

@@ -17,7 +17,7 @@ G  goodbye
 
 The lines between the two `+++` lines are the "front matter". It gives the menu of the screen.
 Here the menu has one item: the key `G` ends the session (`logoff`).
-A screen must have at least one item. Only the screen `goodbye` has no items (task 4).
+A screen must have at least one item. Only the screens `goodbye` and `shutdown` have no items (task 4).
 The other lines are the "body": the text of the screen.
 The BBS shows the screen `main` first.
 
