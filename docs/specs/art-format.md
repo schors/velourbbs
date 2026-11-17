@@ -81,4 +81,4 @@ A file or a part of a file over a limit is an error.
 
 ## 6. Not in the MVP
 
-- Raw art and ANSI animation: [content-trust](../ideas/content-trust.md).
+- Raw art and ANSI animation: [content-trust](https://github.com/schors/velourbbs/issues/5).

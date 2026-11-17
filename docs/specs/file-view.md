@@ -367,8 +367,8 @@ content/gold.md:1:1: front matter: no end line "+++"
 
 ## 12. Not in this specification
 
-- The table of contents and active links to other Markdown files: [file-view](../ideas/file-view.md).
-  They need the selection of a row of [lists](../ideas/lists.md).
-- Syntax colours of source files: [file-view](../ideas/file-view.md).
+- The table of contents and active links to other Markdown files: [file-view](https://github.com/schors/velourbbs/issues/7).
+  They need the selection of a row of [lists](https://github.com/schors/velourbbs/issues/9).
+- Syntax colours of source files: [file-view](https://github.com/schors/velourbbs/issues/7).
 - Italic. The style model has no italic ([bbt-format](bbt-format.md), section 7.1).
 - Files of users.

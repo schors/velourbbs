@@ -1,14 +1,10 @@
-# Done: <block>
-
-- Commits: <!-- hashes -->
-
 ## Result
 
 <!-- What changed. Main files. -->
 
 ## Differences from the plan
 
-<!-- What changed from `<block>.md` and why, or `none`. -->
+<!-- What changed from the plan of the issue and why, or `none`. -->
 
 ## Open points
 

@@ -99,5 +99,5 @@ The unit has these lines:
 
 ## 7. Not in this guide
 
-- nftables and `tc`: [deploy-limits](../ideas/deploy-limits.md).
+- nftables and `tc`: [deploy-limits](https://github.com/schors/velourbbs/issues/6).
 - A port other than 2323.

@@ -1,44 +1,41 @@
 ---
 name: ticket-cleanup
-description: Merge complete issues into main, remove their worktrees and branches, and move them to .ai/archive/.
-argument-hint: "[issue id] | drop <issue id>"
+description: Remove the local files of merged issues and close their sources, or drop an issue.
+argument-hint: "[<n>] | drop <n>"
 ---
 
-# Archive complete issues
+# Clean up issues
 
-Read `docs/dev-flow/flow.md`, sections 2 and 3.
+Read `docs/dev-flow/flow.md`, sections 2 to 4.
 
-Run the skill in the main checkout (`flow.md`, section 3).
-If the current directory is a worktree, go to the main checkout first.
+Run the skill in the main checkout (`flow.md`, section 4).
+Set `GHFLOW_AGENT` to your model name for each `tools/ghflow` call.
 
-1. Select the issues. Use the issue from the arguments, or all issues in `.ai/issues/`.
-2. Check that each issue is complete:
-
-   | Type | Complete when |
-   |---|---|
-   | `idea` | `desc.md` lists one or more ideas. All of them are in `docs/ideas/` on the branch of the issue. |
-   | `dev` | The stage is `implementation`. `plan.md` has one or more blocks. All blocks are done. Each block has `<block>.done.md`. |
-   | `one-shot` | `desc.md` has a filled `Result` section. |
-
-   The worktree of a complete issue has no uncommitted changes.
+1. Select the issues: the issue from the arguments, or each worktree
+   in `.ai/worktrees/` whose name starts with a number.
+2. Run `ghflow show <n>` for each issue. An issue is complete when its PR is merged.
 3. Show the operator the complete issues and the incomplete issues with the reason.
-   If the operator named an incomplete issue, continue with it only after the operator confirms.
 4. Make sure that the main checkout is on `main` and has no uncommitted changes.
-   If not, stop. Tell the operator.
-5. For each issue:
-   1. Do the merge (`flow.md`, section 3).
-      If the sync stops, skip the issue. Tell the operator.
-   2. Run `git worktree remove .ai/worktrees/<id>` and `git branch -d <id>`.
-   3. Move the issue directory to `.ai/archive/`.
-   4. In `.ai/issues.md`, set the stage of the issue to `archived`.
-6. Tell the operator what merged and moved. Show `git log --oneline -n 5`.
+   If not, stop. Tell the operator. Run `git fetch origin` and `git merge --ff-only origin/main`.
+5. For each complete issue:
+   1. If the worktree has uncommitted changes or commits that are not in `main`,
+      show them to the operator. Continue only after the operator confirms.
+   2. Run `git worktree remove --force .ai/worktrees/<n>-<slug>` and `git branch -D <n>-<slug>`.
+   3. Delete `.ai/issues/<n>-<slug>/`.
+   4. Close each open source issue (`Source: #<s>`) as `completed`.
+   5. For a block, tell the operator to run `/ticket <parent>`.
+6. Tell the operator what was removed. Show `git log --oneline -n 5`.
 
 ## Drop
 
-If the arguments are `drop <id>`, stop the issue without a merge:
+If the arguments are `drop <n>`, stop the issue with no merge:
 
-1. Show the operator the commits of the branch that are not in `main`
-   and the uncommitted changes in the worktree. Continue only after the operator confirms.
-2. Run `git worktree remove --force .ai/worktrees/<id>` and `git branch -D <id>`.
-3. Move the issue directory to `.ai/archive/`.
-4. In `.ai/issues.md`, set the stage of the issue to `dropped`.
+1. Show the operator the issue, its PR, the commits of the branch that are not in `main`
+   and the uncommitted changes. Continue only after the operator confirms.
+2. Close the PR with `ghflow close <pr> not_planned` and the issue
+   with `ghflow close <n> not_planned`.
+   If `origin/<n>-<slug>` exists, run `git push origin --delete <n>-<slug>`.
+3. Close each open source issue (`Source: #<s>`) as `not_planned`.
+4. Run `git worktree remove --force .ai/worktrees/<n>-<slug>` and `git branch -D <n>-<slug>`.
+5. Delete `.ai/issues/<n>-<slug>/`.
+6. For a block, tell the operator to run `/ticket <parent>`.

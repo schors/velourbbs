@@ -1,12 +1,18 @@
 # Type: Idea
 
-1. Read `docs/ideas/` to find related ideas.
+An idea is an issue with `idea` and `backlog`. It has no branch and no PR.
+
+1. Run `ghflow list idea`. Read the related ideas with `ghflow show`.
 2. Interview the operator until the idea is clear.
-   Write the decisions of the operator to the `Scope` section of `desc.md`.
-   Do not research or select solutions. The design stage does that.
+   Do not research or select solutions. The design block does that.
 3. If parts of the idea have no effect on each other, make each part a separate idea.
-4. Gate: show the operator the ideas. If the operator does not accept them, return to step 2.
-5. Write each idea to `docs/ideas/<slug>.md`: the goal, the scope, the decisions
-   of the operator and the open questions.
-   List the idea files in the `Ideas` line of `desc.md`. Commit.
-6. Archive the issue with `/ticket-cleanup <id>`.
+4. Gate: show the operator each idea: the goal, the scope, the decisions of the operator
+   and the open questions. If the operator does not accept them, return to step 2.
+5. Create each idea with `ghflow new idea backlog "<title>"`
+   and the body from [template-issue.md](template-issue.md).
+   Give the operator the links.
+   If you opened an existing idea, change it, do not create it again:
+   `ghflow body` for an idea with the marker, a comment for another idea.
+
+To start the work on an idea, create a `dev`, `one-shot` or `docs` issue
+with `Source: #<n>` (`flow.md`, section 7).

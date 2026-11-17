@@ -195,6 +195,6 @@ page 1 80x25 fill none
 
 ## 9. Not in the MVP
 
-- `gosub`, `back`, `top` and a navigation stack: [menu-actions](../ideas/menu-actions.md).
+- `gosub`, `back`, `top` and a navigation stack: [menu-actions](https://github.com/schors/velourbbs/issues/13).
 - Typed command input.
 - `page` for lists, and the actions `run` and `call`. They need lists, Lua or built-ins.

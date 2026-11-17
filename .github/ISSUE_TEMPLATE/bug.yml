@@ -1,0 +1,32 @@
+name: Bug report
+description: Report a defect.
+labels: [bug, backlog]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The release or the commit.
+  - type: input
+    id: client
+    attributes:
+      label: Terminal client
+      description: The telnet client or the terminal, and its size and encoding.

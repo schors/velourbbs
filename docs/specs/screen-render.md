@@ -154,4 +154,4 @@ styles
 
 ## 6. Not in the MVP
 
-- Reload: [reload](../ideas/reload.md). A restart is sufficient for the MVP.
+- Reload: [reload](https://github.com/schors/velourbbs/issues/14). A restart is sufficient for the MVP.
