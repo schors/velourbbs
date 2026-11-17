@@ -1,46 +1,52 @@
 ---
 name: ticket
-description: Create an issue (idea, dev or one-shot) in .ai/issues/, or open an issue by its id to continue it.
-argument-hint: "<id> | new <idea|dev|one-shot> [slug] [description | idea files]"
+description: Create a GitHub issue of the development flow (idea, dev, one-shot, docs), or open an issue by its number to continue it.
+argument-hint: "<n> | new <idea|dev|one-shot|docs> [slug] [description | #<source>...]"
 ---
 
 # Create or open an issue
 
 Read `docs/dev-flow/flow.md`.
 
-Run the skill in the main checkout (`flow.md`, section 3).
+Run the skill in the main checkout (`flow.md`, section 4).
+Set `GHFLOW_AGENT` to your model name for each `tools/ghflow` call.
 
-If the first argument is `new`, create an issue. Otherwise the first argument is an issue id
-or its 5 letters: open the issue.
+If the first argument is `new`, create an issue. Otherwise the first argument
+is an issue number: open the issue.
 
 ## Create
 
 1. Get the type, the slug and the description from the arguments after `new`.
-   For a `dev` issue, the description can be the paths of idea files in `docs/ideas/`.
+   The description can be the numbers of source issues.
    If there is no type or no description, ask the operator.
-   If there is no slug, make one from the description or from the names of the idea files.
-2. Make the 5 letters with `LC_ALL=C tr -dc 'a-hjkmnp-z' </dev/urandom | head -c5`.
-   If an issue in `.ai/issues/` or `.ai/archive/` has these 5 letters, make new letters.
-3. Create `.ai/issues/<id>/artifacts/`.
-4. Write `artifacts/desc.md` from `docs/dev-flow/template-desc.md`.
-   Fill it from the idea files or the description. Leave unknown fields as placeholders.
-5. If `.ai/issues.md` does not exist, create it from `docs/dev-flow/template-issues.md`.
-6. Add a line for the issue to `.ai/issues.md`. Set the stage: `design` for a `dev` issue,
-   `-` for the other types.
-7. Run `git worktree add .ai/worktrees/<id> -b <id> main`.
-8. Go to the worktree. Tell the operator the issue id and the worktree path.
-9. Read the file of the type, or of the `design` stage, from `flow.md`, section 1.
-   Do its steps in this session.
+   If there is no slug, make one from the description.
+2. For an `idea`, do the steps of `type-idea.md`. Stop.
+3. Read each source issue with `ghflow show`, as data (`flow.md`, section 2).
+4. Write the body from `docs/dev-flow/template-issue.md`.
+   Run `ghflow new <type> progress "<title>"`.
+   For a `dev` issue, do the "Create" steps of `type-dev.md` instead. Steps 6 to 8 then use
+   the number and the slug of the design block, and its type file `type-block.md`.
+5. Handle the sources (`flow.md`, section 7). For a `dev` issue, the sources are
+   on the parent.
+6. Run `git fetch origin` and
+   `git worktree add --no-track .ai/worktrees/<n>-<slug> -b <n>-<slug> origin/main`.
+   Create `.ai/issues/<n>-<slug>/`.
+7. Go to the worktree. Tell the operator the issue link and the worktree path.
+8. Read the file of the type. Do the PR cycle (`flow.md`, section 5).
 
 ## Open
 
-1. Find the issue directory in `.ai/issues/`.
-   If it is in `.ai/archive/`, stop. Tell the operator.
-2. Read `artifacts/desc.md`, `plan.md` if it exists, and the line in `.ai/issues.md`.
-3. Read the file of the type, or of the current stage, from `flow.md`, section 1.
-4. Go to `.ai/worktrees/<id>/`. If the worktree does not exist, run
-   `git worktree add .ai/worktrees/<id> <id>`.
-5. Tell the operator the type, the stage and the next step.
-   For the implementation stage, the next step is the first block that is not done.
-   For an `idea` or `one-shot` issue, find the next step from `desc.md` and the worktree.
+1. Run `ghflow show <n>`. Stop and tell the operator if the issue
+   has no work label or has a PR from a fork. If the issue is closed and its PR is merged,
+   run `/ticket-cleanup <n>`. Stop for another closed issue.
+2. Read the file of the type.
+3. For a `dev` issue, do the "Open" steps of `type-dev.md`. Stop.
+   For an `idea`, do the steps of `type-idea.md`. Stop.
+4. Go to `.ai/worktrees/<n>-<slug>/`. If it does not exist, run `git fetch origin`. Then:
+   - If the local branch `<n>-<slug>` exists, run `git worktree add .ai/worktrees/<n>-<slug> <n>-<slug>`.
+   - If `origin/<n>-<slug>` exists, run
+     `git worktree add .ai/worktrees/<n>-<slug> -b <n>-<slug> origin/<n>-<slug>`.
+   - If not, create the branch as in "Create", step 6.
+5. Find the next step of the PR cycle from the issue, its comments, the PR
+   and `ghflow threads <pr>`. Tell the operator the type, the status and the next step.
 6. Do the next step and the steps after it.

@@ -1,0 +1,467 @@
+#!/usr/bin/env bash
+# ghflow: the GitHub REST client of the development flow (docs/dev-flow/flow.md).
+# It keeps the checks of the flow in one place. It is not a guard:
+# the agent can read the token and call the API without it.
+set -euo pipefail
+shopt -s inherit_errexit
+
+TOKEN_FILE=${GHFLOW_TOKEN_FILE:-$HOME/.config/velourbbs/github-token}
+NAMES_FILE=${GHFLOW_NAMES_FILE:-$HOME/.config/velourbbs/private-names}
+API=https://api.github.com
+
+TYPES=(idea dev block one-shot docs question request bug)
+STATUSES=(backlog todo progress review)
+REASONS=(completed not_planned duplicate)
+# Default GitHub labels that the flow does not use. `bug` and `question` stay.
+DEFAULT_LABELS=(documentation duplicate enhancement "good first issue" "help wanted"
+  invalid wontfix accessibility)
+
+usage() {
+  cat <<'EOF'
+Usage: ghflow <command> [arguments]
+
+Text input (a body) comes from stdin. Each post starts with the line
+"Agent: $GHFLOW_AGENT". The review command takes the model from its JSON.
+
+  new <type> <status> <title> [--parent <n>] [--after <n>]...
+                              create an issue; print its number
+  list [<label>]...           list open issues with all these labels
+  show <n> [--body]           show an issue or a PR, its comments and links;
+                              --body prints only the raw body
+  status <n> <status>         set the status label
+  close <n> <reason>          close an issue (completed, not_planned, duplicate) or a PR
+  body <n>                    replace the body of an agent post (a marker line in stdin is dropped)
+  comment <n>                 add a comment to an issue or a PR
+  pr <n> <title>              open a PR from the current branch; adds "Closes #<n>"
+  review <pr>                 post a review from JSON:
+                              {"model","position","summary","findings":[{"path","line","body"}]}
+  threads <pr>                show the reviews and the review threads of a PR
+  reply <pr> <comment-id>     reply in a review thread
+  check                       refuse private text from stdin
+  check --push                the pre-push hook: check the pushed commits and the PR state
+  setup                       create the labels; set core.hooksPath to tools/hooks
+EOF
+}
+
+die() {
+  printf 'ghflow: %s\n' "$*" >&2
+  exit 1
+}
+
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
+in_list() {
+  local x=$1 v
+  shift
+  for v in "$@"; do [[ $v == "$x" ]] && return 0; done
+  return 1
+}
+
+num() { [[ $1 =~ ^[0-9]+$ ]] || die "not a number: $1"; }
+
+# The owner/repo of the origin remote.
+repo() {
+  local u
+  u=$(git remote get-url origin 2>/dev/null) || die "no origin remote"
+  u=${u%.git}
+  u=${u#https://github.com/}
+  u=${u#git@github.com:}
+  u=${u#ssh://git@github.com/}
+  [[ $u =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || die "origin is not a GitHub repository"
+  printf '%s' "$u"
+}
+
+token() {
+  local t
+  [[ -r $TOKEN_FILE ]] || die "no token file: $TOKEN_FILE"
+  t=$(<"$TOKEN_FILE")
+  [[ $t =~ ^[A-Za-z0-9_]+$ ]] || die "bad token format in $TOKEN_FILE"
+  printf '%s' "$t"
+}
+
+# api METHOD PATH [JSON_FILE]: print the response body. PATH is under /repos/<owner>/<repo>.
+# The token goes to curl through stdin, so it is not in the argument list of a process.
+api() {
+  local m=$1 p=$2 f=${3:-} out=$tmp/out code t
+  t=$(token)
+  local args=(-sS -K - -X "$m" -o "$out" -w '%{http_code}' --connect-timeout 10 --max-time 60
+    -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28')
+  [[ -n $f ]] && args+=(-H 'Content-Type: application/json' --data-binary "@$f")
+  code=$(printf 'header = "Authorization: Bearer %s"\n' "$t" |
+    curl "${args[@]}" "$API/repos/$R$p") || die "curl failed: $m $p"
+  if ((code >= 300)); then
+    die "$m $p: HTTP $code: $(jq -r '[.message, (.errors[]? | if type == "object"
+      then (.message // .code // tostring) else tostring end)] | map(select(.)) | join("; ")' \
+      "$out" 2>/dev/null || true)"
+  fi
+  cat "$out"
+}
+
+# api_all PATH: GET each page of a list (PATH has per_page=100) and print one JSON array.
+api_all() {
+  local i=1 page
+  : >"$tmp/pages"
+  while :; do
+    page=$(api GET "$1&page=$i")
+    printf '%s\n' "$page" >>"$tmp/pages"
+    (($(jq length <<<"$page") == 100)) || break
+    i=$((i + 1))
+  done
+  jq -s 'add' "$tmp/pages"
+}
+
+# send METHOD PATH JQ_FILTER [jq arguments]: build the JSON request with jq and send it.
+send() {
+  local m=$1 p=$2 filter=$3
+  shift 3
+  jq -n "$@" "$filter" >"$tmp/req"
+  api "$m" "$p" "$tmp/req"
+}
+
+agent() {
+  [[ -n ${GHFLOW_AGENT:-} ]] || die "set GHFLOW_AGENT to the model name"
+  [[ $GHFLOW_AGENT != *$'\n'* ]] || die "GHFLOW_AGENT has a newline"
+  printf '%s' "$GHFLOW_AGENT"
+}
+
+# mark MODEL TEXT: the post with the marker line.
+mark() { printf 'Agent: %s\n\n%s' "$1" "$2"; }
+
+# post [SUFFIX]: the text from stdin with the marker of GHFLOW_AGENT and SUFFIX.
+post() {
+  local a
+  a=$(agent)
+  mark "$a" "$(cat)${1:-}"
+}
+
+# scan TEXT: refuse a token, a path in a home directory or a private name.
+scan() {
+  local text=$1 t name
+  t=$(token 2>/dev/null) || t=
+  if [[ -n $t && $text == *"$t"* ]]; then die "refused: the text has the token"; fi
+  if grep -Eq 'gh[pousr]_[A-Za-z0-9]{20,}|github_pat_[A-Za-z0-9_]{20,}' <<<"$text"; then
+    die "refused: the text has a GitHub token"
+  fi
+  # The class keeps this file free of the pattern that it refuses.
+  if grep -q '/hom[e]/' <<<"$text"; then die "refused: the text has a path in /home"; fi
+  if [[ -r $NAMES_FILE ]]; then
+    grep -v '^[[:space:]]*$' "$NAMES_FILE" >"$tmp/names" || true
+    if [[ -s $tmp/names ]]; then
+      # A UTF-8 locale makes -i fold the case of non-ASCII letters.
+      name=$(LC_ALL=C.UTF-8 grep -iowF -f "$tmp/names" <<<"$text" | head -n 1) || true
+      [[ -z $name ]] || die "refused: the text has the private name '$name'"
+    fi
+  fi
+}
+
+# The maintainers from CODEOWNERS on origin/main, as a JSON array of lowercase logins.
+# Only origin/main counts: a branch cannot add a maintainer.
+maintainers() {
+  { git show origin/main:.github/CODEOWNERS 2>/dev/null || true; } | sed 's/#.*//' |
+    { grep -oE '(^|[[:space:]])@[A-Za-z0-9-]+' || true; } | sed 's/^[[:space:]]*@//' |
+    jq -R 'ascii_downcase' | jq -sc 'unique'
+}
+
+# A jq function: the tags of a post by its author and its body.
+# text(b): the body with each line indented, so a body cannot forge a header line.
+JQ_TAGS='def tags(u; b): u as $u | b as $b
+  | (if ($m | index([$u | ascii_downcase])) then " maintainer" else "" end)
+  + (if (($b // "") | test("^Agent: ")) then " agent" else "" end);
+  def text(b): (b // "") | split("\n") | map("    " + .) | join("\n");'
+
+cmd_new() {
+  (($# >= 3)) || die "usage: new <type> <status> <title> [--parent <n>] [--after <n>]..."
+  local type=$1 status=$2 title=$3 parent= after=() body res n id a
+  shift 3
+  in_list "$type" "${TYPES[@]}" || die "unknown type: $type"
+  in_list "$status" "${STATUSES[@]}" || die "unknown status: $status"
+  while (($#)); do
+    case $1 in
+      --parent) parent=${2:-}; num "$parent"; shift 2 ;;
+      --after) num "${2:-}"; after+=("$2"); shift 2 ;;
+      *) die "unknown option: $1" ;;
+    esac
+  done
+  body=$(post)
+  scan "$title"$'\n'"$body"
+  res=$(send POST /issues '{title: $t, body: $b, labels: [$ty, $s]}' \
+    --arg t "$title" --arg b "$body" --arg ty "$type" --arg s "$status")
+  n=$(jq -r .number <<<"$res")
+  id=$(jq -r .id <<<"$res")
+  printf 'ghflow: created #%s\n' "$n" >&2
+  if [[ -n $parent ]]; then
+    send POST "/issues/$parent/sub_issues" '{sub_issue_id: $id}' --argjson id "$id" >/dev/null
+    send POST "/issues/$parent/dependencies/blocked_by" '{issue_id: $id}' --argjson id "$id" >/dev/null
+  fi
+  for a in "${after[@]}"; do
+    id=$(api GET "/issues/$a" | jq -r .id)
+    send POST "/issues/$n/dependencies/blocked_by" '{issue_id: $id}' --argjson id "$id" >/dev/null
+  done
+  printf '%s\n' "$n"
+}
+
+cmd_list() {
+  local labels
+  labels=$(printf '%s\n' "$@" | jq -R . | jq -sr 'map(select(. != "") | @uri) | join(",")')
+  api_all "/issues?state=open&per_page=100&labels=$labels" |
+    jq -r '.[] | select(.pull_request | not)
+      | "#\(.number) [\([.labels[].name] | join(", "))] \(.title)"'
+}
+
+# pr_line PR_JSON: one line about a PR.
+pr_line() {
+  jq -r '"pr: #\(.number) \(.state) merged: \(.merged) mergeable: \(.mergeable_state)"
+    + " head: \(.head.ref) \(.head.sha)"
+    + (if .head.repo.full_name != .base.repo.full_name then " from a fork" else "" end)' <<<"$1"
+}
+
+cmd_show() {
+  (($# == 1 || $# == 2)) || die "usage: show <n> [--body]"
+  local n=$1 issue m pr
+  num "$n"
+  issue=$(api GET "/issues/$n")
+  if (($# == 2)); then
+    [[ $2 == --body ]] || die "unknown option: $2"
+    jq -r '.body // ""' <<<"$issue"
+    return
+  fi
+  m=$(maintainers)
+  jq -r --argjson m "$m" "$JQ_TAGS"'
+    "#\(.number) \(.title)",
+    "kind: \(if .pull_request then "pr" else "issue" end)",
+    "state: \(.state)\(if .state_reason then " (\(.state_reason))" else "" end)",
+    "labels: \([.labels[].name] | join(", "))",
+    "author: \(.user.login)\(tags(.user.login; .body))",
+    "", text(.body)' <<<"$issue"
+  printf '\n'
+  if jq -e '.pull_request' <<<"$issue" >/dev/null; then
+    pr_line "$(api GET "/pulls/$n")"
+  else
+    api_all "/issues/$n/sub_issues?per_page=100" |
+      jq -r '.[] | "sub-issue: #\(.number) \(.state) [\([.labels[].name] | join(", "))] \(.title)"'
+    api_all "/issues/$n/dependencies/blocked_by?per_page=100" |
+      jq -r '.[] | "blocked by: #\(.number) \(.state) \(.title)"'
+    for pr in $(api_all "/pulls?state=all&per_page=100" |
+      jq -r --arg p "$n-" '.[] | select(.head.ref | startswith($p)) | .number'); do
+      pr_line "$(api GET "/pulls/$pr")"
+    done
+  fi
+  api_all "/issues/$n/comments?per_page=100" | jq -r --argjson m "$m" "$JQ_TAGS"'
+    .[] | "", "--- comment \(.id) by \(.user.login)\(tags(.user.login; .body)) \(.created_at)",
+      text(.body)'
+}
+
+cmd_status() {
+  (($# == 2)) || die "usage: status <n> <status>"
+  local n=$1 s=$2 cur l
+  num "$n"
+  in_list "$s" "${STATUSES[@]}" || die "unknown status: $s"
+  cur=$(api GET "/issues/$n" | jq -r '.labels[].name')
+  for l in "${STATUSES[@]}"; do
+    if [[ $l != "$s" ]] && grep -qxF "$l" <<<"$cur"; then
+      api DELETE "/issues/$n/labels/$l" >/dev/null
+    fi
+  done
+  grep -qxF "$s" <<<"$cur" || send POST "/issues/$n/labels" '{labels: [$s]}' --arg s "$s" >/dev/null
+}
+
+cmd_close() {
+  (($# == 2)) || die "usage: close <n> <reason>"
+  local n=$1 r=$2 issue
+  num "$n"
+  in_list "$r" "${REASONS[@]}" || die "unknown reason: $r"
+  issue=$(api GET "/issues/$n")
+  if jq -e '.pull_request' <<<"$issue" >/dev/null; then
+    send PATCH "/pulls/$n" '{state: "closed"}' >/dev/null
+  else
+    send PATCH "/issues/$n" '{state: "closed", state_reason: $r}' --arg r "$r" >/dev/null
+  fi
+}
+
+cmd_body() {
+  (($# == 1)) || die "usage: body <n>"
+  local n=$1 body issue
+  num "$n"
+  issue=$(api GET "/issues/$n")
+  jq -e '(.body // "") | test("^Agent: ")' <<<"$issue" >/dev/null ||
+    die "#$n has no agent marker: an agent edits only an agent post"
+  body=$(sed '1{/^Agent: /{N;/\n$/d;s/^[^\n]*\n//}}' | post)
+  scan "$body"
+  send PATCH "/issues/$n" '{body: $b}' --arg b "$body" >/dev/null
+}
+
+cmd_comment() {
+  (($# == 1)) || die "usage: comment <n>"
+  local n=$1 body
+  num "$n"
+  body=$(post)
+  scan "$body"
+  send POST "/issues/$n/comments" '{body: $b}' --arg b "$body" | jq -r .html_url
+}
+
+cmd_pr() {
+  (($# == 2)) || die "usage: pr <n> <title>"
+  local n=$1 title=$2 branch body
+  num "$n"
+  branch=$(git rev-parse --abbrev-ref HEAD)
+  [[ $branch == "$n-"* ]] || die "the current branch $branch is not a branch of #$n"
+  body=$(post $'\n\n'"Closes #$n")
+  scan "$title"$'\n'"$body"
+  send POST /pulls '{title: $t, head: $h, base: "main", body: $b}' \
+    --arg t "$title" --arg h "$branch" --arg b "$body" | jq -r '"#\(.number) \(.html_url)"'
+}
+
+# The lines on the right side of the PR diff, as "path:line".
+diff_lines() {
+  api_all "/pulls/$1/files?per_page=100" |
+    jq -r '.[] | select(.patch) | "@@FILE \(.filename)", .patch' |
+    awk '/^@@FILE / { f = substr($0, 8); next }
+      /^@@ / { match($0, /\+[0-9]+/); n = substr($0, RSTART + 1, RLENGTH - 1) + 0; next }
+      /^[-\\]/ { next }
+      { print f ":" n; n++ }'
+}
+
+cmd_review() {
+  (($# == 1)) || die "usage: review <pr> (JSON on stdin)"
+  local pr=$1 in model head body comments
+  num "$pr"
+  in=$(cat)
+  jq -e 'type == "object" and (.model | type == "string") and (.model | test("^[^\n]+$"))
+    and (.position | type == "string") and (.findings | type == "array")
+    and all(.findings[]; (.body | type == "string"))' <<<"$in" >/dev/null 2>&1 ||
+    die "bad review JSON"
+  model=$(jq -r .model <<<"$in")
+  head=$(api GET "/pulls/$pr" | jq -r .head.sha)
+  [[ $(git rev-parse HEAD) == "$head" ]] ||
+    die "the local HEAD is not the PR head $head: push or pull first"
+  diff_lines "$pr" >"$tmp/lines"
+  jq --rawfile lines "$tmp/lines" --arg model "$model" --arg head "$head" '
+    def mark(t): "Agent: \($model)\n\n\(t)";
+    ($lines | split("\n")) as $l
+    | (.findings | map(select(. as $f | $f.path and $f.line
+        and ($l | index(["\($f.path):\($f.line)"]))))) as $in
+    | (.findings - $in) as $out
+    | {commit_id: $head, event: "COMMENT",
+       body: mark("Position: \(.position). Head: \($head). Findings: \(.findings | length).\n"
+         + (if (.summary // "") != "" then "\n\(.summary)\n" else "" end)
+         + ($out | map("\n- " + (if .path then "`\(.path)\(if .line then ":\(.line)" else "" end)`: "
+             else "" end) + .body) | join(""))),
+       comments: [$in[] | {path, line: (.line | tonumber), side: "RIGHT", body: mark(.body)}]}' <<<"$in" >"$tmp/review"
+  scan "$(jq -r '.body, .comments[].body' "$tmp/review")"
+  api POST "/pulls/$pr/reviews" "$tmp/review" | jq -r .html_url
+}
+
+cmd_threads() {
+  (($# == 1)) || die "usage: threads <pr>"
+  local pr=$1 m
+  num "$pr"
+  m=$(maintainers)
+  api_all "/pulls/$pr/reviews?per_page=100" | jq -r --argjson m "$m" "$JQ_TAGS"'
+    .[] | select((.body // "") != "")
+    | "", "--- review \(.id) by \(.user.login)\(tags(.user.login; .body)) \(.state) \(.commit_id)",
+      text(.body)'
+  api_all "/pulls/$pr/comments?per_page=100" | jq -r --argjson m "$m" "$JQ_TAGS"'
+    def post: "--- \(.id) by \(.user.login)\(tags(.user.login; .body)) \(.created_at)", text(.body);
+    . as $all | .[] | select(.in_reply_to_id == null) | . as $root
+    | "", "=== thread \(.id) \(.path):\(.line // .original_line)\(if .line == null then " (outdated)" else "" end)",
+      post, ($all[] | select(.in_reply_to_id == $root.id) | post)'
+}
+
+cmd_reply() {
+  (($# == 2)) || die "usage: reply <pr> <comment-id>"
+  local pr=$1 id=$2 body
+  num "$pr"
+  num "$id"
+  body=$(post)
+  scan "$body"
+  send POST "/pulls/$pr/comments/$id/replies" '{body: $b}' --arg b "$body" | jq -r .html_url
+}
+
+# The pre-push hook. Stdin: "<local ref> <local sha> <remote ref> <remote sha>" lines.
+check_push() {
+  local lref lsha rref rsha range b text closed head
+  while read -r lref lsha rref rsha; do
+    [[ $lsha =~ ^0+$ ]] && continue # a deleted ref
+    if [[ $rsha =~ ^0+$ ]]; then
+      range=("$lsha" --not --remotes=origin)
+    else
+      git cat-file -e "$rsha^{commit}" 2>/dev/null ||
+        die "the remote ${rref#refs/heads/} has commits that are not here: run git fetch"
+      range=("$rsha..$lsha")
+    fi
+    # Commit messages, file names, and added lines. --remerge-diff shows the lines
+    # that a merge commit adds when it resolves a conflict.
+    text=$(git log --format=%B "${range[@]}"
+      git log --format= --name-only "${range[@]}"
+      git log -p --remerge-diff --format= "${range[@]}" | grep '^+' | grep -v '^+++ ' || true)
+    scan "$text"
+    b=${rref#refs/heads/}
+    [[ $rref == refs/heads/* && $b != main ]] || continue
+    head=$(jq -rn --arg h "${R%%/*}:$b" '$h | @uri')
+    closed=$(api GET "/pulls?state=closed&head=$head" | jq length)
+    [[ $closed == 0 ]] || die "refused: the PR of $b is merged or closed; do the rest in a new issue"
+  done
+}
+
+cmd_check() {
+  if [[ ${1:-} == --push ]]; then
+    check_push
+  else
+    (($# == 0)) || die "usage: check [--push]"
+    scan "$(cat)"
+  fi
+}
+
+cmd_setup() {
+  local have name color desc
+  have=$(api_all "/labels?per_page=100" | jq -r '.[].name')
+  while IFS='|' read -r name color desc; do
+    if grep -qxF "$name" <<<"$have"; then
+      send PATCH "/labels/$(jq -rn --arg n "$name" '$n | @uri')" '{color: $c, description: $d}' \
+        --arg c "$color" --arg d "$desc" >/dev/null
+    else
+      send POST /labels '{name: $n, color: $c, description: $d}' \
+        --arg n "$name" --arg c "$color" --arg d "$desc" >/dev/null
+    fi
+  done <<'EOF'
+idea|c5def5|Type: an idea in the backlog
+dev|1d76db|Type: a feature with blocks; the parent of the blocks
+block|0e8a16|Type: one block of a dev issue
+one-shot|5319e7|Type: a small task in one session
+docs|0075ca|Type: user documentation
+question|d876e3|Type: a question from a user
+request|a2eeef|Type: a feature request from a user
+bug|d73a4a|Type: a bug report
+backlog|ededed|Status: not planned yet
+todo|fbca04|Status: planned
+progress|f9d0c4|Status: in work
+review|e99695|Status: waiting for a maintainer
+EOF
+  for name in "${DEFAULT_LABELS[@]}"; do
+    if grep -qxF "$name" <<<"$have"; then
+      api DELETE "/labels/$(jq -rn --arg n "$name" '$n | @uri')" >/dev/null
+    fi
+  done
+  git config core.hooksPath tools/hooks
+}
+
+main() {
+  (($#)) || {
+    usage
+    exit 1
+  }
+  local c=$1
+  shift
+  case $c in
+    -h | --help | help) usage ;;
+    check) if [[ ${1:-} == --push ]]; then R=$(repo); fi; cmd_check "$@" ;;
+    new | list | show | status | close | body | comment | pr | review | threads | reply | setup)
+      R=$(repo)
+      "cmd_$c" "$@"
+      ;;
+    *) die "unknown command: $c (see ghflow help)" ;;
+  esac
+}
+
+main "$@"

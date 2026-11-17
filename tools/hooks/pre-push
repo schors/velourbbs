@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Refuse a push with private text, or to the branch of a merged or closed PR.
+# Not a guard: `git push --no-verify` skips it.
+exec "$(git rev-parse --show-toplevel)/tools/ghflow" check --push "$@"
