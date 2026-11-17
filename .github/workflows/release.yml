@@ -90,6 +90,12 @@ jobs:
             echo "The release of $TAG exists. It does not change."
             exit 0
           fi
+          # gh links the release to the remote tag: it must still be on the built commit.
+          git fetch --no-tags origin "refs/tags/$TAG"
+          if [[ $(git rev-parse --verify 'FETCH_HEAD^{commit}') != $(git rev-parse HEAD) ]]; then
+            echo "::error::The remote tag $TAG moved during the run"
+            exit 1
+          fi
           flags=(--verify-tag --generate-notes)
           if [[ $TAG == *-* ]]; then flags+=(--prerelease); fi
           gh release create "$TAG" "${flags[@]}" "$RUNNER_TEMP"/dist/*
