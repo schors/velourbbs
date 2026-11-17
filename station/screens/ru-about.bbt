@@ -18,13 +18,13 @@ do = "goto ru-menu"
               Это домашняя станция Velour. Она работает на нём и показывает его
               руководства и возможности.
 
+              {!dim}Исходный код{!}        https://github.com/schors/velourbbs
+
               {!dim}Ваш адрес{!}           {session.ip}
               {!dim}Вы на связи{!}         {session.online}
               {!dim}Версия Velour{!}       {bbs.version}
               {!dim}Открытые сеансы{!}     {bbs.sessions}
               {!dim}Станция работает{!}    {bbs.uptime}
-
-
 
 
 
@@ -59,13 +59,13 @@ do = "goto ru-menu"
     Это домашняя станция Velour. Она работает на нём и показывает
     его руководства и возможности.
 
+    {!dim}Исходный код{!}        https://github.com/schors/velourbbs
+
     {!dim}Ваш адрес{!}           {session.ip}
     {!dim}Вы на связи{!}         {session.online}
     {!dim}Версия Velour{!}       {bbs.version}
     {!dim}Открытые сеансы{!}     {bbs.sessions}
     {!dim}Станция работает{!}    {bbs.uptime}
-
-
 
 
     {!frame}────────────────────────────────────────────────────────────────{!}
