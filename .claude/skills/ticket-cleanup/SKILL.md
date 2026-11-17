@@ -12,7 +12,7 @@ Run the skill in the main checkout (`flow.md`, section 4).
 Set `GHFLOW_AGENT` to your model name for each `tools/ghflow` call.
 
 1. Select the issues: the issue from the arguments, or each worktree
-   in `.ai/worktrees/` whose name starts with a number.
+   in `.ai/worktrees/` whose name starts with `GH-`.
 2. Run `ghflow show <n>` for each issue. An issue is complete when its PR is merged.
 3. Show the operator the complete issues and the incomplete issues with the reason.
 4. Make sure that the main checkout is on `main` and has no uncommitted changes.
@@ -20,8 +20,8 @@ Set `GHFLOW_AGENT` to your model name for each `tools/ghflow` call.
 5. For each complete issue:
    1. If the worktree has uncommitted changes or commits that are not in `main`,
       show them to the operator. Continue only after the operator confirms.
-   2. Run `git worktree remove --force .ai/worktrees/<n>-<slug>` and `git branch -D <n>-<slug>`.
-   3. Delete `.ai/issues/<n>-<slug>/`.
+   2. Run `git worktree remove --force .ai/worktrees/GH-<n>-<slug>` and `git branch -D GH-<n>-<slug>`.
+   3. Delete `.ai/issues/GH-<n>-<slug>/`.
    4. Close each open source issue (`Source: #<s>`) as `completed`.
    5. For a block, tell the operator to run `/ticket <parent>`.
 6. Tell the operator what was removed. Show `git log --oneline -n 5`.
@@ -34,8 +34,8 @@ If the arguments are `drop <n>`, stop the issue with no merge:
    and the uncommitted changes. Continue only after the operator confirms.
 2. Close the PR with `ghflow close <pr> not_planned` and the issue
    with `ghflow close <n> not_planned`.
-   If `origin/<n>-<slug>` exists, run `git push origin --delete <n>-<slug>`.
+   If `origin/GH-<n>-<slug>` exists, run `git push origin --delete GH-<n>-<slug>`.
 3. Close each open source issue (`Source: #<s>`) as `not_planned`.
-4. Run `git worktree remove --force .ai/worktrees/<n>-<slug>` and `git branch -D <n>-<slug>`.
-5. Delete `.ai/issues/<n>-<slug>/`.
+4. Run `git worktree remove --force .ai/worktrees/GH-<n>-<slug>` and `git branch -D GH-<n>-<slug>`.
+5. Delete `.ai/issues/GH-<n>-<slug>/`.
 6. For a block, tell the operator to run `/ticket <parent>`.

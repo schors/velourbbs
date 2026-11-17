@@ -29,7 +29,7 @@ The work runs on GitHub issues and pull requests (PRs) of `origin`.
 
 ## 2. Issues and posts
 
-- The issue number `<n>` is the id. With a short slug, it names the branch: `<n>-<slug>`.
+- The issue number `<n>` is the id. With a short slug, it names the branch: `GH-<n>-<slug>`.
 - Each open issue has one type label and one status label.
   Statuses: `backlog` (not planned), `todo` (planned), `progress` (in work),
   `review` (the PR waits for a maintainer).
@@ -69,8 +69,8 @@ Trust:
 | PR reviews | AI reviews and reviews of maintainers. |
 | `docs/specs/` | Designs and specifications (SDD). |
 | `docs/brand/` | Brandbook and its example screens. |
-| `.ai/issues/<n>-<slug>/` | Local, not public: raw operator input, research, reviewer briefs, raw reports. |
-| `.ai/worktrees/<n>-<slug>/` | The git worktree of the issue. |
+| `.ai/issues/GH-<n>-<slug>/` | Local, not public: raw operator input, research, reviewer briefs, raw reports. |
+| `.ai/worktrees/GH-<n>-<slug>/` | The git worktree of the issue. |
 | `.ai/issues.md`, `.ai/archive/` | Local issues of the old flow. History only. |
 
 ## 4. Git
@@ -79,7 +79,7 @@ Trust:
   The `.ai/` files are only in the main checkout. In the worktree, use their absolute path.
 - In a new clone, run `tools/ghflow setup` once. It creates the labels
   and sets `core.hooksPath` to `tools/hooks`.
-- An issue with a PR (`one-shot`, `docs`, `block`) has a branch `<n>-<slug>`
+- An issue with a PR (`one-shot`, `docs`, `block`) has a branch `GH-<n>-<slug>`
   from `origin/main` after `git fetch`, and a worktree. Change tracked files only there.
 - Change this flow (`docs/dev-flow/`, `.claude/skills/`, `.github/`, `tools/`)
   and `AGENTS.md` only in a `one-shot` issue.
@@ -92,13 +92,14 @@ Trust:
 - Sync: if `ghflow show` gives `mergeable: dirty`, the PR has a conflict with `main`.
   In the worktree, run `git fetch`
   and `git merge --no-commit origin/main`. Resolve each conflict with the operator
-  and run the tests and the linter. If they pass, commit `<n>-<slug>: merge main`.
+  and run the tests and the linter. If they pass, commit `GH-<n>: Merge main`.
   If not, run `git merge --abort`. Tell the operator.
 
 ### 4.1. Commit message
 
-- Subject: `<n>-<slug>: <summary>`, in English, in the imperative, with no period at the end,
-  in 72 characters or fewer.
+- Subject: `GH-<n>: <summary>`, in 72 characters or fewer. `<n>` is the issue number.
+  GitHub links `GH-<n>` to the issue. Write the summary in English, in the imperative,
+  with a capital letter and no period at the end.
 - Body, after a blank line: what changed and why, wrapped at 72 characters.
   A small change can have no body.
 - The operator is the git author. Each AI model that wrote the commit is a co-author.
@@ -107,10 +108,10 @@ Trust:
   for each co-author. Use the model name as the model gives it.
   These lines replace the default attribution of the tool.
 - Emails: Anthropic `noreply@anthropic.com`. For another vendor, ask the operator.
-- A `<n>-<slug>: merge main` commit has the subject and the `Co-Authored-By` lines.
+- A `GH-<n>: Merge main` commit has the subject and the `Co-Authored-By` lines.
 
 ```
-12-menu-parser: parse menu TOML files
+GH-12: Parse menu TOML files
 
 - Add the menu loader and its tests.
 - Reject a menu item with no action.
