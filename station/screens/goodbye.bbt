@@ -18,6 +18,8 @@ width = [80, 132]
 
               {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Вечер, текст и немного золота
                        Evening, text and a little gold
+
+                       {!dim}https://github.com/schors/velourbbs{!}
 {#else}
 
 
@@ -30,4 +32,6 @@ width = [80, 132]
 
         {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Вечер, текст и немного золота
                  Evening, text and a little gold
+
+                 {!dim}https://github.com/schors/velourbbs{!}
 {/if}

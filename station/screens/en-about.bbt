@@ -18,13 +18,13 @@ do = "goto en-menu"
               This is the home station of Velour. It runs on Velour and shows its
               guides and features.
 
+              {!dim}Source code{!}         https://github.com/schors/velourbbs
+
               {!dim}Your address{!}        {session.ip}
               {!dim}Time online{!}         {session.online}
               {!dim}Velour version{!}      {bbs.version}
               {!dim}Open sessions{!}       {bbs.sessions}
               {!dim}Station uptime{!}      {bbs.uptime}
-
-
 
 
 
@@ -59,13 +59,13 @@ do = "goto en-menu"
     This is the home station of Velour. It runs on Velour and shows
     its guides and features.
 
+    {!dim}Source code{!}         https://github.com/schors/velourbbs
+
     {!dim}Your address{!}        {session.ip}
     {!dim}Time online{!}         {session.online}
     {!dim}Velour version{!}      {bbs.version}
     {!dim}Open sessions{!}       {bbs.sessions}
     {!dim}Station uptime{!}      {bbs.uptime}
-
-
 
 
     {!frame}────────────────────────────────────────────────────────────────{!}

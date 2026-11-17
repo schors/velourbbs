@@ -46,7 +46,7 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 | `<lang>-bbt` | The parts of the BBT guide. | `0` for `README.md`, `1`–`9` for the parts: `goto <lang>-bbt-read` with the part. `ESC` `goto <lang>-texts`. |
 | `<lang>-setup-read`, `<lang>-bbt-read`, `<lang>-text-read` | File screens of the argument `file` (section 3.4). | `SPACE` `page next`, `B` `page prev`, `ESC` back to the screen that opened it. |
 | `<lang>-about` | The section About the station (section 3.5). | `ESC` `goto <lang>-menu`. |
-| `goodbye` | The goodbye screen in both languages. | — |
+| `goodbye` | The goodbye screen in both languages, with the repository address (section 3.5). | — |
 
 - The home BBS shows each part of a guide as one file. It does not copy the parts.
 - The texts follow the copy rules of the brandbook, section 7, for their language.
@@ -107,6 +107,8 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 ### 3.5. About the station
 
 - A short text about the project: what Velour is and that the station runs on it.
+- The repository address `https://github.com/schors/velourbbs` as a label and value row
+  (`Исходный код`, `Source code`), above the session and BBS fields.
 - The session and BBS fields as label and value rows: `session.ip`, `session.online`,
   `bbs.version`, `bbs.sessions` and `bbs.uptime` ([session-fields](session-fields.md), section 2).
   A label does not count the value, so it needs no plural form.
