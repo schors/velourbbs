@@ -239,6 +239,15 @@ nocall
 git checkout -q GH-5-test
 git branch -q -D 5-test
 
+name="pr refuses a branch of an issue with a longer number"
+reset
+git checkout -q -b GH-50-x
+run pr 5 "X" <<<"Summary."
+refused
+nocall
+git checkout -q GH-5-test
+git branch -q -D GH-50-x
+
 HEAD_SHA=$(git rev-parse HEAD)
 REVIEW='{"model":"Reviewer 2","position":"Script","summary":"Two findings.",
   "findings":[{"path":"a.sh","line":2,"body":"Bug A."},{"path":"a.sh","line":40,"body":"Bug B."},
