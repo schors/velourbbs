@@ -118,3 +118,40 @@ func TestPreviewFileArgLines(t *testing.T) {
 		t.Errorf("stdout %q, stderr %q, status %d; want stderr %q, status 1", out.String(), errOut.String(), status, want)
 	}
 }
+
+// TestFileSymlink shows a content file through a symlink to a directory outside
+// the BBS directory (file-view, sections 2 and 11).
+func TestFileSymlink(t *testing.T) {
+	top := t.TempDir()
+	bbs, outside := filepath.Join(top, "bbs"), filepath.Join(top, "outside")
+	files := map[string]string{
+		filepath.Join(bbs, "bbs.toml"):            "",
+		filepath.Join(bbs, "screens", "main.bbt"): "+++\nfile = \"ext/far.md\"\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n{>file}\n",
+		filepath.Join(outside, "far.md"):          "A file outside the BBS directory.\n",
+	}
+	for name, data := range files {
+		if err := os.MkdirAll(filepath.Dir(name), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(name, []byte(data), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Mkdir(filepath.Join(bbs, "content"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join("..", "..", "outside"), filepath.Join(bbs, "content", "ext")); err != nil {
+		t.Fatal(err)
+	}
+	fsys := os.DirFS(bbs)
+	var out, errOut bytes.Buffer
+	if status := run([]string{"check"}, fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
+		t.Errorf("check: stdout %q, stderr %q, status %d; want no output and status 0", out.String(), errOut.String(), status)
+	}
+	out.Reset()
+	errOut.Reset()
+	status := run([]string{"preview", "main", "--size", "40x10"}, fsys, &out, &errOut)
+	if !strings.Contains(out.String(), "|A file outside the BBS directory.       |") || errOut.Len() != 0 || status != 0 {
+		t.Errorf("preview: stderr %q, status %d, stdout:\n%s", errOut.String(), status, out.String())
+	}
+}

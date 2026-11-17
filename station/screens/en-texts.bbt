@@ -1,18 +1,72 @@
 +++
+width = [80, 132]
+[[item]]
+key = "1"
+do = "goto en-setup"
+[[item]]
+key = "2"
+do = "goto en-bbt"
+[[item]]
+key = "3"
+do = "goto en-text-read"
+args = { file = "en/features.md" }
 [[item]]
 key = "ESC"
 do = "goto en-menu"
 +++
+{#if term.cols >= 132 and term.rows >= 43}
+
+              {!hi}V E L O U R{!}      {!white}Texts{!}
+              {!gold}───────────{!frame}───────────────────────────────────────────────────────────────────────────────────────────{!} {!emer}■{!}
+
+
+              {!emer}■{!gold}  Texts{!}
+
+              {!dim}Guides{!}
+
+              {!gold}1{!}  {!emer}■{!}  {!ctl}Setup{!} {!frame}............................................................{!} {!dim}Program, BBS directory, systemd{!}
+
+              {!gold}2{!}  {!emer}■{!}  {!ctl}BBT{!} {!frame}...............................................................{!} {!dim}Screens, menus, fields and art{!}
+
+              {!dim}Velour{!}
+
+              {!gold}3{!}  {!emer}■{!}  {!ctl}Features{!} {!frame}..................................................................{!} {!dim}What Velour can do now{!}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+              {!frame}────────────────────────────────────────────────────────────────────────────────────────────────────────{!}
+              {!hi}1 2 3{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To menu{!}
+{#else}
 
     {!hi}V E L O U R{!}      {!white}Texts{!}
     {!gold}───────────{!frame}───────────────────────────────────────────────────{!} {!emer}■{!}
 
+    {!dim}Guides{!}
+    {!gold}1{!}  {!emer}■{!}  {!ctl}Setup{!} {!frame}....................{!} {!dim}Program, BBS directory, systemd{!}
+    {!gold}2{!}  {!emer}■{!}  {!ctl}BBT{!} {!frame}.......................{!} {!dim}Screens, menus, fields and art{!}
 
-
-
-
-
-
+    {!dim}Velour{!}
+    {!gold}3{!}  {!emer}■{!}  {!ctl}Features{!} {!frame}..........................{!} {!dim}What Velour can do now{!}
 
 
 
@@ -25,4 +79,5 @@ do = "goto en-menu"
 
 
     {!frame}────────────────────────────────────────────────────────────────{!}
-    {!hi}Esc{!} {!ctl}To menu{!}
+    {!hi}1 2 3{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To menu{!}
+{/if}
