@@ -243,7 +243,7 @@ cmd_show() {
     api_all "/issues/$n/dependencies/blocked_by?per_page=100" |
       jq -r '.[] | "blocked by: #\(.number) \(.state) \(.title)"'
     for pr in $(api_all "/pulls?state=all&per_page=100" |
-      jq -r --arg p "$n-" '.[] | select(.head.ref | startswith($p)) | .number'); do
+      jq -r --arg p "GH-$n-" '.[] | select(.head.ref | startswith($p)) | .number'); do
       pr_line "$(api GET "/pulls/$pr")"
     done
   fi
@@ -305,7 +305,7 @@ cmd_pr() {
   local n=$1 title=$2 branch body
   num "$n"
   branch=$(git rev-parse --abbrev-ref HEAD)
-  [[ $branch == "$n-"* ]] || die "the current branch $branch is not a branch of #$n"
+  [[ $branch == "GH-$n-"* ]] || die "the current branch $branch is not a branch of #$n"
   body=$(post $'\n\n'"Closes #$n")
   scan "$title"$'\n'"$body"
   send POST /pulls '{title: $t, head: $h, base: "main", body: $b}' \

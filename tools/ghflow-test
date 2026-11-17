@@ -50,7 +50,7 @@ chmod +x "$T/bin/curl"
 
 # A git repository with a GitHub origin and one maintainer.
 REPO=$T/repo
-git init -q -b 5-test "$REPO"
+git init -q -b GH-5-test "$REPO"
 cd "$REPO" || exit 1
 git config user.name Test
 git config user.email test@example.com
@@ -221,7 +221,7 @@ reset
 respond POST /pulls 201 '{"number":8,"html_url":"u"}'
 run pr 5 "Add tests" <<<"Summary."
 ok
-has "$LOG" '"head":"5-test"'
+has "$LOG" '"head":"GH-5-test"'
 has "$LOG" 'Summary.\n\nCloses #5'
 
 name="pr refuses a branch of another issue"
@@ -229,6 +229,24 @@ reset
 run pr 6 "X" <<<"Summary."
 refused
 nocall
+
+name="pr refuses a branch with no GH- prefix"
+reset
+git checkout -q -b 5-test
+run pr 5 "X" <<<"Summary."
+refused
+nocall
+git checkout -q GH-5-test
+git branch -q -D 5-test
+
+name="pr refuses a branch of an issue with a longer number"
+reset
+git checkout -q -b GH-50-x
+run pr 5 "X" <<<"Summary."
+refused
+nocall
+git checkout -q GH-5-test
+git branch -q -D GH-50-x
 
 HEAD_SHA=$(git rev-parse HEAD)
 REVIEW='{"model":"Reviewer 2","position":"Script","summary":"Two findings.",
@@ -269,10 +287,10 @@ respond GET /issues/5 200 '{"number":5,"title":"T","state":"open","labels":[],"u
 respond GET '/issues/5/sub_issues?per_page=100&page=1' 200 '[]'
 respond GET '/issues/5/dependencies/blocked_by?per_page=100&page=1' 200 '[]'
 respond GET /pulls/8 200 \
-  '{"number":8,"state":"open","merged":false,"mergeable_state":"dirty","head":{"ref":"5-test","sha":"s","repo":{"full_name":"o/r"}},"base":{"repo":{"full_name":"o/r"}}}'
+  '{"number":8,"state":"open","merged":false,"mergeable_state":"dirty","head":{"ref":"GH-5-test","sha":"s","repo":{"full_name":"o/r"}},"base":{"repo":{"full_name":"o/r"}}}'
 respond GET '/pulls?state=all&per_page=100&page=1' 200 \
-  '[{"number":8,"state":"open","merged_at":null,"head":{"ref":"5-test","sha":"s","repo":{"full_name":"o/r"}},"base":{"repo":{"full_name":"o/r"}}},
-    {"number":9,"state":"open","merged_at":null,"head":{"ref":"50-x","sha":"s","repo":{"full_name":"o/r"}},"base":{"repo":{"full_name":"o/r"}}}]'
+  '[{"number":8,"state":"open","merged_at":null,"head":{"ref":"GH-5-test","sha":"s","repo":{"full_name":"o/r"}},"base":{"repo":{"full_name":"o/r"}}},
+    {"number":9,"state":"open","merged_at":null,"head":{"ref":"GH-50-x","sha":"s","repo":{"full_name":"o/r"}},"base":{"repo":{"full_name":"o/r"}}}]'
 respond GET '/issues/5/comments?per_page=100&page=1' 200 \
   '[{"id":1,"user":{"login":"maint"},"body":"Please fix.","created_at":"t"},
     {"id":2,"user":{"login":"maint"},"body":"Agent: M\n\nDone.","created_at":"t"},
@@ -310,15 +328,15 @@ name="pre-push passes a clean branch with no closed PR"
 reset
 printf 'clean\n' >f.txt
 git add f.txt
-git commit -qm "5-test: add f"
-respond GET '/pulls?state=closed&head=o%3A5-test' 200 '[]'
-run check --push origin url <<<"refs/heads/5-test $(git rev-parse HEAD) refs/heads/5-test $Z"
+git commit -qm "GH-5: Add f"
+respond GET '/pulls?state=closed&head=o%3AGH-5-test' 200 '[]'
+run check --push origin url <<<"refs/heads/GH-5-test $(git rev-parse HEAD) refs/heads/GH-5-test $Z"
 ok
 
 name="pre-push refuses a branch with a closed PR"
 reset
-respond GET '/pulls?state=closed&head=o%3A5-test' 200 '[{"number":8}]'
-run check --push origin url <<<"refs/heads/5-test $(git rev-parse HEAD) refs/heads/5-test $Z"
+respond GET '/pulls?state=closed&head=o%3AGH-5-test' 200 '[{"number":8}]'
+run check --push origin url <<<"refs/heads/GH-5-test $(git rev-parse HEAD) refs/heads/GH-5-test $Z"
 refused
 has "$T/err" "merged or closed"
 
@@ -326,16 +344,16 @@ name="pre-push refuses an added private line"
 reset
 printf 'by Jane Roe\n' >g.txt
 git add g.txt
-git commit -qm "5-test: add g"
-run check --push origin url <<<"refs/heads/5-test $(git rev-parse HEAD) refs/heads/5-test $Z"
+git commit -qm "GH-5: Add g"
+run check --push origin url <<<"refs/heads/GH-5-test $(git rev-parse HEAD) refs/heads/GH-5-test $Z"
 refused
 nocall
 has "$T/err" "private name"
 
 name="pre-push refuses a private commit message"
 reset
-git commit -q --allow-empty -m "5-test: see $HOMEPATH"
-run check --push origin url <<<"refs/heads/5-test $(git rev-parse HEAD) refs/heads/5-test $(git rev-parse HEAD~1)"
+git commit -q --allow-empty -m "GH-5: See $HOMEPATH"
+run check --push origin url <<<"refs/heads/GH-5-test $(git rev-parse HEAD) refs/heads/GH-5-test $(git rev-parse HEAD~1)"
 refused
 nocall
 has "$T/err" "path in /home"
@@ -345,9 +363,9 @@ reset
 git rm -q g.txt
 printf 'x\n' >jane
 git add jane
-git commit -qm "5-test: add a file"
+git commit -qm "GH-5: Add a file"
 printf 'Jane\n' >>"$T/names"
-run check --push origin url <<<"refs/heads/5-test $(git rev-parse HEAD) refs/heads/5-test $(git rev-parse HEAD~1)"
+run check --push origin url <<<"refs/heads/GH-5-test $(git rev-parse HEAD) refs/heads/GH-5-test $(git rev-parse HEAD~1)"
 refused
 nocall
 sed -i '$d' "$T/names"
@@ -357,18 +375,18 @@ reset
 base=$(git rev-parse HEAD)
 git checkout -q -b side
 printf 'side\n' >c.txt && git add c.txt && git commit -qm side
-git checkout -q 5-test
+git checkout -q GH-5-test
 printf 'main\n' >c.txt && git add c.txt && git commit -qm main
 git merge -q side >/dev/null 2>&1
-printf 'Jane Roe was here\n' >c.txt && git add c.txt && git commit -qm "5-test: merge side"
-run check --push origin url <<<"refs/heads/5-test $(git rev-parse HEAD) refs/heads/5-test $(git rev-parse HEAD~1)"
+printf 'Jane Roe was here\n' >c.txt && git add c.txt && git commit -qm "GH-5: Merge side"
+run check --push origin url <<<"refs/heads/GH-5-test $(git rev-parse HEAD) refs/heads/GH-5-test $(git rev-parse HEAD~1)"
 refused
 has "$T/err" "private name"
 git reset -q --hard "$base"
 
 name="pre-push asks for a fetch when the remote sha is unknown"
 reset
-run check --push origin url <<<"refs/heads/5-test $(git rev-parse HEAD) refs/heads/5-test 1111111111111111111111111111111111111111"
+run check --push origin url <<<"refs/heads/GH-5-test $(git rev-parse HEAD) refs/heads/GH-5-test 1111111111111111111111111111111111111111"
 refused
 has "$T/err" "git fetch"
 
@@ -376,11 +394,11 @@ name="pre-push ignores a removed private line"
 reset
 printf 'by Jane Roe\n' >g.txt
 git add g.txt
-git commit -qm "5-test: add g again"
+git commit -qm "GH-5: Add g again"
 git rm -q g.txt
-git commit -qm "5-test: remove g"
-respond GET '/pulls?state=closed&head=o%3A5-test' 200 '[]'
-run check --push origin url <<<"refs/heads/5-test $(git rev-parse HEAD) refs/heads/5-test $(git rev-parse HEAD~1)"
+git commit -qm "GH-5: Remove g"
+respond GET '/pulls?state=closed&head=o%3AGH-5-test' 200 '[]'
+run check --push origin url <<<"refs/heads/GH-5-test $(git rev-parse HEAD) refs/heads/GH-5-test $(git rev-parse HEAD~1)"
 ok
 
 name="setup creates missing labels, updates others, deletes defaults"

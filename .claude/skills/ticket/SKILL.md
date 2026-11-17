@@ -29,8 +29,8 @@ is an issue number: open the issue.
 5. Handle the sources (`flow.md`, section 7). For a `dev` issue, the sources are
    on the parent.
 6. Run `git fetch origin` and
-   `git worktree add --no-track .ai/worktrees/<n>-<slug> -b <n>-<slug> origin/main`.
-   Create `.ai/issues/<n>-<slug>/`.
+   `git worktree add --no-track .ai/worktrees/GH-<n>-<slug> -b GH-<n>-<slug> origin/main`.
+   Create `.ai/issues/GH-<n>-<slug>/`.
 7. Go to the worktree. Tell the operator the issue link and the worktree path.
 8. Read the file of the type. Do the PR cycle (`flow.md`, section 5).
 
@@ -42,10 +42,10 @@ is an issue number: open the issue.
 2. Read the file of the type.
 3. For a `dev` issue, do the "Open" steps of `type-dev.md`. Stop.
    For an `idea`, do the steps of `type-idea.md`. Stop.
-4. Go to `.ai/worktrees/<n>-<slug>/`. If it does not exist, run `git fetch origin`. Then:
-   - If the local branch `<n>-<slug>` exists, run `git worktree add .ai/worktrees/<n>-<slug> <n>-<slug>`.
-   - If `origin/<n>-<slug>` exists, run
-     `git worktree add .ai/worktrees/<n>-<slug> -b <n>-<slug> origin/<n>-<slug>`.
+4. Go to `.ai/worktrees/GH-<n>-<slug>/`. If it does not exist, run `git fetch origin`. Then:
+   - If the local branch `GH-<n>-<slug>` exists, run `git worktree add .ai/worktrees/GH-<n>-<slug> GH-<n>-<slug>`.
+   - If `origin/GH-<n>-<slug>` exists, run
+     `git worktree add .ai/worktrees/GH-<n>-<slug> -b GH-<n>-<slug> origin/GH-<n>-<slug>`.
    - If not, create the branch as in "Create", step 6.
 5. Find the next step of the PR cycle from the issue, its comments, the PR
    and `ghflow threads <pr>`. Tell the operator the type, the status and the next step.
