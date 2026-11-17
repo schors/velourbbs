@@ -61,6 +61,8 @@ builds the binaries, creates a GitHub Release and deploys the home BBS to the ho
 
 - The assets are `velourbbs-<tag>-<goos>-<goarch>`, with `.exe` for windows,
   and `SHA256SUMS` with the SHA-256 of each binary (the format of `sha256sum`).
+- Before the release, the job fetches the remote tag again. Its commit must be
+  the built commit. Else the job fails with no release: someone moved the tag during the run.
 - The job creates the release with `gh release create <tag> --verify-tag`,
   with `--prerelease` for a pre-release tag, and the assets.
 - The release notes come from `--generate-notes`.

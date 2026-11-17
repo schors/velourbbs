@@ -1,0 +1,101 @@
+# Release of velourbbs on a version tag (docs/specs/release-deploy.md, section 3).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  queue: max
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.ref_name }}
+    steps:
+      - name: Check the tag
+        run: |
+          re='^v(0|1)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$'
+          if [[ ! $TAG =~ $re ]]; then
+            echo "::error::The tag does not match $re"
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Check the tag against main
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          commit=$(git rev-parse --verify "refs/tags/$TAG^{commit}")
+          if ! git merge-base --is-ancestor "$commit" "refs/remotes/origin/main^{commit}"; then
+            echo "::error::The commit of the tag is not in main"
+            exit 1
+          fi
+
+      - name: Keep only the tag of the run on the commit
+        run: |
+          git tag --points-at HEAD | while IFS= read -r t; do
+            if [[ $t != "$TAG" ]]; then
+              git update-ref -d "refs/tags/$t"
+            fi
+          done
+
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
+        with:
+          go-version-file: go.mod
+
+      - name: Test
+        run: |
+          go vet ./...
+          go test ./...
+
+      - name: Build
+        run: |
+          dist="$RUNNER_TEMP/dist"
+          mkdir -p "$dist"
+          for p in linux/amd64 linux/arm64 darwin/arm64 windows/amd64; do
+            goos=${p%/*}
+            goarch=${p#*/}
+            ext=
+            if [[ $goos == windows ]]; then ext=.exe; fi
+            f="$dist/velourbbs-$TAG-$goos-$goarch$ext"
+            CGO_ENABLED=0 GOOS=$goos GOARCH=$goarch go build -trimpath -o "$f" ./cmd/velourbbs
+            v=$(go version -m "$f" | awk '$1 == "mod" { print $3 }')
+            if [[ $v != "$TAG" ]]; then
+              echo "::error::$f has the version '$v', not $TAG"
+              exit 1
+            fi
+          done
+          cd "$dist"
+          sha256sum velourbbs-* > SHA256SUMS
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "The release of $TAG exists. It does not change."
+            exit 0
+          fi
+          # gh links the release to the remote tag: it must still be on the built commit.
+          git fetch --no-tags origin "refs/tags/$TAG"
+          if [[ $(git rev-parse --verify 'FETCH_HEAD^{commit}') != $(git rev-parse HEAD) ]]; then
+            echo "::error::The remote tag $TAG moved during the run"
+            exit 1
+          fi
+          flags=(--verify-tag --generate-notes)
+          if [[ $TAG == *-* ]]; then flags+=(--prerelease); fi
+          gh release create "$TAG" "${flags[@]}" "$RUNNER_TEMP"/dist/*
