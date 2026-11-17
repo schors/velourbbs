@@ -1,0 +1,30 @@
++++
+file = "{arg.file}"
+margin = [4, 12]
+[[item]]
+key = "B"
+do = "page prev"
+when = "file.page > 1"
+[[item]]
+key = "SPACE"
+do = "page next"
+when = "not file.last"
+[[item]]
+key = "ESC"
+do = "goto ru-bbt"
++++
+
+    {!hi}V E L O U R{!}      {!white}Тексты{!}
+    {!gold}───────────{!frame}───────────────────────────────────────────────────{!} {!emer}■{!}
+
+    {!emer}■{!gold}  Тексты  ∙  Руководство по BBT{!}
+
+    {!dim}{file.minutes} мин чтения{!}
+
+{>file}
+    {!frame}{#if file.pages == 1}────────────────────────────────────────────────────────────────{#else}{#if file.pages < 10}───────────────────────────{!dim}   {file.page}/{file.pages}   {!frame}────────────────────────────{#else}{#if file.page < 10}───────────────────────────{!dim}   {file.page}/{file.pages}   {!frame}───────────────────────────{#else}───────────────────────────{!dim}   {file.page}/{file.pages}   {!frame}──────────────────────────{/if}{/if}{/if}{!}
+    {#if item.B}{!hi}B{!} {!ctl}Назад{!}    {/if}{#if item.SPACE}{!hi}Пробел{!} {!ctl}Дальше{!}{#else}             {/if}{#if not item.B}           {/if}                            {!hi}Esc{!} {!ctl}К списку{!}
+
+{#if term.rows >= 25}
+
+{/if}

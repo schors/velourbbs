@@ -92,6 +92,8 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
   and Velour (the features text). Each entry has the gem `emer`, the title, a dot leader
   and a short note in `dim`. It has no lead.
 - A list of guide parts shows the number and the title of each part.
+- Each entry of the catalog and of a list of guide parts starts with the digit of its hotkey
+  in `gold`, in place of the selection.
 
 ### 3.4. Reading
 

@@ -1,0 +1,113 @@
++++
+width = [80, 132]
+[[item]]
+key = "0"
+do = "goto en-bbt-read"
+args = { file = "en/guide/bbt/README.md" }
+[[item]]
+key = "1"
+do = "goto en-bbt-read"
+args = { file = "en/guide/bbt/1-bbs-directory.md" }
+[[item]]
+key = "2"
+do = "goto en-bbt-read"
+args = { file = "en/guide/bbt/2-first-screen.md" }
+[[item]]
+key = "3"
+do = "goto en-bbt-read"
+args = { file = "en/guide/bbt/3-header.md" }
+[[item]]
+key = "4"
+do = "goto en-bbt-read"
+args = { file = "en/guide/bbt/4-menu.md" }
+[[item]]
+key = "5"
+do = "goto en-bbt-read"
+args = { file = "en/guide/bbt/5-fields.md" }
+[[item]]
+key = "6"
+do = "goto en-bbt-read"
+args = { file = "en/guide/bbt/6-colour-depth.md" }
+[[item]]
+key = "7"
+do = "goto en-bbt-read"
+args = { file = "en/guide/bbt/7-texts.md" }
+[[item]]
+key = "8"
+do = "goto en-bbt-read"
+args = { file = "en/guide/bbt/8-art.md" }
+[[item]]
+key = "9"
+do = "goto en-bbt-read"
+args = { file = "en/guide/bbt/9-errors.md" }
+[[item]]
+key = "ESC"
+do = "goto en-texts"
++++
+{#if term.cols >= 132 and term.rows >= 43}
+
+              {!hi}V E L O U R{!}      {!white}Texts{!}
+              {!gold}───────────{!frame}───────────────────────────────────────────────────────────────────────────────────────────{!} {!emer}■{!}
+
+
+              {!emer}■{!gold}  Texts{!}
+
+              {!dim}BBT guide{!}
+
+              {!gold}0{!}  {!emer}■{!}  {!ctl}Introduction{!}
+
+              {!gold}1{!}  {!emer}■{!}  {!ctl}The BBS directory{!}
+
+              {!gold}2{!}  {!emer}■{!}  {!ctl}The first screen{!}
+
+              {!gold}3{!}  {!emer}■{!}  {!ctl}The header{!}
+
+              {!gold}4{!}  {!emer}■{!}  {!ctl}A menu with hotkeys{!}
+
+              {!gold}5{!}  {!emer}■{!}  {!ctl}Fields and conditions{!}
+
+              {!gold}6{!}  {!emer}■{!}  {!ctl}The colour depth{!}
+
+              {!gold}7{!}  {!emer}■{!}  {!ctl}Texts{!}
+
+              {!gold}8{!}  {!emer}■{!}  {!ctl}Art{!}
+
+              {!gold}9{!}  {!emer}■{!}  {!ctl}Errors{!}
+
+
+
+
+
+
+
+
+
+
+
+              {!frame}────────────────────────────────────────────────────────────────────────────────────────────────────────{!}
+              {!hi}0-9{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
+{#else}
+
+    {!hi}V E L O U R{!}      {!white}Texts{!}
+    {!gold}───────────{!frame}───────────────────────────────────────────────────{!} {!emer}■{!}
+
+    {!dim}BBT guide{!}
+    {!gold}0{!}  {!emer}■{!}  {!ctl}Introduction{!}
+    {!gold}1{!}  {!emer}■{!}  {!ctl}The BBS directory{!}
+    {!gold}2{!}  {!emer}■{!}  {!ctl}The first screen{!}
+    {!gold}3{!}  {!emer}■{!}  {!ctl}The header{!}
+    {!gold}4{!}  {!emer}■{!}  {!ctl}A menu with hotkeys{!}
+    {!gold}5{!}  {!emer}■{!}  {!ctl}Fields and conditions{!}
+    {!gold}6{!}  {!emer}■{!}  {!ctl}The colour depth{!}
+    {!gold}7{!}  {!emer}■{!}  {!ctl}Texts{!}
+    {!gold}8{!}  {!emer}■{!}  {!ctl}Art{!}
+    {!gold}9{!}  {!emer}■{!}  {!ctl}Errors{!}
+
+
+
+
+
+
+    {!frame}────────────────────────────────────────────────────────────────{!}
+    {!hi}0-9{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
+{/if}
