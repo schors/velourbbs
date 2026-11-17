@@ -18,7 +18,7 @@ builds the binaries, creates a GitHub Release and deploys the home BBS to the ho
 | `.github/workflows/release.yml` | The workflow of sections 3 and 4. |
 | `deploy/velourbbs.service` | The service unit of section 5. |
 | `deploy/velourbbs.socket` | The socket unit of section 5, with the placeholder `@PORT@`. |
-| `deploy/install.sh` | The host script of section 4.4. |
+| `deploy/install.sh` | The host script of section 4.5. |
 
 ## 3. Release
 
@@ -31,16 +31,23 @@ builds the binaries, creates a GitHub Release and deploys the home BBS to the ho
   `^v(0|1)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$`. Else the job fails.
   Go writes a tag to the build info only for the major version 0 or 1
   ([session-fields](session-fields.md), section 3.4).
-- The commit of the tag must be an ancestor of `origin/main`
-  (`git merge-base --is-ancestor`). Else the job fails, with no release and no deploy.
+- The job fetches `refs/heads/main` into `refs/remotes/origin/main`. The commit of the tag
+  must be an ancestor of `refs/remotes/origin/main^{commit}` (`git merge-base --is-ancestor`).
+  Else the job fails, with no release and no deploy. The job uses only full ref names:
+  a tag named `origin/main` must not replace the branch.
+- The job checks the settings of section 4.1 before the build.
 - A pre-release tag (`v0.1.0-rc.1`) gives a GitHub pre-release. It also deploys.
 - The workflow has the permission `contents: write` and no other permission.
-- One concurrency group holds all runs of the workflow. A run waits for the run before it.
-  It does not cancel it.
+- One concurrency group with `queue: max` holds all runs of the workflow. A run waits
+  for the run before it. It does not cancel it. GitHub keeps at most 100 waiting runs.
 
 ### 3.2. Build
 
 - The checkout is the tagged commit with the full history and the tags (`fetch-depth: 0`).
+- The job deletes each local tag on the commit except the tag of the run
+  (`git tag --points-at HEAD`). Go writes the highest tag of the commit to the build info.
+  So `v0.1.0-rc.1` and `v0.1.0` on one commit give the version of the run.
+  The delete does not change the working tree.
 - Go is the version of `go.mod` (`go-version-file`).
 - The job runs `go vet ./...` and `go test ./...` before the build.
 - It builds `./cmd/velourbbs` with `CGO_ENABLED=0` and `-trimpath` for these platforms:
@@ -57,14 +64,16 @@ builds the binaries, creates a GitHub Release and deploys the home BBS to the ho
 - The job creates the release with `gh release create <tag> --verify-tag`,
   with `--prerelease` for a pre-release tag, and the assets.
 - The release notes come from `--generate-notes`.
-- When the release of the tag exists, the job does not change it. A re-run (section 4.6)
+- When the release of the tag exists, the job does not change it. A re-run (section 4.7)
   then builds and deploys again.
 
 ## 4. Deploy
 
 ### 4.1. Settings
 
-The repository settings of GitHub Actions give the deploy settings:
+The GitHub environment `home` gives the deploy settings. Its rule "Deployment branches
+and tags" allows only the tags `v*`. The job runs in this environment.
+A workflow of a branch push cannot get the SSH key.
 
 | Name | Kind | Content |
 |---|---|---|
@@ -75,7 +84,11 @@ The repository settings of GitHub Actions give the deploy settings:
 | `BBS_PORT` | variable | The TCP port of the BBS in the socket unit. |
 | `DEPLOY_SSH_KEY` | secret | The private SSH key of the user, with no passphrase. |
 
-- A missing setting, except `DEPLOY_SSH_PORT`, fails the job before the release.
+- A missing setting, except `DEPLOY_SSH_PORT`, fails the job before the build.
+- `BBS_PORT` and `DEPLOY_SSH_PORT` must be decimal numbers from 1 to 65535.
+  `DEPLOY_USER` must match `^[a-z_][a-z0-9_-]*$`. `DEPLOY_HOST` must match `^[A-Za-z0-9.:-]+$`
+  and must not start with `-`. Else the job fails before the build. A newline in `BBS_PORT`
+  would add a line to the socket unit.
 - `DEPLOY_KNOWN_HOSTS` is not secret: it holds public keys. For a port other than 22,
   a line starts with `[<host>]:<port>`. `ssh-keyscan -p <port> <host>` gives the lines.
   Compare their fingerprints with the host before the first deploy.
@@ -90,7 +103,14 @@ The repository settings of GitHub Actions give the deploy settings:
 - A changed host key fails the job. The operator checks the host and updates
   `DEPLOY_KNOWN_HOSTS`.
 
-### 4.3. Bundle
+### 4.3. Trust
+
+- A person who can push a tag `v*` can change the workflow in the tagged commit.
+  This workflow gets the SSH key: the check of section 3.1 is in the same file.
+- Only the maintainers have write access ([flow](../dev-flow/flow.md), section 1).
+  A tag push from a fork does not run the workflow of this repository.
+
+### 4.4. Bundle
 
 - The job reads the host architecture with `ssh ... uname -m`.
   `x86_64` gives amd64. `aarch64` gives arm64. Another value fails the job.
@@ -104,7 +124,7 @@ The repository settings of GitHub Actions give the deploy settings:
 - The job sends the bundle over SSH into `~/velourbbs/incoming/<tag>/` on the host.
   It removes this directory before. Then it runs `sh ~/velourbbs/incoming/<tag>/install.sh <tag>`.
 
-### 4.4. Host
+### 4.5. Host
 
 Layout under the home directory of the user:
 
@@ -120,13 +140,14 @@ Layout under the home directory of the user:
 1. Run `../velourbbs check` in `incoming/<tag>/station/`. An error stops the deploy.
    The running release does not change.
 2. Replace `releases/<tag>/` with the binary and `station/` of the bundle.
-3. Copy the units to `~/.config/systemd/user/`. Run `systemctl --user daemon-reload`
+3. Compare the socket unit of the bundle with the installed one. Copy the units
+   to `~/.config/systemd/user/`. Run `systemctl --user daemon-reload`
    and `systemctl --user enable velourbbs.socket velourbbs.service`.
 4. Point `current` to `releases/<tag>`: make a new symlink and rename it over `current`.
 5. When the socket unit changed, run `systemctl --user restart velourbbs.socket`.
-6. Run `systemctl --user restart velourbbs.service`.
-7. Wait 3 s. `systemctl --user is-active velourbbs.service` must give `active`.
-8. Remove `incoming/<tag>/`. Remove the releases except the 3 newest by modification time
+   `Requires=` also restarts the service. Else run `systemctl --user restart velourbbs.service`.
+6. Wait 3 s. `systemctl --user is-active velourbbs.service` must give `active`.
+7. Remove `incoming/<tag>/`. Remove the releases except the 3 newest by modification time
    and the target of `current`.
 
 - A restart stops the sessions with the screen `shutdown` ([menu-nav](menu-nav.md),
@@ -134,12 +155,12 @@ Layout under the home directory of the user:
   wait in its queue and the new process accepts them.
 - `systemctl --user` needs the user manager. Linger keeps it running.
 
-### 4.5. Job log
+### 4.6. Job log
 
 - The job writes the tag, the host architecture and the result of each step of
-  section 4.4 to its log. It does not write the settings of section 4.1.
+  section 4.5 to its log. It does not write the settings of section 4.1.
 
-### 4.6. Rollback
+### 4.7. Rollback
 
 - To deploy an earlier release, re-run its workflow run in GitHub
   ("Re-run all jobs"). The re-run uses the commit and the tag of that run.
@@ -198,7 +219,7 @@ Layout under the home directory of the user:
   and with `ExecStart` set to the path of a built `velourbbs`.
 - `shellcheck` gives no warning for `deploy/install.sh`.
 - A test of `install.sh` runs it with a stub `systemctl` in a temporary home directory.
-  It checks the layout of section 4.4 and that a failed `velourbbs check` keeps `current`.
+  It checks the layout of section 4.5 and that a failed `velourbbs check` keeps `current`.
 - A push of a pre-release tag creates a GitHub pre-release with 4 binaries and `SHA256SUMS`.
   The home BBS then shows the tag in `bbs.version`.
 - A tag on a commit outside `main` fails the job with no release.

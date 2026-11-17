@@ -109,8 +109,7 @@ When the host stops ([telnet-term](telnet-term.md), section 10.2), it shows
 of [bbt-format](bbt-format.md), section 8.4. It also finds these errors:
 
 - a `goto` to a screen that does not exist;
-- a `goto` to a screen without items, for example `goodbye`;
-- a `goto` to `shutdown`;
+- a `goto` to a screen without items, for example `goodbye` or `shutdown`;
 - a screen without items, except `goodbye` and `shutdown`;
 - items in `goodbye` or `shutdown`;
 - a file screen as `goodbye` or `shutdown` ([file-view](file-view.md), section 3);
