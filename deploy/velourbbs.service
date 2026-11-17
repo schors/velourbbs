@@ -1,0 +1,17 @@
+# The home BBS (docs/specs/release-deploy.md, section 5).
+[Unit]
+Description=Velour BBS
+Requires=velourbbs.socket
+After=velourbbs.socket
+
+[Service]
+Type=exec
+ExecStart=%h/velourbbs/current/velourbbs serve
+WorkingDirectory=%h/velourbbs/current/station
+Restart=on-failure
+MemoryMax=128M
+TasksMax=64
+LimitNOFILE=1024
+
+[Install]
+WantedBy=default.target

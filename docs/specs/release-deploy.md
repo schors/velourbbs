@@ -19,6 +19,7 @@ builds the binaries, creates a GitHub Release and deploys the home BBS to the ho
 | `deploy/velourbbs.service` | The service unit of section 5. |
 | `deploy/velourbbs.socket` | The socket unit of section 5, with the placeholder `@PORT@`. |
 | `deploy/install.sh` | The host script of section 4.5. |
+| `deploy/install_test.go` | The test of `install.sh` (section 8). |
 
 ## 3. Release
 
@@ -77,21 +78,26 @@ The GitHub environment `home` gives the deploy settings. Its rule "Deployment br
 and tags" allows only the tags `v*`. The job runs in this environment.
 A workflow of a branch push cannot get the SSH key.
 
-| Name | Kind | Content |
-|---|---|---|
-| `DEPLOY_HOST` | variable | The host name or address for SSH. |
-| `DEPLOY_USER` | variable | The user on the host. |
-| `DEPLOY_SSH_PORT` | variable | The SSH port. Empty gives 22. |
-| `DEPLOY_KNOWN_HOSTS` | variable | The `known_hosts` lines of the host keys. |
-| `BBS_PORT` | variable | The TCP port of the BBS in the socket unit. |
-| `DEPLOY_SSH_KEY` | secret | The private SSH key of the user, with no passphrase. |
+Each setting is a secret of the environment. The repository is public, and so is the job log.
+GitHub masks a secret in the log. It does not mask a variable: the log of each step
+shows its environment.
+
+| Name | Content |
+|---|---|
+| `DEPLOY_HOST` | The host name or address for SSH. |
+| `DEPLOY_USER` | The user on the host. |
+| `DEPLOY_SSH_PORT` | The SSH port. Empty gives 22. |
+| `DEPLOY_KNOWN_HOSTS` | The `known_hosts` lines of the host keys. |
+| `BBS_PORT` | The TCP port of the BBS in the socket unit. |
+| `DEPLOY_SSH_KEY` | The private SSH key of the user, with no passphrase. |
 
 - A missing setting, except `DEPLOY_SSH_PORT`, fails the job before the build.
 - `BBS_PORT` and `DEPLOY_SSH_PORT` must be decimal numbers from 1 to 65535.
   `DEPLOY_USER` must match `^[a-z_][a-z0-9_-]*$`. `DEPLOY_HOST` must match `^[A-Za-z0-9.:-]+$`
   and must not start with `-`. Else the job fails before the build. A newline in `BBS_PORT`
   would add a line to the socket unit.
-- `DEPLOY_KNOWN_HOSTS` is not secret: it holds public keys. For a port other than 22,
+- Only the steps that use a setting get it.
+- `DEPLOY_KNOWN_HOSTS` holds public keys, but its lines name the host. For a port other than 22,
   a line starts with `[<host>]:<port>`. `ssh-keyscan -p <port> <host>` gives the lines.
   Compare their fingerprints with the host before the first deploy.
 
@@ -135,6 +141,7 @@ Layout under the home directory of the user:
 | `~/velourbbs/releases/<tag>/` | The binary `velourbbs` and `station/` of one release. |
 | `~/velourbbs/current` | A symlink to `releases/<tag>` of the running release. |
 | `~/velourbbs/incoming/<tag>/` | The bundle during a deploy. |
+| `~/velourbbs/socket-changed` | A flag: the socket unit changed and the socket waits for a restart. |
 | `~/.config/systemd/user/velourbbs.service`, `velourbbs.socket` | The units of section 5. |
 
 `install.sh <tag>` does these steps. It stops at the first error (`set -eu`).
@@ -142,12 +149,18 @@ Layout under the home directory of the user:
 1. Run `../velourbbs check` in `incoming/<tag>/station/`. An error stops the deploy.
    The running release does not change.
 2. Replace `releases/<tag>/` with the binary and `station/` of the bundle.
-3. Compare the socket unit of the bundle with the installed one. Copy the units
+   When `current` points to `releases/<tag>`, keep it: a re-run of the current tag
+   has the same commit, and the running release does not go away.
+3. Compare the socket unit of the bundle with the installed one. When they differ, create
+   the flag `socket-changed`. A re-run after a failure before step 5 then still restarts the socket.
+   Copy the units
    to `~/.config/systemd/user/`. Run `systemctl --user daemon-reload`
    and `systemctl --user enable velourbbs.socket velourbbs.service`.
 4. Point `current` to `releases/<tag>`: make a new symlink and rename it over `current`.
-5. When the socket unit changed, run `systemctl --user restart velourbbs.socket`.
-   `Requires=` also restarts the service. Else run `systemctl --user restart velourbbs.service`.
+5. When the flag `socket-changed` exists, run `systemctl --user restart velourbbs.socket`.
+   `Requires=` also restarts a running service. Then run `systemctl --user start velourbbs.service`:
+   the socket restart does not start a stopped service, as on the first deploy.
+   Remove the flag. Else run `systemctl --user restart velourbbs.service`.
 6. Wait 3 s. `systemctl --user is-active velourbbs.service` must give `active`.
 7. Remove `incoming/<tag>/`. Remove the releases except the 3 newest by modification time
    and the target of `current`.
