@@ -28,7 +28,7 @@ The other specifications define the effect of a key and refer to this specificat
 
 | Key | Type | Default | Meaning |
 |---|---|---|---|
-| `listen` | string | `":2323"` | The TCP address of the server: `<host>:<port>`. [telnet-term](telnet-term.md), section 10. |
+| `listen` | string | `":2323"` | The TCP address of the server: `<host>:<port>`. A socket from systemd replaces it. [telnet-term](telnet-term.md), section 10.1. |
 | `max_conns` | integer | 64 | The maximum number of connections. [telnet-term](telnet-term.md), section 9.2. |
 | `max_conns_per_addr` | integer | 4 | The maximum number of connections from one address. [telnet-term](telnet-term.md), section 9.2. |
 | `max_connects_per_min` | integer | 10 | The maximum number of connects from one address in 60 s. [telnet-term](telnet-term.md), section 9.2. |

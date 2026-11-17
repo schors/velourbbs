@@ -94,20 +94,29 @@ The host shows a file screen ([file-view](file-view.md), section 3) in these ste
 3. Wait for keys and match them (section 3.3). A `page` action sets the current page
    and continues at step 2. Each other action leaves the screen.
 
+### 5.2. Stop
+
+When the host stops ([telnet-term](telnet-term.md), section 10.2), it shows
+`screens/shutdown.bbt` to each open session if the file exists. Then it disconnects.
+
+- The host renders `shutdown` with the size of the current screen and shows its first page.
+  It does not wait for a key.
+- Without the file, the host disconnects with no output.
+
 ## 6. `velourbbs check`
 
 `velourbbs check` ([screen-render](screen-render.md), section 3.1) finds the item errors
 of [bbt-format](bbt-format.md), section 8.4. It also finds these errors:
 
 - a `goto` to a screen that does not exist;
-- a `goto` to a screen without items, for example `goodbye`;
-- a screen without items, except `goodbye`;
-- items in `goodbye`;
-- a file screen as `goodbye` ([file-view](file-view.md), section 3);
+- a `goto` to a screen without items, for example `goodbye` or `shutdown`;
+- a screen without items, except `goodbye` and `shutdown`;
+- items in `goodbye` or `shutdown`;
+- a file screen as `goodbye` or `shutdown` ([file-view](file-view.md), section 3);
 - a start screen that does not exist or has no items;
 - a `goto` whose `args` differ from the arguments of the target screen
   ([bbt-format](bbt-format.md), section 8.5);
-- arguments of the start screen or of `goodbye`.
+- arguments of the start screen, of `goodbye` or of `shutdown`.
 
 - An error in an item has the position of the first line
   of the front matter ([screen-render](screen-render.md), section 3.1).

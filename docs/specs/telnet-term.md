@@ -351,7 +351,7 @@ The keys of `[telnet]` are in [bbs-toml](bbs-toml.md), section 3.1.
 
 - It does the checks of [screen-render](screen-render.md), section 3.1, at start.
   It writes the errors and the warnings to the standard error.
-- It writes the log to the standard error: a `listen` line with the address,
+- It writes the log to the standard error: a `listen` line with the address and its source,
   the probe line (section 5.6) and a `close` line for each connection.
   The `close` line has the client address, the reason of the end and the time.
 - After an accept error, it logs the error and accepts again after 1 s.
@@ -364,8 +364,31 @@ The keys of `[telnet]` are in [bbs-toml](bbs-toml.md), section 3.1.
   At most `max_conns` connections do this at the same time. The host closes each other
   connection at once.
 - It exits with status 1 after an error of the checks or of `listen`.
-- It runs until SIGINT or SIGTERM. Then it closes the listener and the connections and exits
-  with status 0.
+- It runs until SIGINT or SIGTERM. Then it closes the listener, stops the sessions
+  (section 10.2) and exits with status 0.
+
+### 10.1. Listener
+
+- On Linux, when `LISTEN_PID` is the process ID and `LISTEN_FDS` is set, systemd passes
+  the listener (socket activation). The host uses file descriptor 3 and ignores `telnet.listen`.
+  The source in the `listen` line is `systemd`.
+- `LISTEN_FDS` must be `1`, and file descriptor 3 must be a listening TCP socket.
+  Else it is an error of `listen`.
+- Else the host listens on `telnet.listen` ([bbs-toml](bbs-toml.md), section 3.1).
+  The source in the `listen` line is `bbs.toml`.
+- The other rules of this specification are the same for the two sources.
+
+### 10.2. Stop
+
+At SIGINT or SIGTERM, the host does these steps:
+
+1. Close the listener. A connection in the probe closes at once.
+2. Stop each open session ([session-fields](session-fields.md), section 3.2) at its next
+   wait for a key, or after the output of its current page. Show the screen `shutdown`
+   ([menu-nav](menu-nav.md), section 5.2). The reason in the `close` line is `shutdown`.
+3. After 5 s, close each connection that is still open. Then exit.
+
+- The close after output of section 10 applies after `shutdown`. Its 1 s counts in the 5 s.
 
 ## 11. Code
 
@@ -376,6 +399,7 @@ The keys of `[telnet]` are in [bbs-toml](bbs-toml.md), section 3.1.
 | `internal/server` | The listener, the limits, the PROXY protocol header and the sessions. |
 
 - `cmd/velourbbs` loads the screens and gives them to `internal/server`.
+  It opens the listener of section 10.1.
 
 ## 12. Libraries
 
@@ -385,6 +409,7 @@ The keys of `[telnet]` are in [bbs-toml](bbs-toml.md), section 3.1.
 | PROXY protocol | Own parser | `github.com/pires/go-proxyproto` | The library has API v0.x. Its 2026 releases changed the default policy and the parser, and not all changes are marked as breaking. A receiver of versions 1 and 2 has about 200 lines of the standard library. |
 | Terminal output | Own encoder | `github.com/gdamore/tcell` | The full-screen model of tcell differs from pages with a More row. It does not do the probe. |
 | Log | `log/slog` | Other log libraries | The standard library is sufficient. |
+| Socket activation | Own code | `github.com/coreos/go-systemd/v22/activation` | The host takes one socket. The code reads two variables and calls `net.FileListener`: about 30 lines of the standard library. |
 
 ## 13. Not in the MVP
 
