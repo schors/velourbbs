@@ -14,6 +14,7 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"testing/fstest"
 	"time"
@@ -88,11 +89,13 @@ func startWith(t *testing.T, set func(*config.Telnet), wrap func(net.Listener) n
 		"bbs.toml":            {},
 		"screens/main.bbt":    {Data: []byte(mainScreen)},
 		"screens/goodbye.bbt": {Data: []byte(goodbyeScreen)},
-	}, set, wrap)
+	}, set, wrap, 0)
 }
 
 // startFS starts a server as startWith with the BBS directory fsys and the version testVersion.
-func startFS(t *testing.T, fsys fstest.MapFS, set func(*config.Telnet), wrap func(net.Listener) net.Listener) *testServer {
+// stopTime, when it is not 0, is the longest time of the stop.
+func startFS(t *testing.T, fsys fstest.MapFS, set func(*config.Telnet), wrap func(net.Listener) net.Listener,
+	stopTime time.Duration) *testServer {
 	t.Helper()
 	cfg, ds := config.Load(fsys)
 	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
@@ -113,10 +116,12 @@ func startFS(t *testing.T, fsys fstest.MapFS, set func(*config.Telnet), wrap fun
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() {
-		log := slog.New(slog.NewJSONHandler(ts.log, &slog.HandlerOptions{ReplaceAttr: noRecordTime}))
-		done <- server.New(cfg, screens, log, testVersion).Serve(ctx, ln)
-	}()
+	log := slog.New(slog.NewJSONHandler(ts.log, &slog.HandlerOptions{ReplaceAttr: noRecordTime}))
+	srv := server.New(cfg, screens, log, testVersion)
+	if stopTime != 0 {
+		server.SetStopTime(srv, stopTime)
+	}
+	go func() { done <- srv.Serve(ctx, ln, "test") }()
 	var once sync.Once
 	var result error
 	ts.stop = func() error {
@@ -511,6 +516,7 @@ func TestServeAcceptError(t *testing.T) {
 }
 
 // The stop closes the open connections, and Serve returns nil (section 10).
+// Without the screen shutdown, a session closes without output (menu-nav, section 5.2).
 func TestServeStop(t *testing.T) {
 	ts := start(t, nil)
 	c := ts.dial(t)
@@ -518,12 +524,115 @@ func TestServeStop(t *testing.T) {
 	if err := ts.stop(); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := io.ReadAll(c); err != nil {
-		t.Errorf("read after the stop: %v, want EOF", err)
+	if b, err := io.ReadAll(c); err != nil || len(b) > 0 {
+		t.Errorf("read after the stop: %q, %v; want EOF and no output", b, err)
 	}
 	if _, err := net.Dial("tcp", ts.addr); err == nil {
 		t.Error("dial after the stop: no error")
 	}
+	logRecord(t, ts, "close", "reason", "shutdown")
+}
+
+// shutdownFS is a BBS directory with the screens main, goodbye and shutdown.
+var shutdownFS = fstest.MapFS{
+	"bbs.toml":             {},
+	"screens/main.bbt":     {Data: []byte(mainScreen)},
+	"screens/goodbye.bbt":  {Data: []byte(goodbyeScreen)},
+	"screens/shutdown.bbt": {Data: []byte("Restart {term.cols}\n")},
+}
+
+// The stop shows shutdown to a session at a key wait and closes a connection
+// in the probe at once (section 10.2).
+func TestServeShutdown(t *testing.T) {
+	ts := startFS(t, shutdownFS, func(c *config.Telnet) { c.ProbeTimeout = time.Minute }, nil, 0)
+	c1 := ts.dial(t)
+	probe(t, c1, wontReplies)
+	// c2 stays in the probe: it does not answer.
+	c2 := ts.dial(t)
+	readUntil(t, c2, "\xff", 1)
+
+	stopped := make(chan error, 1)
+	go func() { stopped <- ts.stop() }()
+	start := time.Now()
+	// The host renders shutdown with the size of the session: 80 columns without NAWS.
+	if got := readAll(t, c1); !strings.Contains(got, "Restart 80") {
+		t.Errorf("session output %q, want the screen shutdown", got)
+	}
+	_ = c1.Close()
+	if got := readAll(t, c2); strings.Contains(got, "Restart") {
+		t.Errorf("probe output %q has the screen shutdown", got)
+	}
+	if d := time.Since(start); d >= lingerTime {
+		t.Errorf("probe: close after %v, want at once", d)
+	}
+	if err := <-stopped; err != nil {
+		t.Fatal(err)
+	}
+	if recs := ts.records(t, "close"); len(recs) != 2 || !match(recs[0], []string{"reason", "shutdown"}) ||
+		!match(recs[1], []string{"reason", "shutdown"}) {
+		t.Errorf("close records %v, want 2 with the reason shutdown", recs)
+	}
+}
+
+// stallListener gives connections whose writes wait until the close
+// after the stall starts.
+type stallListener struct {
+	net.Listener
+	stall atomic.Bool
+}
+
+func (l *stallListener) Accept() (net.Conn, error) {
+	c, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	return &stallConn{Conn: c, l: l, closed: make(chan struct{})}, nil
+}
+
+type stallConn struct {
+	net.Conn
+	l      *stallListener
+	once   sync.Once
+	closed chan struct{}
+}
+
+func (c *stallConn) Write(b []byte) (int, error) {
+	if c.l.stall.Load() {
+		<-c.closed
+		return 0, net.ErrClosed
+	}
+	return c.Conn.Write(b)
+}
+
+func (c *stallConn) Close() error {
+	c.once.Do(func() { close(c.closed) })
+	return c.Conn.Close()
+}
+
+// After the stop time, the host closes each connection that is still open
+// and Serve returns (section 10.2, step 3).
+func TestServeStopTime(t *testing.T) {
+	const stopTime = 300 * time.Millisecond
+	var l *stallListener
+	ts := startFS(t, shutdownFS, nil, func(ln net.Listener) net.Listener {
+		l = &stallListener{Listener: ln}
+		return l
+	}, stopTime)
+	c := ts.dial(t)
+	probe(t, c, wontReplies)
+	// The page of shutdown waits: the client does not read.
+	l.stall.Store(true)
+	start := time.Now()
+	if err := ts.stop(); err != nil {
+		t.Fatal(err)
+	}
+	if d := time.Since(start); d < stopTime || d >= stopTime+lingerTime {
+		t.Errorf("stop after %v, want %v", d, stopTime)
+	}
+	if b, err := io.ReadAll(c); err != nil || len(b) > 0 {
+		t.Errorf("read after the stop: %q, %v; want EOF and no output", b, err)
+	}
+	logRecord(t, ts, "close", "reason", "shutdown")
 }
 
 // fieldsRow matches the row of fieldsScreen in the output. Each group is a field.
@@ -557,7 +666,7 @@ func TestServeFields(t *testing.T) {
 		"bbs.toml":            {Data: []byte("[bbs]\nname = \"Test BBS\"\n")},
 		"screens/main.bbt":    {Data: []byte(fieldsScreen)},
 		"screens/goodbye.bbt": {Data: []byte(goodbyeScreen)},
-	}, proxyLocal, nil)
+	}, proxyLocal, nil, 0)
 	c1 := ts.dial(t)
 	write(t, c1, header("192.0.2.1")+wontReplies)
 	readUntil(t, c1, "\x1b[6n", 1)

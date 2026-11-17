@@ -268,3 +268,33 @@ func TestReadDeadline(t *testing.T) {
 		t.Errorf("read deadlines %v, want %v and %v", c.deadlines, far, sub)
 	}
 }
+
+// Stop ends a Key that waits and each later Key with ErrStop, also with keys
+// in the queue (telnet-term, section 10.2). A Page after Stop writes.
+func TestTerminalStop(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		term, f := connect(t, testTimeouts)
+		done := make(chan error, 1)
+		go func() {
+			_, err := term.Key()
+			done <- err
+		}()
+		synctest.Wait()
+		term.Stop()
+		if err := <-done; !errors.Is(err, ErrStop) {
+			t.Errorf("waiting Key: %v, want ErrStop", err)
+		}
+		f.write("ab")
+		synctest.Wait()
+		if _, err := term.Key(); !errors.Is(err, ErrStop) {
+			t.Errorf("Key after Stop: %v, want ErrStop", err)
+		}
+		before := len(f.output())
+		if err := term.Page(screen.Page{Rows: []screen.Row{{{Grapheme: "x"}}}, Cols: 1, Height: 1}); err != nil {
+			t.Fatal(err)
+		}
+		if out := f.output(); !strings.Contains(out[before:], "x") {
+			t.Errorf("output after Page %q, want x", out[before:])
+		}
+	})
+}

@@ -1,0 +1,33 @@
++++
+width = [80, 132]
++++
+{#if term.cols >= 132 and term.rows >= 43}
+
+
+
+
+
+
+
+
+
+
+              {!dim}Перезапуск  ∙  Restarting{!}
+
+{>_logo-132}
+
+              {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Станция перезапускается. Позвоните через минуту.
+                       The station is restarting. Call again in a minute.
+{#else}
+
+
+
+
+
+        {!dim}Перезапуск  ∙  Restarting{!}
+
+{>_logo-80-8}
+
+        {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Станция перезапускается. Позвоните через минуту.
+                 The station is restarting. Call again in a minute.
+{/if}

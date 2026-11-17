@@ -85,6 +85,20 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 	}
 }
 
+// Shutdown shows the first page of the screen shutdown on t, when it exists,
+// with the size of t and without a key wait (section 5.2).
+// It gives the error of t. screens is the result of a load without errors and of Check.
+func Shutdown(t Terminal, cfg config.Config, screens map[string]*screen.Screen, values Values) error {
+	s, ok := screens["shutdown"]
+	if !ok {
+		return nil
+	}
+	for p := range Pages(cfg, s, t.Term(), nil, values()) {
+		return t.Page(p)
+	}
+	return nil
+}
+
 // run shows the screen s with the arguments args and gives the item that leaves it.
 // A page action of a file screen shows its page and waits for keys again (section 5.1).
 func (ss *session) run(s *screen.Screen, args map[string]string) (screen.Item, error) {

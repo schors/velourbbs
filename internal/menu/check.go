@@ -12,7 +12,7 @@ import (
 )
 
 // Check does the checks of section 6 between files: the goto actions and their args,
-// the screens without items, the start screen and the arguments of goodbye. screens is the result of a load without errors.
+// the screens without items, the start screen and the arguments of goodbye and shutdown. screens is the result of a load without errors.
 // Check adds the errors to ds with the limit of screen.MaxFileDiags for each file
 // and gives the sorted diagnostics.
 func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags) screen.Diags {
@@ -30,11 +30,12 @@ func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags
 	}
 	for _, name := range slices.Sorted(maps.Keys(screens)) {
 		s := screens[name]
-		if len(s.Items) == 0 && name != "goodbye" {
+		end := name == "goodbye" || name == "shutdown"
+		if len(s.Items) == 0 && !end {
 			fd(s.File).Errorf(1, 1, "screen has no items")
 		}
-		if name == "goodbye" && len(s.Args) > 0 {
-			fd(s.File).Errorf(1, 1, "the goodbye screen cannot have arguments")
+		if end && len(s.Args) > 0 {
+			fd(s.File).Errorf(1, 1, "the %s screen cannot have arguments", name)
 		}
 		for _, it := range s.Items {
 			if it.Do.Op != screen.Goto {

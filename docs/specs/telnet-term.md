@@ -385,9 +385,10 @@ At SIGINT or SIGTERM, the host does these steps:
 1. Close the listener. A connection in the probe closes at once.
 2. Stop each open session ([session-fields](session-fields.md), section 3.2) at its next
    wait for a key, or after the output of its current page. Show the screen `shutdown`
-   ([menu-nav](menu-nav.md), section 5.2). The reason in the `close` line is `shutdown`.
+   ([menu-nav](menu-nav.md), section 5.2).
 3. After 5 s, close each connection that is still open. Then exit.
 
+- The reason in the `close` line of a connection of steps 1 and 2 is `shutdown`.
 - The close after output of section 10 applies after `shutdown`. Its 1 s counts in the 5 s.
 
 ## 11. Code

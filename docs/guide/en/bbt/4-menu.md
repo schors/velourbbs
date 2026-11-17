@@ -216,6 +216,23 @@ The screen has 21 rows:
 
 "See you soon." is in the light peach `title` in bold.
 
+## The screen `shutdown`
+
+At SIGINT or SIGTERM, `velourbbs serve` stops. It shows the screen `shutdown`
+to each open session and ends the session. Tell the visitors that the BBS restarts:
+
+```
+       {!title}The lamp goes out for a minute.{!}
+       Call again soon.
+```
+
+- `shutdown` has the rules of `goodbye`: no items, no arguments and no file.
+- The BBS shows only the first page of `shutdown`. It does not wait for a key.
+- Without `screens/shutdown.bbt`, the BBS ends the sessions with no text.
+- After 5 s, the BBS closes each connection that is still open.
+
+`velourbbs preview shutdown` shows the screen.
+
 ## Test the keys
 
 `velourbbs preview <screen> --keys <keys>` presses the keys and shows each screen.

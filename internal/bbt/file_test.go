@@ -136,6 +136,13 @@ func TestFileErrors(t *testing.T) {
 		},
 		want: []string{`screens/goodbye.bbt:2:1: file: the goodbye screen cannot be a file screen`},
 	}, {
+		name: "shutdown as a file screen",
+		files: map[string]string{
+			"screens/shutdown.bbt": "+++\nfile = \"a.txt\"\n+++\n{>file}\n",
+			"content/a.txt":        "a\n",
+		},
+		want: []string{`screens/shutdown.bbt:2:1: file: the shutdown screen cannot be a file screen`},
+	}, {
 		name: "file keys",
 		files: map[string]string{
 			"screens/a.bbt": reader(`file = "../gold.md"`, "{>file}\n"),

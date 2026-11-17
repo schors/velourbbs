@@ -630,6 +630,8 @@ func TestItemPaths(t *testing.T) {
 	}{
 		{map[string]string{"goodbye.bbt": "+++\nwidth = [40, 80]\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n"},
 			[]string{`screens/goodbye.bbt:2:1: the goodbye screen cannot have items`}},
+		{map[string]string{"shutdown.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n"},
+			[]string{`screens/shutdown.bbt:2:1: the shutdown screen cannot have items`}},
 		{map[string]string{
 			"main.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{#if item.A and item.B}a{/if}\n{>_f}",
 			"_f.bbt":   "{#if item.C}a{/if}",

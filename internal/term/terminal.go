@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/schors/velourbbs/internal/screen"
@@ -34,8 +35,11 @@ const readSize = 4096
 // ErrIdle tells that no key arrived within the idle timeout.
 var ErrIdle = errors.New("term: idle timeout")
 
+// ErrStop tells that the host stops (telnet-term, section 10.2).
+var ErrStop = errors.New("term: stop")
+
 // Terminal is the terminal of menu-nav, section 8, on a telnet connection.
-// Probe gives it. One goroutine uses it.
+// Probe gives it. One goroutine uses it. Another goroutine can call Stop.
 type Terminal struct {
 	c       Conn
 	to      Timeouts
@@ -46,6 +50,16 @@ type Terminal struct {
 	lastKey time.Time // the start of the idle timeout
 	out     []byte    // the replies that wait for the next read
 	buf     []byte    // the read buffer
+	stopped atomic.Bool
+}
+
+// Stop makes Key give ErrStop: a Key that waits for the input ends,
+// and each later Key ends at once (section 10.2). A Page that writes completes.
+func (t *Terminal) Stop() {
+	t.stopped.Store(true)
+	// The read checks stopped after it sets its deadline, so a read
+	// that starts before this deadline also ends.
+	_ = t.c.SetReadDeadline(time.Now())
 }
 
 // Term gives the terminal fields.
@@ -56,10 +70,13 @@ func (t *Terminal) Term() screen.Term {
 // Key gives the next key of the queue. With an empty queue, it reads the input
 // until a key arrives. While the key decoder waits for the next byte of a sequence,
 // it also reads: a busy host must not end the 150 ms wait of bytes that arrived in time.
-// It gives ErrIdle at the idle timeout and the errors of the connection
+// It gives ErrIdle at the idle timeout, ErrStop after Stop and the errors of the connection
 // and of the telnet parser.
 func (t *Terminal) Key() (string, error) {
 	for {
+		if t.stopped.Load() {
+			return "", ErrStop
+		}
 		_, waiting := t.d.Deadline()
 		if len(t.keys) > 0 && !waiting {
 			break
@@ -110,6 +127,9 @@ func (t *Terminal) read(dl time.Time) ([]telnet.Event, []CPR, error) {
 	}
 	if err := t.c.SetReadDeadline(dl); err != nil {
 		return nil, nil, err
+	}
+	if t.stopped.Load() {
+		return nil, nil, ErrStop
 	}
 	n, err := t.c.Read(t.buf)
 	if err != nil && !errors.Is(err, os.ErrDeadlineExceeded) {

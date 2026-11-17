@@ -21,7 +21,7 @@ func TestStation(t *testing.T) {
 		// The 80 form on a wide terminal with fewer than 43 rows.
 		{"main", "132x42", "256", ""},
 	}
-	for _, screen := range []string{"main", "ru-menu", "en-menu", "ru-about", "en-about", "goodbye",
+	for _, screen := range []string{"main", "ru-menu", "en-menu", "ru-about", "en-about", "goodbye", "shutdown",
 		"ru-texts", "en-texts", "ru-setup", "en-setup", "ru-bbt", "en-bbt"} {
 		cases = append(cases, tcase{screen, "80x24", "256", ""}, tcase{screen, "132x43", "256", ""})
 	}

@@ -87,7 +87,7 @@ screens/main.bbt:2:1: item "T": do: unknown screen "term"
 screens/x.bbt:1:1: screen has no items
 ```
 
-Каждому экрану, кроме `goodbye`, нужен хотя бы один пункт. Добавь пункт.
+Каждому экрану, кроме `goodbye` и `shutdown`, нужен хотя бы один пункт. Добавь пункт.
 
 ## `content file ... does not exist`
 
