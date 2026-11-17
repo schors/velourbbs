@@ -1,4 +1,5 @@
-# Release of velourbbs on a version tag (docs/specs/release-deploy.md, section 3).
+# Release of velourbbs on a version tag and deploy of the home BBS
+# (docs/specs/release-deploy.md, sections 3 and 4).
 name: release
 
 on:
@@ -19,8 +20,14 @@ defaults:
 jobs:
   release:
     runs-on: ubuntu-latest
+    environment: home
     env:
       TAG: ${{ github.ref_name }}
+      DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ vars.DEPLOY_USER }}
+      DEPLOY_SSH_PORT: ${{ vars.DEPLOY_SSH_PORT }}
+      DEPLOY_KNOWN_HOSTS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+      BBS_PORT: ${{ vars.BBS_PORT }}
     steps:
       - name: Check the tag
         run: |
@@ -42,6 +49,31 @@ jobs:
           if ! git merge-base --is-ancestor "$commit" "refs/remotes/origin/main^{commit}"; then
             echo "::error::The commit of the tag is not in main"
             exit 1
+          fi
+
+      - name: Check the deploy settings
+        env:
+          KEY_SET: ${{ secrets.DEPLOY_SSH_KEY != '' }}
+        run: |
+          # The messages name the settings. They do not write their values.
+          fail() {
+            echo "::error::$1"
+            exit 1
+          }
+          port() {
+            [[ $1 =~ ^[1-9][0-9]{0,4}$ ]] && (($1 <= 65535))
+          }
+          for n in DEPLOY_HOST DEPLOY_USER DEPLOY_KNOWN_HOSTS BBS_PORT; do
+            if [[ -z ${!n} ]]; then fail "The setting $n is missing"; fi
+          done
+          if [[ $KEY_SET != true ]]; then fail "The secret DEPLOY_SSH_KEY is missing"; fi
+          if ! port "$BBS_PORT"; then fail "BBS_PORT is not a port number"; fi
+          if [[ -n $DEPLOY_SSH_PORT ]] && ! port "$DEPLOY_SSH_PORT"; then
+            fail "DEPLOY_SSH_PORT is not a port number"
+          fi
+          if [[ ! $DEPLOY_USER =~ ^[a-z_][a-z0-9_-]*$ ]]; then fail "DEPLOY_USER is not a user name"; fi
+          if [[ ! $DEPLOY_HOST =~ ^[A-Za-z0-9.:-]+$ || $DEPLOY_HOST == -* ]]; then
+            fail "DEPLOY_HOST is not a host name or address"
           fi
 
       - name: Keep only the tag of the run on the commit
@@ -99,3 +131,43 @@ jobs:
           flags=(--verify-tag --generate-notes)
           if [[ $TAG == *-* ]]; then flags+=(--prerelease); fi
           gh release create "$TAG" "${flags[@]}" "$RUNNER_TEMP"/dist/*
+
+      - name: Write the SSH files
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          umask 077
+          mkdir -p "$RUNNER_TEMP/ssh"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/ssh/key"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$RUNNER_TEMP/ssh/known_hosts"
+
+      - name: Deploy the home BBS
+        run: |
+          d=$RUNNER_TEMP/ssh
+          remote=(ssh -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$d/known_hosts"
+            -o IdentitiesOnly=yes -o BatchMode=yes -i "$d/key" -p "${DEPLOY_SSH_PORT:-22}"
+            -- "$DEPLOY_USER@$DEPLOY_HOST")
+          echo "Tag: $TAG"
+          m=$("${remote[@]}" uname -m)
+          case $m in
+            x86_64) arch=amd64 ;;
+            aarch64) arch=arm64 ;;
+            *)
+              echo "::error::The host architecture '$m' is not supported"
+              exit 1
+              ;;
+          esac
+          echo "Host architecture: $m"
+          b=$RUNNER_TEMP/bundle
+          mkdir -p "$b/units"
+          cp "$RUNNER_TEMP/dist/velourbbs-$TAG-linux-$arch" "$b/velourbbs"
+          cp deploy/install.sh "$b/"
+          cp deploy/velourbbs.service "$b/units/"
+          sed "s/@PORT@/$BBS_PORT/" deploy/velourbbs.socket > "$b/units/velourbbs.socket"
+          # The remote command runs in the home directory of the user.
+          # The tag matches the check of the first step: it is safe in the remote command.
+          in=velourbbs/incoming/$TAG
+          tar -czh -C "$b" velourbbs units install.sh -C "$PWD" station |
+            "${remote[@]}" "rm -rf $in && mkdir -p $in && tar -xzf - -C $in"
+          echo "Sent the bundle"
+          "${remote[@]}" "sh $in/install.sh $TAG"

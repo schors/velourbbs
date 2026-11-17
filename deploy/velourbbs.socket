@@ -1,0 +1,10 @@
+# The socket of the home BBS (docs/specs/release-deploy.md, section 5).
+# The deploy sets the port of ListenStream from BBS_PORT.
+[Unit]
+Description=Velour BBS socket
+
+[Socket]
+ListenStream=@PORT@
+
+[Install]
+WantedBy=sockets.target

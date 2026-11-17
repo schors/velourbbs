@@ -19,6 +19,7 @@ builds the binaries, creates a GitHub Release and deploys the home BBS to the ho
 | `deploy/velourbbs.service` | The service unit of section 5. |
 | `deploy/velourbbs.socket` | The socket unit of section 5, with the placeholder `@PORT@`. |
 | `deploy/install.sh` | The host script of section 4.5. |
+| `deploy/install_test.go` | The test of `install.sh` (section 8). |
 
 ## 3. Release
 
@@ -147,7 +148,9 @@ Layout under the home directory of the user:
    and `systemctl --user enable velourbbs.socket velourbbs.service`.
 4. Point `current` to `releases/<tag>`: make a new symlink and rename it over `current`.
 5. When the socket unit changed, run `systemctl --user restart velourbbs.socket`.
-   `Requires=` also restarts the service. Else run `systemctl --user restart velourbbs.service`.
+   `Requires=` also restarts a running service. Then run `systemctl --user start velourbbs.service`:
+   the socket restart does not start a stopped service, as on the first deploy.
+   Else run `systemctl --user restart velourbbs.service`.
 6. Wait 3 s. `systemctl --user is-active velourbbs.service` must give `active`.
 7. Remove `incoming/<tag>/`. Remove the releases except the 3 newest by modification time
    and the target of `current`.
