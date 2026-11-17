@@ -116,6 +116,6 @@ the online time, the BBS name, the version, the open sessions, the server time a
 
 ## 7. Not in this specification
 
-- The update of a field on an open screen: [live-fields](../ideas/live-fields.md).
+- The update of a field on an open screen: [live-fields](https://github.com/schors/velourbbs/issues/10).
 - A node number.
 - The names of months and days in other languages.

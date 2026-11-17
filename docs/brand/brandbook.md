@@ -978,16 +978,16 @@ The engine cannot show each element of this book yet. A screen of the home stati
 
 | Element | Specification or idea |
 |---|---|
-| Messages (Сообщения) | [menu-actions](../ideas/menu-actions.md) (`call msg.*`), [lists](../ideas/lists.md) |
-| Files (Файлы) | [menu-actions](../ideas/menu-actions.md) (`call file.*`), [lists](../ideas/lists.md) |
+| Messages (Сообщения) | [menu-actions](https://github.com/schors/velourbbs/issues/13) (`call msg.*`), [lists](https://github.com/schors/velourbbs/issues/9) |
+| Files (Файлы) | [menu-actions](https://github.com/schors/velourbbs/issues/13) (`call file.*`), [lists](https://github.com/schors/velourbbs/issues/9) |
 | Code (Код) and its tree | none yet |
 | Blog (Блог) | none yet |
-| Arrow-key selection and the selection mark | [menu-actions](../ideas/menu-actions.md) (marks), [lists](../ideas/lists.md) (row selection) |
+| Arrow-key selection and the selection mark | [menu-actions](https://github.com/schors/velourbbs/issues/13) (marks), [lists](https://github.com/schors/velourbbs/issues/9) (row selection) |
 | The lead of the selection | none yet |
 | The card at 132 | none yet |
 | The reading screen at 132 | none yet. A file screen has one `margin` for each width ([file-view](../specs/file-view.md), section 3). |
-| The table of contents | [file-view](../ideas/file-view.md) idea |
-| The syntax colours | [file-view](../ideas/file-view.md) idea |
+| The table of contents | [file-view](https://github.com/schors/velourbbs/issues/7) idea |
+| The syntax colours | [file-view](https://github.com/schors/velourbbs/issues/7) idea |
 | The mono mode | none yet ([telnet-term](../specs/telnet-term.md), section 13) |
 | Italic | none yet ([file-view](../specs/file-view.md), section 12) |
 | The title with its rule above the meta | none yet |

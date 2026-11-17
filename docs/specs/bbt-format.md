@@ -409,11 +409,11 @@ without items, the items of `goodbye` and the start screen. It also has the form
 ## 10. Not in the MVP
 
 - `#each`, list rows in art, data providers and `{#if}` inside art:
-  [lists](../ideas/lists.md). In the MVP, logic is in the BBS template only.
-- Marks and arrow-key selection: [menu-actions](../ideas/menu-actions.md).
+  [lists](https://github.com/schors/velourbbs/issues/9). In the MVP, logic is in the BBS template only.
+- Marks and arrow-key selection: [menu-actions](https://github.com/schors/velourbbs/issues/13).
   The MVP selects items by hotkey only.
 - `require` (access checks). It needs users.
-- `ask`, and a field token in an `args` value: [menu-actions](../ideas/menu-actions.md).
+- `ask`, and a field token in an `args` value: [menu-actions](https://github.com/schors/velourbbs/issues/13).
 - Punctuation keys, for example `?`.
 - A `label` for an item. The host does not print item text.
 
