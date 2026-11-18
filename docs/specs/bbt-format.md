@@ -369,9 +369,9 @@ are the same keys.
 | `do` | Action |
 |---|---|
 | `goto <name>` | Show the screen `<name>` in place of the current screen. |
-| `gosub <name>` | Show the screen `<name>`. `back` returns from it. |
-| `back` | Show the screen before the last `gosub` again. |
-| `top` | Show the screen of the first frame of the navigation stack again. |
+| `gosub <name>` | Show the screen `<name>` over the current screen: [menu-nav](menu-nav.md), section 4.1. |
+| `back` | Show the screen below the current screen again: [menu-nav](menu-nav.md), section 4.1. |
+| `top` | Show the first screen of the navigation stack again: [menu-nav](menu-nav.md), section 4.1. |
 | `logoff` | End the session. |
 | `page next`, `page prev`, `page first`, `page last` | Show another page of a file screen: [file-view](file-view.md), section 3.3. |
 | `theme dark`, `theme light`, `theme auto` | Set the theme choice of the session: [screens-toml](screens-toml.md), section 3.2. |
