@@ -106,3 +106,24 @@ func TestValues(t *testing.T) {
 		}
 	}
 }
+
+// TestBackground: the relative luminance rule of section 6. #bcbcbc is the darkest light grey.
+func TestBackground(t *testing.T) {
+	tests := map[string]string{
+		"":        "",
+		"#000000": "dark",
+		"#bbbbbb": "dark",
+		"#bcbcbc": "light",
+		"#ffffff": "light",
+		"#0c0c0c": "dark",
+		"#00ff00": "light", // green has the largest weight
+		"#ff0000": "dark",
+		"#0000ff": "dark",
+		"#ffff00": "light",
+	}
+	for bg, want := range tests {
+		if got := Background(bg); got != want {
+			t.Errorf("Background(%q) = %q, want %q", bg, got, want)
+		}
+	}
+}

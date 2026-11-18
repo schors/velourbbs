@@ -237,18 +237,37 @@ func osc4(end string) string {
 	return b.String()
 }
 
+// osc gives the OSC reply with the body body and the terminator end.
+func osc(body, end string) string {
+	return "\x1b]" + body + end
+}
+
 // The replies of the terminals of section 5.7 in the order of the queries.
-// The research of #31 gives them.
+// The research of #31 and #49 gives them. The OSC 4 replies for 256 and 258 of xterm
+// and Tera Term are special colours, of Windows Terminal reserved entries.
 var (
-	st           = "\x1b\\"
-	termWT       = "\x1bP1$r0;38:2::1:2:3m" + st + "\x1b[>0;10;1c" + osc4(st) + "\x1b[?61;4;6;7;14;21;22;23;24;28;32;42;52c"
-	termXterm    = "\x1bP1$r0;38:2::1:2:3m" + st + "\x1bP>|XTerm(412)" + st + "\x1b[>41;412;0c" + osc4("\a") + "\x1b[?64;1;2;6;9;15;17;18;21;22;28c"
-	termXterm16  = "\x1bP1$r0;38:5:16m" + st + "\x1bP>|XTerm(412)" + st + "\x1b[>41;412;0c" + osc4(st) + "\x1b[?64;1;2;6;9;15;17;18;21;22;28c"
-	termTmux     = "\x1bP0$r" + st + "\x1bP>|tmux 3.6" + st + "\x1b[>84;0;0c" + osc4(st) + "\x1b[?1;2;4c"
-	termITerm2   = "\x1bP1$r0;38:2:1:1:2:3m" + st + "\x1bP>|iTerm2 3.7.7" + st + "\x1b[>64;2500;0c" + osc4(st) + "\x1b[?64;1;2;4;6;17;18;21;22;52c"
-	termGhostty  = "\x1bP1$r0;38:2::1:2:3m" + st + "\x1bP>|ghostty 1.4.0" + st + "\x1b[>1;10;0c" + osc4(st) + "\x1b[?62;22;52c"
-	termPuTTY    = "\x1b[>0;136;0c" + osc4("\a") + "\x1b[?6c"
-	termTeraTerm = "\x1bP1$r0;30m" + st + "\x1b[>32;331;0c" + osc4(st) + "\x1b[?1;2c"
+	st     = "\x1b\\"
+	termWT = "\x1bP1$r0;38:2::1:2:3m" + st + "\x1b[>0;10;1c" +
+		osc("10;rgb:cccc/cccc/cccc", st) + osc("11;rgb:0c0c/0c0c/0c0c", st) + osc4(st) +
+		osc("4;256;rgb:0000/0000/0000", st) + osc("4;258;rgb:0000/0000/0000", st) + "\x1b[?61;4;6;7;14;21;22;23;24;28;32;42;52c"
+	termXterm = "\x1bP1$r0;38:2::1:2:3m" + st + "\x1bP>|XTerm(412)" + st + "\x1b[>41;412;0c" +
+		osc("10;rgb:0000/0000/0000", "\a") + osc("11;rgb:ffff/ffff/ffff", "\a") + osc4("\a") +
+		osc("4;256;rgb:0000/0000/0000", "\a") + osc("4;258;rgb:0000/0000/0000", "\a") + "\x1b[?64;1;2;6;9;15;17;18;21;22;28c"
+	termXterm16 = "\x1bP1$r0;38:5:16m" + st + "\x1bP>|XTerm(412)" + st + "\x1b[>41;412;0c" +
+		osc("10;rgb:0000/0000/0000", st) + osc("11;rgb:ffff/ffff/ffff", st) + osc4(st) +
+		osc("4;256;rgb:0000/0000/0000", st) + osc("4;258;rgb:0000/0000/0000", st) + "\x1b[?64;1;2;6;9;15;17;18;21;22;28c"
+	termTmux = "\x1bP0$r" + st + "\x1bP>|tmux 3.6" + st + "\x1b[>84;0;0c" +
+		osc("10;rgb:d0d0/d0d0/d0d0", st) + osc("11;rgb:1c1c/1c1c/1c1c", st) + osc4(st) + "\x1b[?1;2;4c"
+	termITerm2 = "\x1bP1$r0;38:2:1:1:2:3m" + st + "\x1bP>|iTerm2 3.7.7" + st + "\x1b[>64;2500;0c" +
+		osc("10;rgb:c7c7/c7c7/c7c7", st) + osc("11;rgb:0000/0000/0000", st) + osc4(st) +
+		osc("4;256;rgb:0000/0000/0000", st) + osc("4;258;rgb:0000/0000/0000", st) + "\x1b[?64;1;2;4;6;17;18;21;22;52c"
+	termGhostty = "\x1bP1$r0;38:2::1:2:3m" + st + "\x1bP>|ghostty 1.4.0" + st + "\x1b[>1;10;0c" +
+		osc("10;rgb:ffff/ffff/ffff", st) + osc("11;rgb:2828/2c2c/3434", st) + osc4(st) + "\x1b[?62;22;52c"
+	termPuTTY = "\x1b[>0;136;0c" + osc4("\a") +
+		osc("4;256;rgb:bbbb/bbbb/bbbb", "\a") + osc("4;258;rgb:0000/0000/0000", "\a") + "\x1b[?6c"
+	termTeraTerm = "\x1bP1$r0;30m" + st + "\x1b[>32;331;0c" +
+		osc("10;rgb:ffff/ffff/ffff", st) + osc("11;rgb:0000/0000/0000", st) + osc4(st) +
+		osc("4;256;rgb:ffff/ffff/ffff", st) + osc("4;258;rgb:0000/0000/ffff", st) + "\x1b[?1;2c"
 )
 
 func TestProbeClients(t *testing.T) {
@@ -264,27 +283,27 @@ func TestProbeClients(t *testing.T) {
 		want screen.Term
 	}{
 		// The terminals of section 5.7. inetutils telnet sends $TERM in upper case.
-		{"Windows Terminal", inet("XTERM-256COLOR", termWT), term("xterm-256color", 80, 24, screen.ColorsTrue, "", "sixel")},
-		{"xterm", inet("XTERM-256COLOR", termXterm), term("xterm-256color", 80, 24, screen.ColorsTrue, "XTerm(412)", "")},
-		{"xterm without direct colour", inet("XTERM", termXterm16), term("xterm", 80, 24, 256, "XTerm(412)", "")},
-		{"tmux", inet("TMUX-256COLOR", termTmux), term("tmux-256color", 80, 24, screen.ColorsTrue, "tmux 3.6", "sixel")},
-		{"iTerm2", inet("XTERM-256COLOR", termITerm2), term("xterm-256color", 80, 24, screen.ColorsTrue, "iTerm2 3.7.7", "sixel")},
-		{"Ghostty", inet("XTERM-GHOSTTY", termGhostty), term("xterm-ghostty", 80, 24, screen.ColorsTrue, "ghostty 1.4.0", "")},
+		{"Windows Terminal", inet("XTERM-256COLOR", termWT), colours(term("xterm-256color", 80, 24, screen.ColorsTrue, "", "sixel"), "#cccccc", "#0c0c0c", "dark")},
+		{"xterm", inet("XTERM-256COLOR", termXterm), colours(term("xterm-256color", 80, 24, screen.ColorsTrue, "XTerm(412)", ""), "#000000", "#ffffff", "light")},
+		{"xterm without direct colour", inet("XTERM", termXterm16), colours(term("xterm", 80, 24, 256, "XTerm(412)", ""), "#000000", "#ffffff", "light")},
+		{"tmux", inet("TMUX-256COLOR", termTmux), colours(term("tmux-256color", 80, 24, screen.ColorsTrue, "tmux 3.6", "sixel"), "#d0d0d0", "#1c1c1c", "dark")},
+		{"iTerm2", inet("XTERM-256COLOR", termITerm2), colours(term("xterm-256color", 80, 24, screen.ColorsTrue, "iTerm2 3.7.7", "sixel"), "#c7c7c7", "#000000", "dark")},
+		{"Ghostty", inet("XTERM-GHOSTTY", termGhostty), colours(term("xterm-ghostty", 80, 24, screen.ColorsTrue, "ghostty 1.4.0", ""), "#ffffff", "#282c34", "dark")},
 		{"PuTTY",
 			client{will: allOpts, do: hostOpts, naws: naws(120, 40), ttype: []string{"XTERM"}, cpr: "1;2", term: termPuTTY},
-			term("xterm", 120, 40, screen.ColorsTrue, "", "")},
+			colours(term("xterm", 120, 40, screen.ColorsTrue, "", ""), "#bbbbbb", "#000000", "dark")},
 		// PuTTY with "Treat CJK ambiguous characters as wide": the ambiguous probe
 		// moves the cursor by two cells (section 5.4).
 		{"PuTTY with wide ambiguous characters",
 			client{will: allOpts, do: hostOpts, naws: naws(120, 40), ttype: []string{"XTERM"}, cprs: []string{"1;2", "1;3"}, term: termPuTTY},
-			ambiguous(term("xterm", 120, 40, screen.ColorsTrue, "", ""), 2)},
+			ambiguous(colours(term("xterm", 120, 40, screen.ColorsTrue, "", ""), "#bbbbbb", "#000000", "dark"), 2)},
 		{"Tera Term in line mode",
 			client{
 				will: []byte{telnet.OptNAWS, telnet.OptTTYPE, telnet.OptBinary},
 				do:   []byte{telnet.OptEcho, telnet.OptBinary},
 				naws: naws(80, 24), ttype: []string{"xterm"}, cpr: "1;2", term: termTeraTerm,
 			},
-			term("xterm", 80, 24, 256, "", "")},
+			colours(term("xterm", 80, 24, 256, "", ""), "#ffffff", "#000000", "dark")},
 		// With only a DA1 reply, the TTYPE name gives the values.
 		// The host takes the first name and ignores the later names.
 		{"inetutils telnet",
@@ -373,11 +392,12 @@ func TestProbePalette(t *testing.T) {
 func TestProbeWrite(t *testing.T) {
 	// Section 5.7: the CPR probes first, the queries in one write, DA1 last, then the erase.
 	want := "\râ\x1b[6n\rж\x1b[6n\x1b[38;2;1;2;3m\x1bP$qm\x1b\\\x1b[0m\x1b[>0q\x1b[>c" +
+		"\x1b]10;?\x1b\\\x1b]11;?\x1b\\" +
 		"\x1b]4;0;?\x1b\\\x1b]4;1;?\x1b\\\x1b]4;2;?\x1b\\\x1b]4;3;?\x1b\\" +
 		"\x1b]4;4;?\x1b\\\x1b]4;5;?\x1b\\\x1b]4;6;?\x1b\\\x1b]4;7;?\x1b\\" +
 		"\x1b]4;8;?\x1b\\\x1b]4;9;?\x1b\\\x1b]4;10;?\x1b\\\x1b]4;11;?\x1b\\" +
 		"\x1b]4;12;?\x1b\\\x1b]4;13;?\x1b\\\x1b]4;14;?\x1b\\\x1b]4;15;?\x1b\\" +
-		"\x1b[c\r\x1b[K"
+		"\x1b]4;256;?\x1b\\\x1b]4;258;?\x1b\\\x1b[c\r\x1b[K"
 	if probeWrite != want {
 		t.Errorf("probeWrite = %q, want %q", probeWrite, want)
 	}
@@ -412,6 +432,12 @@ func TestProbeLateDA1(t *testing.T) {
 }
 
 // ambiguous gives t with term.ambiguous n.
+// colours sets term.fg_color, term.bg_color and term.background of t.
+func colours(t screen.Term, fg, bg, background string) screen.Term {
+	t.FgColor, t.BgColor, t.Background = fg, bg, background
+	return t
+}
+
 func ambiguous(t screen.Term, n int) screen.Term {
 	t.Ambiguous = n
 	return t
@@ -484,7 +510,7 @@ func TestProbeLog(t *testing.T) {
 		cl := client{
 			will: allOpts, naws: naws(100, 30), ttype: []string{"X\x1bTERM-256color", "VT100"}, cprs: []string{"1;2", "1;3"},
 			term: "\x1bP1$r0;38:2::1:2:3m\x1b\\\x1bP>|X\x01Term(412)" + strings.Repeat("ы", 40) + "\x1b\\" +
-				"\x1b]4;1;rgb:cdcd/0/80\x07\x1b]4;15;rgb:f/ff/fff\x1b\\\x1b[?64;1;4c",
+				"\x1b]11;rgb:fe/fe/fe\x07\x1b]4;1;rgb:cdcd/0/80\x07\x1b]4;15;rgb:f/ff/fff\x1b\\\x1b]4;258;rgb:0/0/0\x07\x1b[?64;1;4c",
 		}
 		_, _, log, _, err := probeLog(t, cl, testTimeouts)
 		if err != nil {
@@ -492,9 +518,9 @@ func TestProbeLog(t *testing.T) {
 		}
 		want := "level=INFO msg=probe addr=192.0.2.1 ttype=XTERM-256color naws=100x30 cpr=1;2 cpr_ambiguous=1;3 " +
 			"decrqss=1$r0;38:2::1:2:3m xtversion=>|XTerm(412)" + strings.Repeat("ы", 28) + " da2=- da1=?64;1;4c " +
-			"palette=-,cd0080,-,-,-,-,-,-,-,-,-,-,-,-,-,ffffff " +
+			"palette=-,cd0080,-,-,-,-,-,-,-,-,-,-,-,-,-,ffffff osc10=- osc11=fefefe osc4_256=- osc4_258=000000 " +
 			"type=xterm-256color cols=100 rows=30 charset=utf-8 colors=16777216 " +
-			"name=XTerm(412)" + strings.Repeat("ы", 30) + " images=sixel ambiguous=2 time=0s\n"
+			"name=XTerm(412)" + strings.Repeat("ы", 30) + " images=sixel ambiguous=2 fg_color=\"\" bg_color=#fefefe background=light time=0s\n"
 		if _, line, _ := strings.Cut(log, " "); line != want {
 			t.Errorf("log %q, want %q after the time", log, want)
 		}

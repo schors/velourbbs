@@ -10,8 +10,14 @@ import (
 	"github.com/schors/velourbbs/internal/telnet"
 )
 
-// paletteSize is the number of OSC 4 queries: the indexes 0–15 (section 5.7).
+// paletteSize is the number of palette queries: the OSC 4 indexes 0–15 (section 5.7).
 const paletteSize = 16
+
+// The OSC 4 indexes of the default foreground and background of PuTTY (section 5.7).
+const (
+	indexFg = 256
+	indexBg = 258
+)
 
 // probeWrite is the write of step 4 of section 5.1: the CPR probes (section 5.4),
 // the terminal queries in the order of section 5.7 and the erase.
@@ -22,9 +28,12 @@ var probeWrite = func() string {
 	b.WriteString("\x1b[38;2;1;2;3m\x1bP$qm\x1b\\\x1b[0m") // DECRQSS for SGR
 	b.WriteString("\x1b[>0q")                              // XTVERSION
 	b.WriteString("\x1b[>c")                               // DA2
+	b.WriteString("\x1b]10;?\x1b\\")                       // OSC 10
+	b.WriteString("\x1b]11;?\x1b\\")                       // OSC 11
 	for n := range paletteSize {
 		fmt.Fprintf(&b, "\x1b]4;%d;?\x1b\\", n) // OSC 4
 	}
+	fmt.Fprintf(&b, "\x1b]4;%d;?\x1b\\\x1b]4;%d;?\x1b\\", indexFg, indexBg)
 	b.WriteString("\x1b[c")   // DA1
 	b.WriteString("\r\x1b[K") // erase
 	return b.String()
@@ -34,22 +43,45 @@ var probeWrite = func() string {
 // (section 5.4). A number can be 0.
 type CPR struct{ Row, Col int }
 
+// colour is the colour of an OSC reply (section 5.7).
+type colour struct {
+	rgb uint32 // 0xRRGGBB
+	got bool   // the reply arrived
+}
+
+// hex gives the colour as #rrggbb, or empty without a reply (section 6).
+func (c colour) hex() string {
+	if !c.got {
+		return ""
+	}
+	return fmt.Sprintf("#%06x", c.rgb)
+}
+
+// log gives the colour for the log line: rrggbb, or - without a reply (section 5.6).
+func (c colour) log() string {
+	if !c.got {
+		return "-"
+	}
+	return fmt.Sprintf("%06x", c.rgb)
+}
+
 // replies holds the replies of the probe. A reply to a query of section 5.7 is its
 // Reply.Body; an empty string is no reply.
 type replies struct {
-	ttype      string      // the first TTYPE name, as sent
-	ttypeGot   bool        // the first TTYPE name arrived
-	naws       telnet.NAWS // the last NAWS without 0 in a dimension; zero is no size
-	cpr        CPR         // the reply to the charset probe
-	cprGot     bool        // the reply to the charset probe arrived
-	amb        CPR         // the reply to the ambiguous probe
-	ambGot     bool        // the reply to the ambiguous probe arrived
-	decrqss    string
-	xtversion  string
-	da2        string
-	da1        string
-	palette    [paletteSize]uint32 // the colours of the OSC 4 replies as 0xRRGGBB
-	paletteGot [paletteSize]bool   // the OSC 4 reply of the index arrived
+	ttype     string      // the first TTYPE name, as sent
+	ttypeGot  bool        // the first TTYPE name arrived
+	naws      telnet.NAWS // the last NAWS without 0 in a dimension; zero is no size
+	cpr       CPR         // the reply to the charset probe
+	cprGot    bool        // the reply to the charset probe arrived
+	amb       CPR         // the reply to the ambiguous probe
+	ambGot    bool        // the reply to the ambiguous probe arrived
+	decrqss   string
+	xtversion string
+	da2       string
+	da1       string
+	palette   [paletteSize]colour // the OSC 4 replies for 0–15
+	fg, bg    colour              // the OSC 10 and OSC 11 replies
+	fg4, bg4  colour              // the OSC 4 replies for 256 and 258
 }
 
 // add takes the reply rp of step 4 of section 5.1. It drops a second reply
@@ -94,11 +126,11 @@ func (r *replies) add(rp Reply) bool {
 			return first(&r.xtversion)
 		}
 	case ']':
-		n, c, ok := parseOSC4(b)
-		if !ok || r.paletteGot[n] {
+		p, rgb, ok := r.oscColour(b)
+		if !ok || p.got {
 			return false
 		}
-		r.palette[n], r.paletteGot[n] = c, true
+		*p = colour{rgb, true}
 		return true
 	}
 	return false
@@ -120,7 +152,7 @@ func (r *replies) utf8() bool {
 func (r *replies) values() (t screen.Term, utf8 bool) {
 	t = screen.Term{Charset: "utf-8"}
 	t.Type, t.Colors = TypeColors(r.ttype)
-	if isRGBReply(r.decrqss) || inClientTable(r.da2) {
+	if isRGBReply(r.decrqss) || isPuTTY(r.da2) || isTmux(r.da2) {
 		t.Colors = screen.ColorsTrue
 	}
 	if xt, ok := strings.CutPrefix(r.xtversion, ">|"); ok {
@@ -138,6 +170,17 @@ func (r *replies) values() (t screen.Term, utf8 bool) {
 		t.Cols, t.Rows = defaultCols, defaultRows
 	}
 	t.Cols, t.Rows = clamp(t.Cols, t.Rows)
+	fg, bg := r.fg, r.bg
+	if isPuTTY(r.da2) {
+		if !fg.got {
+			fg = r.fg4
+		}
+		if !bg.got {
+			bg = r.bg4
+		}
+	}
+	t.FgColor, t.BgColor = fg.hex(), bg.hex()
+	t.Background = Background(t.BgColor)
 	return t, r.utf8()
 }
 
@@ -153,7 +196,7 @@ func logReply(b string) string {
 // other than the VGA colour of its index (section 5.7).
 func (r *replies) notVGA() bool {
 	for n := range paletteSize {
-		if r.paletteGot[n] && r.palette[n] != vga[n] {
+		if c := r.palette[n]; c.got && c.rgb != vga[n] {
 			return true
 		}
 	}
@@ -163,11 +206,8 @@ func (r *replies) notVGA() bool {
 // logPalette gives the palette for the log line (section 5.6).
 func (r *replies) logPalette() string {
 	s := make([]string, paletteSize)
-	for n := range s {
-		s[n] = "-"
-		if r.paletteGot[n] {
-			s[n] = fmt.Sprintf("%06x", r.palette[n])
-		}
+	for n, c := range r.palette {
+		s[n] = c.log()
 	}
 	return strings.Join(s, ",")
 }
@@ -261,10 +301,17 @@ func daParams(b, prefix string) []int {
 	return ns
 }
 
-// inClientTable reports whether the DA2 reply b is in the client table of section 6.
-func inClientTable(b string) bool {
+// isPuTTY reports whether the DA2 reply b is the reply of PuTTY in the client table
+// of section 6.
+func isPuTTY(b string) bool {
+	return slices.Equal(daParams(b, ">"), []int{0, 136, 0})
+}
+
+// isTmux reports whether the DA2 reply b is the reply of tmux in the client table
+// of section 6.
+func isTmux(b string) bool {
 	ns := daParams(b, ">")
-	return slices.Equal(ns, []int{0, 136, 0}) || len(ns) > 0 && ns[0] == 84
+	return len(ns) > 0 && ns[0] == 84
 }
 
 // hasSixel reports whether the DA1 reply b has the feature 4 (section 6).
@@ -273,34 +320,57 @@ func hasSixel(b string) bool {
 	return len(ns) > 1 && slices.Contains(ns[1:], 4)
 }
 
-// parseOSC4 parses the body of an OSC 4 reply (section 5.7): the index n
-// and the colour c as 0xRRGGBB.
-func parseOSC4(b string) (n int, c uint32, ok bool) {
-	rest, ok := strings.CutPrefix(b, "4;")
-	if !ok {
-		return 0, 0, false
+// oscColour parses the body b of an OSC 4, OSC 10 or OSC 11 reply (section 5.7).
+// It gives the place of the reply in r and the colour as 0xRRGGBB.
+func (r *replies) oscColour(b string) (p *colour, rgb uint32, ok bool) {
+	cmd, spec, _ := strings.Cut(b, ";")
+	switch cmd {
+	case "10":
+		p = &r.fg
+	case "11":
+		p = &r.bg
+	case "4":
+		idx, rest, found := strings.Cut(spec, ";")
+		if !found || !isNumber(idx) {
+			return nil, 0, false
+		}
+		switch n, _ := strconv.Atoi(idx); {
+		case n < paletteSize:
+			p = &r.palette[n]
+		case n == indexFg:
+			p = &r.fg4
+		case n == indexBg:
+			p = &r.bg4
+		default:
+			return nil, 0, false
+		}
+		spec = rest
+	default:
+		return nil, 0, false
 	}
-	idx, spec, ok := strings.Cut(rest, ";")
-	if !ok || !isNumber(idx) {
-		return 0, 0, false
-	}
-	n, _ = strconv.Atoi(idx)
+	rgb, ok = parseRGB(spec)
+	return p, rgb, ok
+}
+
+// parseRGB parses the colour rgb:<r>/<g>/<b> of an OSC reply (section 5.7)
+// and gives it as 0xRRGGBB.
+func parseRGB(spec string) (c uint32, ok bool) {
 	spec, ok = strings.CutPrefix(spec, "rgb:")
 	parts := strings.Split(spec, "/")
-	if !ok || n >= paletteSize || len(parts) != 3 {
-		return 0, 0, false
+	if !ok || len(parts) != 3 {
+		return 0, false
 	}
 	for _, s := range parts {
 		if len(s) < 1 || len(s) > 4 {
-			return 0, 0, false
+			return 0, false
 		}
 		v, err := strconv.ParseUint(s, 16, 16)
 		if err != nil {
-			return 0, 0, false
+			return 0, false
 		}
 		// round(v × 255 / (16^d − 1))
 		maxV := uint64(1)<<(4*len(s)) - 1
 		c = c<<8 | uint32((2*v*255+maxV)/(2*maxV))
 	}
-	return n, c, true
+	return c, true
 }

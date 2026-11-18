@@ -52,18 +52,25 @@ func TestRGBReply(t *testing.T) {
 	}
 }
 
-func TestOSC4(t *testing.T) {
+func TestOSCColour(t *testing.T) {
+	var r replies
 	cases := map[string]struct {
-		n  int
+		p  *colour
 		c  uint32
 		ok bool
 	}{
-		"4;0;rgb:0000/0000/0000": {0, 0x000000, true},
-		"4;15;rgb:ffff/ff/f":     {15, 0xffffff, true},
-		"4;1;rgb:8080/80/8":      {1, 0x808088, true},
-		"4;3;rgb:AAAA/5555/0":    {3, 0xaa5500, true},
-		"4;7;rgb:7/77/777":       {7, 0x777777, true},
+		"4;0;rgb:0000/0000/0000": {&r.palette[0], 0x000000, true},
+		"4;15;rgb:ffff/ff/f":     {&r.palette[15], 0xffffff, true},
+		"4;1;rgb:8080/80/8":      {&r.palette[1], 0x808088, true},
+		"4;3;rgb:AAAA/5555/0":    {&r.palette[3], 0xaa5500, true},
+		"4;7;rgb:7/77/777":       {&r.palette[7], 0x777777, true},
+		"4;256;rgb:bbbb/bbbb/bb": {&r.fg4, 0xbbbbbb, true},
+		"4;258;rgb:0/0/0":        {&r.bg4, 0x000000, true},
+		"10;rgb:cccc/cccc/cccc":  {&r.fg, 0xcccccc, true},
+		"11;rgb:0c/0c/0c":        {&r.bg, 0x0c0c0c, true},
 		"4;16;rgb:0/0/0":         {},
+		"4;257;rgb:0/0/0":        {},
+		"4;259;rgb:0/0/0":        {},
 		"4;1;rgb:0/0":            {},
 		"4;1;rgb:0/0/0/0":        {},
 		"4;1;rgb:00000/0/0":      {},
@@ -73,12 +80,17 @@ func TestOSC4(t *testing.T) {
 		"4;1;rgbi:1/0/0":         {},
 		"4;;rgb:0/0/0":           {},
 		"4;1":                    {},
-		"10;rgb:0/0/0":           {},
+		"10;?":                   {},
+		"11;rgba:0/0/0/0":        {},
+		"11;rgb:0/0/0/0":         {},
+		"12;rgb:0/0/0":           {},
+		"110;rgb:0/0/0":          {},
+		"rgb:0/0/0":              {},
 	}
 	for in, want := range cases {
-		n, c, ok := parseOSC4(in)
-		if ok != want.ok || ok && (n != want.n || c != want.c) {
-			t.Errorf("parseOSC4(%q) = %d, %06x, %v; want %d, %06x, %v", in, n, c, ok, want.n, want.c, want.ok)
+		p, c, ok := r.oscColour(in)
+		if ok != want.ok || ok && (p != want.p || c != want.c) {
+			t.Errorf("oscColour(%q) = %p, %06x, %v; want %p, %06x, %v", in, p, c, ok, want.p, want.c, want.ok)
 		}
 	}
 }
@@ -103,7 +115,8 @@ func TestRepliesAdd(t *testing.T) {
 	if r.add(Reply{'P', "1$r0;38;2;1;2;3m", true}) || r.add(Reply{'P', ">|x", true}) {
 		t.Error("add() takes a DCS reply with BEL")
 	}
-	add(']', "11;rgb:0/0/0", false)
+	add(']', "12;rgb:0/0/0", false)
+	add(']', "4;257;rgb:0/0/0", false)
 	if r != (replies{}) {
 		t.Fatalf("replies after invalid replies: %+v", r)
 	}
@@ -123,6 +136,14 @@ func TestRepliesAdd(t *testing.T) {
 	if !r.add(Reply{']', "4;3;rgb:f/f/f", true}) {
 		t.Error("add() drops an OSC 4 reply with BEL")
 	}
+	add(']', "10;rgb:f/f/f", true)
+	add(']', "10;rgb:0/0/0", false)
+	add(']', "11;rgb:0/0/0", true)
+	add(']', "11;rgb:f/f/f", false)
+	add(']', "4;256;rgb:1/1/1", true)
+	add(']', "4;256;rgb:2/2/2", false)
+	add(']', "4;258;rgb:3/3/3", true)
+	add(']', "4;258;rgb:4/4/4", false)
 	if r.done() {
 		t.Error("done() before DA1")
 	}
@@ -138,7 +159,9 @@ func TestRepliesAdd(t *testing.T) {
 		t.Errorf("logPalette() = %q", got)
 	}
 	// The DA2 reply of PuTTY gives 16777216. The empty XTVERSION text is no name.
-	if tm, utf8 := r.values(); tm.Colors != 16777216 || tm.Name != "" || tm.Images != "sixel" || tm.Ambiguous != 2 || !utf8 {
+	// The OSC 10 and OSC 11 replies win over the OSC 4 replies for 256 and 258.
+	if tm, utf8 := r.values(); tm.Colors != 16777216 || tm.Name != "" || tm.Images != "sixel" || tm.Ambiguous != 2 || !utf8 ||
+		tm.FgColor != "#ffffff" || tm.BgColor != "#000000" || tm.Background != "dark" {
 		t.Errorf("values() = %+v", tm)
 	}
 
@@ -183,6 +206,41 @@ func TestQueryValues(t *testing.T) {
 	}
 	if s := slices.Collect(strings.SplitSeq(new(replies).logPalette(), ",")); len(s) != paletteSize {
 		t.Errorf("logPalette() of no replies has %d items", len(s))
+	}
+}
+
+// TestColourValues: OSC 10 and OSC 11 give term.fg_color and term.bg_color. The OSC 4
+// replies for 256 and 258 give them only with the DA2 reply of PuTTY (section 6).
+func TestColourValues(t *testing.T) {
+	tests := []struct {
+		name               string
+		da2                string
+		replies            []string
+		fg, bg, background string
+	}{
+		{"no reply", "", nil, "", "", ""},
+		{"OSC 10 and OSC 11", ">41;412;0c", []string{"10;rgb:0000/0000/0000", "11;rgb:FFFF/FFFF/FFFF"}, "#000000", "#ffffff", "light"},
+		{"only OSC 11", "", []string{"11;rgb:28/2c/34"}, "", "#282c34", "dark"},
+		{"only OSC 10", "", []string{"10;rgb:28/2c/34"}, "#282c34", "", ""},
+		{"PuTTY", ">0;136;0c", []string{"4;256;rgb:bbbb/bbbb/bbbb", "4;258;rgb:0000/0000/0000"}, "#bbbbbb", "#000000", "dark"},
+		{"PuTTY with a light background", ">0;136;0c", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "#000000", "#ffffff", "light"},
+		// xterm gives the special colours for 256 and 258.
+		{"xterm with 256 and 258", ">41;412;0c", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "", "", ""},
+		{"no DA2 reply with 256 and 258", "", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "", "", ""},
+		{"tmux with 256 and 258", ">84;0;0c", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "", "", ""},
+	}
+	for _, tt := range tests {
+		r := replies{da2: tt.da2}
+		for _, b := range tt.replies {
+			if !r.add(Reply{']', b, false}) {
+				t.Fatalf("%s: add(%q) = false", tt.name, b)
+			}
+		}
+		got, _ := r.values()
+		if got.FgColor != tt.fg || got.BgColor != tt.bg || got.Background != tt.background {
+			t.Errorf("%s: values() = %q %q %q, want %q %q %q",
+				tt.name, got.FgColor, got.BgColor, got.Background, tt.fg, tt.bg, tt.background)
+		}
 	}
 }
 

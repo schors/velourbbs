@@ -287,6 +287,32 @@ styles
 		name: "ambiguous width",
 		args: []string{"fields", "--set", "term.ambiguous=2"},
 		want: page(80, 24, "F|127.0.0.1|00:00:00|Kind Brothers BBS|dev|1|2006-01-02 15:04:05|00:00:00|||2|E"),
+	}, {
+		// term.bg_color gives term.background (telnet-term, section 6).
+		name: "terminal colours",
+		args: []string{"colours", "--set", "term.fg_color=#000000", "--set", "term.bg_color=#BCBCBC"},
+		want: page(80, 24, "C|#000000|#bcbcbc|light|E"),
+	}, {
+		name: "dark background colour",
+		args: []string{"colours", "--set", "term.bg_color=#bbbbbb"},
+		want: page(80, 24, "C||#bbbbbb|dark|E"),
+	}, {
+		name: "empty background colour",
+		args: []string{"colours", "--set", "term.bg_color=#ffffff", "--set", "term.bg_color="},
+		want: page(80, 24, "C||||E"),
+	}, {
+		// An explicit term.background overrides term.bg_color in each order.
+		name: "background before the colour",
+		args: []string{"colours", "--set", "term.background=dark", "--set", "term.bg_color=#ffffff"},
+		want: page(80, 24, "C||#ffffff|dark|E"),
+	}, {
+		name: "background after the colour",
+		args: []string{"colours", "--set", "term.bg_color=#000000", "--set", "term.background=light"},
+		want: page(80, 24, "C||#000000|light|E"),
+	}, {
+		name: "empty background",
+		args: []string{"colours", "--set", "term.bg_color=#000000", "--set", "term.background="},
+		want: page(80, 24, "C||#000000||E"),
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -311,17 +337,21 @@ func TestPreviewErrors(t *testing.T) {
 		{"preview", []string{"main", "--size", "80x101"}, "velourbbs preview: term.rows is 101, must be from 10 to 100", exitUsage},
 		{"preview", []string{"main", "--size", "+80x25"}, `invalid value "+80x25" for flag -size: cols: "+80" is not a decimal number`, exitUsage},
 		{"preview", []string{"main", "--size", "80"}, `invalid value "80" for flag -size: rows: "" is not a decimal number`, exitUsage},
-		{"preview", []string{"main", "--set", "term.cols=100"}, `invalid value "term.cols=100" for flag -set: cannot set "term.cols": only term.type, term.colors, term.name, term.images, term.ambiguous, arg.<name>, session.* and bbs.*`, exitUsage},
-		{"preview", []string{"main", "--set", "term.charset=koi8-r"}, `invalid value "term.charset=koi8-r" for flag -set: cannot set "term.charset": only term.type, term.colors, term.name, term.images, term.ambiguous, arg.<name>, session.* and bbs.*`, exitUsage},
+		{"preview", []string{"main", "--set", "term.cols=100"}, `invalid value "term.cols=100" for flag -set: cannot set "term.cols": only term.type, term.colors, term.name, term.images, term.ambiguous, term.bg_color, term.fg_color, term.background, arg.<name>, session.* and bbs.*`, exitUsage},
+		{"preview", []string{"main", "--set", "term.charset=koi8-r"}, `invalid value "term.charset=koi8-r" for flag -set: cannot set "term.charset": only term.type, term.colors, term.name, term.images, term.ambiguous, term.bg_color, term.fg_color, term.background, arg.<name>, session.* and bbs.*`, exitUsage},
 		{"preview", []string{"main", "--set", "term.colors=17"}, "velourbbs preview: term.colors is 17, must be 16, 256 or 16777216", exitUsage},
 		{"preview", []string{"main", "--set", "term.type"}, `invalid value "term.type" for flag -set: expected <path>=<value>`, exitUsage},
 		{"preview", []string{"main", "--set", "term.images=SIXEL"}, `invalid value "term.images=SIXEL" for flag -set: term.images is "SIXEL", must be sixel or empty`, exitUsage},
 		{"preview", []string{"main", "--set", "term.ambiguous=3"}, `invalid value "term.ambiguous=3" for flag -set: term.ambiguous is "3", must be 1 or 2`, exitUsage},
+		{"preview", []string{"main", "--set", "term.bg_color=fff"}, `invalid value "term.bg_color=fff" for flag -set: term.bg_color is "fff", must be #rrggbb or empty`, exitUsage},
+		{"preview", []string{"main", "--set", "term.bg_color=#fff"}, `invalid value "term.bg_color=#fff" for flag -set: term.bg_color is "#fff", must be #rrggbb or empty`, exitUsage},
+		{"preview", []string{"main", "--set", "term.fg_color=#gggggg"}, `invalid value "term.fg_color=#gggggg" for flag -set: term.fg_color is "#gggggg", must be #rrggbb or empty`, exitUsage},
+		{"preview", []string{"main", "--set", "term.background=Light"}, `invalid value "term.background=Light" for flag -set: term.background is "Light", must be dark, light or empty`, exitUsage},
 		{"preview", []string{"fields", "--set", "bbs.name={x"}, `invalid value "bbs.name={x" for flag -set: bbs.name: value has "{"`, exitUsage},
 		{"preview", []string{"fields", "--set", "session.ip=a\tb"}, "invalid value \"session.ip=a\\tb\" for flag -set: session.ip: value has a control character", exitUsage},
 		{"preview", []string{"fields", "--set", "bbs.sessions=-1"}, `invalid value "bbs.sessions=-1" for flag -set: bbs.sessions: "-1" is not a decimal number`, exitUsage},
 		{"preview", []string{"fields", "--set", "bbs.sessions="}, `invalid value "bbs.sessions=" for flag -set: bbs.sessions: "" is not a decimal number`, exitUsage},
-		{"preview", []string{"fields", "--set", "session.node=1"}, `invalid value "session.node=1" for flag -set: cannot set "session.node": only term.type, term.colors, term.name, term.images, term.ambiguous, arg.<name>, session.* and bbs.*`, exitUsage},
+		{"preview", []string{"fields", "--set", "session.node=1"}, `invalid value "session.node=1" for flag -set: cannot set "session.node": only term.type, term.colors, term.name, term.images, term.ambiguous, term.bg_color, term.fg_color, term.background, arg.<name>, session.* and bbs.*`, exitUsage},
 		{"preview", []string{"nope"}, `velourbbs preview: unknown screen "nope"`, exitUsage},
 		{"preview", []string{}, "velourbbs preview: expected one screen name", exitUsage},
 		{"preview", []string{"main", "term"}, "velourbbs preview: expected one screen name", exitUsage},
