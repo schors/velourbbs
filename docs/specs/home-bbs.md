@@ -17,7 +17,7 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 | Path | Content |
 |---|---|
 | `station/` | The BBS directory of the home BBS ([bbs-toml](bbs-toml.md), section 2). |
-| `station/bbs.toml` | `[bbs] name = "Velour"`. No `[telnet]` table. |
+| `station/bbs.toml` | `[bbs] name = "Velour"`. No `[telnet]` and no `[limits]` table. |
 | `station/screens/screens.toml` | The theme of section 4 and the screen settings. |
 | `station/screens/` | The screens of section 3 and their fragments. |
 | `station/content/<lang>/features.md` | The features text (section 6). |

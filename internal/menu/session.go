@@ -95,7 +95,7 @@ func (ss *session) loop(screens map[string]*screen.Screen, start string, args ma
 			ss.choice = config.ThemeChoice(it.Do.Theme)
 			continue
 		case screen.Logoff:
-		default: // a new action needs its own case; the session recovers the panic
+		default: // a new action needs its own case; serve recovers the panic of one session
 			panic(fmt.Sprintf("menu: no case for action %d", it.Do.Op))
 		}
 		if err := ss.ev.Logoff(); err != nil {
