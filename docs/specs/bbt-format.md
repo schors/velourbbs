@@ -36,8 +36,8 @@ The limits of section 9 catch mistakes, for example a file that is too large.
 - A "grapheme" is an extended grapheme cluster (Unicode UAX #29).
   A grapheme of more than 32 bytes is an error in a file.
 - The width of a grapheme is 0, 1 or 2 cells, by Unicode 17. East Asian Ambiguous characters
-  have the width 1. Terminals that show them as wide are not in the MVP
-  ([telnet-term](telnet-term.md), section 13).
+  have the width 1. A terminal that shows them as wide gives `term.ambiguous` 2
+  ([telnet-term](telnet-term.md), section 5.4). The layout does not change.
 - A grapheme of width 0 is an error in a file. Examples: U+200B, a combining mark
   at the start of a line.
 - The "control characters" are U+0000–U+001F, U+007F–U+009F, U+202A–U+202E
@@ -133,6 +133,7 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `term.colors` | integer | Colour depth: `16`, `256` or `16777216`. |
 | `term.name` | string | Terminal name and version, for display only. Can be empty. |
 | `term.images` | string | Image output of the terminal: `sixel` or empty. |
+| `term.ambiguous` | integer | Cells of an East Asian Ambiguous character in the terminal: `1` or `2`. |
 | `item.<KEY>` | boolean | True when the item with the key `<KEY>` exists and is enabled (section 8.2). |
 | `arg.<name>` | string | The argument `<name>` of the screen (section 8.5). |
 | `file.*`, `meta.<key>` | — | The fields of a file screen: [file-view](file-view.md), section 3.4. |
