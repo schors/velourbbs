@@ -83,6 +83,7 @@ type Item struct {
 type Action struct {
 	Op     Op
 	Screen string            // the screen name of Goto
+	Theme  string            // the theme choice of Theme: dark, light or auto
 	Args   map[string]string // the args of Goto (section 8.5); nil without args
 }
 
@@ -93,6 +94,7 @@ type Op uint8
 const (
 	Goto Op = iota + 1
 	Logoff
+	Theme
 	PageNext
 	PagePrev
 	PageFirst

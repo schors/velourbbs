@@ -15,6 +15,12 @@ do = "page first"
 key = "L"
 do = "page last"
 [[item]]
+key = "T"
+do = "theme light"
+[[item]]
+key = "D"
+do = "theme dark"
+[[item]]
 key = "ESC"
 do = "goto main"
 +++
@@ -23,4 +29,4 @@ do = "goto main"
 {!md_dim}{meta.author}  ∙  {file.minutes} min
 {>file}
 {!md_frame}──────────────   {file.page}/{file.pages}   ──────────────
-{#if item.B}{!md_mark}B {!}Back    {/if}{#if item.SPACE}{!md_mark}Space {!}Next    {/if}{!md_mark}Esc {!}List
+{#if item.B}{!md_mark}B {!}Back    {/if}{#if item.SPACE}{!md_mark}Space {!}Next    {/if}{!md_mark}Esc {!}List  {session.theme}

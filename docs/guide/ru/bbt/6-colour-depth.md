@@ -209,7 +209,46 @@ velourbbs preview main --set term.background=light --set term.colors=16
 Первая команда показывает стили `[theme.light.default]`.
 Вторая команда показывает ещё и стили `[theme.light.16]`.
 
-Полные правила: [screens-toml](../../../specs/screens-toml.md), разделы 3.1 и 3.2.
+### Тема пользователя
+
+Пункты с действием `theme` дают пользователю выбрать тему.
+Чтобы попробовать их, добавь эти пункты во front matter `screens/main.bbt`,
+а строку клавиш — в его текст:
+
+```toml
+[[item]]
+key = "L"
+do = "theme light"
+[[item]]
+key = "D"
+do = "theme dark"
+[[item]]
+key = "B"
+do = "theme auto"
+```
+
+```
+[L] светлая  [D] тёмная  [B] по терминалу: {session.theme}
+```
+
+- `theme light` и `theme dark` выбирают тему. `theme auto` возвращает выбор полю `term.background`.
+- BBS снова показывает текущий экран с новой темой. В файловом экране она показывает ту же страницу.
+- Выбор действует до конца сессии.
+- Поле `session.theme` даёт выбор: `dark`, `light` или `auto`.
+  В начале сессии это `[screen] theme`.
+
+Запусти пункты через `--keys`. `--set session.theme` задаёт выбор в начале:
+
+```
+velourbbs preview main --keys D,L,B --set term.background=light
+velourbbs preview main --set session.theme=light
+```
+
+Первая команда показывает `main` с тёмной темой после `D` и со светлой темой после `L`.
+После `B` она снова показывает светлую тему, потому что `term.background` равно `light`.
+
+Полные правила: [screens-toml](../../../specs/screens-toml.md), разделы 3.1 и 3.2,
+и [menu-nav](../../../specs/menu-nav.md), раздел 4.
 
 ## Результат
 

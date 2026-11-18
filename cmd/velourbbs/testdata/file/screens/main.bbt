@@ -19,8 +19,14 @@ args = { file = "xfer/crc16.c" }
 key = "5"
 do = "goto code"
 [[item]]
+key = "T"
+do = "theme light"
+[[item]]
+key = "D"
+do = "theme dark"
+[[item]]
 key = "G"
 do = "logoff"
 +++
-Texts
+Texts {session.theme}
 1 Gold  2 Notes  3 Plain  4 Source  5 Code  G Goodbye

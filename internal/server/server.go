@@ -267,12 +267,12 @@ func (s *Server) session(c net.Conn, accepted time.Time) (addr netip.Addr, reaso
 	s.sessions.Add(1)
 	defer s.sessions.Add(-1)
 	values := s.values(addr, accepted)
-	err = menu.Run(t, s.cfg, s.screens, s.cfg.Start, nil, values)
+	choice, err := menu.Run(t, s.cfg, s.screens, s.cfg.Start, nil, values)
 	switch {
 	case errors.Is(err, term.ErrStop):
 		// Without the screen shutdown, there is no output (menu-nav, section 5.2).
 		_, ok := s.screens["shutdown"]
-		return addr, reasonShutdown, ok && menu.Shutdown(t, s.cfg, s.screens, values) == nil
+		return addr, reasonShutdown, ok && menu.Shutdown(t, s.cfg, s.screens, choice, values) == nil
 	case err != nil && s.stopped(c):
 		// The close of step 3 ended a page of the session.
 		return addr, reasonShutdown, false

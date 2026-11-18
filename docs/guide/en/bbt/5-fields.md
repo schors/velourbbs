@@ -59,6 +59,7 @@ Users online {bbs.sessions}, up {bbs.uptime}
 | Field | Value |
 |---|---|
 | `session.ip` | The address of the user. Example: `203.0.113.7`. |
+| `session.theme` | The theme choice of the session: `dark`, `light` or `auto` (task 6). |
 | `session.online` | The time from the connect of the user: `hh:mm:ss`, from 24 hours `<d>d hh:mm:ss`. |
 | `bbs.name` | The key `name` of `[bbs]` in `bbs.toml`. The default is `Kind Brothers BBS`. |
 | `bbs.version` | The version of `velourbbs`, for example `v1.2.0`. A build that is not of a release tag gives `dev`. |

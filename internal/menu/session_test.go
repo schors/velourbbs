@@ -248,7 +248,7 @@ File {arg.f}
 		t.Run(tt.name, func(t *testing.T) {
 			ss := load(t, tt.change)
 			ft := &fakeTerm{cols: tt.cols, keys: slices.Clone(tt.keys)}
-			err := Run(eventsTerm{ft}, config.Config{More: "-- More --"}, ss, "main", nil, noValues)
+			_, err := Run(eventsTerm{ft}, config.Config{More: "-- More --"}, ss, "main", nil, noValues)
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("error %v, want %v", err, tt.wantErr)
 			}
@@ -263,7 +263,7 @@ File {arg.f}
 func TestRunTermError(t *testing.T) {
 	errClosed := errors.New("closed")
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"G"}, pageErr: errClosed}
-	err := Run(ft, config.Config{}, load(t, nil), "main", nil, noValues)
+	_, err := Run(ft, config.Config{}, load(t, nil), "main", nil, noValues)
 	if !errors.Is(err, errClosed) || len(ft.log) != 1 {
 		t.Errorf("error %v, log %q; want %v after one page", err, ft.log, errClosed)
 	}
@@ -272,7 +272,7 @@ func TestRunTermError(t *testing.T) {
 // A terminal without Events gets the pages only.
 func TestRunNoEvents(t *testing.T) {
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"L", "S", "B", "G", "X"}}
-	if err := Run(ft, config.Config{More: "-- More --"}, load(t, nil), "main", nil, noValues); err != nil {
+	if _, err := Run(ft, config.Config{More: "-- More --"}, load(t, nil), "main", nil, noValues); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"page: [S]ystem [G]oodbye", "page: 1", "page: 10", "page: [S]ystem [G]oodbye", "page: Bye"}
@@ -322,7 +322,7 @@ func TestRunSessionTheme(t *testing.T) {
 	}
 	for colors, want := range map[int]string{16: "15/1 bold", 256: "15/4 bold"} {
 		st := &styleTerm{colors: colors}
-		if err := Run(st, cfg, ss, "main", nil, noValues); err != nil {
+		if _, err := Run(st, cfg, ss, "main", nil, noValues); err != nil {
 			t.Fatal(err)
 		}
 		if st.style != want {
@@ -354,7 +354,7 @@ func TestRunThemeChoice(t *testing.T) {
 			t.Fatalf("load: %v", ds)
 		}
 		st := &styleTerm{colors: 256, background: tt.background}
-		if err := Run(st, cfg, ss, "main", nil, noValues); err != nil {
+		if _, err := Run(st, cfg, ss, "main", nil, noValues); err != nil {
 			t.Fatal(err)
 		}
 		if st.style != tt.want {
@@ -401,7 +401,7 @@ do = "goto main"
 	}
 	// 10 rows: H is 9, so 20 lines give 3 pages.
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"R", "N", "N", "N", "P", "P", "P", "L", "F", "Q"}}
-	err := Run(eventsTerm{ft}, config.Config{Start: "main"}, ss, "main", nil, noValues)
+	_, err := Run(eventsTerm{ft}, config.Config{Start: "main"}, ss, "main", nil, noValues)
 	want := []string{
 		"screen main", "page: Main", "key R", "screen read", "page: 1/3 N",
 		"key N", "page: 2/3 N", "key N", "page: 3/3", "key N ignored",
@@ -464,7 +464,7 @@ read {bbs.sessions} {file.page}
 		return screen.SessionValues{Sessions: n}
 	}
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"R", "N", "Q", "R"}}
-	err := Run(ft, config.Config{Start: "main"}, ss, "main", nil, values)
+	_, err := Run(ft, config.Config{Start: "main"}, ss, "main", nil, values)
 	want := []string{"page: main 1 R", "page: read 3 1", "page: read 4 2", "page: main 5"}
 	if !errors.Is(err, io.EOF) || !slices.Equal(ft.log, want) {
 		t.Errorf("err %v, log %q, want %q", err, ft.log, want)
@@ -476,7 +476,7 @@ func TestShutdown(t *testing.T) {
 	ss := load(t, map[string]string{"shutdown": "Restart {term.cols} {bbs.name}\n" + lines(12)})
 	ft := &fakeTerm{cols: []int{40}}
 	values := func() screen.SessionValues { return screen.SessionValues{Name: "Lamp"} }
-	if err := Shutdown(ft, config.Config{More: "-- More --"}, ss, values); err != nil {
+	if err := Shutdown(ft, config.Config{More: "-- More --"}, ss, "", values); err != nil {
 		t.Fatal(err)
 	}
 	if want := []string{"page: Restart 40 Lamp"}; !slices.Equal(ft.log, want) {
@@ -485,14 +485,135 @@ func TestShutdown(t *testing.T) {
 
 	// Without the file, Shutdown shows nothing.
 	ft = &fakeTerm{cols: []int{40}}
-	if err := Shutdown(ft, config.Config{}, load(t, nil), noValues); err != nil || len(ft.log) > 0 {
+	if err := Shutdown(ft, config.Config{}, load(t, nil), "", noValues); err != nil || len(ft.log) > 0 {
 		t.Errorf("no shutdown: error %v, log %q; want no error and no page", err, ft.log)
 	}
 
 	// Shutdown gives the error of the terminal.
 	errClosed := errors.New("closed")
 	ft = &fakeTerm{cols: []int{40}, pageErr: errClosed}
-	if err := Shutdown(ft, config.Config{}, ss, values); !errors.Is(err, errClosed) {
+	if err := Shutdown(ft, config.Config{}, ss, "", values); !errors.Is(err, errClosed) {
 		t.Errorf("error %v, want %v", err, errClosed)
+	}
+}
+
+// themeTerm is a fakeTerm with Events that also logs the style of the first cell of each page.
+type themeTerm struct{ eventsTerm }
+
+func (f themeTerm) Page(p screen.Page) error {
+	if err := f.fakeTerm.Page(p); err != nil {
+		return err
+	}
+	f.log[len(f.log)-1] += " " + p.Line(0, nil)[0].Style.String()
+	return nil
+}
+
+// A theme action sets the theme choice of the session and shows the current screen again,
+// or the current page of a file screen (section 4). session.theme gives the choice.
+// Run gives the choice at the end, and Shutdown uses it.
+func TestRunThemeAction(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml": {},
+		"screens/screens.toml": {Data: []byte("[screen]\ntheme = \"auto\"\n" +
+			"[theme.default]\ntitle = \"15/4\"\n[theme.light.default]\ntitle = \"4/15\"\n")},
+		"screens/main.bbt": {Data: []byte(`+++
+[[item]]
+key = "L"
+do = "theme light"
+[[item]]
+key = "D"
+do = "theme dark"
+[[item]]
+key = "R"
+do = "goto read"
+args = { file = "a.txt" }
+[[item]]
+key = "G"
+do = "logoff"
++++
+{!title}{session.theme} main
+`)},
+		"screens/read.bbt": {Data: []byte(`+++
+file = "{arg.file}"
+[[item]]
+key = "N"
+do = "page next"
+[[item]]
+key = "A"
+do = "theme auto"
+[[item]]
+key = "L"
+do = "theme light"
+[[item]]
+key = "Q"
+do = "goto main"
++++
+{!title}{session.theme} {file.page}/{file.pages}
+{>file}
+`)},
+		"screens/tall.bbt": {Data: []byte(`+++
+file = "b.txt"
+[[item]]
+key = "E"
+do = "page last"
+[[item]]
+key = "T"
+do = "theme light"
+[[item]]
+key = "G"
+do = "logoff"
++++
+{!title}{session.theme} {file.page}/{file.pages}
+{#if session.theme == "light"}
+Light
+{/if}
+{>file}
+`)},
+		"screens/shutdown.bbt": {Data: []byte("{!title}{session.theme}\n")},
+		"content/a.txt":        {Data: []byte(lines(20))},
+		"content/b.txt":        {Data: []byte(lines(18))},
+	}
+	cfg, ds := config.Load(fsys)
+	ss, lds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
+	ds = Check(cfg, ss, append(ds, lds...))
+	if len(ds) > 0 {
+		t.Fatalf("load: %v", ds)
+	}
+	ft := &fakeTerm{cols: []int{80}, keys: []string{"L", "R", "N", "A", "L", "Q", "D"}}
+	choice, err := Run(themeTerm{eventsTerm{ft}}, cfg, ss, "main", nil, noValues)
+	want := []string{
+		"screen main", "page: auto main 15/4",
+		"key L", "screen main", "page: light main 4/15",
+		"key R", "screen read", "page: light 1/3 4/15",
+		"key N", "page: light 2/3 4/15",
+		"key A", "page: auto 2/3 15/4",
+		"key L", "page: light 2/3 4/15",
+		"key Q", "screen main", "page: light main 4/15",
+		"key D", "screen main", "page: dark main 15/4",
+	}
+	if !errors.Is(err, io.EOF) || choice != config.ThemeDark || !slices.Equal(ft.log, want) {
+		t.Errorf("err %v, choice %q, log:\n%s\nwant dark and:\n%s", err, choice, strings.Join(ft.log, "\n"), strings.Join(want, "\n"))
+	}
+
+	// The file pages stay after a theme action, also when a frame row depends on session.theme
+	// (section 5.1). Auto without a reply is dark: H is 9 and 18 lines give 2 pages.
+	// Light: H would be 8 and 3 pages.
+	ft = &fakeTerm{cols: []int{80}, keys: []string{"E", "T"}}
+	_, err = Run(themeTerm{eventsTerm{ft}}, cfg, ss, "tall", nil, noValues)
+	want = []string{
+		"screen tall", "page: auto 1/2 15/4",
+		"key E", "page: auto 2/2 15/4",
+		"key T", "page: light 2/2 4/15",
+	}
+	if !errors.Is(err, io.EOF) || !slices.Equal(ft.log, want) {
+		t.Errorf("tall: err %v, log:\n%s\nwant:\n%s", err, strings.Join(ft.log, "\n"), strings.Join(want, "\n"))
+	}
+
+	ft = &fakeTerm{cols: []int{80}}
+	if err := Shutdown(themeTerm{eventsTerm{ft}}, cfg, ss, config.ThemeLight, noValues); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"page: light 4/15"}; !slices.Equal(ft.log, want) {
+		t.Errorf("Shutdown log %q, want %q", ft.log, want)
 	}
 }

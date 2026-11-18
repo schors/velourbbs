@@ -640,17 +640,17 @@ func TestServeStopTime(t *testing.T) {
 }
 
 // fieldsRow matches the row of fieldsScreen in the output. Each group is a field.
-var fieldsRow = regexp.MustCompile(`F\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|E`)
+var fieldsRow = regexp.MustCompile(`F\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|E`)
 
 // fieldsScreen shows each session and BBS field (session-fields, section 2).
 const fieldsScreen = "+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n" +
-	"F|{session.ip}|{session.online}|{bbs.name}|{bbs.version}|{bbs.sessions}|{bbs.time}|{bbs.uptime}|E\n"
+	"F|{session.ip}|{session.online}|{bbs.name}|{bbs.version}|{bbs.sessions}|{bbs.time}|{bbs.uptime}|{session.theme}|E\n"
 
 // underMinute matches a duration of less than one minute in the duration form.
 var underMinute = regexp.MustCompile(`^00:00:[0-5][0-9]$`)
 
 // fields writes the reply to the cursor probe on c, reads until the row of fieldsScreen
-// and gives session.ip, bbs.name, bbs.version and bbs.sessions. It checks bbs.time
+// and gives session.ip, bbs.name, bbs.version, bbs.sessions and session.theme. It checks bbs.time
 // against the time before the write and after the read, and session.online and bbs.uptime
 // against one minute.
 func fields(t *testing.T, c net.Conn) []string {
@@ -670,7 +670,7 @@ func fields(t *testing.T, c net.Conn) []string {
 			t.Errorf("duration field %d = %q, want less than one minute", i, m[i])
 		}
 	}
-	return []string{m[1], m[3], m[4], m[5]}
+	return []string{m[1], m[3], m[4], m[5], m[8]}
 }
 
 // A screen shows each session and BBS field. session.ip is the address of the PROXY
@@ -685,7 +685,7 @@ func TestServeFields(t *testing.T) {
 	c1 := ts.dial(t)
 	write(t, c1, header("192.0.2.1")+wontReplies)
 	readUntil(t, c1, "\x1b[6n", 1)
-	if got, want := fields(t, c1), []string{"192.0.2.1", "Test BBS", testVersion, "1"}; !slices.Equal(got, want) {
+	if got, want := fields(t, c1), []string{"192.0.2.1", "Test BBS", testVersion, "1", "dark"}; !slices.Equal(got, want) {
 		t.Errorf("session 1: fields %q, want %q", got, want)
 	}
 	// c2 stays in the probe: it does not answer the charset probe.
@@ -695,7 +695,7 @@ func TestServeFields(t *testing.T) {
 	c3 := ts.dial(t)
 	write(t, c3, header("192.0.2.3")+wontReplies)
 	readUntil(t, c3, "\x1b[6n", 1)
-	if got, want := fields(t, c3), []string{"192.0.2.3", "Test BBS", testVersion, "2"}; !slices.Equal(got, want) {
+	if got, want := fields(t, c3), []string{"192.0.2.3", "Test BBS", testVersion, "2", "dark"}; !slices.Equal(got, want) {
 		t.Errorf("session 3: fields %q, want %q", got, want)
 	}
 	// c2 ends the probe after c3: its session is the third.

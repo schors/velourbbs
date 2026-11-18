@@ -1,0 +1,5 @@
+[theme.light.default]
+normal    = "0/15"
+md_h1     = "4 bold"
+md_strong = "0 bold"
+md_mark   = "1"

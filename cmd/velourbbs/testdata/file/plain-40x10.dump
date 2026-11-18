@@ -8,7 +8,7 @@ page 1 40x10 fill none
 |Name:   value after a TAB.              |
 |This is a long line of plain text. It   |
 |──────────────   1/7   ──────────────   |
-|Space Next    Esc List                  |
+|Space Next    Esc List  dark            |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-9 15/0 bold, 10-40 7/0
@@ -30,7 +30,7 @@ page 2 40x10 fill none
 |Line 1 of the plain text.               |
 |Line 2 of the plain text.               |
 |──────────────   2/7   ──────────────   |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-9 15/0 bold, 10-40 7/0
@@ -52,7 +52,7 @@ page 3 40x10 fill none
 |Line 6 of the plain text.               |
 |Line 7 of the plain text.               |
 |──────────────   3/7   ──────────────   |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-9 15/0 bold, 10-40 7/0
@@ -74,7 +74,7 @@ page 4 40x10 fill none
 |Line 11 of the plain text.              |
 |Line 12 of the plain text.              |
 |──────────────   4/7   ──────────────   |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-9 15/0 bold, 10-40 7/0
@@ -96,7 +96,7 @@ page 5 40x10 fill none
 |Line 16 of the plain text.              |
 |Line 17 of the plain text.              |
 |──────────────   5/7   ──────────────   |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-9 15/0 bold, 10-40 7/0
@@ -118,7 +118,7 @@ page 6 40x10 fill none
 |Line 21 of the plain text.              |
 |Line 22 of the plain text.              |
 |──────────────   6/7   ──────────────   |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-9 15/0 bold, 10-40 7/0
@@ -140,7 +140,7 @@ page 7 40x10 fill none
 |                                        |
 |                                        |
 |──────────────   7/7   ──────────────   |
-|B Back    Esc List                      |
+|B Back    Esc List  dark                |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-9 15/0 bold, 10-40 7/0

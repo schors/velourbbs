@@ -1,6 +1,6 @@
 screen main
 page 1 40x10 fill none
-|Texts                                   |
+|Texts dark                              |
 |1 Gold  2 Notes  3 Plain  4 Source  5   |
 |Code  G Goodbye                         |
 styles
@@ -19,7 +19,7 @@ page 1 40x10 fill none
 |with a Mr. William Legrand. He was of an|
 |ancient Huguenot family, and had once   |
 |──────────────   1/12   ──────────────  |
-|Space Next    Esc List                  |
+|Space Next    Esc List  dark            |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -42,7 +42,7 @@ page 2 40x10 fill none
 |autolink https://example.org, inline    |
 |<b>HTML</b> and a comment . A second    |
 |──────────────   2/12   ──────────────  |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -65,7 +65,7 @@ page 1 40x10 fill none
 |with a Mr. William Legrand. He was of an|
 |ancient Huguenot family, and had once   |
 |──────────────   1/12   ──────────────  |
-|Space Next    Esc List                  |
+|Space Next    Esc List  dark            |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -88,7 +88,7 @@ page 12 40x10 fill none
 |                                        |
 |                                        |
 |──────────────   12/12   ────────────── |
-|B Back    Esc List                      |
+|B Back    Esc List  dark                |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -112,7 +112,7 @@ page 1 40x10 fill none
 |with a Mr. William Legrand. He was of an|
 |ancient Huguenot family, and had once   |
 |──────────────   1/12   ──────────────  |
-|Space Next    Esc List                  |
+|Space Next    Esc List  dark            |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -127,7 +127,7 @@ styles
 key ESC
 screen main
 page 1 40x10 fill none
-|Texts                                   |
+|Texts dark                              |
 |1 Gold  2 Notes  3 Plain  4 Source  5   |
 |Code  G Goodbye                         |
 styles
@@ -299,7 +299,7 @@ styles
 key Q
 screen main
 page 1 40x10 fill none
-|Texts                                   |
+|Texts dark                              |
 |1 Gold  2 Notes  3 Plain  4 Source  5   |
 |Code  G Goodbye                         |
 styles
