@@ -22,6 +22,16 @@ func style(t *testing.T, text string) screen.Style {
 	return spec.Over(screen.Style{})
 }
 
+// dark gives the dark theme of colors.
+func dark(cfg Config, colors int) map[string]screen.Style {
+	return cfg.SessionTheme(ThemeDark, screen.Term{Colors: colors})
+}
+
+// light gives the light theme of colors.
+func light(cfg Config, colors int) map[string]screen.Style {
+	return cfg.SessionTheme(ThemeLight, screen.Term{Colors: colors})
+}
+
 func messages(ds screen.Diags) []string {
 	var s []string
 	for _, d := range ds {
@@ -60,9 +70,25 @@ func TestDefaults(t *testing.T) {
 		cfg.Time != "2006-01-02 15:04:05" || cfg.Name != "Kind Brothers BBS" {
 		t.Errorf("cfg = %+v", cfg)
 	}
+	if cfg.ThemeChoice != ThemeDark {
+		t.Errorf("theme choice = %q", cfg.ThemeChoice)
+	}
 	for _, colors := range []int{16, 256, 16777216} {
-		if !reflect.DeepEqual(cfg.SessionTheme(colors), cfg.Theme) {
-			t.Errorf("SessionTheme(%d) = %v", colors, cfg.SessionTheme(colors))
+		if !reflect.DeepEqual(dark(cfg, colors), cfg.Theme) {
+			t.Errorf("dark theme %d = %v", colors, dark(cfg, colors))
+		}
+		// The light theme takes normal from 0/15. more has both colours.
+		for name, got := range light(cfg, colors) {
+			want := cfg.Theme[name]
+			if name != "more" {
+				want.Bg = screen.IndexColour(15)
+			}
+			if name == "normal" {
+				want.Fg = screen.IndexColour(0)
+			}
+			if got != want {
+				t.Errorf("light theme %d: %s = %v, want %v", colors, name, got, want)
+			}
 		}
 	}
 }
@@ -162,6 +188,7 @@ func TestErrors(t *testing.T) {
 		`align = "centre"`,
 		`valign = "Top"`,
 		`fill = ""`,
+		`theme = "Dark"`,
 		`[theme.default]`,
 		`Title = "1"`,
 		`normal = "7/0"`,
@@ -173,6 +200,13 @@ func TestErrors(t *testing.T) {
 		`normal = "1 bolt"`,
 		`[theme.256]`,
 		`more = "1"`,
+		`[theme.light.default]`,
+		`x = "1"`,
+		`normal = "1 bolt"`,
+		`[theme.light.16]`,
+		`title = "1"`,
+		`[theme.light.256]`,
+		`Bad = "1"`,
 		`[menu]`,
 		`start = "Main"`,
 	}, "\n")
@@ -183,6 +217,7 @@ func TestErrors(t *testing.T) {
 		`screens/screens.toml:1:1: screen.valign: invalid value "Top", want "top", "middle" or "bottom"`,
 		`screens/screens.toml:1:1: screen.fill: invalid value "", want "none", "spaces" or "erase"`,
 		`screens/screens.toml:1:1: screen.more: zero-width grapheme U+200B`,
+		`screens/screens.toml:1:1: screen.theme: invalid value "Dark", want "dark", "light" or "auto"`,
 		`screens/screens.toml:1:1: menu.start: invalid screen name "Main"`,
 		`screens/screens.toml:1:1: theme.default: invalid style name "Title"`,
 		`screens/screens.toml:1:1: theme.default.bad: invalid style "x": invalid colour "x"`,
@@ -190,6 +225,10 @@ func TestErrors(t *testing.T) {
 		`screens/screens.toml:1:1: theme.16: invalid style name "Title"`,
 		`screens/screens.toml:1:1: theme.16.normal: invalid style "1 bolt": unknown attribute "bolt"`,
 		`screens/screens.toml:1:1: theme.16: unknown style "title"`,
+		`screens/screens.toml:1:1: theme.light.default.normal: invalid style "1 bolt": unknown attribute "bolt"`,
+		`screens/screens.toml:1:1: theme.light.default: unknown style "x"`,
+		`screens/screens.toml:1:1: theme.light.16: unknown style "title"`,
+		`screens/screens.toml:1:1: theme.light.256: invalid style name "Bad"`,
 	}
 	if got := messages(ds); !slices.Equal(got, want) {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
@@ -197,14 +236,14 @@ func TestErrors(t *testing.T) {
 	if !ds.HasErrors() {
 		t.Error("HasErrors = false")
 	}
-	if cfg.Layout != defaultLayout || cfg.More != "-- More --" || cfg.Start != "main" {
+	if cfg.Layout != defaultLayout || cfg.More != "-- More --" || cfg.Start != "main" || cfg.ThemeChoice != ThemeDark {
 		t.Errorf("an invalid value replaced a default: %+v", cfg)
 	}
-	if cfg.SessionTheme(16)["normal"] != style(t, "7/0") || cfg.SessionTheme(16)["bad"] != style(t, "2/0") {
-		t.Errorf("theme.16 = %v", cfg.SessionTheme(16))
+	if dark(cfg, 16)["normal"] != style(t, "7/0") || dark(cfg, 16)["bad"] != style(t, "2/0") {
+		t.Errorf("theme.16 = %v", dark(cfg, 16))
 	}
-	if cfg.SessionTheme(256)["more"] != style(t, "1/0") {
-		t.Errorf("theme.256 = %v", cfg.SessionTheme(256))
+	if dark(cfg, 256)["more"] != style(t, "1/0") {
+		t.Errorf("theme.256 = %v", dark(cfg, 256))
 	}
 }
 
@@ -223,6 +262,11 @@ func TestTOMLErrors(t *testing.T) {
 		{"[theme.16]\nx = 1", []string{`2:5: theme.16.x: must be a string`}},
 		{"[theme.32]\nx = \"1\"", []string{`1:2: unknown key "theme.32"`}},
 		{"[theme]\nnormal = \"1\"", []string{`2:1: unknown key "theme.normal"`}},
+		{"[theme.light.32]\nx = \"1\"", []string{`1:2: unknown key "theme.light.32"`}},
+		{"[theme.light.dark]\nx = \"1\"", []string{`1:2: unknown key "theme.light.dark"`}},
+		{"[theme.light]\nnormal = \"1\"", []string{`2:1: unknown key "theme.light.normal"`}},
+		{"[theme.light.256]\nx = 1", []string{`2:5: theme.light.256.x: must be a string`}},
+		{"[screen]\ntheme = 1", []string{`2:9: screen.theme: must be a string`}},
 		{"[telnet]\nlisten = \":1\"", []string{`1:2: unknown key "telnet"`}},
 		{"menu = \"main\"", []string{`1:8: menu: must be a table`}},
 		{"[menu]\nstart = 1", []string{`2:9: menu.start: must be a string`}},
@@ -347,13 +391,13 @@ output_timeout = 60
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
-	if cfg.SessionTheme(16)["title"] != style(t, "15/1 bold") || cfg.SessionTheme(256)["title"] != style(t, "15/4 bold") {
-		t.Errorf("title: 16 %v, 256 %v", cfg.SessionTheme(16)["title"], cfg.SessionTheme(256)["title"])
+	if dark(cfg, 16)["title"] != style(t, "15/1 bold") || dark(cfg, 256)["title"] != style(t, "15/4 bold") {
+		t.Errorf("title: 16 %v, 256 %v", dark(cfg, 16)["title"], dark(cfg, 256)["title"])
 	}
 	if cfg.VAlign != screen.VAlignMiddle || cfg.Fill != screen.FillSpaces {
 		t.Errorf("layout = %+v", cfg.Layout)
 	}
-	if cfg.SessionTheme(16)["prompt"] != style(t, "14/0") || cfg.Start != "welcome" || cfg.Telnet.Listen != ":2323" ||
+	if dark(cfg, 16)["prompt"] != style(t, "14/0") || cfg.Start != "welcome" || cfg.Telnet.Listen != ":2323" ||
 		cfg.Name != "Kind Brothers BBS" {
 		t.Errorf("cfg = %+v", cfg)
 	}
@@ -380,7 +424,7 @@ title  = "15 bold"
 		16777216: "#60a0d0/#101020 bold",
 	}
 	for colors, text := range want {
-		if got := cfg.SessionTheme(colors)["title"]; got != style(t, text) {
+		if got := dark(cfg, colors)["title"]; got != style(t, text) {
 			t.Errorf("title at %d = %v, want %s", colors, got, text)
 		}
 	}
@@ -411,7 +455,7 @@ more   = "1"
 		"title":  "#203040/4 bold",
 		"prompt": "14/#405060",
 	}
-	th := cfg.SessionTheme(256)
+	th := dark(cfg, 256)
 	if len(th) != len(want)+len(mdStyles) {
 		t.Errorf("theme.256 = %v", th)
 	}
@@ -422,6 +466,125 @@ more   = "1"
 	}
 	if cfg.Theme["title"] != style(t, "7/4 bold") || cfg.Theme["more"] != style(t, "15/0") {
 		t.Errorf("base theme = %v", cfg.Theme)
+	}
+}
+
+// The example of screens-toml, section 3.2, with light tables.
+func TestLightTheme(t *testing.T) {
+	data := `
+[screen]
+theme = "auto"
+
+[theme.default]
+normal = "#c0c0c0/#101020"
+title  = "#60a0d0 bold"
+prompt = "14"
+
+[theme.16]
+normal = "7/0"
+title  = "15 bold"
+
+[theme.light.default]
+normal = "#202020/#f0f0e8"
+title  = "#004080 bold"
+
+[theme.light.16]
+normal = "0/7"
+
+[theme.light.256]
+prompt = "4"
+`
+	cfg, ds := parseScreens([]byte(data))
+	if len(ds) != 0 {
+		t.Fatalf("diags: %q", messages(ds))
+	}
+	if cfg.ThemeChoice != ThemeAuto {
+		t.Errorf("theme choice = %q", cfg.ThemeChoice)
+	}
+	want := []struct {
+		colors                int
+		normal, title, prompt string
+	}{
+		{16, "0/7", "#004080/7 bold", "14/7"},
+		{256, "#202020/#f0f0e8", "#004080/#f0f0e8 bold", "4/#f0f0e8"},
+		{16777216, "#202020/#f0f0e8", "#004080/#f0f0e8 bold", "14/#f0f0e8"},
+	}
+	for _, w := range want {
+		th := light(cfg, w.colors)
+		for name, text := range map[string]string{"normal": w.normal, "title": w.title, "prompt": w.prompt} {
+			if got := th[name]; got != style(t, text) {
+				t.Errorf("light %d: %s = %v, want %s", w.colors, name, got, text)
+			}
+		}
+	}
+	// The light tables do not change the dark themes.
+	if dark(cfg, 16)["title"] != style(t, "15/0 bold") || dark(cfg, 256)["prompt"] != style(t, "14/#101020") {
+		t.Errorf("dark: 16 %v, 256 %v", dark(cfg, 16), dark(cfg, 256))
+	}
+}
+
+// A light normal with one colour takes the other from 0/15 (screens-toml, section 3.2).
+// A style of a light table replaces the whole style with the same name.
+// With 16777216 colours, only [theme.light.default] applies.
+func TestLightNormal(t *testing.T) {
+	data := `
+[theme.default]
+title = "1"
+
+[theme.light.default]
+normal = "4"
+title  = "/2"
+
+[theme.light.16]
+normal = "/7"
+`
+	cfg, ds := parseScreens([]byte(data))
+	if len(ds) != 0 {
+		t.Fatalf("diags: %q", messages(ds))
+	}
+	want := map[int]map[string]string{
+		16:       {"normal": "0/7", "title": "0/2", "more": "15/0", "md_em": "14/7"},
+		256:      {"normal": "4/15", "title": "4/2", "more": "15/0", "md_em": "14/15"},
+		16777216: {"normal": "4/15", "title": "4/2", "more": "15/0", "md_em": "14/15"},
+	}
+	for colors, styles := range want {
+		for name, text := range styles {
+			if got := light(cfg, colors)[name]; got != style(t, text) {
+				t.Errorf("light %d: %s = %v, want %s", colors, name, got, text)
+			}
+		}
+	}
+}
+
+// The session theme is light for light, and for auto with term.background light
+// (screens-toml, section 3.2).
+func TestSessionTheme(t *testing.T) {
+	cfg, ds := parseScreens([]byte("[theme.default]\nnormal = \"7/1\"\n[theme.light.default]\nnormal = \"0/7\"\n"))
+	if len(ds) != 0 {
+		t.Fatalf("diags: %q", messages(ds))
+	}
+	tests := []struct {
+		choice     ThemeChoice
+		background string
+		want       string
+	}{
+		{ThemeDark, "", "7/1"}, {ThemeDark, "light", "7/1"},
+		{ThemeLight, "", "0/7"}, {ThemeLight, "dark", "0/7"},
+		{ThemeAuto, "", "7/1"}, {ThemeAuto, "dark", "7/1"}, {ThemeAuto, "light", "0/7"},
+	}
+	for _, tt := range tests {
+		for _, colors := range []int{16, 256, 16777216} {
+			th := cfg.SessionTheme(tt.choice, screen.Term{Colors: colors, Background: tt.background})
+			if th["normal"] != style(t, tt.want) {
+				t.Errorf("%s, background %q, colors %d: normal %v, want %s", tt.choice, tt.background, colors, th["normal"], tt.want)
+			}
+		}
+	}
+	for _, c := range []string{"dark", "light", "auto"} {
+		cfg, ds := parseScreens([]byte("[screen]\ntheme = \"" + c + "\"\n"))
+		if len(ds) != 0 || cfg.ThemeChoice != ThemeChoice(c) {
+			t.Errorf("theme %q: choice %q, diags %q", c, cfg.ThemeChoice, messages(ds))
+		}
 	}
 }
 

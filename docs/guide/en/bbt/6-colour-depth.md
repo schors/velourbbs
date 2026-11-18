@@ -168,6 +168,49 @@ Both commands show the screen with the styles of `[theme.16]`.
 The dump shows the colours of the theme as you wrote them.
 Only the telnet client shows the nearest colours of its depth.
 
+## The light theme
+
+Some terminals have a light background. A dark ground on a light terminal looks wrong.
+The "light theme" gives other styles for these terminals.
+
+```toml
+[screen]
+theme = "auto"
+
+[theme.light.default]
+normal = "#3a2a24/#f4ece0"
+title  = "#8a3a1c bold"
+
+[theme.light.16]
+normal = "0/15"
+title  = "4 bold"
+```
+
+- `[screen] theme` selects the theme at the start of a session: `dark`, `light` or `auto`.
+  Without `theme`, the session uses the dark theme.
+- With `auto`, the field `term.background` selects the theme (task 5).
+  `light` gives the light theme. A terminal without a reply gets the dark theme.
+- The "light tables" `[theme.light.default]`, `[theme.light.16]` and `[theme.light.256]`
+  give other styles in the light theme.
+- The light theme of a depth is the theme of this depth with the styles of `[theme.light.default]`,
+  then with the styles of the light table of this depth.
+- Each name of a light table must be a name of the theme, as in a depth theme.
+- In the light theme, `normal` takes a missing colour from `0/15`: black text on a white ground.
+
+Lamp keeps the dark theme. To try the light theme, add the key `theme` to the table `[screen]`
+of `screens/screens.toml` and the light tables to the end of the file.
+Then set the background of the terminal:
+
+```
+velourbbs preview main --set term.background=light
+velourbbs preview main --set term.background=light --set term.colors=16
+```
+
+The first command shows the styles of `[theme.light.default]`.
+The second command also shows the styles of `[theme.light.16]`.
+
+Full rules: [screens-toml](../../../specs/screens-toml.md), sections 3.1 and 3.2.
+
 ## Result
 
 - `velourbbs check` gives no output.

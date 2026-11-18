@@ -9,6 +9,7 @@ import (
 	"io/fs"
 
 	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/term"
 	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
@@ -21,6 +22,9 @@ type Config struct {
 	More string
 	// Theme is the base theme (screens-toml, section 3.2). It always has normal and more.
 	Theme map[string]screen.Style
+	// ThemeChoice is the theme choice at the start of a session: the key theme of [screen]
+	// (screens-toml, section 3.1).
+	ThemeChoice ThemeChoice
 	// Fields maps an alias to its field (screens-toml, section 3.3).
 	Fields screen.Fields
 	// Time is the layout of the field bbs.time: the key time of [screen] (screens-toml, section 3.1).
@@ -32,17 +36,28 @@ type Config struct {
 	// Name is the name of the BBS: the key name of [bbs] (bbs-toml, section 3.2).
 	Name string
 
-	// depth maps a term.colors to its session theme, for each depth theme.
-	depth map[int]map[string]screen.Style
+	// dark and light map each term.colors to its dark theme and its light theme.
+	dark, light map[int]map[string]screen.Style
 }
 
-// SessionTheme gives the session theme of colors, the term.colors of a terminal
-// (screens-toml, section 3.2). Without a depth theme of colors, it is the base theme.
-func (c Config) SessionTheme(colors int) map[string]screen.Style {
-	if t, ok := c.depth[colors]; ok {
-		return t
+// ThemeChoice is a theme choice of a session (screens-toml, section 3.2).
+type ThemeChoice string
+
+// The theme choices (screens-toml, section 3.2).
+const (
+	ThemeDark  ThemeChoice = "dark"
+	ThemeLight ThemeChoice = "light"
+	ThemeAuto  ThemeChoice = "auto"
+)
+
+// SessionTheme gives the session theme of the theme choice choice and the terminal t
+// (screens-toml, section 3.2): the light theme of t.Colors for light, and for auto
+// with t.Background light. Else it gives the dark theme of t.Colors.
+func (c Config) SessionTheme(choice ThemeChoice, t screen.Term) map[string]screen.Style {
+	if choice == ThemeLight || choice == ThemeAuto && t.Background == term.BackgroundLight {
+		return c.light[t.Colors]
 	}
-	return c.Theme
+	return c.dark[t.Colors]
 }
 
 // The names of the settings files in the BBS directory and in the diagnostics.

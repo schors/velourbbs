@@ -281,16 +281,17 @@ func TestRunNoEvents(t *testing.T) {
 	}
 }
 
-// styleTerm is a Terminal with the term.colors colors. It keeps the style of the first cell
-// of the last page and sends the key G once.
+// styleTerm is a Terminal with the term.colors colors and the term.background background.
+// It keeps the style of the first cell of the last page and sends the key G once.
 type styleTerm struct {
-	colors int
-	style  string
-	sent   bool
+	colors     int
+	background string
+	style      string
+	sent       bool
 }
 
 func (f *styleTerm) Term() screen.Term {
-	return screen.Term{Type: "ansi", Cols: 80, Rows: 10, Charset: "utf-8", Colors: f.colors}
+	return screen.Term{Type: "ansi", Cols: 80, Rows: 10, Charset: "utf-8", Colors: f.colors, Background: f.background}
 }
 
 func (f *styleTerm) Key() (string, error) {
@@ -326,6 +327,38 @@ func TestRunSessionTheme(t *testing.T) {
 		}
 		if st.style != want {
 			t.Errorf("colors %d: style %s, want %s", colors, st.style, want)
+		}
+	}
+}
+
+// The session theme follows [screen] theme and term.background. An auto session
+// without a reply of the terminal uses the dark theme (screens-toml, section 3.2).
+func TestRunThemeChoice(t *testing.T) {
+	tests := []struct{ choice, background, want string }{
+		{"dark", "light", "15/4 bold"},
+		{"light", "", "4/15 bold"},
+		{"auto", "", "15/4 bold"},
+		{"auto", "dark", "15/4 bold"},
+		{"auto", "light", "4/15 bold"},
+	}
+	for _, tt := range tests {
+		fsys := fstest.MapFS{
+			"bbs.toml": {},
+			"screens/screens.toml": {Data: []byte("[screen]\ntheme = \"" + tt.choice + "\"\n" +
+				"[theme.default]\ntitle = \"15/4 bold\"\n[theme.light.default]\ntitle = \"4 bold\"\n")},
+			"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{!title}T\n")},
+		}
+		cfg, ds := config.Load(fsys)
+		ss, lds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
+		if ds = append(ds, lds...); len(ds) > 0 {
+			t.Fatalf("load: %v", ds)
+		}
+		st := &styleTerm{colors: 256, background: tt.background}
+		if err := Run(st, cfg, ss, "main", nil, noValues); err != nil {
+			t.Fatal(err)
+		}
+		if st.style != tt.want {
+			t.Errorf("theme %s, background %q: style %s, want %s", tt.choice, tt.background, st.style, tt.want)
 		}
 	}
 }
