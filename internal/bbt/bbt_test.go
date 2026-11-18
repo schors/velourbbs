@@ -166,7 +166,10 @@ func TestTokens(t *testing.T) {
 	}{
 		{"a{{b}", `"a{b}" /`},
 		{"{{{term.cols}", `"{" {term.cols} /`},
-		{"{1} {-} {Ж} {", `"{1} {-} {Ж} {" /`},
+		{"{1} {} {Ж} {", `"{1} {} {Ж} {" /`},
+		{"a {-}", `screens/s.bbt:1:3: unknown token "{-}"`},
+		{"{~.}", `screens/s.bbt:1:1: unknown token "{~.}"`},
+		{"{%x", `screens/s.bbt:1:1: token has no "}"`},
 		{"a}b", `"a}b" /`},
 		{"", ``},
 		{"{term.type      }", `{term.type:17} /`},

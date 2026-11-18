@@ -18,6 +18,17 @@ do = "gosub about"
 - The BBS does not show the items. Write the text of the items and the key row in the body.
   The key row shows all keys of the screen.
 
+The short form writes each item on one line. It is the same menu:
+
+```
+item = [
+  { key = "A", do = "gosub about" },
+  { key = "G", do = "logoff" },
+]
+```
+
+Use one form in a screen.
+
 Full rules: [bbt-format](../../../specs/bbt-format.md), section 8,
 and [menu-nav](../../../specs/menu-nav.md), sections 3–6.
 
