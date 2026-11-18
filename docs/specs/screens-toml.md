@@ -41,8 +41,11 @@ The other specifications define the effect of a key and refer to this specificat
 
 - `width`, `align`, `valign` and `fill` have the rules of the front matter keys
   ([bbt-format](bbt-format.md), section 3.2).
-- `zone` is `"Local"`, `"UTC"` or a name of the IANA time zone database. Example: `"Europe/Berlin"`.
-  The binary has the database, so each name works on each host. Another value is an error.
+- `zone` is `"Local"`, `"UTC"` or a zone name that the Go function `time.LoadLocation` loads.
+  Example: `"Europe/Berlin"`. The function reads the zone files of the host, else the IANA
+  time zone database in the binary. So each name of that database works on each host.
+  A name only in the zone files of a host, for example `"localtime"`, works only on that host.
+  Another value is an error.
 - `more` cannot have a control character, a grapheme of width 0 or a grapheme
   of more than 32 bytes ([bbt-format](bbt-format.md), section 2.1).
 
