@@ -549,13 +549,17 @@ velourbbs preview reader --set arg.file=lamp.md
 The command gives the cell dumps of all pages of the text, one after the other.
 Without `--set`, `velourbbs preview reader` gives the error `missing argument "file" of screen "reader"`.
 
-`--keys` shows the pages:
+`--keys` shows the pages. Start at `texts`: `1` opens the text in `reader`, `Esc` goes back to `texts`:
 
 ```
-velourbbs preview reader --set arg.file=lamp.md --keys SPACE,SPACE,B,ESC
+velourbbs preview texts --keys 1,SPACE,SPACE,B,ESC
 ```
 
 ```
+screen texts
+page 1 80x24 fill spaces
+...
+key 1
 screen reader
 page 1 80x24 fill spaces
 ...

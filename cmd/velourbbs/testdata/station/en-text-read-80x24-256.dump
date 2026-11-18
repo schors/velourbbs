@@ -116,8 +116,8 @@ page 3 80x24 fill spaces
 |                                                                                |
 |    Hotkeys lead from screen to screen. Letters also work in the                |
 |    Russian layout: й is q. A menu item can work only under a                   |
-|    condition. A submenu returns to the screen that opened it: the              |
-|    screen author writes no way back.                                           |
+|    condition. A submenu goes back to the screen that opened it: its            |
+|    back item does not name that screen.                                        |
 |                                                                                |
 |                                                                                |
 |    ───────────────────────────   3/6   ────────────────────────────            |
@@ -142,7 +142,7 @@ styles
 16: 1-80 248/16
 17: 1-20 248/16, 21-21 65/16, 22-25 248/16, 26-26 65/16, 27-80 248/16
 18: 1-80 248/16
-19: 1-80 248/16
+19: 1-4 248/16, 5-8 65/16, 9-80 248/16
 20: 1-80 248/16
 21: 1-80 248/16
 22: 1-4 248/16, 5-31 94/16, 32-40 243/16, 41-68 94/16, 69-80 248/16

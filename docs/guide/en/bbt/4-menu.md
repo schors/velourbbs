@@ -161,7 +161,7 @@ The keys `Esc Enter` are in the orange `key`. The word "back" is in the grey-bro
 
 ## The navigation stack
 
-The BBS keeps the open screens of a session in a stack. Each action changes the stack:
+The BBS keeps the open screens of a session in a stack. These actions change the stack:
 
 | `do` | Action |
 |---|---|
@@ -171,7 +171,7 @@ The BBS keeps the open screens of a session in a stack. Each action changes the 
 | `goto <screen>` | Shows the screen in place of the current screen. `back` then goes to the screen below. |
 
 - A screen of `back` and `top` keeps its arguments (task 7) and the page of a text.
-- The stack holds 16 screens. A `gosub` on the 16th screen removes the second screen.
+- The stack holds at most 16 screens. A `gosub` on the 16th screen removes the second screen.
   The first screen stays.
 
 Example: `main` opens `texts` with `gosub`, `texts` opens `reader` with `gosub`.

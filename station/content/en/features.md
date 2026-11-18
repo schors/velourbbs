@@ -28,7 +28,7 @@ The sysop sets the form and the time zone of the server time.
 
 Hotkeys lead from screen to screen. Letters also work in the Russian layout:
 `й` is `q`. A menu item can work only under a condition.
-A submenu returns to the screen that opened it: the screen author writes no way back.
+A submenu goes back to the screen that opened it: its `back` item does not name that screen.
 
 ## Texts
 

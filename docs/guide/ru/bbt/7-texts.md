@@ -548,13 +548,17 @@ velourbbs preview reader --set arg.file=lamp.md
 Команда выводит cell dump каждой страницы текста, одну за другой.
 Без `--set` `velourbbs preview reader` выводит ошибку `missing argument "file" of screen "reader"`.
 
-`--keys` показывает страницы:
+`--keys` показывает страницы. Начни с `texts`: `1` открывает текст в `reader`, `Esc` возвращает на `texts`:
 
 ```
-velourbbs preview reader --set arg.file=lamp.md --keys SPACE,SPACE,B,ESC
+velourbbs preview texts --keys 1,SPACE,SPACE,B,ESC
 ```
 
 ```
+screen texts
+page 1 80x24 fill spaces
+...
+key 1
 screen reader
 page 1 80x24 fill spaces
 ...
