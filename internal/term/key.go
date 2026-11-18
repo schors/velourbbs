@@ -38,6 +38,13 @@ var csiKeys = map[string]string{
 	"20~": "F9", "21~": "F10", "23~": "F11", "24~": "F12",
 }
 
+// The paste marks (section 8.4). The decoder gives them in the key stream.
+// They are not keys: no key contains ESC.
+const (
+	PasteStart = "\x1b[200~"
+	PasteEnd   = "\x1b[201~"
+)
+
 // ss3Keys maps the final byte of an SS3 sequence to the key (section 8.2).
 var ss3Keys = map[rune]string{
 	'A': "UP", 'B': "DOWN", 'C': "RIGHT", 'D': "LEFT",
@@ -62,7 +69,8 @@ const (
 // It takes the data bytes after the telnet parser. Its zero value is ready.
 //
 // A key is a key name of bbt-format, section 8.1, for example ENTER or F1,
-// or one character, for example "a" or "ы".
+// or one character, for example "a" or "ы". The paste marks PasteStart and PasteEnd
+// come between the keys.
 type Decoder struct {
 	afterCR bool              // the previous byte was CR (section 8.1, step 2)
 	utf     [utf8.UTFMax]byte // an incomplete UTF-8 character
@@ -250,10 +258,18 @@ func (d *Decoder) csi(r rune) bool {
 }
 
 // csiEnd handles a complete CSI sequence. body is the bytes after ESC[.
-// A sequence that is not a key is a reply.
+// A sequence that is not a key or a paste mark is a reply.
 func (d *Decoder) csiEnd(body string) {
 	if k, ok := csiKeys[body]; ok {
 		d.emit(k)
+		return
+	}
+	switch body {
+	case "200~":
+		d.emit(PasteStart)
+		return
+	case "201~":
+		d.emit(PasteEnd)
 		return
 	}
 	d.reply(d.nseq, 0, false)
