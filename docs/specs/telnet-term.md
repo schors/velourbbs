@@ -2,8 +2,8 @@
 
 This specification defines the telnet server, the detection of the terminal at connect,
 the output of pages, the key decoder and the connection limits.
-Related parts: [bbt-format](bbt-format.md), [bbs-toml](bbs-toml.md), [screen-render](screen-render.md)
-and [menu-nav](menu-nav.md).
+Related parts: [bbt-format](bbt-format.md), [bbs-toml](bbs-toml.md), [screen-render](screen-render.md),
+[menu-nav](menu-nav.md) and [line-input](line-input.md).
 
 ## 1. Goal
 
@@ -476,13 +476,33 @@ The key decoder gives:
 
 `CSI [` is a CSI sequence with the final byte `[`. One more byte from `A` to `E` follows it.
 
+`CSI 200~` and `CSI 201~` are the paste marks (section 8.4). They are not keys.
+
 ### 8.3. Key queue
 
-- The key queue holds at most 64 keys. The host drops a key when the queue is full.
+- The key queue holds at most 256 keys. The host drops a key when the queue is full.
+  So the queue holds a pasted line of the line input ([line-input](line-input.md), section 6):
+  `term.cols` is at most 255.
 - After `idle_timeout` seconds without a key, the host disconnects.
 - The idle timeout starts at the end of the probe.
 - Keys reset the idle timeout, also a key that the full queue drops.
   NOP, NAWS and dropped input do not reset it.
+
+### 8.4. Paste
+
+The line input turns on the bracketed paste mode ([line-input](line-input.md), section 6).
+Then the terminal sends a paste between two marks: `CSI 200~` (the paste start)
+and `CSI 201~` (the paste end).
+
+- A "paste" is the keys from a paste start to the next paste end.
+  A paste also ends at the next paste start and after 1 s without input bytes.
+  So a client that sends no paste end does not drop the keys after it.
+- The line input takes the keys of a paste with their paste mark.
+- Outside the line input, the host drops each key of a paste.
+  A paste that the user starts in the line input can end after it.
+- Before the host disconnects while the mode is on, it sends `ESC[?2004l`:
+  at the idle timeout and at a stop (section 10.2). After a hangup, no output is possible.
+- A terminal without the mode ignores `ESC[?2004h` and sends no marks.
 
 ## 9. Limits
 
@@ -579,7 +599,7 @@ At SIGINT or SIGTERM, the host does these steps:
 | Package | Content |
 |---|---|
 | `internal/telnet` | The telnet parser, the option states and the subnegotiations. |
-| `internal/term` | The probe, the encoder, the colour reduction, the key decoder and the terminal of [menu-nav](menu-nav.md), section 8. |
+| `internal/term` | The probe, the encoder, the colour reduction, the key decoder, the paste and the terminal of [menu-nav](menu-nav.md), section 8. |
 | `internal/server` | The listener, the limits, the PROXY protocol header and the sessions. |
 
 - `cmd/velourbbs` loads the screens and gives them to `internal/server`.
