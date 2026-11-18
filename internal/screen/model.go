@@ -105,7 +105,13 @@ const (
 )
 
 // IsPage reports whether o is a page action (file-view, section 3.3).
-func (o Op) IsPage() bool { return o >= PageNext }
+func (o Op) IsPage() bool {
+	switch o {
+	case PageNext, PagePrev, PageFirst, PageLast:
+		return true
+	}
+	return false
+}
 
 // HasTarget reports whether o shows the screen of Action.Screen with Action.Args: Goto or Gosub.
 func (o Op) HasTarget() bool { return o == Goto || o == Gosub }
