@@ -15,9 +15,11 @@ The title is `Design: <name>`. Its PR puts the specifications into `main`.
 1. Read the parent and its source issues. Research the solutions for the open questions.
 2. Gate 1 also shows the blocks after the design.
 3. Write the design and the specifications to `docs/specs/`.
-4. Before step 4 of the PR cycle, post the plan of the next blocks as a parent comment,
-   in the order of execution. For each block: the title, the blocks that it needs,
+4. Before step 4 of the PR cycle, post the plan of the next blocks as a parent comment
+   that starts with `Plan of #<n>`. List the blocks in the order of execution.
+   For each block: the title, the blocks that it needs,
    the specification section, the task and the acceptance.
+   Name each open block that the plan replaces.
    After the merge, the parent steps create the blocks.
 
 Rules for the specifications:
@@ -35,3 +37,4 @@ If a block shows that the specification is wrong, tell the operator.
 Create a block `Design: <name>` before the first open block:
 `ghflow new block todo "Design: <name>" --parent <parent> --before <m>`.
 Ask the operator to keep this block open or to drop it (`/ticket-cleanup drop <n>`).
+Tell the operator the new design block: `/ticket <m>`.

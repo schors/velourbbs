@@ -176,7 +176,7 @@ JQ_TAGS='def tags(u; b): u as $u | b as $b
   def text(b): (b // "") | split("\n") | map("    " + .) | join("\n");'
 
 cmd_new() {
-  (($# >= 3)) || die "usage: new <type> <status> <title> [--parent <n>] [--after <n>]..."
+  (($# >= 3)) || die "usage: new <type> <status> <title> [--parent <n> [--before <n>]] [--after <n>]..."
   local type=$1 status=$2 title=$3 parent= before= after=() body res n id a
   shift 3
   in_list "$type" "${TYPES[@]}" || die "unknown type: $type"

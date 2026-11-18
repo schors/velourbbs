@@ -64,7 +64,7 @@ Trust:
 |---|---|
 | Issue body | What the issue is. |
 | Issue comment after gate 1 | The accepted plan and the reviewers. |
-| Sub-issues of a parent | The blocks, in the order of execution. |
+| Sub-issues of a parent | The blocks of a `dev` issue. |
 | PR body | The result. Template: [pull_request_template.md](../../.github/pull_request_template.md). |
 | PR reviews | AI reviews and reviews of maintainers. |
 | `docs/specs/` | Designs and specifications (SDD). |
