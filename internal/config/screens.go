@@ -11,11 +11,16 @@ import (
 
 // The defaults of screens-toml, sections 3.1 and 3.2.
 var (
-	defaultLayout    = screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}
-	defaultMore      = "-- More --"
-	defaultTime      = "2006-01-02 15:04:05"
-	defaultNormal    = screen.Style{Fg: screen.IndexColour(7), Bg: screen.IndexColour(0)}
-	lightNormal      = screen.Style{Fg: screen.IndexColour(0), Bg: screen.IndexColour(15)}
+	defaultLayout = screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}
+	defaultMore   = "-- More --"
+	defaultTime   = "2006-01-02 15:04:05"
+	defaultNormal = screen.Style{Fg: screen.IndexColour(7), Bg: screen.IndexColour(0)}
+	lightNormal   = screen.Style{Fg: screen.IndexColour(0), Bg: screen.IndexColour(15)}
+	// defaultNormalStyle is normal of the base theme: it has both colours, so the light
+	// theme without a light normal keeps 7/0.
+	defaultNormalStyle = screen.StyleSpec{
+		Fg: screen.IndexColour(7), Bg: screen.IndexColour(0), HasFg: true, HasBg: true,
+	}
 	defaultMoreStyle = screen.StyleSpec{
 		Fg: screen.IndexColour(15), Bg: screen.IndexColour(0), HasFg: true, HasBg: true,
 	}
@@ -185,7 +190,7 @@ var mdStyles = map[string]string{
 
 // baseSpecs gives the defaults of the base theme: normal, more and the md_* styles.
 func baseSpecs() map[string]screen.StyleSpec {
-	specs := map[string]screen.StyleSpec{"normal": {}, "more": defaultMoreStyle}
+	specs := map[string]screen.StyleSpec{"normal": defaultNormalStyle, "more": defaultMoreStyle}
 	for name, text := range mdStyles {
 		spec, err := screen.ParseStyle(text)
 		if err != nil {

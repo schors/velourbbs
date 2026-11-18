@@ -77,18 +77,9 @@ func TestDefaults(t *testing.T) {
 		if !reflect.DeepEqual(dark(cfg, colors), cfg.Theme) {
 			t.Errorf("dark theme %d = %v", colors, dark(cfg, colors))
 		}
-		// The light theme takes normal from 0/15. more has both colours.
-		for name, got := range light(cfg, colors) {
-			want := cfg.Theme[name]
-			if name != "more" {
-				want.Bg = screen.IndexColour(15)
-			}
-			if name == "normal" {
-				want.Fg = screen.IndexColour(0)
-			}
-			if got != want {
-				t.Errorf("light theme %d: %s = %v, want %v", colors, name, got, want)
-			}
+		// Without light tables, the light theme is the dark theme: normal of the base theme is 7/0.
+		if !reflect.DeepEqual(light(cfg, colors), cfg.Theme) {
+			t.Errorf("light theme %d = %v", colors, light(cfg, colors))
 		}
 	}
 }

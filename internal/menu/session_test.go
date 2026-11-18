@@ -345,7 +345,7 @@ func TestRunThemeChoice(t *testing.T) {
 		fsys := fstest.MapFS{
 			"bbs.toml": {},
 			"screens/screens.toml": {Data: []byte("[screen]\ntheme = \"" + tt.choice + "\"\n" +
-				"[theme.default]\ntitle = \"15/4 bold\"\n[theme.light.default]\ntitle = \"4 bold\"\n")},
+				"[theme.default]\ntitle = \"15/4 bold\"\n[theme.light.default]\nnormal = \"0/15\"\ntitle = \"4 bold\"\n")},
 			"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{!title}T\n")},
 		}
 		cfg, ds := config.Load(fsys)
