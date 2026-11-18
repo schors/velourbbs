@@ -131,6 +131,8 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `term.rows` | integer | Terminal rows. |
 | `term.charset` | string | Output charset, `utf-8` in the MVP. |
 | `term.colors` | integer | Colour depth: `16`, `256` or `16777216`. |
+| `term.name` | string | Terminal name and version, for display only. Can be empty. |
+| `term.images` | string | Image output of the terminal: `sixel` or empty. |
 | `item.<KEY>` | boolean | True when the item with the key `<KEY>` exists and is enabled (section 8.2). |
 | `arg.<name>` | string | The argument `<name>` of the screen (section 8.5). |
 | `file.*`, `meta.<key>` | — | The fields of a file screen: [file-view](file-view.md), section 3.4. |
@@ -257,9 +259,14 @@ The body gives rows in source order:
 ### 7.1. Colour model
 
 - A cell holds one grapheme and a style, never encoded bytes. A wide grapheme takes 2 cells.
-- A "colour" is `default` (the colour of the terminal), an index from 0 to 255, or RGB.
+- A "colour" is `default` (the colour of the terminal), an index from 0 to 255, RGB,
+  or a VGA colour.
   Indexes 0–7 are the standard colours, 8–15 the bright colours,
   16–255 the xterm 256-colour palette.
+- A "VGA colour" is a colour 0–15 of art ([art-format](art-format.md), section 3).
+  It is the index when the palette of the terminal is VGA, and the VGA RGB value when not
+  ([telnet-term](telnet-term.md), section 7.3). So art keeps the colours of its artist.
+  The theme and the styles of this format give indexes, never VGA colours.
 - A "style" is a foreground colour, a background colour and the attributes
   `bold`, `underline` and `blink`.
 - [telnet-term](telnet-term.md) reduces each colour to the colour depth of the terminal.
