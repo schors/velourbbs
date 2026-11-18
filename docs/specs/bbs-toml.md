@@ -29,14 +29,8 @@ The other specifications define the effect of a key and refer to this specificat
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `listen` | string | `":2323"` | The TCP address of the server: `<host>:<port>`. A socket from systemd replaces it. [telnet-term](telnet-term.md), section 10.1. |
-| `max_conns` | integer | 64 | The maximum number of connections. [telnet-term](telnet-term.md), section 9.2. |
-| `max_conns_per_addr` | integer | 4 | The maximum number of connections from one address. [telnet-term](telnet-term.md), section 9.2. |
-| `max_connects_per_min` | integer | 10 | The maximum number of connects from one address in 60 s. [telnet-term](telnet-term.md), section 9.2. |
-| `allow` | array of strings | `[]` | Addresses and prefixes without the address limits. [telnet-term](telnet-term.md), section 9.2. |
 | `proxy` | array of strings | `[]` | Addresses and prefixes of the PROXY protocol senders. [telnet-term](telnet-term.md), section 9.3. |
-| `idle_timeout` | integer | 600 | Seconds without a key until the host disconnects. [telnet-term](telnet-term.md), section 8.3. |
 | `probe_timeout` | integer | 5 | Seconds from accept until the probe ends. [telnet-term](telnet-term.md), section 5.1. |
-| `output_timeout` | integer | 60 | Seconds until a write must complete. Else the host disconnects. [telnet-term](telnet-term.md), sections 4.3 and 9.4. |
 
 - Each integer is from 1 to 1000000. The port of `listen` is from 1 to 65535.
 - The host of `listen` is empty, an IP address or a host name. `velourbbs check` checks
@@ -51,6 +45,22 @@ The other specifications define the effect of a key and refer to this specificat
 |---|---|---|---|
 | `name` | string | `"Kind Brothers BBS"` | The name of the BBS: the field `bbs.name` of [session-fields](session-fields.md), section 2. |
 
+### 3.3. `[limits]`
+
+The connection limits and the timeouts of the host.
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `max_conns` | integer | 64 | The maximum number of connections. [telnet-term](telnet-term.md), section 9.2. |
+| `max_conns_per_addr` | integer | 4 | The maximum number of connections from one address. [telnet-term](telnet-term.md), section 9.2. |
+| `max_connects_per_min` | integer | 10 | The maximum number of connects from one address in 60 s. [telnet-term](telnet-term.md), section 9.2. |
+| `allow` | array of strings | `[]` | Addresses and prefixes without the address limits. [telnet-term](telnet-term.md), section 9.2. |
+| `idle_timeout` | integer | 600 | Seconds without a key until the host disconnects. [telnet-term](telnet-term.md), section 8.3. |
+| `output_timeout` | integer | 60 | Seconds until a write must complete. Else the host disconnects. [telnet-term](telnet-term.md), sections 4.3 and 9.4. |
+
+- Each integer is from 1 to 1000000.
+- An entry of `allow` is an address or a prefix, as in section 3.1.
+
 ## 4. Example
 
 ```toml
@@ -59,13 +69,15 @@ name = "Kind Brothers BBS"
 
 [telnet]
 listen = ":2323"
+proxy = ["127.0.0.1"]
+probe_timeout = 5
+
+[limits]
 max_conns = 64
 max_conns_per_addr = 4
 max_connects_per_min = 10
 allow = ["192.0.2.10", "2001:db8::/48"]
-proxy = ["127.0.0.1"]
 idle_timeout = 600
-probe_timeout = 5
 output_timeout = 60
 ```
 

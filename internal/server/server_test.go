@@ -77,14 +77,14 @@ type testServer struct {
 	stop func() error // stops the server and gives the result of Serve
 }
 
-// start starts a server with the screens main and goodbye. set changes the defaults of [telnet].
-func start(t *testing.T, set func(*config.Telnet)) *testServer {
+// start starts a server with the screens main and goodbye. set changes the defaults of bbs.toml.
+func start(t *testing.T, set func(*config.Config)) *testServer {
 	t.Helper()
 	return startWith(t, set, nil)
 }
 
 // startWith starts a server as start. wrap, when it is not nil, changes the listener.
-func startWith(t *testing.T, set func(*config.Telnet), wrap func(net.Listener) net.Listener) *testServer {
+func startWith(t *testing.T, set func(*config.Config), wrap func(net.Listener) net.Listener) *testServer {
 	t.Helper()
 	return startFS(t, fstest.MapFS{
 		"bbs.toml":            {},
@@ -95,7 +95,7 @@ func startWith(t *testing.T, set func(*config.Telnet), wrap func(net.Listener) n
 
 // startFS starts a server as startWith with the BBS directory fsys and the version testVersion.
 // stopTime, when it is not 0, is the longest time of the stop.
-func startFS(t *testing.T, fsys fstest.MapFS, set func(*config.Telnet), wrap func(net.Listener) net.Listener,
+func startFS(t *testing.T, fsys fstest.MapFS, set func(*config.Config), wrap func(net.Listener) net.Listener,
 	stopTime time.Duration) *testServer {
 	t.Helper()
 	cfg, ds := config.Load(fsys)
@@ -105,7 +105,7 @@ func startFS(t *testing.T, fsys fstest.MapFS, set func(*config.Telnet), wrap fun
 		t.Fatalf("load: %v", ds)
 	}
 	if set != nil {
-		set(&cfg.Telnet)
+		set(&cfg)
 	}
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -308,10 +308,10 @@ func TestServeNotUTF8(t *testing.T) {
 func TestServeLimits(t *testing.T) {
 	for _, tt := range []struct {
 		name, reason string
-		set          func(*config.Telnet)
+		set          func(*config.Config)
 	}{
-		{"max_conns", "max_conns", func(c *config.Telnet) { c.MaxConns = 1 }},
-		{"max_conns_per_addr", "address limit", func(c *config.Telnet) { c.MaxConnsPerAddr = 1 }},
+		{"max_conns", "max_conns", func(c *config.Config) { c.Limits.MaxConns = 1 }},
+		{"max_conns_per_addr", "address limit", func(c *config.Config) { c.Limits.MaxConnsPerAddr = 1 }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := start(t, tt.set)
@@ -337,16 +337,16 @@ func header(a string) string {
 }
 
 // proxyLocal sets 127.0.0.1 as the PROXY protocol sender.
-func proxyLocal(c *config.Telnet) {
-	c.Proxy = []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
+func proxyLocal(c *config.Config) {
+	c.Telnet.Proxy = []netip.Prefix{netip.MustParsePrefix("127.0.0.1/32")}
 }
 
 // The PROXY protocol header gives the address of the limits and of the log.
 // The telnet data after the header goes to the probe (section 9.3).
 func TestServeProxy(t *testing.T) {
-	ts := start(t, func(c *config.Telnet) {
+	ts := start(t, func(c *config.Config) {
 		proxyLocal(c)
-		c.MaxConnsPerAddr = 1
+		c.Limits.MaxConnsPerAddr = 1
 	})
 	// WILL NAWS with the size 80x25 and WONT TTYPE after the header.
 	c1 := ts.dial(t)
@@ -381,10 +381,10 @@ func TestServeProxy(t *testing.T) {
 // A connection that the address limits refuse does not hold its max_conns slot
 // while the host discards its input (section 10).
 func TestServeRefusalSlot(t *testing.T) {
-	ts := start(t, func(c *config.Telnet) {
+	ts := start(t, func(c *config.Config) {
 		proxyLocal(c)
-		c.MaxConns = 2
-		c.MaxConnsPerAddr = 1
+		c.Limits.MaxConns = 2
+		c.Limits.MaxConnsPerAddr = 1
 	})
 	probe(t, ts.dial(t), header("192.0.2.1")+wontReplies)
 	// The client keeps the refused connection open, so the host discards its input for 1 s.
@@ -400,7 +400,7 @@ func TestServeRefusalSlot(t *testing.T) {
 // The host closes each other connection at once (section 10).
 // The clients do not close, so a connection that discards its input ends after lingerTime.
 func TestServeLingerLimit(t *testing.T) {
-	ts := start(t, func(c *config.Telnet) { c.MaxConns = 1 })
+	ts := start(t, func(c *config.Config) { c.Limits.MaxConns = 1 })
 	logoff := func() {
 		c := ts.dial(t)
 		probe(t, c, wontReplies)
@@ -449,9 +449,9 @@ func (c panicConn) Read(b []byte) (int, error) {
 // A panic in a session ends only this session. The host logs it with the stack
 // and closes the connection. The limits of the session are free (section 10).
 func TestServePanic(t *testing.T) {
-	ts := startWith(t, func(c *config.Telnet) {
-		c.MaxConns = 1
-		c.MaxConnsPerAddr = 1
+	ts := startWith(t, func(c *config.Config) {
+		c.Limits.MaxConns = 1
+		c.Limits.MaxConnsPerAddr = 1
 	}, func(ln net.Listener) net.Listener { return panicListener{ln} })
 	c := ts.dial(t)
 	write(t, c, "PANIC")
@@ -470,9 +470,9 @@ func TestServePanic(t *testing.T) {
 // An invalid or missing header closes the connection without output (section 9.3).
 // The header ends within probe_timeout.
 func TestServeProxyInvalid(t *testing.T) {
-	ts := start(t, func(c *config.Telnet) {
+	ts := start(t, func(c *config.Config) {
 		proxyLocal(c)
-		c.ProbeTimeout = 200 * time.Millisecond
+		c.Telnet.ProbeTimeout = 200 * time.Millisecond
 	})
 	for _, in := range []string{wontReplies + "PROXY TCP4 192.0.2.1\r\n", ""} {
 		c := ts.dial(t)
@@ -545,7 +545,7 @@ var shutdownFS = fstest.MapFS{
 // The stop shows shutdown to a session at a key wait and closes a connection
 // in the probe at once (section 10.2).
 func TestServeShutdown(t *testing.T) {
-	ts := startFS(t, shutdownFS, func(c *config.Telnet) { c.ProbeTimeout = time.Minute }, nil, 0)
+	ts := startFS(t, shutdownFS, func(c *config.Config) { c.Telnet.ProbeTimeout = time.Minute }, nil, 0)
 	c1 := ts.dial(t)
 	probe(t, c1, wontReplies)
 	// c2 stays in the probe: it does not answer.

@@ -66,11 +66,11 @@ type Server struct {
 func New(cfg config.Config, screens map[string]*screen.Screen, log *slog.Logger, version string) *Server {
 	return &Server{
 		cfg: cfg, screens: screens, log: log, version: version,
-		limits: NewLimits(cfg.Telnet),
+		limits: NewLimits(cfg.Limits),
 		to: term.Timeouts{
 			Probe:  cfg.Telnet.ProbeTimeout,
-			Idle:   cfg.Telnet.IdleTimeout,
-			Output: cfg.Telnet.OutputTimeout,
+			Idle:   cfg.Limits.IdleTimeout,
+			Output: cfg.Limits.OutputTimeout,
 		},
 		conns:    map[net.Conn]*connState{},
 		stopTime: stopTime,
@@ -334,7 +334,7 @@ func (s *Server) close(c net.Conn, output bool) {
 func (s *Server) startLinger() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.lingers >= s.cfg.Telnet.MaxConns {
+	if s.lingers >= s.cfg.Limits.MaxConns {
 		return false
 	}
 	s.lingers++

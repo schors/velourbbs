@@ -41,7 +41,7 @@ type connects struct {
 }
 
 // NewLimits makes the limits of c.
-func NewLimits(c config.Telnet) *Limits {
+func NewLimits(c config.Limits) *Limits {
 	return &Limits{
 		maxConns: c.MaxConns, perAddr: c.MaxConnsPerAddr, perMin: c.MaxConnectsPerMin,
 		allow: c.Allow,
