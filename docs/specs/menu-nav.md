@@ -132,7 +132,8 @@ When the host stops ([telnet-term](telnet-term.md), section 10.2), it shows
 
 - The host renders `shutdown` with the size of the current screen and shows its first page.
   It does not wait for a key.
-- Without the file, the host disconnects with no output.
+- Without the file, the host disconnects with no page.
+  [telnet-term](telnet-term.md), section 8.4, can send `ESC[?2004l` before.
 
 ## 6. `velourbbs check`
 
