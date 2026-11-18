@@ -33,6 +33,8 @@ The work runs on GitHub issues and pull requests (PRs) of `origin`.
 - Each open issue has one type label and one status label.
   Statuses: `backlog` (not planned), `todo` (planned), `progress` (in work),
   `review` (the PR waits for a maintainer).
+- An open idea also has one priority label: `p1` (next), `p2` (soon) or `p3` (later).
+  The operator sets the priority. `ghflow priority <n> <priority>` sets the label.
 - An open issue with no status label is the inbox. The operator triages it.
 - A closed issue is `done` if its reason is `completed`. It is `cancel`
   if its reason is `not_planned` or `duplicate`. A closed issue wins over its label.

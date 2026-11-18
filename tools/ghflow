@@ -11,6 +11,7 @@ API=https://api.github.com
 
 TYPES=(idea dev block one-shot docs question request bug)
 STATUSES=(backlog todo progress review)
+PRIORITIES=(p1 p2 p3)
 REASONS=(completed not_planned duplicate)
 # Default GitHub labels that the flow does not use. `bug` and `question` stay.
 DEFAULT_LABELS=(documentation duplicate enhancement "good first issue" "help wanted"
@@ -32,6 +33,7 @@ Text input (a body) comes from stdin. Each post starts with the line
   status <n> <status>         set the status label
                               (new and status: progress also assigns the issue
                               to the owner of the token)
+  priority <n> <priority>     set the priority label (p1, p2, p3)
   close <n> <reason>          close an issue (completed, not_planned, duplicate) or a PR
   body <n>                    replace the body of an agent post (a marker line in stdin is dropped)
   comment <n>                 add a comment to an issue or a PR
@@ -270,19 +272,33 @@ assign() {
     --arg l "$(api GET /user | jq -r .login)" >/dev/null
 }
 
-cmd_status() {
-  (($# == 2)) || die "usage: status <n> <status>"
+# set_label <n> <label> <group>...: replace the label of the group on issue <n>.
+set_label() {
   local n=$1 s=$2 cur l
-  num "$n"
-  in_list "$s" "${STATUSES[@]}" || die "unknown status: $s"
+  shift 2
   cur=$(api GET "/issues/$n" | jq -r '.labels[].name')
-  for l in "${STATUSES[@]}"; do
+  for l in "$@"; do
     if [[ $l != "$s" ]] && grep -qxF "$l" <<<"$cur"; then
       api DELETE "/issues/$n/labels/$l" >/dev/null
     fi
   done
   grep -qxF "$s" <<<"$cur" || send POST "/issues/$n/labels" '{labels: [$s]}' --arg s "$s" >/dev/null
+}
+
+cmd_status() {
+  (($# == 2)) || die "usage: status <n> <status>"
+  local n=$1 s=$2
+  num "$n"
+  in_list "$s" "${STATUSES[@]}" || die "unknown status: $s"
+  set_label "$n" "$s" "${STATUSES[@]}"
   [[ $s != progress ]] || assign "$n"
+}
+
+cmd_priority() {
+  (($# == 2)) || die "usage: priority <n> <priority>"
+  num "$1"
+  in_list "$2" "${PRIORITIES[@]}" || die "unknown priority: $2"
+  set_label "$1" "$2" "${PRIORITIES[@]}"
 }
 
 cmd_close() {
@@ -456,6 +472,9 @@ backlog|ededed|Status: not planned yet
 todo|fbca04|Status: planned
 progress|ff7b00|Status: in work
 review|e99695|Status: waiting for a maintainer
+p1|b60205|Priority: next
+p2|d93f0b|Priority: soon
+p3|fef2c0|Priority: later
 EOF
   for name in "${DEFAULT_LABELS[@]}"; do
     if grep -qxF "$name" <<<"$have"; then
@@ -475,7 +494,7 @@ main() {
   case $c in
     -h | --help | help) usage ;;
     check) if [[ ${1:-} == --push ]]; then R=$(repo); fi; cmd_check "$@" ;;
-    new | list | show | status | close | body | comment | pr | review | threads | reply | setup)
+    new | list | show | status | priority | close | body | comment | pr | review | threads | reply | setup)
       R=$(repo)
       "cmd_$c" "$@"
       ;;
