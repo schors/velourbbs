@@ -431,13 +431,13 @@ func TestProbeLateDA1(t *testing.T) {
 	})
 }
 
-// ambiguous gives t with term.ambiguous n.
 // colours sets term.fg_color, term.bg_color and term.background of t.
 func colours(t screen.Term, fg, bg, background string) screen.Term {
 	t.FgColor, t.BgColor, t.Background = fg, bg, background
 	return t
 }
 
+// ambiguous gives t with term.ambiguous n.
 func ambiguous(t screen.Term, n int) screen.Term {
 	t.Ambiguous = n
 	return t
