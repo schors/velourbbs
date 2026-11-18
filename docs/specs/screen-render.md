@@ -97,7 +97,7 @@ and writes its cell dump to the standard output.
   For `term.name`, the host removes the control characters and cuts the text to 40 graphemes
   ([telnet-term](telnet-term.md), section 6), with no case change and no default.
   `term.images` is `sixel` or empty. `term.ambiguous` is `1` or `2`.
-  It does not change the dump.
+  The layout does not use it.
 - Each argument of the screen needs `--set arg.<name>=<value>`
   ([bbt-format](bbt-format.md), section 8.5). A missing argument, another argument and
   an invalid value are invalid arguments. A content file of a value has the checks of

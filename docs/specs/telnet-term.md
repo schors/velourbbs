@@ -200,7 +200,8 @@ Step 4 of section 5.1 sends this write:
 
 | Query | Bytes | Reply |
 |---|---|---|
-| CPR probes | Section 5.4. | Two CPRs. |
+| Charset probe | Section 5.4. | CPR. |
+| Ambiguous probe | Section 5.4. | CPR. |
 | DECRQSS for SGR | `ESC[38;2;1;2;3m`, `ESC P $ q m ST`, `ESC[0m` | `ESC P 1 $ r <parameters> m ST`, or `ESC P 0 $ r ST`. |
 | XTVERSION | `ESC[>0q` | `ESC P >| <text> ST`. |
 | DA2 | `ESC[>c` | `ESC[> <parameters> c`. |
@@ -212,7 +213,7 @@ Step 4 of section 5.1 sends this write:
 
 - DA1 goes last. Each target terminal answers DA1 and sends its replies in the order
   of the queries. So the DA1 reply comes after the other replies.
-- The CPR probes go first. Windows Terminal 1.25 and later can send its own CPR query after
+- The CPR probes go first, in the order of section 5.4. Windows Terminal 1.25 and later can send its own CPR query after
   an unknown sequence and take the next CPR reply.
 - PuTTY sends no reply to an OSC 4 query with more than one index. So each index has its own query.
 - tmux 3.6 and later sends OSC 4 to the outer terminal. It delays its next replies until
@@ -273,7 +274,9 @@ Reply rules:
   | Windows Terminal 1.25 and later | `compatibility.ambiguousWidth`. It keeps U+2500–U+259F narrow. |
   | VTE (GNOME Terminal) | `cjk-utf8-ambiguous-width`. |
 
-  Ghostty, cmux and tmux have no such setting. They show these characters in one cell.
+  Ghostty and cmux have no such setting. They show these characters in one cell.
+  tmux has no ambiguous width setting. Its option `codepoint-widths` (3.6 and later) sets
+  the width of single code points. The probe sees only the width of U+0436.
 - The layout does not use `term.ambiguous`: with 2, the columns of a page move,
   and frames and art break. A screen can show the user how to turn the setting off.
   The host cannot fix the layout: no target terminal switches the setting by an escape
@@ -322,7 +325,7 @@ The host shows a page ([menu-nav](menu-nav.md), section 5) in this order:
   by row. The host sends it without a query. A terminal without the mode ignores it.
 - A wide grapheme appears once. Its second cell gives no output.
 - Each row starts at its own position, so a page has no line ends
-  and the terminal does not scroll.
+  and the terminal does not scroll (one exception: section 7.4).
 - A page writes the last cell of the last terminal row when its rows or its fill rows
   with `fill = "spaces"` reach that row. The terminal of each target implementation
   delays the wrap after the last column, so it does not scroll.
@@ -370,15 +373,22 @@ The host reduces each colour of a cell to `term.colors` before the output:
 
 The encoder writes each grapheme in UTF-8. 8-bit charsets are later encoders.
 
-After a grapheme of more than one code point, the encoder sends `ESC[<col>G` when a cell
-of the row follows the grapheme. `<col>` is the terminal column of the next cell.
+A "re-sync" follows a grapheme of more than one code point when a cell of the row follows
+the last cell of the grapheme. The re-sync is a space in the style of the grapheme,
+then `ESC[<row>;<col>H`. `<row>` is the terminal row. `<col>` is the terminal column
+after the last cell of the grapheme.
 
 - Terminals give different widths to these graphemes. An emoji with VS16 (`❤️`) takes one cell
   in PuTTY, xterm, Tera Term and VTE with their default settings. A ZWJ sequence (`👨‍👩‍👧`)
   takes two cells for each emoji in PuTTY, xterm and VTE.
-- With `ESC[<col>G`, the next cells stay in their columns. A terminal that shows the grapheme
-  narrow leaves an empty cell after it. A terminal that shows it wide shows the next cells
-  over the end of the grapheme.
+- After the re-sync, the next cells are in their columns.
+  - A terminal that shows the grapheme narrow writes the space after it.
+    The space has the background of the grapheme.
+  - A terminal that shows the grapheme wide writes the next cells over the end of the grapheme.
+    When the grapheme passes the last column, the terminal wraps it. The output of the next
+    terminal row overwrites the wrapped part. A fill row with `fill = "erase"` has no output,
+    so the part stays there. On the last terminal row, the wrap scrolls the page.
+  - When no cell follows the grapheme, a narrow terminal leaves the last cell empty.
 
 ## 8. Key decoder
 
