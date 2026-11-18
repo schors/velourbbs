@@ -93,7 +93,8 @@ and writes its cell dump to the standard output.
 - `--set` sets `term.type`, `term.colors`, `term.name`, `term.images`, `arg.<name>` or a field of
   [session-fields](session-fields.md), section 4. Example: `--set term.colors=256`.
   The defaults are `xterm`, 256 and empty. `term.charset` is `utf-8`.
-  `term.name` has the rules of `term.type`, but keeps its case.
+  For `term.name`, the host removes the control characters and cuts the text to 40 graphemes
+  ([telnet-term](telnet-term.md), section 6), with no case change and no default.
   `term.images` is `sixel` or empty.
 - Each argument of the screen needs `--set arg.<name>=<value>`
   ([bbt-format](bbt-format.md), section 8.5). A missing argument, another argument and
@@ -133,7 +134,8 @@ styles
   A run has the form `<first>-<last> <style>`, also for one column. Example: `5-5 7/0`.
 - The dump has the colours of the model with the session theme of `term.colors`
   ([screens-toml](screens-toml.md), section 3.2), before the reduction to `term.colors`.
-  A VGA colour appears as its index.
+  A VGA colour appears as its index. The tests of the output
+  ([telnet-term](telnet-term.md), section 7.3) check the VGA colours.
 - A page with a More row includes it as its last row.
 
 ## 4. Code

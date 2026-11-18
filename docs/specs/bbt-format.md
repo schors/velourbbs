@@ -264,8 +264,8 @@ The body gives rows in source order:
   Indexes 0–7 are the standard colours, 8–15 the bright colours,
   16–255 the xterm 256-colour palette.
 - A "VGA colour" is a colour 0–15 of art ([art-format](art-format.md), section 3).
-  It is the index when the palette of the terminal is VGA, and the VGA RGB value when not
-  ([telnet-term](telnet-term.md), section 7.3). So art keeps the colours of its artist.
+  [telnet-term](telnet-term.md), section 7.3, gives its output with the VGA values.
+  So art keeps the colours of its artist.
   The theme and the styles of this format give indexes, never VGA colours.
 - A "style" is a foreground colour, a background colour and the attributes
   `bold`, `underline` and `blink`.
