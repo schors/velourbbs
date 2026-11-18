@@ -19,7 +19,7 @@ type Conn interface {
 	SetWriteDeadline(t time.Time) error
 }
 
-// Timeouts are the timeouts of [telnet] (bbs-toml, section 3.1).
+// Timeouts are the timeouts of [telnet] and [limits] (bbs-toml, sections 3.1 and 3.3).
 type Timeouts struct {
 	Probe  time.Duration // probe_timeout
 	Idle   time.Duration // idle_timeout

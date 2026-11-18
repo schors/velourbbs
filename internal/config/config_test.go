@@ -67,7 +67,7 @@ func TestDefaults(t *testing.T) {
 			t.Errorf("theme %s = %v, want %s", name, got, text)
 		}
 	}
-	if cfg.Start != "main" || len(cfg.Fields) != 0 || !reflect.DeepEqual(cfg.Telnet, defaultTelnet) ||
+	if cfg.Start != "main" || len(cfg.Fields) != 0 || !reflect.DeepEqual(cfg.Telnet, defaultTelnet) || !reflect.DeepEqual(cfg.Limits, defaultLimits) ||
 		cfg.Time != "2006-01-02 15:04:05" || cfg.Zone != time.Local || cfg.Name != "Kind Brothers BBS" {
 		t.Errorf("cfg = %+v", cfg)
 	}
@@ -343,7 +343,7 @@ func TestZone(t *testing.T) {
 	}
 }
 
-// bbs.toml has only [bbs] and [telnet] (bbs-toml, section 2).
+// bbs.toml has only [bbs], [telnet] and [limits] (bbs-toml, section 2).
 func TestHostErrors(t *testing.T) {
 	tests := []struct{ data, want string }{
 		{"[screen]\nwidth = [40, 80]", `bbs.toml:1:2: unknown key "screen"`},
@@ -357,8 +357,7 @@ func TestHostErrors(t *testing.T) {
 		{"[bbs]\nnode = 1", `bbs.toml:2:1: unknown key "bbs.node"`},
 	}
 	for _, tt := range tests {
-		_, _, ds := parseHost([]byte(tt.data))
-		if got := messages(ds); !slices.Equal(got, []string{tt.want}) {
+		if _, got := host(tt.data); !slices.Equal(got, []string{tt.want}) {
 			t.Errorf("parseHost(%q) = %q, want %q", tt.data, got, tt.want)
 		}
 	}
@@ -393,13 +392,15 @@ name = "Kind Brothers BBS"
 
 [telnet]
 listen = ":2323"
+proxy = ["127.0.0.1"]
+probe_timeout = 5
+
+[limits]
 max_conns = 64
 max_conns_per_addr = 4
 max_connects_per_min = 10
 allow = ["192.0.2.10", "2001:db8::/48"]
-proxy = ["127.0.0.1"]
 idle_timeout = 600
-probe_timeout = 5
 output_timeout = 60
 `
 	cfg, ds := Load(fstest.MapFS{

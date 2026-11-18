@@ -101,7 +101,7 @@ The host keeps the state of each option for each side, as in RFC 1143:
 ### 4.3. Output
 
 - The host writes each reply to the client before it reads more input.
-  `output_timeout` ([bbs-toml](bbs-toml.md), section 3.1) applies to each write.
+  `output_timeout` ([bbs-toml](bbs-toml.md), section 3.3) applies to each write.
 - IAC doubling runs after the encoder, because 0xFF is a character in some 8-bit charsets.
 - The host always sends CR LF as the line end.
 
@@ -396,7 +396,7 @@ The host reduces each colour of a cell to `term.colors` before the output:
 
 ### 7.4. Encoder
 
-The encoder writes each grapheme in UTF-8. 8-bit charsets are later encoders.
+The encoder writes each grapheme in UTF-8.
 
 A "re-sync" follows a grapheme of more than one code point when a cell of the row follows
 the last cell of the grapheme. The re-sync is a space in the style of the grapheme,
@@ -488,7 +488,7 @@ The key decoder gives:
 
 ### 9.1. `bbs.toml`
 
-The keys of `[telnet]` are in [bbs-toml](bbs-toml.md), section 3.1.
+The keys of `[telnet]` and `[limits]` are in [bbs-toml](bbs-toml.md), sections 3.1 and 3.3.
 
 ### 9.2. Connection limits
 
@@ -600,7 +600,6 @@ At SIGINT or SIGTERM, the host does these steps:
 - SSH. The size and the terminal type come from `pty-req` and `window-change`.
 - Web client.
 - Charset negotiation (telnet CHARSET, RFC 2066).
-- 8-bit charset output. CP437 is the first encoder, for SyncTERM and NetRunner.
 - Terminals without ANSI and monochrome output.
 - A layout for terminals that show ambiguous-width characters as wide (section 6).
 - Mouse input.

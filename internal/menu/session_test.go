@@ -765,3 +765,23 @@ Light
 		t.Errorf("Shutdown log %q, want %q", ft.log, want)
 	}
 }
+
+// An action without a case in the session loop panics; it does not log off (section 4).
+func TestRunUnknownOp(t *testing.T) {
+	screens := load(t, nil)
+	for i, it := range screens["main"].Items {
+		if it.Key == "G" {
+			screens["main"].Items[i].Do.Op = screen.PageLast + 1
+		}
+	}
+	ft := &fakeTerm{cols: []int{80}, keys: []string{"G"}}
+	defer func() {
+		if recover() == nil {
+			t.Error("no panic")
+		}
+		if slices.Contains(ft.log, "page: Bye") {
+			t.Errorf("log %q: the session logged off", ft.log)
+		}
+	}()
+	_, _ = Run(ft, config.Config{}, screens, "main", nil, noValues)
+}

@@ -17,7 +17,7 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 | Path | Content |
 |---|---|
 | `station/` | The BBS directory of the home BBS ([bbs-toml](bbs-toml.md), section 2). |
-| `station/bbs.toml` | `[bbs] name = "Velour"`. No `[telnet]` table. |
+| `station/bbs.toml` | `[bbs] name = "Velour"`. No `[telnet]` and no `[limits]` table. |
 | `station/screens/screens.toml` | The theme of section 4 and the screen settings. |
 | `station/screens/` | The screens of section 3 and their fragments. |
 | `station/content/<lang>/features.md` | The features text (section 6). |
@@ -42,10 +42,10 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 |---|---|---|
 | `main` | The entry screen (section 3.1). | `R` `gosub ru-menu`, `E` `gosub en-menu`, `Q` `logoff`. |
 | `<lang>-menu` | The menu (section 3.2). | `1` `gosub <lang>-texts`, `2` `gosub <lang>-about`, `ESC` `back`, `Q` `logoff`. |
-| `<lang>-texts` | The catalog of the section Texts (section 3.3). | `1` `gosub <lang>-setup`, `2` `gosub <lang>-bbt`, `3` `gosub <lang>-text-read` with the features text, `ESC` `back`. |
-| `<lang>-setup` | The parts of the setup guide. | `0` for `README.md`, `1`–`5` for the parts: `gosub <lang>-setup-read` with the part. `ESC` `back`. |
-| `<lang>-bbt` | The parts of the BBT guide. | `0` for `README.md`, `1`–`9` for the parts: `gosub <lang>-bbt-read` with the part. `ESC` `back`. |
-| `<lang>-setup-read`, `<lang>-bbt-read`, `<lang>-text-read` | File screens of the argument `file` (section 3.4). | `SPACE` `page next`, `B` `page prev`, `ESC` `back`. |
+| `<lang>-texts` | The catalog of the section Texts (section 3.3). | `1` `gosub <lang>-setup`, `2` `gosub <lang>-bbt`, `3` `gosub <lang>-read` with the features text and the title `Velour`, `ESC` `back`. |
+| `<lang>-setup` | The parts of the setup guide. | `0` for `README.md`, `1`–`5` for the parts: `gosub <lang>-read` with the part and the title of the guide. `ESC` `back`. |
+| `<lang>-bbt` | The parts of the BBT guide. | `0` for `README.md`, `1`–`9` for the parts: `gosub <lang>-read` with the part and the title of the guide. `ESC` `back`. |
+| `<lang>-read` | The file screen of the argument `file`, with the argument `title` in the header (section 3.4). | `SPACE` `page next`, `B` `page prev`, `ESC` `back`. |
 | `<lang>-about` | The section About the station (section 3.5). | `ESC` `back`. |
 | `goodbye` | The goodbye screen in both languages, with the repository address (section 3.5). | — |
 | `shutdown` | The restart notice in both languages: the station restarts, call again in a minute. | — |
@@ -60,8 +60,7 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 | `<lang>-menu` | `1 2 Открыть    Esc Ко входу    Q Выход` | `1 2 Open    Esc To entry    Q Quit` |
 | `<lang>-texts` | `1 2 3 Открыть    Esc В меню` | `1 2 3 Open    Esc To menu` |
 | `<lang>-setup`, `<lang>-bbt` | `0-9 Открыть    Esc К текстам` | `0-9 Open    Esc To texts` |
-| `<lang>-setup-read`, `<lang>-bbt-read` | `B Назад    Пробел Дальше    Esc К списку` | `B Back    Space Next    Esc To list` |
-| `<lang>-text-read` | `B Назад    Пробел Дальше    Esc К текстам` | `B Back    Space Next    Esc To texts` |
+| `<lang>-read` | `B Назад    Пробел Дальше    Esc К списку` | `B Back    Space Next    Esc To list` |
 | `<lang>-about` | `Esc В меню` | `Esc To menu` |
 
 - `<lang>-setup` shows `0-5` in place of `0-9`.
@@ -110,6 +109,8 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 
 - The brandbook screen "Тексты: чтение" at 80: the kicker, the meta, the file area,
   the footer with `{file.page}/{file.pages}` and the keys.
+- The kicker is `Тексты  ∙  {arg.title}` (English: `Texts  ∙  {arg.title}`). The item gives the title:
+  the name of the guide, or `Velour` for the features text.
 - The meta is `{file.minutes} мин чтения` (English: `{file.minutes} min read`).
 - The title is the level-1 heading at the start of the file. The rows above the file area
   do not repeat it.
@@ -207,7 +208,7 @@ The English table of section 7 of the brandbook:
   - `ru-about` and `en-about` also with 16777216 colours, `term.ambiguous` 2,
     a `term.name`, sixel and a `term.bg_color` (a dark one and a light one);
   - `ru-about` also at 80x24 with a `term.type` and a `term.name` of 40 wide graphemes;
-  - each file screen with its first file.
+  - each file screen with the first file of each catalog.
 - The `ru-` and the `en-` screens have the same items.
 - `content/ru/guide` and `content/en/guide` are symlinks into `docs/guide/`.
 

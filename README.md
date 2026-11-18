@@ -29,16 +29,19 @@ You need Go 1.27.3 or later. Build the program:
 go build ./cmd/velourbbs
 ```
 
-The directory `station/` is the home station of Velour. Check it, preview its entry screen and serve it:
+The directory `examples/lamp/en/` is a small example BBS. The BBT guide builds it step by step.
+Check it, preview its entry screen and serve it:
 
 ```
-cd station
-../velourbbs check
-../velourbbs preview main --size 132x43
-../velourbbs serve
+cd examples/lamp/en
+../../../velourbbs check
+../../../velourbbs preview main --size 80x24
+../../../velourbbs serve
 ```
 
 In another terminal, connect with `telnet localhost 2323`. The terminal needs the UTF-8 charset.
+
+The directory `station/` is the home station of Velour: the BBS of the project, in Russian and English.
 
 ## Documentation
 

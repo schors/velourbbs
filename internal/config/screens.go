@@ -55,13 +55,13 @@ type screensDoc struct {
 	} `toml:"menu"`
 }
 
-// parseScreens reads screens/screens.toml from data. The Telnet of the result is the default.
+// parseScreens reads screens/screens.toml from data. The values of bbs.toml in the result are the defaults.
 // An unknown key is an error (screens-toml, section 2).
 // It gives at most screen.MaxFileDiags diagnostics (screen-render, section 3.1).
 func parseScreens(data []byte) (Config, screen.Diags) {
 	cfg := Config{
 		Layout: defaultLayout, More: defaultMore, Time: defaultTime, Zone: time.Local, Fields: screen.Fields{}, Start: "main",
-		ThemeChoice: ThemeDark, Telnet: defaultTelnet, Name: defaultName,
+		ThemeChoice: ThemeDark, Telnet: defaultTelnet, Limits: defaultLimits, Name: defaultName,
 	}
 	fd := screen.FileDiags{File: ScreensFile}
 	var d screensDoc

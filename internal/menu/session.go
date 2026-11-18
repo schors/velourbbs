@@ -1,6 +1,7 @@
 package menu
 
 import (
+	"fmt"
 	"iter"
 	"slices"
 
@@ -93,6 +94,9 @@ func (ss *session) loop(screens map[string]*screen.Screen, start string, args ma
 		case screen.Theme: // show the screen of the top frame again
 			ss.choice = config.ThemeChoice(it.Do.Theme)
 			continue
+		case screen.Logoff:
+		default: // a new action needs its own case; serve recovers the panic of one session
+			panic(fmt.Sprintf("menu: no case for action %d", it.Do.Op))
 		}
 		if err := ss.ev.Logoff(); err != nil {
 			return err

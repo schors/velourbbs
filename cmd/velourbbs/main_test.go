@@ -71,14 +71,14 @@ func TestCheckValid(t *testing.T) {
 	}
 }
 
-// velourbbs check reports the errors of [telnet] (bbs-toml, section 3.1).
-func TestCheckTelnet(t *testing.T) {
+// velourbbs check reports the errors of [limits] (bbs-toml, section 3.3).
+func TestCheckLimits(t *testing.T) {
 	fsys := fstest.MapFS{
-		"bbs.toml":         {Data: []byte("[telnet]\nmax_conns = 0\nallow = [\"x\"]\n")},
+		"bbs.toml":         {Data: []byte("[limits]\nmax_conns = 0\nallow = [\"x\"]\n")},
 		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"g\"\ndo = \"logoff\"\n+++\n")},
 	}
-	want := `bbs.toml:1:1: telnet.max_conns: 0 is not from 1 to 1000000
-bbs.toml:1:1: telnet.allow: invalid address or prefix "x"
+	want := `bbs.toml:1:1: limits.max_conns: 0 is not from 1 to 1000000
+bbs.toml:1:1: limits.allow: invalid address or prefix "x"
 `
 	var out, errOut bytes.Buffer
 	status := run([]string{"check"}, fsys, &out, &errOut)

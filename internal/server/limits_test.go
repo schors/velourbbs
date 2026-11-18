@@ -13,7 +13,7 @@ import (
 var t0 = time.Date(2026, 11, 13, 12, 0, 0, 0, time.UTC)
 
 func limits(maxConns, perAddr, perMin int, allow ...string) *server.Limits {
-	c := config.Telnet{MaxConns: maxConns, MaxConnsPerAddr: perAddr, MaxConnectsPerMin: perMin}
+	c := config.Limits{MaxConns: maxConns, MaxConnsPerAddr: perAddr, MaxConnectsPerMin: perMin}
 	for _, s := range allow {
 		c.Allow = append(c.Allow, netip.MustParsePrefix(s))
 	}

@@ -1,7 +1,7 @@
 # 3. `bbs.toml`
 
-`bbs.toml` holds the table `[bbs]`: the name of the BBS, and the table `[telnet]`:
-the settings of the telnet server.
+`bbs.toml` holds three tables: `[bbs]` has the name of the BBS,
+`[telnet]` has the settings of the telnet server, and `[limits]` has the connection limits and the timeouts.
 Each key is optional. A key that is not set has its default. An empty file gives the defaults.
 
 ## The name
@@ -11,7 +11,7 @@ The default is `"Kind Brothers BBS"`.
 
 ## The address
 
-`listen` is the TCP address of the server: `<host>:<port>`. The default is `":2323"`.
+`listen` of `[telnet]` is the TCP address of the server: `<host>:<port>`. The default is `":2323"`.
 
 - An empty host: the server listens on all addresses of the host: `":2323"`.
 - One address: the server listens only on this address, for example `"192.0.2.1:2323"`.
@@ -22,6 +22,8 @@ The default is `"Kind Brothers BBS"`.
 the address, `velourbbs serve` stops.
 
 ## The connection limits
+
+These keys are in `[limits]`.
 
 | Key | Default | What it does | When to change it |
 |---|---|---|---|
@@ -38,13 +40,13 @@ the address, `velourbbs serve` stops.
 Example:
 
 ```toml
-[telnet]
+[limits]
 allow = ["192.0.2.10", "2001:db8::/48"]
 ```
 
 ## The PROXY protocol
 
-`proxy` holds the addresses and prefixes of the proxies that send the PROXY protocol header.
+`proxy` of `[telnet]` holds the addresses and prefixes of the proxies that send the PROXY protocol header.
 The default is `[]`: the server reads no header.
 Set it when a proxy, for example HAProxy, sends the connections to the BBS.
 Then the log and the limits use the address of the client, not the address of the proxy.
@@ -65,6 +67,8 @@ proxy = ["127.0.0.1"]
 
 ## The timeouts
 
+`probe_timeout` is in `[telnet]`. `idle_timeout` and `output_timeout` are in `[limits]`.
+
 | Key | Default | What it does | When to change it |
 |---|---|---|---|
 | `idle_timeout` | 600 | Seconds without a key until the server disconnects. | Users read long screens. |
@@ -81,18 +85,20 @@ name = "Kind Brothers BBS"
 
 [telnet]
 listen = ":2323"
+probe_timeout = 5
+
+[limits]
 max_conns = 64
 max_conns_per_addr = 4
 max_connects_per_min = 10
 idle_timeout = 600
-probe_timeout = 5
 output_timeout = 60
 ```
 
 Write it to `/srv/velourbbs/bbs.toml`. Then change the values that you need.
 After each change, run `sudo chmod -R a+rX /srv/velourbbs` and `velourbbs check`.
 
-Full rules: [bbs-toml](../../../specs/bbs-toml.md), sections 3.1 and 3.2.
+Full rules: [bbs-toml](../../../specs/bbs-toml.md), section 3.
 
 ## Result
 

@@ -40,6 +40,8 @@ type Config struct {
 	Start string
 	// Telnet is the table [telnet] (bbs-toml, section 3.1).
 	Telnet Telnet
+	// Limits is the table [limits] (bbs-toml, section 3.3).
+	Limits Limits
 	// Name is the name of the BBS: the key name of [bbs] (bbs-toml, section 3.2).
 	Name string
 
@@ -82,6 +84,7 @@ type hostDoc struct {
 		Name *string `toml:"name"`
 	} `toml:"bbs"`
 	Telnet telnetDoc `toml:"telnet"`
+	Limits limitsDoc `toml:"limits"`
 }
 
 // Load reads bbs.toml and screens/screens.toml of the BBS directory fsys.
@@ -103,17 +106,17 @@ func Load(fsys fs.FS) (Config, screen.Diags) {
 		ds.Errorf(ScreensFile, 1, 1, "%v", err)
 	}
 	cfg, sds := parseScreens(data)
-	var hds screen.Diags
-	cfg.Telnet, cfg.Name, hds = parseHost(host)
+	hds := parseHost(host, &cfg)
 	ds = append(ds, sds...)
 	ds = append(ds, hds...)
 	return cfg, ds
 }
 
-// parseHost reads bbs.toml from data: the table [telnet] and the BBS name.
+// parseHost reads bbs.toml from data into cfg: the tables [telnet] and [limits] and the BBS name.
+// A value with an error keeps the value of cfg.
 // An unknown key is an error (bbs-toml, section 2).
 // It gives at most screen.MaxFileDiags diagnostics (screen-render, section 3.1).
-func parseHost(data []byte) (Telnet, string, screen.Diags) {
+func parseHost(data []byte, cfg *Config) screen.Diags {
 	fd := screen.FileDiags{File: File}
 	var d hostDoc
 	errs := tomlcheck.Decode(bytes.TrimPrefix(data, screen.BOM), &d)
@@ -121,13 +124,14 @@ func parseHost(data []byte) (Telnet, string, screen.Diags) {
 		fd.Errorf(e.Line, e.Col, "%s", e.Msg)
 	}
 	if len(errs) > 0 {
-		return defaultTelnet, defaultName, fd.Diags
+		return fd.Diags
 	}
-	name := defaultName
 	if d.BBS.Name != nil {
-		name = *d.BBS.Name
+		cfg.Name = *d.BBS.Name
 	}
 	// Each other error has the position 1:1 (screen-render, section 3.1).
 	errorf := func(format string, args ...any) { fd.Errorf(1, 1, format, args...) }
-	return telnet(d.Telnet, errorf), name, fd.Diags
+	cfg.Telnet = telnet(d.Telnet, errorf)
+	cfg.Limits = limits(d.Limits, errorf)
+	return fd.Diags
 }

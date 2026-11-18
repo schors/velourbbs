@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -43,12 +44,16 @@ func TestStation(t *testing.T) {
 		cases = append(cases, tcase{screen: screen, size: "80x24", colors: "256"},
 			tcase{screen: screen, size: "132x43", colors: "256"})
 	}
-	// Each file screen with its first file: 80 form only.
-	for _, lang := range []string{"ru", "en"} {
-		cases = append(cases,
-			tcase{screen: lang + "-setup-read", size: "80x24", colors: "256", file: lang + "/guide/setup/README.md"},
-			tcase{screen: lang + "-bbt-read", size: "80x24", colors: "256", file: lang + "/guide/bbt/README.md"},
-			tcase{screen: lang + "-text-read", size: "80x24", colors: "256", file: lang + "/features.md"})
+	// The file screen with the first file of each catalog: 80 form only.
+	for _, c := range []struct{ lang, setup, bbt string }{
+		{"ru", "Руководство по установке", "Руководство по BBT"}, {"en", "Setup guide", "BBT guide"},
+	} {
+		read := func(file, title, tag string) tcase {
+			return tcase{screen: c.lang + "-read", size: "80x24", colors: "256", file: c.lang + "/" + file,
+				set: []string{"arg.title=" + title}, tag: "-" + tag}
+		}
+		cases = append(cases, read("guide/setup/README.md", c.setup, "setup"),
+			read("guide/bbt/README.md", c.bbt, "bbt"), read("features.md", "Velour", "features"))
 	}
 	fsys := os.DirFS(filepath.Join("..", "..", "station"))
 	var out, errOut bytes.Buffer
@@ -98,11 +103,15 @@ func TestStationGuideLinks(t *testing.T) {
 	}
 }
 
+// titleArg is the title arg of an item. Its group 1 is the value.
+var titleArg = regexp.MustCompile(`title = "([^"]*)"`)
+
 // TestStationItems checks that the ru- and the en- screens of the home BBS
 // have the same items: the front matter of each file equals the front matter
 // of the other file with the language replaced in the screen names and in the
-// content paths. Both directions catch a goto or a gosub from a screen of one language
-// to a screen or a file of the other.
+// content paths. The title args are text of the language, so the test ignores their values.
+// Both directions catch a goto or a gosub from a screen of one language
+// to a screen or a file of the other. TestStationTitles checks the title values.
 func TestStationItems(t *testing.T) {
 	dir := filepath.Join("..", "..", "station", "screens")
 	ru, err := filepath.Glob(filepath.Join(dir, "ru-*.bbt"))
@@ -120,12 +129,45 @@ func TestStationItems(t *testing.T) {
 	toRu := strings.NewReplacer("en-", "ru-", `"en/`, `"ru/`)
 	for _, ruFile := range ru {
 		enFile := filepath.Join(dir, "en-"+strings.TrimPrefix(filepath.Base(ruFile), "ru-"))
-		ruFront, enFront := frontMatter(t, ruFile), frontMatter(t, enFile)
+		ruFront := titleArg.ReplaceAllString(frontMatter(t, ruFile), `title = ""`)
+		enFront := titleArg.ReplaceAllString(frontMatter(t, enFile), `title = ""`)
 		if want := toEn.Replace(ruFront); enFront != want {
 			t.Errorf("%s: front matter\n%s\nwant\n%s", enFile, enFront, want)
 		}
 		if want := toRu.Replace(enFront); ruFront != want {
 			t.Errorf("%s: front matter\n%s\nwant\n%s", ruFile, ruFront, want)
+		}
+	}
+}
+
+// TestStationTitles checks the title of each item that opens a reading screen
+// (home-bbs, section 3.4): the name of the guide, or Velour for the features text.
+func TestStationTitles(t *testing.T) {
+	want := map[string]string{
+		"en-texts.bbt": "Velour", "en-setup.bbt": "Setup guide", "en-bbt.bbt": "BBT guide",
+		"ru-texts.bbt": "Velour", "ru-setup.bbt": "Руководство по установке", "ru-bbt.bbt": "Руководство по BBT",
+	}
+	// The fragments have no front matter, so the test reads only the screens of a language.
+	files, err := filepath.Glob(filepath.Join("..", "..", "station", "screens", "[er][nu]-*.bbt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, file := range files {
+		front := frontMatter(t, file)
+		var titles []string
+		for _, m := range titleArg.FindAllStringSubmatch(front, -1) {
+			titles = append(titles, m[1])
+		}
+		reads := strings.Count(front, "-read\"")
+		w := want[filepath.Base(file)]
+		if len(titles) != reads || reads > 0 && w == "" {
+			t.Errorf("%s: %d reading items, %d titles", file, reads, len(titles))
+			continue
+		}
+		for _, title := range titles {
+			if title != w {
+				t.Errorf("%s: title %q, want %q", file, title, w)
+			}
 		}
 	}
 }
