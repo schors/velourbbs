@@ -52,6 +52,7 @@ type session struct {
 	ev     Events
 	cfg    config.Config
 	values Values
+	choice config.ThemeChoice // the theme choice of the session
 }
 
 // Run runs a session from the screen start with the arguments args until logoff (section 5).
@@ -64,7 +65,7 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 	if !ok {
 		ev = noEvents{}
 	}
-	ss := &session{t: t, ev: ev, cfg: cfg, values: values}
+	ss := &session{t: t, ev: ev, cfg: cfg, values: values, choice: cfg.ThemeChoice}
 	s := screens[start]
 	for {
 		it, err := ss.run(s, args)
@@ -113,7 +114,7 @@ func (ss *session) run(s *screen.Screen, args map[string]string) (screen.Item, e
 		return screen.Item{}, err
 	}
 	term := ss.t.Term()
-	v := newFileView(s, term, args, ss.cfg.SessionTheme(term.Colors), ss.values)
+	v := newFileView(s, term, args, ss.cfg.SessionTheme(ss.choice, term), ss.values)
 	n := 1
 	for {
 		p, items := v.page(n)
@@ -146,7 +147,7 @@ func (ss *session) show(s *screen.Screen, args map[string]string) (map[string]sc
 	}
 	env, items := Enabled(s, screen.Env{Term: ss.t.Term(), Args: args, Session: ss.values()})
 	first := true
-	for p := range screen.Render(s, env, ss.cfg.SessionTheme(env.Term.Colors), ss.cfg.More) {
+	for p := range screen.Render(s, env, ss.cfg.SessionTheme(ss.choice, env.Term), ss.cfg.More) {
 		if !first {
 			k, err := ss.t.Key()
 			if err != nil {
@@ -166,10 +167,10 @@ func (ss *session) show(s *screen.Screen, args map[string]string) (map[string]sc
 
 // Pages gives each page of the screen s for the terminal term with the arguments args
 // and the session and BBS fields sv: the pages of the render, or each file page of a file screen.
-// velourbbs preview uses it.
+// The theme choice is the key theme of [screen]. velourbbs preview uses it.
 func Pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[string]string,
 	sv screen.SessionValues) iter.Seq[screen.Page] {
-	theme := cfg.SessionTheme(term.Colors)
+	theme := cfg.SessionTheme(cfg.ThemeChoice, term)
 	if s.FileScreen == nil {
 		env, _ := Enabled(s, screen.Env{Term: term, Args: args, Session: sv})
 		return screen.Render(s, env, theme, cfg.More)

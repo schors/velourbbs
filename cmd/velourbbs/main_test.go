@@ -324,6 +324,52 @@ styles
 	}
 }
 
+// The dump has the colours of the session theme: [screen] theme and term.background
+// select it (screens-toml, section 3.2).
+func TestPreviewTheme(t *testing.T) {
+	dark := `page 1 80x24 fill none
+|Welcome!                                                                        |
+|[G]oodbye                                                                       |
+styles
+1: 1-8 15/4 bold, 9-80 7/0
+2: 1-9 14/0, 10-80 7/0
+`
+	light := `page 1 80x24 fill none
+|Welcome!                                                                        |
+|[G]oodbye                                                                       |
+styles
+1: 1-8 15/4 bold, 9-80 0/15
+2: 1-9 4/15, 10-80 0/15
+`
+	tests := []struct {
+		choice string
+		args   []string
+		want   string
+	}{
+		{"auto", []string{"--set", "term.background=light"}, light},
+		{"light", []string{"--set", "term.background=light"}, light},
+		{"dark", []string{"--set", "term.background=light"}, dark},
+		{"auto", nil, dark},
+		{"light", nil, light},
+	}
+	for _, tt := range tests {
+		fsys := fstest.MapFS{
+			"bbs.toml": {},
+			"screens/screens.toml": {Data: []byte("[screen]\ntheme = \"" + tt.choice + "\"\n" +
+				"[theme.default]\nnormal = \"7/0\"\ntitle = \"15/4 bold\"\nprompt = \"14\"\n" +
+				"[theme.light.default]\nnormal = \"0/15\"\nprompt = \"4\"\n")},
+			"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n" +
+				"{!title}Welcome!{!}\n{!prompt}[G]oodbye\n")},
+		}
+		var out, errOut bytes.Buffer
+		status := run(append([]string{"preview", "main"}, tt.args...), fsys, &out, &errOut)
+		if out.String() != tt.want || errOut.Len() != 0 || status != 0 {
+			t.Errorf("theme %s %q: stdout:\n%s\nstderr %q, status %d; want stdout:\n%s",
+				tt.choice, tt.args, out.String(), errOut.String(), status, tt.want)
+		}
+	}
+}
+
 func TestPreviewErrors(t *testing.T) {
 	tests := []struct {
 		dir    string
