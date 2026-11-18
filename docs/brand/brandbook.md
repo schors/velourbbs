@@ -986,11 +986,11 @@ The engine cannot show each element of this book yet. A screen of the home stati
 
 | Element | Specification or idea |
 |---|---|
-| Messages (Сообщения) | [menu-actions](https://github.com/schors/velourbbs/issues/13) (`call msg.*`), [lists](https://github.com/schors/velourbbs/issues/9) |
-| Files (Файлы) | [menu-actions](https://github.com/schors/velourbbs/issues/13) (`call file.*`), [lists](https://github.com/schors/velourbbs/issues/9) |
+| Messages (Сообщения) | none yet |
+| Files (Файлы) | none yet |
 | Code (Код) and its tree | none yet |
 | Blog (Блог) | none yet |
-| Arrow-key selection and the selection mark | [menu-actions](https://github.com/schors/velourbbs/issues/13) (marks), [lists](https://github.com/schors/velourbbs/issues/9) (row selection) |
+| Arrow-key selection and the selection mark | [marks](https://github.com/schors/velourbbs/issues/67), [lists](https://github.com/schors/velourbbs/issues/9) (row selection) |
 | The lead of the selection | none yet |
 | The card at 132 | none yet |
 | The reading screen at 132 | none yet. A file screen has one `margin` for each width ([file-view](../specs/file-view.md), section 3). |

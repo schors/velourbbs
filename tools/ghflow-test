@@ -228,6 +228,24 @@ run status 4 review
 ok
 hasnt "$LOG" "assignees"
 
+name="priority replaces the priority label"
+reset
+respond GET /issues/4 200 '{"labels":[{"name":"idea"},{"name":"backlog"},{"name":"p3"}]}'
+respond DELETE /issues/4/labels/p3 200 '[]'
+respond POST /issues/4/labels 200 '[]'
+run priority 4 p1
+ok
+has "$LOG" "DELETE /issues/4/labels/p3"
+has "$LOG" '{"labels":["p1"]}'
+hasnt "$LOG" "/labels/backlog"
+hasnt "$LOG" "assignees"
+
+name="priority refuses an unknown priority"
+reset
+run priority 4 high
+refused
+nocall
+
 name="close sets the reason"
 reset
 respond GET /issues/4 200 '{"number":4}'
