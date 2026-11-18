@@ -89,7 +89,7 @@ func (t *Terminal) Key() (string, error) {
 		if err != nil {
 			return "", err
 		}
-		// After the probe, the terminal drops the CPR replies, the option events
+		// After the probe, the terminal drops the replies, the option events
 		// and the TTYPE names.
 		for _, e := range events {
 			if n, ok := e.(telnet.NAWS); ok && n.Cols > 0 && n.Rows > 0 {
@@ -108,10 +108,10 @@ func (t *Terminal) Page(p screen.Page) error {
 }
 
 // read writes the waiting replies, then reads the input once, until the deadline dl
-// at the latest. It gives the telnet events and the CPR replies. The keys go to the queue.
+// at the latest. It gives the telnet events and the replies. The keys go to the queue.
 // The wait of the key decoder and the 10 s of a subnegotiation also end a read,
 // so a read can give nothing.
-func (t *Terminal) read(dl time.Time) ([]telnet.Event, []CPR, error) {
+func (t *Terminal) read(dl time.Time) ([]telnet.Event, []Reply, error) {
 	if len(t.out) > 0 {
 		err := t.write(t.out)
 		t.out = t.out[:0]
@@ -141,7 +141,7 @@ func (t *Terminal) read(dl time.Time) ([]telnet.Event, []CPR, error) {
 		return nil, nil, err
 	}
 	t.out = append(t.out, r.Reply...)
-	keys, cprs := t.d.Feed(now, r.Data)
+	keys, replies := t.d.Feed(now, r.Data)
 	if len(keys) > 0 {
 		t.lastKey = now
 	}
@@ -150,7 +150,7 @@ func (t *Terminal) read(dl time.Time) ([]telnet.Event, []CPR, error) {
 			t.keys = append(t.keys, k)
 		}
 	}
-	return r.Events, cprs, nil
+	return r.Events, replies, nil
 }
 
 // write writes b with the deadline output_timeout.

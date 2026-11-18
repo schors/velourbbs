@@ -42,10 +42,10 @@ const tooMany = "Too many connections. Try again later.\r\n"
 const lingerTime = time.Second
 
 // The client replies of the tests: WONT NAWS and WONT TTYPE, then the CPR reply
-// of the charset probe (UTF-8).
+// of the charset probe (UTF-8) and the DA1 reply that ends the probe.
 const (
 	wontReplies = "\xff\xfc\x1f\xff\xfc\x18"
-	cprReply    = "\x1b[1;2R"
+	probeReply  = "\x1b[1;2R\x1b[?1;2c"
 )
 
 // moreInput is client input that the host does not read before the close:
@@ -175,7 +175,7 @@ func probe(t *testing.T, c net.Conn, first string) {
 	t.Helper()
 	write(t, c, first)
 	readUntil(t, c, "\x1b[6n", 1)
-	write(t, c, cprReply)
+	write(t, c, probeReply)
 	readUntil(t, c, "Hello from main", 1)
 }
 
@@ -352,7 +352,7 @@ func TestServeProxy(t *testing.T) {
 	c1 := ts.dial(t)
 	write(t, c1, header("192.0.2.1")+"\xff\xfb\x1f\xff\xfa\x1f\x00\x50\x00\x19\xff\xf0\xff\xfc\x18")
 	out := readUntil(t, c1, "\x1b[6n", 1)
-	write(t, c1, "\x1b[1;2R")
+	write(t, c1, probeReply)
 	out += readUntil(t, c1, "Hello from main", 1)
 	if n := strings.Count(out, "\x1b[6n"); n != 1 {
 		t.Errorf("%d CPR probes, want 1: %q", n, out)
@@ -656,7 +656,7 @@ var underMinute = regexp.MustCompile(`^00:00:[0-5][0-9]$`)
 func fields(t *testing.T, c net.Conn) []string {
 	t.Helper()
 	before := time.Now().Truncate(time.Second)
-	write(t, c, cprReply)
+	write(t, c, probeReply)
 	m := fieldsRow.FindStringSubmatch(readUntil(t, c, "|E", 1))
 	after := time.Now()
 	if m == nil {

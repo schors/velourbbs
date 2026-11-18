@@ -14,11 +14,11 @@ import (
 var t0 = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 
 // decode feeds in at t0 and then ends the wait.
-func decode(in string) ([]string, []CPR) {
+func decode(in string) ([]string, []Reply) {
 	var d Decoder
-	keys, cprs := d.Feed(t0, []byte(in))
-	k, c := d.Feed(t0.Add(SeqWait), nil)
-	return append(keys, k...), append(cprs, c...)
+	keys, replies := d.Feed(t0, []byte(in))
+	k, r := d.Feed(t0.Add(SeqWait), nil)
+	return append(keys, k...), append(replies, r...)
 }
 
 func checkKeys(t *testing.T, in string, want ...string) {
@@ -327,42 +327,45 @@ func TestControlString(t *testing.T) {
 	checkKeys(t, "\x1b]4;1\x1b")
 }
 
-func TestCPR(t *testing.T) {
-	cases := map[string][]CPR{
-		"\x1b[12;80R":    {{12, 80}},
-		"\x1b[0;0R":      {{0, 0}},
-		"\x1b[1;5R":      {{1, 5}},
-		"\x1b[99999;1R":  {{99999, 1}},
-		"\x1b[007;02R":   {{7, 2}},
-		"\x1b[100000;1R": nil,
-		"\x1b[1;100000R": nil,
-		"\x1b[;5R":       nil,
-		"\x1b[5;R":       nil,
-		"\x1b[5R":        nil,
-		"\x1b[1;2;3R":    nil,
-		"\x1b[?1;2R":     nil,
-		"\x1b[1:2R":      nil,
-		"\x1b[1;2 R":     nil,
-		"\x1bOR":         nil,
+func TestReplies(t *testing.T) {
+	cases := map[string][]Reply{
+		"\x1b[12;80R":                       {{'[', "12;80R", false}},
+		"\x1b[?61;4;6c":                     {{'[', "?61;4;6c", false}},
+		"\x1b[>0;136;0c":                    {{'[', ">0;136;0c", false}},
+		"\x1b[1;5A":                         {{'[', "1;5A", false}},
+		"\x1b]4;1;rgb:cdcd/0000/0000\x1b\\": {{']', "4;1;rgb:cdcd/0000/0000", false}},
+		"\x1b]4;15;rgb:ff/ff/ff\x07":        {{']', "4;15;rgb:ff/ff/ff", true}},
+		"\x1bP1$r0;38:2::1:2:3m\x1b\\":      {{'P', "1$r0;38:2::1:2:3m", false}},
+		"\x1bP>|Ωmega ы\x07":                {{'P', ">|Ωmega ы", true}},
+		"\x1b_Gi=1;OK\x1b\\":                {{'_', "Gi=1;OK", false}},
+		"\x1b]0;a\rb\x1b\\":                 {{']', "0;a\rb", false}},
+		// Keys, a broken string and long input give no reply.
+		"\x1b[A\x1bOP\x1b[[A":                       nil,
+		"\x1b]4;1;rgb\x1bx":                         nil,
+		"\x1b]" + strings.Repeat("x", 200) + "\x07": nil,
+		"\x1b[" + strings.Repeat("1", maxSeq) + "c": nil,
+		// The limit of 128 bytes counts the terminator.
+		"\x1bP>|" + strings.Repeat("x", 122) + "\x1b\\": {{'P', ">|" + strings.Repeat("x", 122), false}},
+		"\x1bP>|" + strings.Repeat("x", 123) + "\x1b\\": nil,
+		"\x1b]" + strings.Repeat("x", 125) + "\x07":     {{']', strings.Repeat("x", 125), true}},
+		"\x1b]" + strings.Repeat("x", 126) + "\x07":     nil,
+		"\x1b[" + strings.Repeat("1", 125) + "c":        {{'[', strings.Repeat("1", 125) + "c", false}},
+		"\x1b[" + strings.Repeat("1", 126) + "c":        nil,
 	}
 	for in, want := range cases {
-		keys, got := decode(in)
-		if !slices.Equal(got, want) {
-			t.Errorf("decode(%q) CPR = %v, want %v", in, got, want)
-		}
-		if in != "\x1bOR" && len(keys) > 0 {
-			t.Errorf("decode(%q) keys = %q, want none", in, keys)
+		if _, got := decode(in); !slices.Equal(got, want) {
+			t.Errorf("decode(%q) replies = %+v, want %+v", in, got, want)
 		}
 	}
 
-	keys, cprs := decode("a\x1b[3;2Rb\x1b[24;80R")
-	if !slices.Equal(keys, []string{"a", "b"}) || !slices.Equal(cprs, []CPR{{3, 2}, {24, 80}}) {
-		t.Errorf("keys and CPR: %q, %v", keys, cprs)
+	keys, replies := decode("a\x1b[3;2Rb\x1bP0$r\x1b\\c")
+	if !slices.Equal(keys, []string{"a", "b", "c"}) || !slices.Equal(replies, []Reply{{'[', "3;2R", false}, {'P', "0$r", false}}) {
+		t.Errorf("keys and replies: %q, %+v", keys, replies)
 	}
 }
 
 // FuzzDecoderFeed checks that input in one Feed and one byte in each Feed at one time
-// give the same keys and CPRs, and that each key and CPR is valid.
+// give the same keys and replies, and that each key and reply is valid.
 func FuzzDecoderFeed(f *testing.F) {
 	for _, s := range []string{
 		"a\x1b[3;2Rb\x1b[24;80R", "\x1b[99999;1R\x1b[100000;1R", "\r\n\r\x00\n\r",
@@ -372,28 +375,28 @@ func FuzzDecoderFeed(f *testing.F) {
 		f.Add([]byte(s))
 	}
 	f.Fuzz(func(t *testing.T, in []byte) {
-		keys, cprs := decode(string(in))
+		keys, replies := decode(string(in))
 
 		var d Decoder
 		var gotKeys []string
-		var gotCPRs []CPR
+		var gotReplies []Reply
 		for i := range in {
-			k, c := d.Feed(t0, in[i:i+1])
-			gotKeys, gotCPRs = append(gotKeys, k...), append(gotCPRs, c...)
+			k, r := d.Feed(t0, in[i:i+1])
+			gotKeys, gotReplies = append(gotKeys, k...), append(gotReplies, r...)
 		}
-		k, c := d.Feed(t0.Add(SeqWait), nil)
-		gotKeys, gotCPRs = append(gotKeys, k...), append(gotCPRs, c...)
-		if !slices.Equal(gotKeys, keys) || !slices.Equal(gotCPRs, cprs) {
-			t.Fatalf("one byte in each Feed: %q %v; one Feed: %q %v", gotKeys, gotCPRs, keys, cprs)
+		k, r := d.Feed(t0.Add(SeqWait), nil)
+		gotKeys, gotReplies = append(gotKeys, k...), append(gotReplies, r...)
+		if !slices.Equal(gotKeys, keys) || !slices.Equal(gotReplies, replies) {
+			t.Fatalf("one byte in each Feed: %q %+v; one Feed: %q %+v", gotKeys, gotReplies, keys, replies)
 		}
 		for _, k := range keys {
 			if !isKey(k) {
 				t.Fatalf("key %q", k)
 			}
 		}
-		for _, c := range cprs {
-			if c.Row < 0 || c.Row > 99999 || c.Col < 0 || c.Col > 99999 {
-				t.Fatalf("CPR %v", c)
+		for _, r := range replies {
+			if !strings.ContainsRune("[]P_", rune(r.Intro)) || len(r.Body) > maxSeq-2 {
+				t.Fatalf("reply %+v", r)
 			}
 		}
 	})

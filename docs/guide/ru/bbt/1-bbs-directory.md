@@ -75,7 +75,8 @@ styles
 
 1. Выполни `velourbbs serve`. Сервер слушает порт 2323.
 2. Подключи telnet-клиент к `localhost`, порт 2323. Используй PuTTY или Tera Term:
-   они показывают UTF-8 и 256 цветов. SyncTERM и NetRunner не показывают UTF-8.
+   они показывают UTF-8. PuTTY показывает 16777216 цветов, Tera Term — 256 цветов.
+   SyncTERM и NetRunner не показывают UTF-8.
    В PuTTY выбери тип соединения «Telnet».
    Установи «Close window on exit» в «Never»: иначе PuTTY закрывает окно в конце сеанса.
 3. Нажми `G`, чтобы завершить сеанс.

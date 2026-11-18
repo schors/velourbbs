@@ -3,6 +3,7 @@ package term
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
@@ -27,8 +28,11 @@ const (
 	dont = 254
 )
 
-// dsr is the cursor position request of the charset probe.
-var dsr = []byte("\x1b[6n")
+// dsr is the cursor position request of the charset probe, da1 is the DA1 query.
+var (
+	dsr = []byte("\x1b[6n")
+	da1 = []byte("\x1b[c")
+)
 
 // client is the script of a fake telnet client.
 type client struct {
@@ -37,6 +41,7 @@ type client struct {
 	naws  []byte   // the NAWS data after WILL NAWS, 4 bytes; nil sends no NAWS
 	ttype []string // the names that the client sends for each SEND, each in its own subnegotiation
 	cpr   string   // the reply to each ESC[6n, for example "1;2"; "" gives no reply
+	term  string   // the replies to the terminal queries, sent at the DA1 query
 	early string   // data that the client sends with its first reply
 	quiet bool     // the client sends nothing
 }
@@ -137,7 +142,10 @@ func (f *fake) parse() []byte {
 				reply = append(reply, "\x1b["+f.cl.cpr+"R"...)
 			}
 			f.pos += len(dsr)
-		case bytes.HasPrefix(dsr, rest):
+		case bytes.HasPrefix(rest, da1):
+			reply = append(reply, f.cl.term...)
+			f.pos += len(da1)
+		case bytes.HasPrefix(dsr, rest) || bytes.HasPrefix(da1, rest):
 			return reply // an incomplete request
 		default:
 			f.pos++
@@ -209,47 +217,85 @@ var (
 	hostOpts = []byte{telnet.OptEcho, telnet.OptSGA, telnet.OptBinary}
 )
 
+// osc4 gives the OSC 4 replies to the indexes 0–15 with the VGA colours (section 7.3)
+// in 4-digit form and the terminator end.
+func osc4(end string) string {
+	var b strings.Builder
+	for n, c := range vga {
+		fmt.Fprintf(&b, "\x1b]4;%d;rgb:%02x%02[2]x/%02x%02[3]x/%02x%02[4]x%s", n, c>>16, c>>8&0xff, c&0xff, end)
+	}
+	return b.String()
+}
+
+// The replies of the terminals of section 5.7 in the order of the queries.
+// The research of #31 gives them.
+var (
+	st           = "\x1b\\"
+	termWT       = "\x1bP1$r0;38:2::1:2:3m" + st + "\x1b[>0;10;1c" + osc4(st) + "\x1b[?61;4;6;7;14;21;22;23;24;28;32;42;52c"
+	termXterm    = "\x1bP1$r0;38:2::1:2:3m" + st + "\x1bP>|XTerm(412)" + st + "\x1b[>41;412;0c" + osc4("\a") + "\x1b[?64;1;2;6;9;15;17;18;21;22;28c"
+	termXterm16  = "\x1bP1$r0;38:5:16m" + st + "\x1bP>|XTerm(412)" + st + "\x1b[>41;412;0c" + osc4(st) + "\x1b[?64;1;2;6;9;15;17;18;21;22;28c"
+	termTmux     = "\x1bP0$r" + st + "\x1bP>|tmux 3.6" + st + "\x1b[>84;0;0c" + osc4(st) + "\x1b[?1;2;4c"
+	termITerm2   = "\x1bP1$r0;38:2:1:1:2:3m" + st + "\x1bP>|iTerm2 3.7.7" + st + "\x1b[>64;2500;0c" + osc4(st) + "\x1b[?64;1;2;4;6;17;18;21;22;52c"
+	termGhostty  = "\x1bP1$r0;38:2::1:2:3m" + st + "\x1bP>|ghostty 1.4.0" + st + "\x1b[>1;10;0c" + osc4(st) + "\x1b[?62;22;52c"
+	termPuTTY    = "\x1b[>0;136;0c" + osc4("\a") + "\x1b[?6c"
+	termTeraTerm = "\x1bP1$r0;30m" + st + "\x1b[>32;331;0c" + osc4(st) + "\x1b[?1;2c"
+)
+
 func TestProbeClients(t *testing.T) {
-	term := func(typ string, cols, rows, colors int) screen.Term {
-		return screen.Term{Type: typ, Cols: cols, Rows: rows, Charset: "utf-8", Colors: colors}
+	term := func(typ string, cols, rows, colors int, name, images string) screen.Term {
+		return screen.Term{Type: typ, Cols: cols, Rows: rows, Charset: "utf-8", Colors: colors, Name: name, Images: images}
+	}
+	inet := func(typ, replies string) client {
+		return client{will: allOpts, do: hostOpts, naws: naws(80, 24), ttype: []string{typ}, cpr: "1;2", term: replies}
 	}
 	tests := []struct {
 		name string
 		cl   client
 		want screen.Term
 	}{
+		// The terminals of section 5.7. inetutils telnet sends $TERM in upper case.
+		{"Windows Terminal", inet("XTERM-256COLOR", termWT), term("xterm-256color", 80, 24, screen.ColorsTrue, "", "sixel")},
+		{"xterm", inet("XTERM-256COLOR", termXterm), term("xterm-256color", 80, 24, screen.ColorsTrue, "XTerm(412)", "")},
+		{"xterm without direct colour", inet("XTERM", termXterm16), term("xterm", 80, 24, 256, "XTerm(412)", "")},
+		{"tmux", inet("TMUX-256COLOR", termTmux), term("tmux-256color", 80, 24, screen.ColorsTrue, "tmux 3.6", "sixel")},
+		{"iTerm2", inet("XTERM-256COLOR", termITerm2), term("xterm-256color", 80, 24, screen.ColorsTrue, "iTerm2 3.7.7", "sixel")},
+		{"Ghostty", inet("XTERM-GHOSTTY", termGhostty), term("xterm-ghostty", 80, 24, screen.ColorsTrue, "ghostty 1.4.0", "")},
 		{"PuTTY",
-			client{will: allOpts, do: hostOpts, naws: naws(120, 40), ttype: []string{"XTERM"}, cpr: "1;2"},
-			term("xterm", 120, 40, 256)},
+			client{will: allOpts, do: hostOpts, naws: naws(120, 40), ttype: []string{"XTERM"}, cpr: "1;2", term: termPuTTY},
+			term("xterm", 120, 40, screen.ColorsTrue, "", "")},
 		{"Tera Term in line mode",
 			client{
 				will: []byte{telnet.OptNAWS, telnet.OptTTYPE, telnet.OptBinary},
 				do:   []byte{telnet.OptEcho, telnet.OptBinary},
-				naws: naws(80, 24), ttype: []string{"xterm"}, cpr: "1;2",
+				naws: naws(80, 24), ttype: []string{"xterm"}, cpr: "1;2", term: termTeraTerm,
 			},
-			term("xterm", 80, 24, 256)},
+			term("xterm", 80, 24, 256, "", "")},
+		// With only a DA1 reply, the TTYPE name gives the values.
 		// The host takes the first name and ignores the later names.
 		{"inetutils telnet",
 			client{
 				will: allOpts, do: hostOpts, naws: naws(200, 60),
-				ttype: []string{"XTERM-256COLOR", "XTERM-DIRECT"}, cpr: "3;2",
+				ttype: []string{"XTERM-256COLOR", "XTERM-DIRECT"}, cpr: "3;2", term: "\x1b[?1;2c",
 			},
-			term("xterm-256color", 200, 60, 256)},
-		{"direct colour", client{will: allOpts, naws: naws(80, 25), ttype: []string{"xterm-direct"}, cpr: "1;2"},
-			term("xterm-direct", 80, 25, screen.ColorsTrue)},
+			term("xterm-256color", 200, 60, 256, "", "")},
+		{"direct colour", client{will: allOpts, naws: naws(80, 25), ttype: []string{"xterm-direct"}, cpr: "1;2", term: "\x1b[?1;2c"},
+			term("xterm-direct", 80, 25, screen.ColorsTrue, "", "")},
 		// MTTS is a plain name.
-		{"MTTS", client{will: allOpts, naws: naws(100, 30), ttype: []string{"MTTS 13"}, cpr: "1;2"},
-			term("mtts 13", 100, 30, 256)},
+		{"MTTS", client{will: allOpts, naws: naws(100, 30), ttype: []string{"MTTS 13"}, cpr: "1;2", term: "\x1b[?1;2c"},
+			term("mtts 13", 100, 30, 256, "", "")},
 		// A NAWS with 0 gives no size.
-		{"NAWS with 0", client{will: allOpts, naws: naws(0, 30), ttype: []string{"VT100"}, cpr: "1;2"},
-			term("vt100", 80, 24, 16)},
-		{"no TTYPE", client{will: []byte{telnet.OptNAWS}, naws: naws(90, 30), cpr: "1;2"},
-			term("ansi", 90, 30, 16)},
-		// A key and a CPR reply arrive before step 4: the key goes to the queue
-		// and the reply is dropped.
+		{"NAWS with 0", client{will: allOpts, naws: naws(0, 30), ttype: []string{"VT100"}, cpr: "1;2", term: "\x1b[?1;2c"},
+			term("vt100", 80, 24, 16, "", "")},
+		{"no TTYPE", client{will: []byte{telnet.OptNAWS}, naws: naws(90, 30), cpr: "1;2", term: "\x1b[?1;2c"},
+			term("ansi", 90, 30, 16, "", "")},
+		// A key and replies arrive before step 4: the key goes to the queue
+		// and the replies are dropped.
 		{"early input",
-			client{will: allOpts, naws: naws(90, 30), ttype: []string{"A"}, cpr: "1;2", early: "x\x1b[1;3R"},
-			term("a", 90, 30, 256)},
+			client{
+				will: allOpts, naws: naws(90, 30), ttype: []string{"A"}, cpr: "1;2", term: "\x1b[?1;2c",
+				early: "x\x1b[1;3R\x1b[>0;136;0c\x1b[?1;4c",
+			},
+			term("a", 90, 30, 256, "", "")},
 	}
 	for _, tt := range tests {
 		synctest.Test(t, func(t *testing.T) {
@@ -263,13 +309,13 @@ func TestProbeClients(t *testing.T) {
 			if got := term.Term(); got != tt.want {
 				t.Errorf("%s: Term() = %+v, want %+v", tt.name, got, tt.want)
 			}
-			// One SEND after WILL TTYPE, and one charset probe.
+			// One SEND after WILL TTYPE, and one write of step 4.
 			out := f.output()
 			if n, want := f.nsend, min(len(tt.cl.ttype), 1); n != want {
 				t.Errorf("%s: %d SEND requests, want %d", tt.name, n, want)
 			}
-			if n := strings.Count(out, string(dsr)); n != 1 || !strings.Contains(out, charsetProbe) {
-				t.Errorf("%s: output %q, want one charset probe", tt.name, out)
+			if n := strings.Count(out, string(dsr)); n != 1 || !strings.Contains(out, probeWrite) {
+				t.Errorf("%s: output %q, want one write of step 4", tt.name, out)
 			}
 			if tt.cl.early != "" {
 				if k, err := term.Key(); k != "x" || err != nil {
@@ -278,6 +324,47 @@ func TestProbeClients(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProbeWrite(t *testing.T) {
+	// Section 5.7: the queries in one write, DA1 last, then the erase.
+	want := "\râ\x1b[6n\x1b[38;2;1;2;3m\x1bP$qm\x1b\\\x1b[0m\x1b[>0q\x1b[>c" +
+		"\x1b]4;0;?\x1b\\\x1b]4;1;?\x1b\\\x1b]4;2;?\x1b\\\x1b]4;3;?\x1b\\" +
+		"\x1b]4;4;?\x1b\\\x1b]4;5;?\x1b\\\x1b]4;6;?\x1b\\\x1b]4;7;?\x1b\\" +
+		"\x1b]4;8;?\x1b\\\x1b]4;9;?\x1b\\\x1b]4;10;?\x1b\\\x1b]4;11;?\x1b\\" +
+		"\x1b]4;12;?\x1b\\\x1b]4;13;?\x1b\\\x1b]4;14;?\x1b\\\x1b]4;15;?\x1b\\" +
+		"\x1b[c\r\x1b[K"
+	if probeWrite != want {
+		t.Errorf("probeWrite = %q, want %q", probeWrite, want)
+	}
+}
+
+func TestProbeLateDA1(t *testing.T) {
+	// The replies before DA1 restart the 1 s wait. Without DA1, the wait ends
+	// 1 s after the last reply, and the host keeps the replies.
+	synctest.Test(t, func(t *testing.T) {
+		cl := client{will: allOpts, naws: naws(80, 24), ttype: []string{"XTERM"}, cpr: "1;2"}
+		host, f := start(t, cl)
+		go func() {
+			time.Sleep(900 * time.Millisecond)
+			f.write("\x1bP>|tmux 3.6\x1b\\")
+			time.Sleep(900 * time.Millisecond)
+			f.write("\x1b[>84;0;0c")
+			time.Sleep(900 * time.Millisecond)
+			f.write("\x1b[>84;0;0c") // a second reply is not a reply
+		}()
+		start := time.Now()
+		term, err := Probe(host, start, testTimeouts, slog.New(slog.DiscardHandler))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if d := time.Since(start); d != 2800*time.Millisecond {
+			t.Errorf("the probe took %v; want 2.8s", d)
+		}
+		if got := term.Term(); got.Name != "tmux 3.6" || got.Colors != screen.ColorsTrue {
+			t.Errorf("Term() = %+v, want tmux 3.6 with 16777216 colours", got)
+		}
+	})
 }
 
 func TestProbeStart(t *testing.T) {
@@ -313,13 +400,20 @@ func TestProbeSendOnce(t *testing.T) {
 
 func TestProbeLog(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		cl := client{will: allOpts, naws: naws(100, 30), ttype: []string{"X\x1bTERM-256color", "VT100"}, cpr: "1;2"}
+		cl := client{
+			will: allOpts, naws: naws(100, 30), ttype: []string{"X\x1bTERM-256color", "VT100"}, cpr: "1;2",
+			term: "\x1bP1$r0;38:2::1:2:3m\x1b\\\x1bP>|X\x01Term(412)" + strings.Repeat("ы", 40) + "\x1b\\" +
+				"\x1b]4;1;rgb:cdcd/0/80\x07\x1b]4;15;rgb:f/ff/fff\x1b\\\x1b[?64;1;4c",
+		}
 		_, _, log, _, err := probeLog(t, cl, testTimeouts)
 		if err != nil {
 			t.Fatal(err)
 		}
 		want := "level=INFO msg=probe addr=192.0.2.1 ttype=XTERM-256color naws=100x30 cpr=1;2 " +
-			"type=xterm-256color cols=100 rows=30 charset=utf-8 colors=256 time=0s\n"
+			"decrqss=1$r0;38:2::1:2:3m xtversion=>|XTerm(412)" + strings.Repeat("ы", 28) + " da2=- da1=?64;1;4c " +
+			"palette=-,cd0080,-,-,-,-,-,-,-,-,-,-,-,-,-,ffffff " +
+			"type=xterm-256color cols=100 rows=30 charset=utf-8 colors=16777216 " +
+			"name=XTerm(412)" + strings.Repeat("ы", 30) + " images=sixel time=0s\n"
 		if _, line, _ := strings.Cut(log, " "); line != want {
 			t.Errorf("log %q, want %q after the time", log, want)
 		}

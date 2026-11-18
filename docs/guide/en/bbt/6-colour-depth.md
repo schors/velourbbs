@@ -3,18 +3,20 @@
 ## The depth of a terminal
 
 A terminal shows 16, 256 or 16777216 colours: its "colour depth".
-The BBS finds the depth from the terminal type that the client sends.
-The first row of the table that matches the type gives the depth:
+At the connect, the BBS asks the terminal and reads the terminal type that the client sends.
+The first row of the table that matches gives the depth:
 
-| Terminal type | Depth |
+| Terminal | Depth |
 |---|---|
-| Ends with `-direct`, or has `truecolor` or `24bit` | 16777216 |
-| Has `256color` | 256 |
-| Ends with `-16color` or `-8color`, or is `ansi`, `dumb`, `vt52`, `vt100`, `vt102`, `vt220`, `vt320`, `rxvt`, `xterm-color`, `eterm-color` or `cygwin` | 16 |
+| Shows an RGB colour, for example Windows Terminal, iTerm2, Ghostty, xterm with direct colour | 16777216 |
+| PuTTY or tmux | 16777216 |
+| Type ends with `-direct`, or has `truecolor` or `24bit` | 16777216 |
+| Type has `256color` | 256 |
+| Type ends with `-16color` or `-8color`, or is `ansi`, `dumb`, `vt52`, `vt100`, `vt102`, `vt220`, `vt320`, `rxvt`, `xterm-color`, `eterm-color` or `cygwin` | 16 |
 | Each other type, for example `xterm` | 256 |
 
-- A client without a type gets `ansi`, so 16 colours.
-- PuTTY and Tera Term send `xterm`, so 256 colours.
+- A client without a type gets `ansi`. If its terminal does not answer, it gets 16 colours.
+- Tera Term sends `xterm` and shows no RGB colour, so 256 colours.
 
 The BBS changes each colour to the nearest colour of the depth.
 At 256 colours, the cream text `#e9dccb` becomes the neutral grey 253, and the screen loses its warmth.

@@ -75,7 +75,8 @@ Full rules: [screen-render](../../../specs/screen-render.md), sections 3.2 and 3
 
 1. Run `velourbbs serve`. The server listens on port 2323.
 2. Connect a telnet client to `localhost`, port 2323. Use PuTTY or Tera Term:
-   they show UTF-8 and 256 colours. SyncTERM and NetRunner do not show UTF-8.
+   they show UTF-8. PuTTY shows 16777216 colours, Tera Term shows 256 colours.
+   SyncTERM and NetRunner do not show UTF-8.
    In PuTTY, select the connection type "Telnet".
    Set "Close window on exit" to "Never": else PuTTY closes the window at the end of the session.
 3. Press `G` to end the session.
