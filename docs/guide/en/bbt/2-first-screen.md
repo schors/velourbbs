@@ -118,7 +118,7 @@ The screen has 23 rows:
 - The closing line and the word "goodbye" are in the grey-brown `dim`.
 - The key `G` is in the orange `key` in bold.
 
-PuTTY and Tera Term show 256 colours. There the ground is dark grey.
+Tera Term shows 256 colours. There the ground is dark grey.
 Task 6 gives the styles for 256 colours.
 
 ## Result

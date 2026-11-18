@@ -173,7 +173,7 @@ func decimal(s string) (int, error) {
 	return strconv.Atoi(s)
 }
 
-// setField sets term.type or term.colors of t, or an argument of args, from "<path>=<value>".
+// setField sets a term.* field of t, or an argument of args, from "<path>=<value>".
 // term.type also gives term.colors, unless colorsSet: an explicit term.colors overrides it.
 func setField(v string, t *screen.Term, colorsSet *bool, args map[string]string) error {
 	path, value, ok := strings.Cut(v, "=")
@@ -201,8 +201,17 @@ func setField(v string, t *screen.Term, colorsSet *bool, args map[string]string)
 		}
 		t.Colors, *colorsSet = n, true
 		return nil
+	case path == "term.name":
+		t.Name = term.CleanName(value)
+		return nil
+	case path == "term.images":
+		if value != "" && value != screen.ImagesSixel {
+			return fmt.Errorf("term.images is %q, must be %s or empty", value, screen.ImagesSixel)
+		}
+		t.Images = value
+		return nil
 	}
-	return fmt.Errorf("cannot set %q: only term.type, term.colors, arg.<name>, session.* and bbs.*", path)
+	return fmt.Errorf("cannot set %q: only term.type, term.colors, term.name, term.images, arg.<name>, session.* and bbs.*", path)
 }
 
 // setSession sets the session or BBS field path of sv to value (session-fields, section 4).

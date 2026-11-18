@@ -1,8 +1,6 @@
 package term
 
 import (
-	"strconv"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -21,9 +19,12 @@ const SeqWait = time.Second
 // ESC included (section 8.2).
 const maxSeq = 128
 
-// CPR is a cursor position report ESC[<row>;<col>R with 1–5 digits in each number
-// (section 5.4). A number can be 0.
-type CPR struct{ Row, Col int }
+// Reply is a complete CSI sequence that is not a key, or a complete control string.
+// The probe takes the replies to its queries from them (sections 5.4 and 5.7).
+type Reply struct {
+	Intro byte   // the byte after ESC: '[' (CSI), ']' (OSC), 'P' (DCS) or '_' (APC)
+	Body  string // the bytes after Intro, without the terminator of a control string
+}
 
 // csiKeys maps the bytes of a CSI sequence after ESC[ to the key (section 8.2).
 var csiKeys = map[string]string{
@@ -72,7 +73,7 @@ type Decoder struct {
 	later   bool              // a byte arrived after the byte that starts the sequence
 	last    time.Time         // the arrival of the last byte while a sequence waits
 	keys    []string          // the output of Feed
-	cprs    []CPR             // the output of Feed
+	replies []Reply           // the output of Feed
 }
 
 // Deadline gives the time at which the wait for the next byte after ESC
@@ -91,9 +92,9 @@ func (d *Decoder) Deadline() (t time.Time, ok bool) {
 // Feed decodes the data bytes that arrived at the time now. All bytes of one call
 // arrive together. First Feed ends the wait when now is at or after Deadline:
 // ESC alone gives ESC, and a started sequence or control string is dropped.
-// The CPR replies are for the probe. After the probe, the caller drops them.
-func (d *Decoder) Feed(now time.Time, in []byte) (keys []string, cprs []CPR) {
-	d.keys, d.cprs = nil, nil
+// The replies are for the probe. After the probe, the caller drops them.
+func (d *Decoder) Feed(now time.Time, in []byte) (keys []string, replies []Reply) {
+	d.keys, d.replies = nil, nil
 	if dl, ok := d.Deadline(); ok && !now.Before(dl) {
 		if d.st == seqESC {
 			d.emit("ESC")
@@ -111,7 +112,7 @@ func (d *Decoder) Feed(now time.Time, in []byte) (keys []string, cprs []CPR) {
 	if len(in) > 0 && d.st != seqNone {
 		d.last = now
 	}
-	return d.keys, d.cprs
+	return d.keys, d.replies
 }
 
 // enter is step 2 of section 8.1: each Enter form becomes one CR.
@@ -150,6 +151,8 @@ func (d *Decoder) key(r rune) {
 	if d.st == seqStringESC {
 		d.st = seqNone
 		if r == '\\' { // ST ends the control string
+			d.nseq-- // the ESC of ST
+			d.reply()
 			return
 		}
 		// Another byte ends the control string. ESC is new input.
@@ -177,6 +180,7 @@ func (d *Decoder) key(r rune) {
 		switch r {
 		case 0x07: // BEL ends the control string
 			d.st = seqNone
+			d.reply()
 		case 0x1B:
 			d.st = seqStringESC
 			d.push(r)
@@ -246,36 +250,21 @@ func (d *Decoder) csi(r rune) bool {
 }
 
 // csiEnd handles a complete CSI sequence. body is the bytes after ESC[.
-// A sequence that is not a key or a CPR reply is dropped.
+// A sequence that is not a key is a reply.
 func (d *Decoder) csiEnd(body string) {
 	if k, ok := csiKeys[body]; ok {
 		d.emit(k)
 		return
 	}
-	params, ok := strings.CutSuffix(body, "R")
-	if !ok {
-		return
-	}
-	row, col, ok := strings.Cut(params, ";")
-	if !ok || !isNumber(row) || !isNumber(col) {
-		return
-	}
-	r, _ := strconv.Atoi(row)
-	c, _ := strconv.Atoi(col)
-	d.cprs = append(d.cprs, CPR{Row: r, Col: c})
+	d.reply()
 }
 
-// isNumber reports whether s has 1–5 decimal digits and nothing else (section 5.4).
-func isNumber(s string) bool {
-	if len(s) < 1 || len(s) > 5 {
-		return false
+// reply gives the complete sequence or control string as a reply,
+// unless it is longer than maxSeq.
+func (d *Decoder) reply() {
+	if !d.long {
+		d.replies = append(d.replies, Reply{Intro: d.seq[1], Body: string(d.seq[2:d.nseq])})
 	}
-	for _, c := range s {
-		if c < '0' || c > '9' {
-			return false
-		}
-	}
-	return true
 }
 
 // isFinal reports whether r is a final byte of a CSI or SS3 sequence.

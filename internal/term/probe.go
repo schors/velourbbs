@@ -13,9 +13,6 @@ import (
 // replyWait is the time without a reply that ends a wait of the probe (section 5.1).
 const replyWait = time.Second
 
-// charsetProbe is the charset probe of section 5.4 and the erase after it.
-const charsetProbe = "\râ\x1b[6n\r\x1b[K"
-
 // notUTF8Text is the text of section 5.5.
 const notUTF8Text = "\r\n" +
 	"This BBS needs a UTF-8 terminal. Your terminal uses another charset.\r\n" +
@@ -34,7 +31,7 @@ type probe struct {
 	nawsAnswered, nawsOn, nawsGot bool
 	ttypeAnswered, ttypeOn        bool
 	ttypeSent                     bool // the host sent TTYPE SEND
-	cprSent                       bool // the host sent the charset probe
+	queried                       bool // the host sent the write of step 4
 }
 
 // Probe does steps 2–5 of section 5.1 on the connection c, without the first screen.
@@ -53,9 +50,9 @@ func Probe(c Conn, accepted time.Time, to Timeouts, log *slog.Logger) (*Terminal
 
 	// Step 4.
 	if time.Now().Before(pr.end) {
-		pr.cprSent = true
-		t.out = append(t.out, charsetProbe...)
-		if err := pr.wait(true, func() bool { return pr.r.cprGot }); err != nil {
+		pr.queried = true
+		t.out = append(t.out, probeWrite...)
+		if err := pr.wait(true, pr.r.done); err != nil {
 			return nil, err
 		}
 	}
@@ -90,9 +87,9 @@ func (pr *probe) repliesDone() bool {
 }
 
 // wait reads the input until done gives true, or until no reply arrives for replyWait,
-// or until the end of the probe (section 5.1). In step 4 (cpr is true), only a CPR reply
-// is a reply. In step 3, only a reply of step 3.
-func (pr *probe) wait(cpr bool, done func() bool) error {
+// or until the end of the probe (section 5.1). In step 4 (step4 is true), only the first
+// reply to a query of step 4 is a reply. In step 3, only a reply of step 3.
+func (pr *probe) wait(step4 bool, done func() bool) error {
 	last := time.Now()
 	for !done() {
 		dl := last.Add(replyWait)
@@ -102,20 +99,21 @@ func (pr *probe) wait(cpr bool, done func() bool) error {
 		if !time.Now().Before(dl) {
 			return nil
 		}
-		events, cprs, err := pr.t.read(dl)
+		events, replies, err := pr.t.read(dl)
 		if err != nil {
 			return err
 		}
-		if step3, step4 := pr.handle(events, cprs); cpr && step4 || !cpr && step3 {
+		if got3, got4 := pr.handle(events, replies); step4 && got4 || !step4 && got3 {
 			last = time.Now()
 		}
 	}
 	return nil
 }
 
-// handle handles the events and the CPR replies of one read. step3 is true when
-// a reply of step 3 arrived, step4 when a CPR reply arrived (section 5.1).
-func (pr *probe) handle(events []telnet.Event, cprs []CPR) (step3, step4 bool) {
+// handle handles the events and the replies of one read. step3 is true when
+// a reply of step 3 arrived, step4 when the first reply to a query of step 4 arrived
+// (section 5.1).
+func (pr *probe) handle(events []telnet.Event, replies []Reply) (step3, step4 bool) {
 	for _, e := range events {
 		switch e := e.(type) {
 		case telnet.Option:
@@ -145,9 +143,11 @@ func (pr *probe) handle(events []telnet.Event, cprs []CPR) (step3, step4 bool) {
 			}
 		}
 	}
-	// A CPR reply before step 4 is dropped.
-	if len(cprs) > 0 && pr.cprSent && !pr.r.cprGot {
-		pr.r.cpr, pr.r.cprGot, step4 = cprs[0], true, true
+	// A reply before step 4 is dropped.
+	for _, rp := range replies {
+		if pr.queried && pr.r.add(rp) {
+			step4 = true
+		}
 	}
 	return step3, step4
 }
@@ -156,7 +156,7 @@ func (pr *probe) handle(events []telnet.Event, cprs []CPR) (step3, step4 bool) {
 func (pr *probe) log(log *slog.Logger, accepted time.Time, term screen.Term, utf8 bool) {
 	ttype := "-"
 	if pr.r.ttypeGot {
-		ttype = cleanName(pr.r.ttype)
+		ttype = CleanName(pr.r.ttype)
 	}
 	naws := "-"
 	if pr.r.naws.Cols > 0 {
@@ -172,7 +172,9 @@ func (pr *probe) log(log *slog.Logger, accepted time.Time, term screen.Term, utf
 	}
 	log.Info("probe",
 		"ttype", ttype, "naws", naws, "cpr", cpr,
+		"decrqss", logReply(pr.r.decrqss), "xtversion", logReply(pr.r.xtversion),
+		"da2", logReply(pr.r.da2), "da1", logReply(pr.r.da1), "palette", pr.r.logPalette(),
 		"type", term.Type, "cols", term.Cols, "rows", term.Rows,
-		"charset", charset, "colors", term.Colors,
+		"charset", charset, "colors", term.Colors, "name", term.Name, "images", term.Images,
 		"time", time.Since(accepted))
 }

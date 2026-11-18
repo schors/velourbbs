@@ -4,10 +4,10 @@ import (
 	"strings"
 
 	"github.com/schors/velourbbs/internal/screen"
-	"github.com/schors/velourbbs/internal/telnet"
 )
 
-// typeLen is the maximum number of graphemes of a TTYPE name (section 6).
+// typeLen is the maximum number of graphemes of a client text: a TTYPE name,
+// term.name and a reply in the log (sections 5.6 and 6).
 const typeLen = 40
 
 // The default size (section 5.2).
@@ -22,9 +22,9 @@ var names16 = map[string]bool{
 	"vt320": true, "rxvt": true, "xterm-color": true, "eterm-color": true, "cygwin": true,
 }
 
-// cleanName removes the control characters of a TTYPE name and cuts it
-// to typeLen graphemes (section 6). It keeps the case.
-func cleanName(name string) string {
+// CleanName removes the control characters of a client text and cuts it
+// to typeLen graphemes (sections 5.6 and 6). It keeps the case.
+func CleanName(name string) string {
 	var b strings.Builder
 	for i, g := range screen.CleanValue(name) {
 		if i == typeLen {
@@ -39,7 +39,7 @@ func cleanName(name string) string {
 // the clean name in lower case, or ansi for an empty name, and its colour depth.
 func TypeColors(name string) (typ string, colors int) {
 	typ = "ansi"
-	if c := cleanName(name); c != "" {
+	if c := CleanName(name); c != "" {
 		typ = strings.ToLower(c)
 	}
 	return typ, colorDepth(typ)
@@ -61,27 +61,4 @@ func colorDepth(typ string) int {
 // clamp gives the size cols x rows in the range of section 5.2.
 func clamp(cols, rows int) (int, int) {
 	return min(max(cols, screen.MinCols), screen.MaxCols), min(max(rows, screen.MinRows), screen.MaxRows)
-}
-
-// replies holds the replies of the probe.
-type replies struct {
-	ttype    string      // the first TTYPE name, as sent
-	ttypeGot bool        // the first TTYPE name arrived
-	naws     telnet.NAWS // the last NAWS without 0 in a dimension; zero is no size
-	cpr      CPR         // the reply to the charset probe
-	cprGot   bool        // the reply to the charset probe arrived
-}
-
-// values gives the terminal values of section 6. utf8 is false when the charset probe
-// gives "not UTF-8" (section 5.4).
-func (r *replies) values() (t screen.Term, utf8 bool) {
-	t = screen.Term{Charset: "utf-8"}
-	t.Type, t.Colors = TypeColors(r.ttype)
-	utf8 = !r.cprGot || r.cpr.Col != 3
-	t.Cols, t.Rows = r.naws.Cols, r.naws.Rows
-	if t.Cols == 0 {
-		t.Cols, t.Rows = defaultCols, defaultRows
-	}
-	t.Cols, t.Rows = clamp(t.Cols, t.Rows)
-	return t, utf8
 }

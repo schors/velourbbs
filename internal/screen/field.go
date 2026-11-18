@@ -42,6 +42,8 @@ const (
 	termRows
 	termCharset
 	termColors
+	termName
+	termImages
 )
 
 // termFields is the term.* fields of the registry of section 4.1.
@@ -54,6 +56,8 @@ var termFields = [...]struct {
 	termRows:    {"term.rows", TypeInt},
 	termCharset: {"term.charset", TypeString},
 	termColors:  {"term.colors", TypeInt},
+	termName:    {"term.name", TypeString},
+	termImages:  {"term.images", TypeString},
 }
 
 // fileField is a file.* field of a file screen (file-view, section 3.4).
@@ -293,6 +297,8 @@ type Term struct {
 	Rows    int
 	Charset string
 	Colors  int
+	Name    string
+	Images  string
 }
 
 // The ranges of term.cols and term.rows (section 4.1).
@@ -309,6 +315,9 @@ const (
 	Colors256  = 256
 	ColorsTrue = 16777216
 )
+
+// ImagesSixel is the value of term.images for a terminal with sixel (section 4.1).
+const ImagesSixel = "sixel"
 
 // Check reports an error when term.cols, term.rows or term.colors
 // is outside the values of section 4.1.
@@ -406,6 +415,10 @@ func (e *Env) value(r Ref) any {
 		return e.Term.Rows
 	case termCharset:
 		return e.Term.Charset
+	case termName:
+		return e.Term.Name
+	case termImages:
+		return e.Term.Images
 	}
 	return e.Term.Colors
 }

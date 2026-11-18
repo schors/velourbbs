@@ -19,8 +19,8 @@ func TestCleanName(t *testing.T) {
 		strings.Repeat("é", 45): strings.Repeat("é", typeLen),
 	}
 	for in, want := range tests {
-		if got := cleanName(in); got != want {
-			t.Errorf("cleanName(%q) = %q, want %q", in, got, want)
+		if got := CleanName(in); got != want {
+			t.Errorf("CleanName(%q) = %q, want %q", in, got, want)
 		}
 	}
 }
