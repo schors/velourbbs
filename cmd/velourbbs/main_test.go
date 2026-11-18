@@ -554,6 +554,29 @@ func TestPreviewKeysPages(t *testing.T) {
 	}
 }
 
+// The default bbs.time of preview is the reference clock in [screen] zone; Local gives UTC
+// (session-fields, section 4).
+func TestPreviewZone(t *testing.T) {
+	tests := []struct{ zone, want string }{
+		{"", "2006-01-02 15:04 UTC"},
+		{"zone = \"Local\"", "2006-01-02 15:04 UTC"},
+		{"zone = \"UTC\"", "2006-01-02 15:04 UTC"},
+		{"zone = \"Europe/Berlin\"", "2006-01-02 15:04 CET"},
+	}
+	for _, tt := range tests {
+		fsys := fstest.MapFS{
+			"bbs.toml":             {Data: []byte("")},
+			"screens/screens.toml": {Data: []byte("[screen]\ntime = \"2006-01-02 15:04 MST\"\n" + tt.zone + "\n")},
+			"screens/main.bbt":     {Data: []byte("+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n{bbs.time}\n")},
+		}
+		var out, errOut bytes.Buffer
+		status := run([]string{"preview", "main", "--size", "40x10"}, fsys, &out, &errOut)
+		if !strings.Contains(out.String(), "|"+tt.want+" ") || errOut.String() != "" || status != 0 {
+			t.Errorf("%q: stdout:\n%s\nstderr %q, status %d; want %q", tt.zone, out.String(), errOut.String(), status, tt.want)
+		}
+	}
+}
+
 func TestUsage(t *testing.T) {
 	tests := []struct {
 		args []string

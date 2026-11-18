@@ -46,7 +46,7 @@ do = "logoff"
 
 
 
-              {!hi}1 2{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To entry{!}    {!hi}Q{!} {!ctl}Quit{!}
+              {!hi}1 2{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To entry{!}    {!hi}Q{!} {!ctl}Quit{!}                                                           {!dim}{ bbs.time}{!}
 {#else}
 
 {>_logo-80-4}
@@ -65,5 +65,5 @@ do = "logoff"
 
 
 
-    {!hi}1 2{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To entry{!}    {!hi}Q{!} {!ctl}Quit{!}
+    {!hi}1 2{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To entry{!}    {!hi}Q{!} {!ctl}Quit{!}                   {!dim}{ bbs.time}{!}
 {/if}

@@ -36,10 +36,13 @@ The other specifications define the effect of a key and refer to this specificat
 | `valign` | string | `"top"` | The vertical position of a screen: [bbt-format](bbt-format.md), section 6.5. |
 | `fill` | string | `"none"` | The fill rows: [bbt-format](bbt-format.md), section 6.5. |
 | `time` | string | `"2006-01-02 15:04:05"` | The layout of the Go package `time` for the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
+| `zone` | string | `"Local"` | The time zone of the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 | `theme` | string | `"dark"` | The theme choice at the start of a session: `dark`, `light` or `auto` (section 3.2). |
 
 - `width`, `align`, `valign` and `fill` have the rules of the front matter keys
   ([bbt-format](bbt-format.md), section 3.2).
+- `zone` is `"Local"`, `"UTC"` or a name of the IANA time zone database. Example: `"Europe/Berlin"`.
+  The binary has the database, so each name works on each host. Another value is an error.
 - `more` cannot have a control character, a grapheme of width 0 or a grapheme
   of more than 32 bytes ([bbt-format](bbt-format.md), section 2.1).
 

@@ -22,6 +22,7 @@ Velour replaces a colour that the terminal does not have with the nearest one.
 
 Fields show the data of the session and of the station: the address of the guest, the time online,
 the BBS name, the Velour version, the open sessions, the server time and the uptime.
+The sysop sets the form and the time zone of the server time.
 
 ## Menus
 

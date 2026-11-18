@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"maps"
 	"slices"
+	"time"
 
 	"github.com/schors/velourbbs/internal/screen"
 	"github.com/schors/velourbbs/internal/tomlcheck"
@@ -35,6 +36,7 @@ type screensDoc struct {
 		Fill   *string  `toml:"fill"`
 		More   *string  `toml:"more"`
 		Time   *string  `toml:"time"`
+		Zone   *string  `toml:"zone"`
 		Theme  *string  `toml:"theme"`
 	} `toml:"screen"`
 	Theme struct {
@@ -58,7 +60,7 @@ type screensDoc struct {
 // It gives at most screen.MaxFileDiags diagnostics (screen-render, section 3.1).
 func parseScreens(data []byte) (Config, screen.Diags) {
 	cfg := Config{
-		Layout: defaultLayout, More: defaultMore, Time: defaultTime, Fields: screen.Fields{}, Start: "main",
+		Layout: defaultLayout, More: defaultMore, Time: defaultTime, Zone: time.Local, Fields: screen.Fields{}, Start: "main",
 		ThemeChoice: ThemeDark, Telnet: defaultTelnet, Name: defaultName,
 	}
 	fd := screen.FileDiags{File: ScreensFile}
@@ -84,6 +86,14 @@ func parseScreens(data []byte) (Config, screen.Diags) {
 	}
 	if p := d.Screen.Time; p != nil {
 		cfg.Time = *p
+	}
+	if p := d.Screen.Zone; p != nil {
+		// LoadLocation gives UTC for an empty name: the key wants a name.
+		if loc, err := time.LoadLocation(*p); err != nil || *p == "" {
+			errorf("screen.zone: unknown time zone %q", *p)
+		} else {
+			cfg.Zone = loc
+		}
 	}
 	if p := d.Screen.Theme; p != nil {
 		switch c := ThemeChoice(*p); c {
