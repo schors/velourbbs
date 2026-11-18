@@ -649,12 +649,14 @@ const fieldsScreen = "+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n" +
 // underMinute matches a duration of less than one minute in the duration form.
 var underMinute = regexp.MustCompile(`^00:00:[0-5][0-9]$`)
 
-// fields reads from c until the row of fieldsScreen and gives session.ip, bbs.name,
-// bbs.version and bbs.sessions. It checks bbs.time against the time before and after
-// the read, and session.online and bbs.uptime against one minute.
+// fields writes the reply to the cursor probe on c, reads until the row of fieldsScreen
+// and gives session.ip, bbs.name, bbs.version and bbs.sessions. It checks bbs.time
+// against the time before the write and after the read, and session.online and bbs.uptime
+// against one minute.
 func fields(t *testing.T, c net.Conn) []string {
 	t.Helper()
 	before := time.Now().Truncate(time.Second)
+	write(t, c, cprReply)
 	m := fieldsRow.FindStringSubmatch(readUntil(t, c, "|E", 1))
 	after := time.Now()
 	if m == nil {
@@ -683,7 +685,6 @@ func TestServeFields(t *testing.T) {
 	c1 := ts.dial(t)
 	write(t, c1, header("192.0.2.1")+wontReplies)
 	readUntil(t, c1, "\x1b[6n", 1)
-	write(t, c1, cprReply)
 	if got, want := fields(t, c1), []string{"192.0.2.1", "Test BBS", testVersion, "1"}; !slices.Equal(got, want) {
 		t.Errorf("session 1: fields %q, want %q", got, want)
 	}
@@ -694,12 +695,10 @@ func TestServeFields(t *testing.T) {
 	c3 := ts.dial(t)
 	write(t, c3, header("192.0.2.3")+wontReplies)
 	readUntil(t, c3, "\x1b[6n", 1)
-	write(t, c3, cprReply)
 	if got, want := fields(t, c3), []string{"192.0.2.3", "Test BBS", testVersion, "2"}; !slices.Equal(got, want) {
 		t.Errorf("session 3: fields %q, want %q", got, want)
 	}
 	// c2 ends the probe after c3: its session is the third.
-	write(t, c2, cprReply)
 	if got := fields(t, c2); got[3] != "3" {
 		t.Errorf("session 2: bbs.sessions %q, want 3", got[3])
 	}
