@@ -90,12 +90,14 @@ and writes its cell dump to the standard output.
 - It does the checks of `velourbbs check` first. After an error it writes no dump
   and exits with status 1.
 - The default size is 80x24. `--size` is the only way to set the size.
-- `--set` sets `term.type`, `term.colors`, `term.name`, `term.images`, `arg.<name>` or a field of
-  [session-fields](session-fields.md), section 4. Example: `--set term.colors=256`.
-  The defaults are `xterm`, 256 and empty. `term.charset` is `utf-8`.
+- `--set` sets `term.type`, `term.colors`, `term.name`, `term.images`, `term.ambiguous`,
+  `arg.<name>` or a field of [session-fields](session-fields.md), section 4.
+  Example: `--set term.colors=256`.
+  The defaults are `xterm`, 256, empty, empty and 1. `term.charset` is `utf-8`.
   For `term.name`, the host removes the control characters and cuts the text to 40 graphemes
   ([telnet-term](telnet-term.md), section 6), with no case change and no default.
-  `term.images` is `sixel` or empty.
+  `term.images` is `sixel` or empty. `term.ambiguous` is `1` or `2`.
+  It does not change the dump.
 - Each argument of the screen needs `--set arg.<name>=<value>`
   ([bbt-format](bbt-format.md), section 8.5). A missing argument, another argument and
   an invalid value are invalid arguments. A content file of a value has the checks of

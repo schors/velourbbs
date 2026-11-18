@@ -113,7 +113,7 @@ The host keeps the state of each option for each side, as in RFC 1143:
    If a limit is reached, send an ASCII line and close (section 9.2).
 2. Send the requests of section 4.1. After `WILL TTYPE`, send TTYPE `SEND` (section 5.3).
 3. Wait for the replies (below).
-4. Send the charset probe (section 5.4) and the terminal queries (section 5.7) in one write.
+4. Send the CPR probes (section 5.4) and the terminal queries (section 5.7) in one write.
    Wait for the replies (below).
 5. Decide the terminal values (section 6). Show the first screen. It clears the probe output.
 
@@ -142,18 +142,30 @@ The host keeps the state of each option for each side, as in RFC 1143:
 - The host sends `SEND` once. The first TTYPE name is the terminal name.
 - The host ignores each later TTYPE subnegotiation.
 
-### 5.4. Charset probe
+### 5.4. CPR probes
 
-The charset probe is `CR`, U+00E2 (`â`, bytes `C3 A2`), `ESC[6n`. `CR ESC[K` after the queries
-of section 5.7 erases the probe.
-The reply is a CPR: `ESC[<row>;<col>R`.
+Each CPR probe writes one character at the start of the line and asks for the cursor position:
+
+| Probe | Bytes | Measures |
+|---|---|---|
+| Charset probe | `CR`, U+00E2 (`â`, bytes `C3 A2`), `ESC[6n` | The charset. |
+| Ambiguous probe | `CR`, U+0436 (`ж`, bytes `D0 B6`), `ESC[6n` | The cells of an East Asian Ambiguous character. |
+
+The charset probe goes first. `CR ESC[K` after the queries of section 5.7 erases the probes.
+The reply is a CPR: `ESC[<row>;<col>R`. The first CPR reply is the reply to the charset probe.
+The second CPR reply is the reply to the ambiguous probe.
 
 - A number of the reply has 1–5 digits. Else the host drops the reply.
 - Charset: the reply column 2 means UTF-8. The column 3 means "not UTF-8":
   the cursor moved by the byte count of `â`. Each other reply, or no reply, means UTF-8.
-- U+00E2 has the East Asian Width N, so a CJK terminal also shows it in one cell. Both
-  of its bytes are printable characters in ISO-8859-1, CP437, CP866 and KOI8-R. A byte from
-  0x80 to 0x9F is a C1 control in some 8-bit terminals, so the probe does not use one.
+- Ambiguous width: the reply column 3 gives `term.ambiguous` 2. Each other reply,
+  or no reply, gives 1.
+- U+00E2 has the East Asian Width N, so a CJK terminal also shows it in one cell.
+- U+0436 has the East Asian Width A. Windows Terminal keeps U+2500–U+259F narrow
+  in its wide mode, but makes Cyrillic wide. So the probe uses a Cyrillic letter,
+  not a box drawing character.
+- The bytes of both characters are printable characters in ISO-8859-1, CP437, CP866 and KOI8-R.
+  A byte from 0x80 to 0x9F is a C1 control in some 8-bit terminals, so the probes do not use one.
 
 ### 5.5. Not UTF-8
 
@@ -170,7 +182,7 @@ Each line ends with CR LF. The text starts with `CR LF`.
 ### 5.6. Log
 
 At the end of the probe, the host logs one line: the address, the TTYPE name,
-the NAWS size, the CPR reply, the replies of section 5.7, the terminal values of section 6
+the NAWS size, the CPR replies, the replies of section 5.7, the terminal values of section 6
 and the probe time. So the colour rules can be tuned.
 
 - In the TTYPE name and in the replies to DECRQSS, DA1, DA2 and XTVERSION, the host removes
@@ -188,7 +200,7 @@ Step 4 of section 5.1 sends this write:
 
 | Query | Bytes | Reply |
 |---|---|---|
-| Charset probe | Section 5.4. | CPR. |
+| CPR probes | Section 5.4. | Two CPRs. |
 | DECRQSS for SGR | `ESC[38;2;1;2;3m`, `ESC P $ q m ST`, `ESC[0m` | `ESC P 1 $ r <parameters> m ST`, or `ESC P 0 $ r ST`. |
 | XTVERSION | `ESC[>0q` | `ESC P >| <text> ST`. |
 | DA2 | `ESC[>c` | `ESC[> <parameters> c`. |
@@ -200,7 +212,7 @@ Step 4 of section 5.1 sends this write:
 
 - DA1 goes last. Each target terminal answers DA1 and sends its replies in the order
   of the queries. So the DA1 reply comes after the other replies.
-- The CPR goes first. Windows Terminal 1.25 and later can send its own CPR query after
+- The CPR probes go first. Windows Terminal 1.25 and later can send its own CPR query after
   an unknown sequence and take the next CPR reply.
 - PuTTY sends no reply to an OSC 4 query with more than one index. So each index has its own query.
 - tmux 3.6 and later sends OSC 4 to the outer terminal. It delays its next replies until
@@ -242,6 +254,7 @@ Reply rules:
 | `term.colors` | `16`, `256` or `16777216`. |
 | `term.name` | The `<text>` of the XTVERSION reply (section 5.7). Without a reply, empty. |
 | `term.images` | `sixel` when the DA1 reply has the feature `4` (section 5.7). Else empty. |
+| `term.ambiguous` | `1` or `2`: the ambiguous probe (section 5.4). |
 
 - `term.type` and `term.name` are untrusted client input. The host removes the control
   characters and cuts the text to 40 graphemes. A name that is empty after this counts as no name.
@@ -249,6 +262,24 @@ Reply rules:
 - `term.name` is for display only. Screens must not select output by it.
 - `term.images` is for a future image output. Today no output uses it.
   Tera Term with the terminal ID VT282 or VT382 (not the default) has the feature `4`, but no sixel.
+- `term.ambiguous` 2 comes from a setting of the terminal. Each setting is off by default:
+
+  | Terminal | Setting |
+  |---|---|
+  | PuTTY | Window > Translation: "Treat CJK ambiguous characters as wide". |
+  | Tera Term | `UnicodeAmbiguousWidth`. The installer sets it to 2 when the Windows UI language is Chinese, Japanese or Korean. |
+  | xterm | `cjkWidth`. |
+  | iTerm2 | Profiles > Text, the profile key `Ambiguous Double Width`. |
+  | Windows Terminal 1.25 and later | `compatibility.ambiguousWidth`. It keeps U+2500–U+259F narrow. |
+  | VTE (GNOME Terminal) | `cjk-utf8-ambiguous-width`. |
+
+  Ghostty, cmux and tmux have no such setting. They show these characters in one cell.
+- The layout does not use `term.ambiguous`: with 2, the columns of a page move,
+  and frames and art break. A screen can show the user how to turn the setting off.
+  The host cannot fix the layout: no target terminal switches the setting by an escape
+  sequence, and a write to the second cell of a wide character erases the character.
+- tmux answers the CPR with its own widths. When the outer terminal shows ambiguous
+  characters as wide, `term.ambiguous` is 1.
 - Colour depth: the first rule that matches gives it:
   1. the DECRQSS reply is the RGB reply (section 5.7): 16777216;
   2. the DA2 reply is in the client table below: 16777216;
@@ -338,6 +369,16 @@ The host reduces each colour of a cell to `term.colors` before the output:
 ### 7.4. Encoder
 
 The encoder writes each grapheme in UTF-8. 8-bit charsets are later encoders.
+
+After a grapheme of more than one code point, the encoder sends `ESC[<col>G` when a cell
+of the row follows the grapheme. `<col>` is the terminal column of the next cell.
+
+- Terminals give different widths to these graphemes. An emoji with VS16 (`❤️`) takes one cell
+  in PuTTY, xterm, Tera Term and VTE with their default settings. A ZWJ sequence (`👨‍👩‍👧`)
+  takes two cells for each emoji in PuTTY, xterm and VTE.
+- With `ESC[<col>G`, the next cells stay in their columns. A terminal that shows the grapheme
+  narrow leaves an empty cell after it. A terminal that shows it wide shows the next cells
+  over the end of the grapheme.
 
 ## 8. Key decoder
 
@@ -526,7 +567,7 @@ At SIGINT or SIGTERM, the host does these steps:
 - Charset negotiation (telnet CHARSET, RFC 2066).
 - 8-bit charset output. CP437 is the first encoder, for SyncTERM and NetRunner.
 - Terminals without ANSI and monochrome output.
-- Detection of terminals that show ambiguous-width characters as wide.
+- A layout for terminals that show ambiguous-width characters as wide (section 6).
 - Mouse input.
 - MUD clients (Mudlet, TinTin++). Mudlet does not execute `ESC[2J` and cursor positions,
   so a page becomes one line.
