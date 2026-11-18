@@ -65,7 +65,7 @@ The front matter is TOML 1.1. An unknown key is an error.
 | `valign` | string | The vertical position: `"top"`, `"middle"` or `"bottom"`. Section 6.5. |
 | `fill` | string | The fill rows: `"none"`, `"spaces"` or `"erase"`. Section 6.5. |
 | `file`, `lines`, `numbers`, `margin` | — | The file of a file screen: [file-view](file-view.md), section 3. |
-| `[[item]]` | array of tables | Menu items with `key`, `do`, an optional `when` and optional `args`. Section 8. |
+| `[[item]]` | array of tables | Menu items with `key`, `do`, an optional `when` and optional `args`. Section 8. An array of inline tables is the same: `item = [{ key = "G", do = "logoff" }]`. |
 
 Example:
 
@@ -90,7 +90,7 @@ do = "logoff"
 
 ### 3.3. Tokens
 
-`{` starts a token when an ASCII letter, a space, `#`, `/`, `!`, `>` or `@` follows it.
+`{` starts a token when an ASCII letter, a space or ASCII punctuation other than `{` and `}` follows it.
 Each other `{` is a plain character. In the body, `{{` gives a plain `{`.
 A token ends at the first `}` on the same line. A token without `}` is an error.
 In art, only [art-format](art-format.md), section 4, defines the field tokens.
@@ -106,6 +106,7 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `{><name>.ans}` | Art insert of `screens/<name>.ans`. Sections 3.4 and 6.2. |
 | `{>file}` | The file area of a file screen: [file-view](file-view.md), section 3.1. |
 | `{@<id>}` `{/@}` | Reserved for marks. An error in the MVP. |
+| `{<punctuation>...}` | Each other token that starts with ASCII punctuation is reserved for new tokens. An error. |
 
 - The width of a fixed-width field includes the braces. Example: `{term.type      }` is 17 cells.
 - A field token with spaces on both sides of the path is an error.

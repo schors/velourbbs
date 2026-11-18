@@ -130,9 +130,13 @@ type piece struct {
 }
 
 // isTokenStart reports whether "{" and c start a token (section 3.3).
+// The ASCII punctuation without a token meaning is reserved: its tokens are errors.
 func isTokenStart(c byte) bool {
-	return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || strings.IndexByte(" #/!>@", c) >= 0
+	return 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' || c == ' ' || strings.IndexByte(asciiPunct, c) >= 0
 }
+
+// asciiPunct is the ASCII punctuation that can start a token: all except "{" and "}".
+const asciiPunct = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~"
 
 // pieces splits a line into text runs and tokens. "{{" is a run of one "{".
 func (s *scanner) pieces(row int, line string) []piece {
@@ -203,7 +207,11 @@ func (s *scanner) line(row int, line string) {
 		case '@':
 			s.d.Errorf(row, p.col, "marks are not supported")
 		default:
-			s.field(pos, p.text)
+			if strings.IndexByte(asciiPunct, p.text[0]) >= 0 {
+				s.d.Errorf(row, p.col, "unknown token %q", "{"+p.text+"}")
+			} else {
+				s.field(pos, p.text)
+			}
 		}
 	}
 	if len(text) > 0 {
