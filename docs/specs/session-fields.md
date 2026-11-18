@@ -116,7 +116,9 @@ the online time, the BBS name, the version, the open sessions, the server time a
   `bbs.sessions` counts two open sessions and not a connection in the probe.
 - Golden cell dumps of `velourbbs preview` show each field with the values of section 4,
   without `--set` and with `--set` for each field.
-- A test covers an invalid `--set` value of a string field and of `bbs.sessions`.
+- A test covers an invalid `--set` value of a string field, of `bbs.sessions` and of `session.theme`.
+- A golden output of `velourbbs preview --keys` shows an item with the action `theme`
+  that changes `session.theme` and the theme, in a screen and in a file screen.
 
 ## 7. Not in this specification
 

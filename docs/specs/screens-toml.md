@@ -52,7 +52,7 @@ section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), sectio
   `[theme.16]` and `[theme.256]` are the "depth themes". A depth theme gives other styles
   for one colour depth `term.colors` ([telnet-term](telnet-term.md), section 6).
 - `[theme.light]` has only the tables `default`, `16` and `256`: the "light tables".
-  They give other styles for a terminal with a light background.
+  They give other styles in the light theme (below).
 - A style name matches `[a-z][a-z0-9_]*`. Its value is a string.
 - The "base theme" is `normal = "7/0"`, `more = "15/0"`, the `md_*` styles of
   [file-view](file-view.md), section 4, and the styles of `[theme.default]`.
@@ -66,6 +66,7 @@ section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), sectio
 - The "light theme" of one `term.colors` is the dark theme with each style
   of `[theme.light.default]`, then each style of the light table of `term.colors`,
   in place of the style with the same name.
+  When `term.colors` has no light table, only `[theme.light.default]` applies.
 - The "theme choice" of a session is `dark`, `light` or `auto`. It starts as `[screen] theme`.
   The action `theme` changes it ([menu-nav](menu-nav.md), section 4).
   The field `session.theme` gives it ([session-fields](session-fields.md), section 2).
@@ -73,7 +74,8 @@ section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), sectio
   or when it is `auto` and `term.background` is `light` ([telnet-term](telnet-term.md), section 6).
   Else it is the dark theme of `term.colors`.
 - A style of the session theme without a foreground or a background takes it
-  from `normal` of the session theme. `normal` takes it from `7/0`.
+  from `normal` of the session theme. `normal` takes it from `7/0` in the dark theme
+  and from `0/15` in the light theme.
 
 Example:
 

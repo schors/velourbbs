@@ -288,7 +288,7 @@ attr   = "bold" | "underline" | "blink" ;
 ### 7.3. Theme and style tokens
 
 - The theme in `screens/screens.toml` maps a style name to a style. A depth theme replaces
-  styles for one `term.colors`. A light table replaces styles for a light background.
+  styles for one `term.colors`. A light table replaces styles in the light theme.
   [screens-toml](screens-toml.md), section 3.2, gives the session theme.
 - A theme style is a style of the session theme.
 - `{!<name>}` sets the whole theme style `<name>`. A name that is not a name of the theme

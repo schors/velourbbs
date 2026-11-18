@@ -222,8 +222,11 @@ Step 4 of section 5.1 sends this write:
 - PuTTY 0.71 and later answer OSC 4 for the indexes 256 (the default foreground)
   and 258 (the default background). PuTTY answers no OSC 10 and no OSC 11.
   Other terminals answer the indexes 256 and 258 with other colours or ignore them:
-  xterm and Tera Term give special colours, iTerm2 gives black, tmux and Ghostty send no reply.
+  xterm and Tera Term give special colours, Windows Terminal 1.22 and later give reserved
+  entries, iTerm2 gives black, tmux and Ghostty send no reply.
   No target terminal shows these queries as text.
+  The host sends these two queries to each terminal, because the one write goes before
+  the DA2 reply. It uses their replies only for PuTTY (section 6).
 - Windows Terminal 1.22 and later, xterm, tmux, iTerm2, Ghostty, cmux and Tera Term answer
   OSC 10 and OSC 11. tmux answers with the colours of the pane or of the outer terminal,
   and sends no reply when it does not know the colour. tmux does not delay its next replies
