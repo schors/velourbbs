@@ -91,13 +91,18 @@ and writes its cell dump to the standard output.
   and exits with status 1.
 - The default size is 80x24. `--size` is the only way to set the size.
 - `--set` sets `term.type`, `term.colors`, `term.name`, `term.images`, `term.ambiguous`,
+  `term.bg_color`, `term.fg_color`, `term.background`,
   `arg.<name>` or a field of [session-fields](session-fields.md), section 4.
   Example: `--set term.colors=256`.
-  The defaults are `xterm`, 256, empty, empty and 1. `term.charset` is `utf-8`.
+  The defaults are `xterm`, 256, empty, empty, 1, empty, empty and empty. `term.charset` is `utf-8`.
   For `term.name`, the host removes the control characters and cuts the text to 40 graphemes
   ([telnet-term](telnet-term.md), section 6), with no case change and no default.
   `term.images` is `sixel` or empty. `term.ambiguous` is `1` or `2`.
   The layout does not use it.
+- `term.bg_color` and `term.fg_color` are `#rrggbb` or empty. The host makes them lower case.
+  `--set term.bg_color` gives `term.background` by the rule of [telnet-term](telnet-term.md),
+  section 6. `term.background` is `dark`, `light` or empty.
+  `--set term.background` overrides it, in each order of the options.
 - Each argument of the screen needs `--set arg.<name>=<value>`
   ([bbt-format](bbt-format.md), section 8.5). A missing argument, another argument and
   an invalid value are invalid arguments. A content file of a value has the checks of
@@ -134,7 +139,7 @@ styles
 - Each line of `styles` gives the terminal row number and the runs of equal styles,
   in the syntax of [bbt-format](bbt-format.md), section 7.2, with 1-based columns.
   A run has the form `<first>-<last> <style>`, also for one column. Example: `5-5 7/0`.
-- The dump has the colours of the model with the session theme of `term.colors`
+- The dump has the colours of the model with the session theme
   ([screens-toml](screens-toml.md), section 3.2), before the reduction to `term.colors`.
   A VGA colour appears as its index. The tests of the output
   ([telnet-term](telnet-term.md), section 7.3) check the VGA colours.
