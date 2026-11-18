@@ -1,6 +1,6 @@
 # Issue body templates
 
-Write the body in English. `ghflow` adds the marker line.
+`ghflow` adds the marker line.
 Add a `Source: #<n>` line at the top for each source issue.
 Remove the comments.
 

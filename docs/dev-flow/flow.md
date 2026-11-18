@@ -37,7 +37,7 @@ The work runs on GitHub issues and pull requests (PRs) of `origin`.
 - A closed issue is `done` if its reason is `completed`. It is `cancel`
   if its reason is `not_planned` or `duplicate`. A closed issue wins over its label.
 - Never reopen an issue. Create a new issue with the line `Source: #<n>`.
-- Issue bodies: [template-issue.md](template-issue.md). Write posts in English.
+- Issue bodies: [template-issue.md](template-issue.md).
 
 Agent posts:
 
@@ -98,7 +98,7 @@ Trust:
 ### 4.1. Commit message
 
 - Subject: `GH-<n>: <summary>`, in 72 characters or fewer. `<n>` is the issue number.
-  GitHub links `GH-<n>` to the issue. Write the summary in English, in the imperative,
+  GitHub links `GH-<n>` to the issue. Write the summary in the imperative,
   with a capital letter and no period at the end.
 - Body, after a blank line: what changed and why, wrapped at 72 characters.
   A small change can have no body.
