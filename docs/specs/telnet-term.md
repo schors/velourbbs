@@ -34,6 +34,21 @@ The host must work with these telnet clients:
 | Tera Term | TTYPE `xterm`. Starts in line mode. |
 | inetutils telnet in a UTF-8 terminal | TTYPE is `$TERM` in upper case, then aliases. Sends CR NUL for Enter in character mode. |
 
+inetutils telnet passes the bytes unchanged, so its terminal answers the queries of section 5.7.
+The host must work with inetutils telnet in these terminals:
+
+| Terminal | Notes |
+|---|---|
+| Windows Terminal | With inetutils telnet in WSL. |
+| xterm and xterm-like terminals | |
+| tmux | tmux answers the queries itself. It does not pass them to the outer terminal, except OSC 4. |
+| iTerm2 | |
+| Ghostty and cmux | cmux uses Ghostty. |
+
+- The host supports other clients on a best-effort basis.
+- Windows telnet.exe is a best-effort client. It sends TTYPE `ANSI`, so it gets 16 colours.
+  Its UTF-8 support depends on the console code page. Its own escape sequence interpreter
+  breaks ANSI art and frames. Its replies to the queries of section 5.7 are not known.
 - SyncTERM and NetRunner show no UTF-8. The probe finds them as "not UTF-8" (section 5.4).
 - The PROXY protocol senders are HAProxy, nginx, Traefik and stunnel.
   They send version 1 or 2, so the host accepts both (section 9.3).
@@ -98,13 +113,16 @@ The host keeps the state of each option for each side, as in RFC 1143:
    If a limit is reached, send an ASCII line and close (section 9.2).
 2. Send the requests of section 4.1. After `WILL TTYPE`, send TTYPE `SEND` (section 5.3).
 3. Wait for the replies (below).
-4. Send the charset probe (section 5.4). Wait for its reply (below).
+4. Send the charset probe (section 5.4) and the terminal queries (section 5.7) in one write.
+   Wait for the replies (below).
 5. Decide the terminal values (section 6). Show the first screen. It clears the probe output.
 
 - In step 3, the host waits for an answer to `DO NAWS` and `DO TTYPE`, for the first NAWS
   after `WILL NAWS` and for the first TTYPE name after `WILL TTYPE`.
-  In step 4, the host waits for the reply to the charset probe.
+  In step 4, the host waits for the reply to DA1 (section 5.7), or for a CPR reply
+  that means "not UTF-8" (section 5.4).
 - A wait ends when all these replies arrive, or when no reply arrives for 1 s.
+  In step 4, the first reply to each query of section 5.7 is a reply.
 - The PROXY protocol header and the probe end within `probe_timeout`
   ([bbs-toml](bbs-toml.md), section 3.1)
   from accept. Then the host decides with the replies that it has.
@@ -126,7 +144,8 @@ The host keeps the state of each option for each side, as in RFC 1143:
 
 ### 5.4. Charset probe
 
-The charset probe is `CR`, U+00E2 (`â`, bytes `C3 A2`), `ESC[6n`. Then `CR ESC[K` erases the probe.
+The charset probe is `CR`, U+00E2 (`â`, bytes `C3 A2`), `ESC[6n`. `CR ESC[K` after the queries
+of section 5.7 erases the probe.
 The reply is a CPR: `ESC[<row>;<col>R`.
 
 - A number of the reply has 1–5 digits. Else the host drops the reply.
@@ -151,9 +170,67 @@ Each line ends with CR LF. The text starts with `CR LF`.
 ### 5.6. Log
 
 At the end of the probe, the host logs one line: the address, the TTYPE name,
-the NAWS size, the CPR reply, the terminal values of section 6
-and the probe time. So the TTYPE colour rules can be tuned.
-The TTYPE name in the log is filtered and cut as `term.type` (section 6).
+the NAWS size, the CPR reply, the replies of section 5.7, the terminal values of section 6
+and the probe time. So the colour rules can be tuned.
+
+- In the TTYPE name and in the replies to DECRQSS, DA1, DA2 and XTVERSION, the host removes
+  the control characters and cuts the text to 40 graphemes, with no case change.
+  The log has each reply from the byte after the introducer
+  (`ESC P`, `ESC[`) to the byte before the terminator: for example `1$r0;38:2::1:2:3m`.
+- The palette is the 16 colours of the OSC 4 replies as `rrggbb`, separated by commas.
+  An index without a reply is `-`.
+- A missing reply is `-`.
+
+### 5.7. Terminal queries
+
+The host asks the terminal for its colours, its name and its image support.
+Step 4 of section 5.1 sends this write:
+
+| Query | Bytes | Reply |
+|---|---|---|
+| Charset probe | Section 5.4. | CPR. |
+| DECRQSS for SGR | `ESC[38;2;1;2;3m`, `ESC P $ q m ST`, `ESC[0m` | `ESC P 1 $ r <parameters> m ST`, or `ESC P 0 $ r ST`. |
+| XTVERSION | `ESC[>0q` | `ESC P >| <text> ST`. |
+| DA2 | `ESC[>c` | `ESC[> <parameters> c`. |
+| OSC 4 | `ESC]4;<n>;? ST` for each `<n>` from 0 to 15 | `ESC]4;<n>;rgb:<r>/<g>/<b>` and ST or BEL. |
+| DA1 | `ESC[c` | `ESC[? <parameters> c`. |
+| Erase | `CR ESC[K` | None. |
+
+`ST` is `ESC \`.
+
+- DA1 goes last. Each target terminal answers DA1 and sends its replies in the order
+  of the queries. So the DA1 reply comes after the other replies.
+- The CPR goes first. Windows Terminal 1.25 and later can send its own CPR query after
+  an unknown sequence and take the next CPR reply.
+- PuTTY sends no reply to an OSC 4 query with more than one index. So each index has its own query.
+- tmux 3.6 and later sends OSC 4 to the outer terminal. It delays its next replies until
+  the outer terminal answers: for about 0.6 s at most in tmux 3.7 and later, for 3.5 s
+  at most in tmux 3.6, 3.6a and 3.6b. OSC 4 goes directly before DA1, so only the DA1 reply can be late.
+- The ConPTY of Windows Terminal 1.21 and earlier answers DA1, DA2 and DECRQSS itself, at once.
+  Windows Terminal 1.21 answers no OSC 4 and no XTVERSION. So no reply is lost.
+- PuTTY 0.83 and earlier show the DECRQSS query as the text `$qm`. The erase removes it.
+- The host sends the queries after step 3. So PuTTY and inetutils telnet are in character
+  mode and do not echo the replies.
+- The host takes the first reply to each query, and for OSC 4 to each index.
+  It drops a reply before step 4, a second reply and a reply that does not match this section.
+
+Reply rules:
+
+- DECRQSS: the "RGB reply" is a reply with `1$r` whose parameters, split at `;`, have
+  the colour 1, 2, 3 in one of these forms: the five parameters `38`, `2`, `1`, `2`, `3`,
+  or one parameter `38:2:1:2:3` or `38:2:<id>:1:2:3`, where `<id>` is empty or a number.
+  Windows Terminal 1.19 and later, xterm and Ghostty send `38:2::1:2:3`.
+  iTerm2 sends `38:2:1:1:2:3`. A terminal that maps RGB to its palette sends an index colour:
+  Tera Term sends `0;30`, xterm without direct colour sends `0;38:5:16`.
+- OSC 4: `<n>` is 0–15. Each of `<r>`, `<g>` and `<b>` has 1–4 hex digits.
+  A value v with d digits gives the 8-bit value `round(v × 255 / (16^d − 1))`.
+  For example, `ffff` and `ff` give 255, `8080` gives 128.
+- XTVERSION: `<text>` is the name and the version of the terminal, for example `XTerm(412)`
+  or `tmux 3.6`.
+- DA1 and DA2: the parameters are numbers separated by `;`. A parameter of a DA1 reply
+  after the first parameter is a feature. The first parameter is the terminal class.
+- The "palette" is the colours of the OSC 4 replies. The palette is "not VGA" when
+  a reply has a colour other than the VGA colour of its index (section 7.3).
 
 ## 6. Terminal values
 
@@ -163,21 +240,36 @@ The TTYPE name in the log is filtered and cut as `term.type` (section 6).
 | `term.cols`, `term.rows` | Section 5.2. |
 | `term.charset` | `utf-8`. |
 | `term.colors` | `16`, `256` or `16777216`. |
+| `term.name` | The `<text>` of the XTVERSION reply (section 5.7). Without a reply, empty. |
+| `term.images` | `sixel` when the DA1 reply has the feature `4` (section 5.7). Else empty. |
 
-- `term.type` is untrusted client input. The host removes the control characters and cuts
-  the name to 40 graphemes. A name that is empty after this counts as no name.
+- `term.type` and `term.name` are untrusted client input. The host removes the control
+  characters and cuts the text to 40 graphemes. A name that is empty after this counts as no name.
   The value rules of [bbt-format](bbt-format.md), section 4.3, also apply.
-- Colour depth: the first rule that matches `term.type` gives it:
-  1. a name that ends with `-direct`, or that has `truecolor` or `24bit`: 16777216;
-  2. a name that has `256color`: 256;
-  3. a name that ends with `-16color` or `-8color`, or that is `ansi`, `dumb`, `vt52`,
+- `term.name` is for display only. Screens must not select output by it.
+- `term.images` is for a future image output. Today no output uses it.
+  Tera Term with the terminal ID VT282 or VT382 (not the default) has the feature `4`, but no sixel.
+- Colour depth: the first rule that matches gives it:
+  1. the DECRQSS reply is the RGB reply (section 5.7): 16777216;
+  2. the DA2 reply is in the client table below: 16777216;
+  3. a `term.type` that ends with `-direct`, or that has `truecolor` or `24bit`: 16777216;
+  4. a `term.type` that has `256color`: 256;
+  5. a `term.type` that ends with `-16color` or `-8color`, or that is `ansi`, `dumb`, `vt52`,
      `vt100`, `vt102`, `vt220`, `vt320`, `rxvt`, `xterm-color`, `eterm-color` or `cygwin`: 16;
-  4. each other name: 256.
-- Rule 3 has only names where 16 colours are certain. A terminal without `38;5` reads
+  6. each other `term.type`: 256.
+- The client table has the terminals that show RGB but do not answer DECRQSS with it:
+
+  | Client | DA2 reply | Reason |
+  |---|---|---|
+  | PuTTY | The parameters are `0;136;0`. | PuTTY shows RGB by default since 0.71. It answers no DECRQSS. |
+  | tmux | The first parameter is `84`. | tmux reduces RGB for the outer terminal itself. tmux 3.6 and later send an invalid DECRQSS reply. |
+
+- Rule 5 has only names where 16 colours are certain. A terminal without `38;5` reads
   `38;5;n` as other SGR parameters, for example `5` as blink. Without a name, `term.type`
-  is `ansi`, so the depth is 16.
-- PuTTY (`xterm`) and Tera Term (`xterm`) get 256. They show 256 colours.
-  Truecolor art is reduced to 256 for them.
+  is `ansi`, so rule 5 gives 16.
+- Tera Term (`xterm`) gets 256. It answers DECRQSS with an index colour.
+  Truecolor art is reduced to 256 for it.
+- Windows Terminal, iTerm2, Ghostty, cmux and xterm with direct colour get 16777216 by rule 1.
 
 ## 7. Output
 
@@ -185,15 +277,18 @@ The TTYPE name in the log is filtered and cut as `term.type` (section 6).
 
 The host shows a page ([menu-nav](menu-nav.md), section 5) in this order:
 
-1. `ESC[0m ESC[2J`: reset the style and clear the terminal screen.
+1. `ESC[?2026h ESC[0m ESC[2J`: start the synchronized output, reset the style and clear
+   the terminal screen.
    With `fill = "erase"`, the SGR of `normal` (sections 7.2 and 7.3) in place of `ESC[0m`:
    the terminal clears the screen in the background of `normal`.
 2. For each terminal row from the top, with the terminal rows of [bbt-format](bbt-format.md),
    section 6.5:
    - a row of the page: `ESC[<row>;1H`, then the cells of the row;
    - a fill row with `fill = "spaces"`: `ESC[<row>;1H`, then `term.cols` spaces in `normal`.
-3. `ESC[0m`.
+3. `ESC[0m ESC[?2026l`: reset the style and end the synchronized output.
 
+- With the synchronized output (mode 2026), the terminal shows the page at once, not row
+  by row. The host sends it without a query. A terminal without the mode ignores it.
 - A wide grapheme appears once. Its second cell gives no output.
 - Each row starts at its own position, so a page has no line ends
   and the terminal does not scroll.
@@ -225,6 +320,9 @@ The parameters are the attributes, then the foreground, then the background:
 
 The host reduces each colour of a cell to `term.colors` before the output:
 
+- First, a VGA colour ([bbt-format](bbt-format.md), section 7.1) becomes its RGB value
+  of the table below when the palette is not VGA (section 5.7). Else it becomes its index.
+  With 16 colours, the RGB value becomes the same index again.
 - 16777216: no change.
 - 256: an RGB colour becomes the nearest index from 16 to 255.
 - 16: an index from 16 to 255 and an RGB colour become the nearest index from 0 to 15.
@@ -266,16 +364,25 @@ The key decoder gives:
 
 ### 8.2. Escape sequences
 
-- After ESC and after each byte of a sequence, the decoder waits 150 ms for the next byte.
-  When no byte arrives, ESC alone gives `ESC`, and the decoder drops a started sequence.
-- After ESC, `[` starts a CSI sequence and `O` starts an SS3 sequence. Each other byte
+- After ESC and after the byte that starts a sequence or a control string, the decoder waits
+  150 ms for the next byte. After each later byte, it waits 1 s. So a reply that arrives
+  in two parts does not become keys. When no byte arrives, ESC alone gives `ESC`,
+  and the decoder drops a started sequence or control string.
+- After ESC, `[` starts a CSI sequence and `O` starts an SS3 sequence.
+  `]` (OSC), `P` (DCS) and `_` (APC) start a control string. Each other byte
   gives `ESC`, and then the decoder handles the byte as new input.
-  So Alt+letter gives `ESC` and the letter.
+  So Alt+letter gives `ESC` and the letter, except Alt+`P`. Alt+`]`, Alt+`P` and Alt+`_`
+  give no key.
+- A control string ends with ST (`ESC \`) or BEL. The decoder drops it as a whole.
+  So a late reply to a query of section 5.7 does not become keys.
+  In a control string, ESC followed by a byte other than `\` ends the string. The decoder drops
+  the string and handles ESC as new input. Other control characters do not end the string.
 - A CSI sequence has parameter bytes 0x30–0x3F, intermediate bytes 0x20–0x2F and one final byte
   0x40–0x7E. An SS3 sequence has one final byte.
 - An invalid byte ends the sequence. The decoder drops the sequence and handles the byte
   as new input.
-- The decoder drops a sequence longer than 32 bytes up to its end, also its final byte.
+- The decoder drops a sequence or a control string longer than 128 bytes up to its end,
+  also its final byte or its terminator. The DA1 reply of Windows Terminal has 39 bytes.
 - The decoder drops each sequence that is not in the table as a whole.
   It never becomes separate keys. Keys with modifiers, for example `ESC[1;5A`, are dropped.
 - A CPR reply after the probe is dropped.
@@ -423,4 +530,4 @@ At SIGINT or SIGTERM, the host does these steps:
 - Mouse input.
 - MUD clients (Mudlet, TinTin++). Mudlet does not execute `ESC[2J` and cursor positions,
   so a page becomes one line.
-- Windows telnet.exe. Its UTF-8 support is not known.
+- The size by a CPR for a client without NAWS. Each target client sends NAWS.

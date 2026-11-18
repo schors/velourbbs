@@ -59,6 +59,8 @@ Each other sequence, an incomplete sequence and ESC without `[` are errors.
 
 Each other SGR parameter and an invalid `38` or `48` are errors.
 A cell takes the style of the SGR state. Art cells have no `bold` attribute.
+In art, each index 0–15 is a VGA colour ([bbt-format](bbt-format.md), section 7.1),
+also from `38;5;n` and `48;5;n`.
 
 ## 4. Fields in art
 

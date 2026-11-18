@@ -90,16 +90,19 @@ and writes its cell dump to the standard output.
 - It does the checks of `velourbbs check` first. After an error it writes no dump
   and exits with status 1.
 - The default size is 80x24. `--size` is the only way to set the size.
-- `--set` sets `term.type`, `term.colors`, `arg.<name>` or a field of
+- `--set` sets `term.type`, `term.colors`, `term.name`, `term.images`, `arg.<name>` or a field of
   [session-fields](session-fields.md), section 4. Example: `--set term.colors=256`.
-  The defaults are `xterm` and 256. `term.charset` is `utf-8`.
+  The defaults are `xterm`, 256 and empty. `term.charset` is `utf-8`.
+  For `term.name`, the host removes the control characters and cuts the text to 40 graphemes
+  ([telnet-term](telnet-term.md), section 6), with no case change and no default.
+  `term.images` is `sixel` or empty.
 - Each argument of the screen needs `--set arg.<name>=<value>`
   ([bbt-format](bbt-format.md), section 8.5). A missing argument, another argument and
   an invalid value are invalid arguments. A content file of a value has the checks of
   [file-view](file-view.md), section 7. After an error, the command writes no dump and exits with status 1.
 - `--set term.type` applies the rules of [telnet-term](telnet-term.md), section 6:
   it cleans the name, cuts it and makes it lower case. An empty name gives `ansi`.
-  The name gives `term.colors`. `--set term.colors` overrides it, in each order of the options.
+  The name gives `term.colors` by rules 3–6. `--set term.colors` overrides it, in each order of the options.
 - `item.<KEY>` comes from the items of the screen and their `when`.
 - A size outside the ranges of [bbt-format](bbt-format.md), section 4.1, and an unknown screen
   are invalid arguments.
@@ -131,6 +134,8 @@ styles
   A run has the form `<first>-<last> <style>`, also for one column. Example: `5-5 7/0`.
 - The dump has the colours of the model with the session theme of `term.colors`
   ([screens-toml](screens-toml.md), section 3.2), before the reduction to `term.colors`.
+  A VGA colour appears as its index. The tests of the output
+  ([telnet-term](telnet-term.md), section 7.3) check the VGA colours.
 - A page with a More row includes it as its last row.
 
 ## 4. Code
