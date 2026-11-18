@@ -15,7 +15,7 @@ page 1 80x24 fill spaces
 |    Open sessions       1                                                       |
 |    Station uptime      00:00:00                                                |
 |                                                                                |
-|    Terminal            xterm, 80x24                                            |
+|    Terminal            80x24, xterm                                            |
 |    Program             no reply                                                |
 |    Colours             256                                                     |
 |    Background          unknown                                                 |

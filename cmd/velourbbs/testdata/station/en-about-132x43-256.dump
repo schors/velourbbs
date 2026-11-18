@@ -20,7 +20,7 @@ page 1 132x43 fill spaces
 |              Open sessions       1                                                                                                 |
 |              Station uptime      00:00:00                                                                                          |
 |                                                                                                                                    |
-|              Terminal            xterm, 132x43                                                                                     |
+|              Terminal            132x43, xterm                                                                                     |
 |              Program             no reply                                                                                          |
 |              Colours             256                                                                                               |
 |              Background          unknown                                                                                           |

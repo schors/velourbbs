@@ -34,6 +34,10 @@ func TestStation(t *testing.T) {
 				set: []string{"term.name=WezTerm 20240203", "term.images=sixel", "term.bg_color=" + c.bg}, tag: "-detected"})
 		}
 	}
+	// The longest term.type and term.name of wide graphemes keep the 80 form in 23 rows.
+	wide := strings.Repeat("界", 40)
+	cases = append(cases, tcase{screen: "ru-about", size: "80x24", colors: "256",
+		set: []string{"term.type=" + wide, "term.name=" + wide}, tag: "-wide"})
 	for _, screen := range []string{"main", "ru-menu", "en-menu", "ru-about", "en-about", "goodbye", "shutdown",
 		"ru-texts", "en-texts", "ru-setup", "en-setup", "ru-bbt", "en-bbt"} {
 		cases = append(cases, tcase{screen: screen, size: "80x24", colors: "256"},

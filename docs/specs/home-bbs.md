@@ -126,12 +126,14 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 
   | Label | Value |
   |---|---|
-  | `Терминал`, `Terminal` | `{term.type}, {term.cols}x{term.rows}` |
+  | `Терминал`, `Terminal` | `{term.cols}x{term.rows}, {term.type}` |
   | `Программа`, `Program` | `term.name`. When it is empty, `нет ответа`, `no reply`. |
   | `Цвета`, `Colours` | `term.colors`, `truecolor` for 16777216. `, sixel` follows when `term.images` is `sixel`. |
   | `Фон`, `Background` | `тёмный`, `dark` or `светлый`, `light` and `, {term.bg_color}`. When `term.background` is empty, `не определён`, `unknown`. |
   | `Ширина кириллицы`, `Cyrillic width` | `1 клетка`, `1 cell` or `2 клетки`, `2 cells`: `term.ambiguous`. |
 
+- `term.type` and `term.name` are fixed-width fields of 40 cells, so a long value
+  does not wrap.
 - The 80 form has 23 rows: its text is one paragraph of two rows, and the repository row
   has no empty row below it.
 - The station facts (the SysOp name, the address, the port) come from the operator.
@@ -202,6 +204,7 @@ The English table of section 7 of the brandbook:
   - `main` and `ru-texts` also with 16 and 16777216 colours;
   - `ru-about` and `en-about` also with 16777216 colours, `term.ambiguous` 2,
     a `term.name`, sixel and a `term.bg_color` (a dark one and a light one);
+  - `ru-about` also at 80x24 with a `term.type` and a `term.name` of 40 wide graphemes;
   - each file screen with its first file.
 - The `ru-` and the `en-` screens have the same items.
 - `content/ru/guide` and `content/en/guide` are symlinks into `docs/guide/`.
