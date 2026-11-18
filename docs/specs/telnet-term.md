@@ -191,6 +191,7 @@ and the probe time. So the colour rules can be tuned.
   (`ESC P`, `ESC[`) to the byte before the terminator: for example `1$r0;38:2::1:2:3m`.
 - The palette is the 16 colours of the OSC 4 replies as `rrggbb`, separated by commas.
   An index without a reply is `-`.
+- The replies to OSC 10, OSC 11 and OSC 4 for 256 and 258 are colours as `rrggbb`.
 - A missing reply is `-`.
 
 ### 5.7. Terminal queries
@@ -205,7 +206,9 @@ Step 4 of section 5.1 sends this write:
 | DECRQSS for SGR | `ESC[38;2;1;2;3m`, `ESC P $ q m ST`, `ESC[0m` | `ESC P 1 $ r <parameters> m ST`, or `ESC P 0 $ r ST`. |
 | XTVERSION | `ESC[>0q` | `ESC P >| <text> ST`. |
 | DA2 | `ESC[>c` | `ESC[> <parameters> c`. |
-| OSC 4 | `ESC]4;<n>;? ST` for each `<n>` from 0 to 15 | `ESC]4;<n>;rgb:<r>/<g>/<b>` and ST or BEL. |
+| OSC 10 | `ESC]10;? ST` | `ESC]10;rgb:<r>/<g>/<b>` and ST or BEL. |
+| OSC 11 | `ESC]11;? ST` | `ESC]11;rgb:<r>/<g>/<b>` and ST or BEL. |
+| OSC 4 | `ESC]4;<n>;? ST` for each `<n>` from 0 to 15, then 256 and 258 | `ESC]4;<n>;rgb:<r>/<g>/<b>` and ST or BEL. |
 | DA1 | `ESC[c` | `ESC[? <parameters> c`. |
 | Erase | `CR ESC[K` | None. |
 
@@ -216,6 +219,19 @@ Step 4 of section 5.1 sends this write:
 - The CPR probes go first, in the order of section 5.4. Windows Terminal 1.25 and later can send its own CPR query after
   an unknown sequence and take the next CPR reply.
 - PuTTY sends no reply to an OSC 4 query with more than one index. So each index has its own query.
+- PuTTY 0.71 and later answer OSC 4 for the indexes 256 (the default foreground)
+  and 258 (the default background). PuTTY answers no OSC 10 and no OSC 11.
+  Other terminals answer the indexes 256 and 258 with other colours or ignore them:
+  xterm and Tera Term give special colours, Windows Terminal 1.22 and later give reserved
+  entries, iTerm2 gives black, tmux and Ghostty send no reply.
+  No target terminal shows these queries as text.
+  The host sends these two queries to each terminal, because the one write goes before
+  the DA2 reply. It uses their replies only for PuTTY (section 6).
+- Windows Terminal 1.22 and later, xterm, tmux, iTerm2, Ghostty, cmux and Tera Term answer
+  OSC 10 and OSC 11. tmux answers with the colours of the pane or of the outer terminal,
+  and sends no reply when it does not know the colour. tmux does not delay its next replies
+  after OSC 10 and OSC 11. The ConPTY of Windows Terminal 1.21 and earlier drops OSC 10
+  and OSC 11 with no reply.
 - tmux 3.6 and later sends OSC 4 to the outer terminal. It delays its next replies until
   the outer terminal answers: for about 0.6 s at most in tmux 3.7 and later, for 3.5 s
   at most in tmux 3.6, 3.6a and 3.6b. OSC 4 goes directly before DA1, so only the DA1 reply can be late.
@@ -235,14 +251,15 @@ Reply rules:
   Windows Terminal 1.19 and later, xterm and Ghostty send `38:2::1:2:3`.
   iTerm2 sends `38:2:1:1:2:3`. A terminal that maps RGB to its palette sends an index colour:
   Tera Term sends `0;30`, xterm without direct colour sends `0;38:5:16`.
-- OSC 4: `<n>` is 0–15. Each of `<r>`, `<g>` and `<b>` has 1–4 hex digits.
+- OSC 4: `<n>` is 0–15, 256 or 258. Each of `<r>`, `<g>` and `<b>` has 1–4 hex digits.
   A value v with d digits gives the 8-bit value `round(v × 255 / (16^d − 1))`.
   For example, `ffff` and `ff` give 255, `8080` gives 128.
+- OSC 10 and OSC 11: `<r>`, `<g>` and `<b>` have the rules of OSC 4.
 - XTVERSION: `<text>` is the name and the version of the terminal, for example `XTerm(412)`
   or `tmux 3.6`.
 - DA1 and DA2: the parameters are numbers separated by `;`. A parameter of a DA1 reply
   after the first parameter is a feature. The first parameter is the terminal class.
-- The "palette" is the colours of the OSC 4 replies. The palette is "not VGA" when
+- The "palette" is the colours of the OSC 4 replies for 0–15. The palette is "not VGA" when
   a reply has a colour other than the VGA colour of its index (section 7.3).
 
 ## 6. Terminal values
@@ -256,11 +273,19 @@ Reply rules:
 | `term.name` | The `<text>` of the XTVERSION reply (section 5.7). Without a reply, empty. |
 | `term.images` | `sixel` when the DA1 reply has the feature `4` (section 5.7). Else empty. |
 | `term.ambiguous` | `1` or `2`: the ambiguous probe (section 5.4). |
+| `term.bg_color` | The background colour of the terminal as `#rrggbb` in lower case: the OSC 11 reply. Without it, the OSC 4 reply for 258 when the DA2 reply is the reply of PuTTY in the client table below. Else empty. |
+| `term.fg_color` | The foreground colour of the terminal as `#rrggbb` in lower case: the OSC 10 reply. Without it, the OSC 4 reply for 256 when the DA2 reply is the reply of PuTTY in the client table below. Else empty. |
+| `term.background` | `light` when the relative luminance of `term.bg_color` is more than 0.5. Else `dark`. Empty when `term.bg_color` is empty. |
 
 - `term.type` and `term.name` are untrusted client input. The host removes the control
   characters and cuts the text to 40 graphemes. A name that is empty after this counts as no name.
   The value rules of [bbt-format](bbt-format.md), section 4.3, also apply.
 - `term.name` is for display only. Screens must not select output by it.
+- The relative luminance of the colour R, G, B (0–255) is `0.2126 R' + 0.7152 G' + 0.0722 B'`.
+  For each channel, with c = value / 255: c' is c / 12.92 when c ≤ 0.04045,
+  else ((c + 0.055) / 1.055)^2.4. So `#bcbcbc` and lighter greys are light, `#bbbbbb` is dark.
+- `term.background` selects the session theme with `[screen] theme = "auto"`
+  ([screens-toml](screens-toml.md), section 3.2).
 - `term.images` is for a future image output. Today no output uses it.
   Tera Term with the terminal ID VT282 or VT382 (not the default) has the feature `4`, but no sixel.
 - `term.ambiguous` 2 comes from a setting of the terminal. Each setting is off by default:

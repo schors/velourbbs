@@ -134,6 +134,8 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `term.name` | string | Terminal name and version, for display only. Can be empty. |
 | `term.images` | string | Image output of the terminal: `sixel` or empty. |
 | `term.ambiguous` | integer | Cells of an East Asian Ambiguous character in the terminal: `1` or `2`. |
+| `term.background` | string | Background of the terminal: `dark`, `light` or empty. |
+| `term.bg_color`, `term.fg_color` | string | Background and foreground colour of the terminal: `#rrggbb` or empty. |
 | `item.<KEY>` | boolean | True when the item with the key `<KEY>` exists and is enabled (section 8.2). |
 | `arg.<name>` | string | The argument `<name>` of the screen (section 8.5). |
 | `file.*`, `meta.<key>` | — | The fields of a file screen: [file-view](file-view.md), section 3.4. |
@@ -286,8 +288,9 @@ attr   = "bold" | "underline" | "blink" ;
 ### 7.3. Theme and style tokens
 
 - The theme in `screens/screens.toml` maps a style name to a style. A depth theme replaces
-  styles for one `term.colors`: [screens-toml](screens-toml.md), section 3.2.
-- A theme style is a style of the session theme of the `term.colors` of the terminal.
+  styles for one `term.colors`. A light table replaces styles in the light theme.
+  [screens-toml](screens-toml.md), section 3.2, gives the session theme.
+- A theme style is a style of the session theme.
 - `{!<name>}` sets the whole theme style `<name>`. A name that is not a name of the theme
   is an error.
 - `{!14}`, `{!14/1}` and `{!/1}` set only the colours that they name.
@@ -368,8 +371,9 @@ are the same keys.
 | `goto <name>` | Show the screen `<name>`. |
 | `logoff` | End the session. |
 | `page next`, `page prev`, `page first`, `page last` | Show another page of a file screen: [file-view](file-view.md), section 3.3. |
+| `theme dark`, `theme light`, `theme auto` | Set the theme choice of the session: [screens-toml](screens-toml.md), section 3.2. |
 
-- The action words are lower case. `do` has no other spaces than the one space after `goto` or `page`.
+- The action words are lower case. `do` has no other spaces than the one space after `goto`, `page` or `theme`.
 - `<name>` matches the screen name of section 2.
 - [menu-nav](menu-nav.md), section 4, defines how the host runs the actions.
 

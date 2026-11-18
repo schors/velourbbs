@@ -36,6 +36,7 @@ The other specifications define the effect of a key and refer to this specificat
 | `valign` | string | `"top"` | The vertical position of a screen: [bbt-format](bbt-format.md), section 6.5. |
 | `fill` | string | `"none"` | The fill rows: [bbt-format](bbt-format.md), section 6.5. |
 | `time` | string | `"2006-01-02 15:04:05"` | The layout of the Go package `time` for the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
+| `theme` | string | `"dark"` | The theme choice at the start of a session: `dark`, `light` or `auto` (section 3.2). |
 
 - `width`, `align`, `valign` and `fill` have the rules of the front matter keys
   ([bbt-format](bbt-format.md), section 3.2).
@@ -47,21 +48,34 @@ The other specifications define the effect of a key and refer to this specificat
 The theme maps a style name to a style in the syntax of [bbt-format](bbt-format.md),
 section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), section 7.3.
 
-- `[theme]` has only the tables `default`, `16` and `256`.
+- `[theme]` has only the tables `default`, `16`, `256` and `light`.
   `[theme.16]` and `[theme.256]` are the "depth themes". A depth theme gives other styles
   for one colour depth `term.colors` ([telnet-term](telnet-term.md), section 6).
+- `[theme.light]` has only the tables `default`, `16` and `256`: the "light tables".
+  They give other styles in the light theme (below).
 - A style name matches `[a-z][a-z0-9_]*`. Its value is a string.
 - The "base theme" is `normal = "7/0"`, `more = "15/0"`, the `md_*` styles of
   [file-view](file-view.md), section 4, and the styles of `[theme.default]`.
   A style of `[theme.default]` replaces the style with the same name.
   A "name of the theme" is a name of the base theme.
   The effect of `normal` and `more`: [bbt-format](bbt-format.md), sections 6.2, 6.4 and 7.3.
-- Each name of a depth theme must be a name of the theme.
-- The "session theme" is the theme of one `term.colors`. It is the base theme
-  with each style of the depth theme of `term.colors` in place of the style with the same name.
-  When `term.colors` has no depth theme, the session theme is the base theme.
+- Each name of a depth theme and of a light table must be a name of the theme.
+- The "dark theme" of one `term.colors` is the base theme with each style of the depth theme
+  of `term.colors` in place of the style with the same name.
+  When `term.colors` has no depth theme, the dark theme is the base theme.
+- The "light theme" of one `term.colors` is the dark theme with each style
+  of `[theme.light.default]`, then each style of the light table of `term.colors`,
+  in place of the style with the same name.
+  When `term.colors` has no light table, only `[theme.light.default]` applies.
+- The "theme choice" of a session is `dark`, `light` or `auto`. It starts as `[screen] theme`.
+  The action `theme` changes it ([menu-nav](menu-nav.md), section 4).
+  The field `session.theme` gives it ([session-fields](session-fields.md), section 2).
+- The "session theme" is the light theme of `term.colors` when the theme choice is `light`,
+  or when it is `auto` and `term.background` is `light` ([telnet-term](telnet-term.md), section 6).
+  Else it is the dark theme of `term.colors`.
 - A style of the session theme without a foreground or a background takes it
-  from `normal` of the session theme. `normal` takes it from `7/0`.
+  from `normal` of the session theme. `normal` takes it from `7/0` in the dark theme
+  and from `0/15` in the light theme.
 
 Example:
 
@@ -73,10 +87,19 @@ title  = "#60a0d0 bold"
 [theme.16]
 normal = "7/0"
 title  = "15 bold"
+
+[theme.light.default]
+normal = "#202020/#f0f0e8"
+title  = "#004080 bold"
+
+[theme.light.16]
+normal = "0/7"
 ```
 
-With 16 colours, `title` is `15/0 bold`. With 256 colours, it is `#60a0d0/#101020 bold`,
-and the host reduces it ([telnet-term](telnet-term.md), section 7.3).
+With 16 colours, `title` is `15/0 bold` in the dark theme. With 256 colours,
+it is `#60a0d0/#101020 bold`, and the host reduces it ([telnet-term](telnet-term.md), section 7.3).
+In the light theme with 16 colours, `title` is `#004080/7 bold`, and the host reduces
+the foreground to an index from 0 to 15.
 
 ### 3.3. `[fields]`
 
@@ -106,6 +129,7 @@ width = [40, 100]
 more = "-- More --"
 valign = "middle"
 fill = "spaces"
+theme = "auto"
 
 [theme.default]
 normal = "7/0"
@@ -114,6 +138,11 @@ prompt = "14"
 
 [theme.16]
 title = "15/1 bold"
+
+[theme.light.default]
+normal = "0/15"
+title  = "15/4 bold"
+prompt = "4"
 
 [fields]
 w = "term.cols"
@@ -126,4 +155,4 @@ start = "welcome"
 
 | Package | Content |
 |---|---|
-| `internal/config` | The parse of `screens/screens.toml`, the checks of section 3 and the session theme of each `term.colors`. |
+| `internal/config` | The parse of `screens/screens.toml`, the checks of section 3, and the dark theme and the light theme of each `term.colors`. |
