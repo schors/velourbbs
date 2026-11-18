@@ -140,6 +140,48 @@ func TestAppendPageWide(t *testing.T) {
 	}
 }
 
+// TestAppendPageResync: a grapheme of more than one code point gets the re-sync
+// when a cell of the row follows it (section 7.4).
+func TestAppendPageResync(t *testing.T) {
+	s := screen.Style{Fg: idx(7), Bg: idx(0)}
+	wide := func(g string) screen.Row { return screen.Row{{Grapheme: g, Style: s}, {Grapheme: "", Style: s}} }
+	a := screen.Row{{Grapheme: "a", Style: s}}
+	cat := func(rs ...screen.Row) screen.Row {
+		var r screen.Row
+		for _, x := range rs {
+			r = append(r, x...)
+		}
+		return r
+	}
+	const start, end = "\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;37;40m", "\x1b[0m\x1b[?2026l"
+	cases := []struct {
+		name string
+		row  screen.Row
+		want string
+	}{
+		{"VS16 emoji", cat(a, wide("❤️"), a), "a❤️ \x1b[1;4Ha"},
+		{"ZWJ sequence", cat(wide("👨‍👩‍👧"), a), "👨‍👩‍👧 \x1b[1;3Ha"},
+		{"flag", cat(wide("🇺🇦"), a, a), "🇺🇦 \x1b[1;3Haa"},
+		{"one code point", cat(wide("中"), a), "中a"},
+		{"last cells", cat(a, wide("❤️")), "a❤️"},
+	}
+	for _, c := range cases {
+		page := rows(c.row)
+		if got := string(AppendPage(nil, page, screen.Colors16, false)); got != start+c.want+end {
+			t.Errorf("%s: AppendPage =\n%q\nwant\n%q", c.name, got, start+c.want+end)
+		}
+	}
+	// The re-sync uses the terminal row and the style of the grapheme.
+	page := screen.Page{
+		Rows: []screen.Row{cat(screen.Row{cell("❤️", idx(9), idx(4), 0), {Grapheme: "", Style: screen.Style{Fg: idx(9), Bg: idx(4)}}}, a)},
+		Cols: 3, Height: 3, Top: 1,
+	}
+	want := "\x1b[2;1H\x1b[0;91;44m❤️ \x1b[2;3H\x1b[0;37;40ma"
+	if got := string(AppendPage(nil, page, screen.Colors16, false)); !strings.Contains(got, want) {
+		t.Errorf("AppendPage =\n%q\nwant it to contain\n%q", got, want)
+	}
+}
+
 // TestAppendPageReducedEqual: two model styles with one reduced style give one SGR.
 func TestAppendPageReducedEqual(t *testing.T) {
 	page := rows(screen.Row{cell("a", rgb(250, 250, 250), def, 0), cell("b", rgb(255, 255, 255), def, 0)})

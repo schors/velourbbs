@@ -81,6 +81,11 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 
 - `main` is the brandbook screen "Вход". The greeting and the motto are in both languages.
   The language keys replace `Enter Войти`.
+- With `term.ambiguous` 2 ([telnet-term](telnet-term.md), section 6), `main` shows a hint
+  in place of the greeting, the logo and the motto, in both forms. The hint tells in both languages
+  that the screens break, and gives the setting for one cell in PuTTY, Tera Term, xterm, iTerm2,
+  Windows Terminal, GNOME Terminal and Ptyxis. The key row stays.
+  Each row fits 80 columns when each Cyrillic letter takes two cells.
 - `<lang>-menu` is the brandbook screen "Меню" with two items:
   Texts (gem `emer`) and About the station (gem `gold`).
   A hotkey is the digit of the item. The menu has no selection mark.

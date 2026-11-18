@@ -14,23 +14,26 @@ func TestStation(t *testing.T) {
 	type tcase struct {
 		screen, size, colors string
 		file                 string // The argument file of a file screen.
+		ambiguous            string // term.ambiguous; "" is the default 1.
 	}
 	cases := []tcase{
-		{"main", "80x24", "16", ""}, {"main", "80x24", "16777216", ""},
-		{"ru-texts", "80x24", "16", ""}, {"ru-texts", "80x24", "16777216", ""},
+		{"main", "80x24", "16", "", ""}, {"main", "80x24", "16777216", "", ""},
+		{"ru-texts", "80x24", "16", "", ""}, {"ru-texts", "80x24", "16777216", "", ""},
 		// The 80 form on a wide terminal with fewer than 43 rows.
-		{"main", "132x42", "256", ""},
+		{"main", "132x42", "256", "", ""},
+		// The hint of home-bbs, section 3.2, in both forms.
+		{"main", "80x24", "256", "", "2"}, {"main", "132x43", "256", "", "2"},
 	}
 	for _, screen := range []string{"main", "ru-menu", "en-menu", "ru-about", "en-about", "goodbye", "shutdown",
 		"ru-texts", "en-texts", "ru-setup", "en-setup", "ru-bbt", "en-bbt"} {
-		cases = append(cases, tcase{screen, "80x24", "256", ""}, tcase{screen, "132x43", "256", ""})
+		cases = append(cases, tcase{screen, "80x24", "256", "", ""}, tcase{screen, "132x43", "256", "", ""})
 	}
 	// Each file screen with its first file: 80 form only.
 	for _, lang := range []string{"ru", "en"} {
 		cases = append(cases,
-			tcase{lang + "-setup-read", "80x24", "256", lang + "/guide/setup/README.md"},
-			tcase{lang + "-bbt-read", "80x24", "256", lang + "/guide/bbt/README.md"},
-			tcase{lang + "-text-read", "80x24", "256", lang + "/features.md"})
+			tcase{lang + "-setup-read", "80x24", "256", lang + "/guide/setup/README.md", ""},
+			tcase{lang + "-bbt-read", "80x24", "256", lang + "/guide/bbt/README.md", ""},
+			tcase{lang + "-text-read", "80x24", "256", lang + "/features.md", ""})
 	}
 	fsys := os.DirFS(filepath.Join("..", "..", "station"))
 	var out, errOut bytes.Buffer
@@ -44,8 +47,13 @@ func TestStation(t *testing.T) {
 		if c.file != "" {
 			args = append(args, "--set", "arg.file="+c.file)
 		}
+		name := c.screen + "-" + c.size + "-" + c.colors
+		if c.ambiguous != "" {
+			args = append(args, "--set", "term.ambiguous="+c.ambiguous)
+			name += "-ambiguous" + c.ambiguous
+		}
 		status := run(args, fsys, &out, &errOut)
-		file := filepath.Join("testdata", "station", c.screen+"-"+c.size+"-"+c.colors+".dump")
+		file := filepath.Join("testdata", "station", name+".dump")
 		want, err := os.ReadFile(file)
 		if err != nil {
 			t.Fatal(err)

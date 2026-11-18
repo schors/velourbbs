@@ -44,6 +44,7 @@ const (
 	termColors
 	termName
 	termImages
+	termAmbiguous
 )
 
 // termFields is the term.* fields of the registry of section 4.1.
@@ -51,13 +52,14 @@ var termFields = [...]struct {
 	path string
 	typ  Type
 }{
-	termType:    {"term.type", TypeString},
-	termCols:    {"term.cols", TypeInt},
-	termRows:    {"term.rows", TypeInt},
-	termCharset: {"term.charset", TypeString},
-	termColors:  {"term.colors", TypeInt},
-	termName:    {"term.name", TypeString},
-	termImages:  {"term.images", TypeString},
+	termType:      {"term.type", TypeString},
+	termCols:      {"term.cols", TypeInt},
+	termRows:      {"term.rows", TypeInt},
+	termCharset:   {"term.charset", TypeString},
+	termColors:    {"term.colors", TypeInt},
+	termName:      {"term.name", TypeString},
+	termImages:    {"term.images", TypeString},
+	termAmbiguous: {"term.ambiguous", TypeInt},
 }
 
 // fileField is a file.* field of a file screen (file-view, section 3.4).
@@ -299,6 +301,8 @@ type Term struct {
 	Colors  int
 	Name    string
 	Images  string
+	// Ambiguous is the cells of an East Asian Ambiguous character: 1 or 2.
+	Ambiguous int
 }
 
 // The ranges of term.cols and term.rows (section 4.1).
@@ -419,6 +423,8 @@ func (e *Env) value(r Ref) any {
 		return e.Term.Name
 	case termImages:
 		return e.Term.Images
+	case termAmbiguous:
+		return e.Term.Ambiguous
 	}
 	return e.Term.Colors
 }

@@ -27,7 +27,7 @@ var previewTime = time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC)
 // to stdout. With --keys, it runs a session (menu-nav, section 7).
 // The flags can come before and after the name.
 func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
-	term := screen.Term{Type: "xterm", Cols: 80, Rows: 24, Charset: "utf-8", Colors: screen.Colors256}
+	term := screen.Term{Type: "xterm", Cols: 80, Rows: 24, Charset: "utf-8", Colors: screen.Colors256, Ambiguous: 1}
 	// The values of session-fields, section 4. bbs.name and bbs.time come from the config.
 	sv := screen.SessionValues{IP: "127.0.0.1", Online: "00:00:00", Version: version(), Sessions: 1, Uptime: "00:00:00"}
 	svSet := map[string]bool{} // the session and BBS fields of --set
@@ -210,8 +210,14 @@ func setField(v string, t *screen.Term, colorsSet *bool, args map[string]string)
 		}
 		t.Images = value
 		return nil
+	case path == "term.ambiguous":
+		if value != "1" && value != "2" {
+			return fmt.Errorf("term.ambiguous is %q, must be 1 or 2", value)
+		}
+		t.Ambiguous = int(value[0] - '0')
+		return nil
 	}
-	return fmt.Errorf("cannot set %q: only term.type, term.colors, term.name, term.images, arg.<name>, session.* and bbs.*", path)
+	return fmt.Errorf("cannot set %q: only term.type, term.colors, term.name, term.images, term.ambiguous, arg.<name>, session.* and bbs.*", path)
 }
 
 // setSession sets the session or BBS field path of sv to value (session-fields, section 4).

@@ -354,8 +354,8 @@ func TestServeProxy(t *testing.T) {
 	out := readUntil(t, c1, "\x1b[6n", 1)
 	write(t, c1, probeReply)
 	out += readUntil(t, c1, "Hello from main", 1)
-	if n := strings.Count(out, "\x1b[6n"); n != 1 {
-		t.Errorf("%d CPR probes, want 1: %q", n, out)
+	if n := strings.Count(out, "\x1b[6n"); n != 2 {
+		t.Errorf("%d CPR probes, want 2: %q", n, out)
 	}
 	// Another client address has its own limit.
 	c2 := ts.dial(t)

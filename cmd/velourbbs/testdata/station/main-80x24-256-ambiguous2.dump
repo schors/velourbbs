@@ -1,0 +1,48 @@
+page 1 80x24 fill spaces
+|                                                                                |
+|    Терминал рисует часть букв в две клетки.                                    |
+|    Из-за этого экраны станции ломаются.                                        |
+|    Your terminal shows some characters in two cells. This breaks the screens.  |
+|                                                                                |
+|    Включите одну клетку и войдите снова.                                       |
+|    Set them to one cell and connect again.                                     |
+|                                                                                |
+|    PuTTY             Window > Translation:                                     |
+|                      clear "Treat CJK ambiguous characters as wide"            |
+|    Tera Term         Setup > Additional settings > Encoding:                   |
+|                      Ambiguous Characters width = 1 Cell                       |
+|    xterm             XTerm*cjkWidth: false, or start without -cjk_width        |
+|    iTerm2            Settings > Profiles > Text:                               |
+|                      clear "Ambiguous characters are double-width"             |
+|    Windows Terminal  Settings > Compatibility:                                 |
+|                      Width of ambiguous characters = Narrow, then restart      |
+|    GNOME Terminal    Preferences > profile > Compatibility:                    |
+|                      Ambiguous-width characters = Narrow                       |
+|    Ptyxis            Preferences > Behavior > Compatibility:                   |
+|                      Ambiguous-width Characters = Narrow                       |
+|                                                                                |
+|    R Русский    E English    Q Отключиться / Disconnect                        |
+styles
+1: 1-80 248/16
+2: 1-4 248/16, 5-44 222/16, 45-80 248/16
+3: 1-4 248/16, 5-40 222/16, 41-80 248/16
+4: 1-4 248/16, 5-78 222/16, 79-80 248/16
+5: 1-80 248/16
+6: 1-80 248/16
+7: 1-80 248/16
+8: 1-80 248/16
+9: 1-4 248/16, 5-9 220/16, 10-80 248/16
+10: 1-80 248/16
+11: 1-4 248/16, 5-13 220/16, 14-80 248/16
+12: 1-80 248/16
+13: 1-4 248/16, 5-9 220/16, 10-80 248/16
+14: 1-4 248/16, 5-10 220/16, 11-80 248/16
+15: 1-80 248/16
+16: 1-4 248/16, 5-20 220/16, 21-80 248/16
+17: 1-80 248/16
+18: 1-4 248/16, 5-18 220/16, 19-80 248/16
+19: 1-80 248/16
+20: 1-4 248/16, 5-10 220/16, 11-80 248/16
+21: 1-80 248/16
+22: 1-80 248/16
+23: 1-4 248/16, 5-5 220/16, 6-6 248/16, 7-13 144/16, 14-17 248/16, 18-18 220/16, 19-19 248/16, 20-26 144/16, 27-30 248/16, 31-31 220/16, 32-32 248/16, 33-56 144/16, 57-80 248/16

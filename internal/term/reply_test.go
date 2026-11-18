@@ -110,7 +110,8 @@ func TestRepliesAdd(t *testing.T) {
 
 	// The first reply to each query is a reply. A second reply is dropped.
 	add('[', "1;2R", true)
-	add('[', "1;3R", false)
+	add('[', "1;3R", true)
+	add('[', "1;2R", false)
 	add('P', "0$r", true)
 	add('P', "1$r0;38:2::1:2:3m", false)
 	add('P', ">|", true)
@@ -130,14 +131,14 @@ func TestRepliesAdd(t *testing.T) {
 	if !r.done() {
 		t.Error("done() = false after DA1")
 	}
-	if r.cpr != (CPR{1, 2}) || r.decrqss != "0$r" || r.xtversion != ">|" || r.da2 != ">0;136;0c" || r.da1 != "?1;4c" {
+	if r.cpr != (CPR{1, 2}) || r.amb != (CPR{1, 3}) || r.decrqss != "0$r" || r.xtversion != ">|" || r.da2 != ">0;136;0c" || r.da1 != "?1;4c" {
 		t.Errorf("replies %+v", r)
 	}
 	if got := r.logPalette(); got != "-,-,000000,ffffff,-,-,-,-,-,-,-,-,-,-,-,-" {
 		t.Errorf("logPalette() = %q", got)
 	}
 	// The DA2 reply of PuTTY gives 16777216. The empty XTVERSION text is no name.
-	if tm, _ := r.values(); tm.Colors != 16777216 || tm.Name != "" || tm.Images != "sixel" {
+	if tm, utf8 := r.values(); tm.Colors != 16777216 || tm.Name != "" || tm.Images != "sixel" || tm.Ambiguous != 2 || !utf8 {
 		t.Errorf("values() = %+v", tm)
 	}
 

@@ -262,27 +262,31 @@ styles
 		// The values of session-fields, section 4. A test binary has no tag: bbs.version is dev.
 		name: "session fields",
 		args: []string{"fields"},
-		want: page(80, 24, "F|127.0.0.1|00:00:00|Kind Brothers BBS|dev|1|2006-01-02 15:04:05|00:00:00|||E"),
+		want: page(80, 24, "F|127.0.0.1|00:00:00|Kind Brothers BBS|dev|1|2006-01-02 15:04:05|00:00:00|||1|E"),
 	}, {
 		name: "set session fields",
 		args: []string{"fields", "--set", "session.ip=2001:db8::1", "--set", "session.online=01:25:07",
 			"--set", "bbs.name=Мир BBS", "--set", "bbs.version=v1.2.0", "--set", "bbs.sessions=12",
 			"--set", "bbs.time=16.11.2026", "--set", "bbs.uptime=3d 04:17:09"},
-		want: page(80, 24, "F|2001:db8::1|01:25:07|Мир BBS|v1.2.0|12|16.11.2026|3d 04:17:09|||E"),
+		want: page(80, 24, "F|2001:db8::1|01:25:07|Мир BBS|v1.2.0|12|16.11.2026|3d 04:17:09|||1|E"),
 	}, {
 		name: "empty session fields",
 		args: []string{"fields", "--set", "session.ip=", "--set", "bbs.name=", "--set", "bbs.time="},
-		want: page(80, 24, "F||00:00:00||dev|1||00:00:00|||E"),
+		want: page(80, 24, "F||00:00:00||dev|1||00:00:00|||1|E"),
 	}, {
 		// term.name as in a session with this XTVERSION text (telnet-term, section 6).
 		name: "terminal name and images",
 		args: []string{"fields", "--set", "session.ip=", "--set", "bbs.name=", "--set", "bbs.time=",
 			"--set", "term.name=\x1bXTerm(412) " + strings.Repeat("ы", 40), "--set", "term.images=sixel"},
-		want: page(80, 24, "F||00:00:00||dev|1||00:00:00|XTerm(412) "+strings.Repeat("ы", 29)+"|sixel|E"),
+		want: page(80, 24, "F||00:00:00||dev|1||00:00:00|XTerm(412) "+strings.Repeat("ы", 29)+"|sixel|1|E"),
 	}, {
 		name: "empty images",
 		args: []string{"fields", "--set", "term.images=sixel", "--set", "term.images="},
-		want: page(80, 24, "F|127.0.0.1|00:00:00|Kind Brothers BBS|dev|1|2006-01-02 15:04:05|00:00:00|||E"),
+		want: page(80, 24, "F|127.0.0.1|00:00:00|Kind Brothers BBS|dev|1|2006-01-02 15:04:05|00:00:00|||1|E"),
+	}, {
+		name: "ambiguous width",
+		args: []string{"fields", "--set", "term.ambiguous=2"},
+		want: page(80, 24, "F|127.0.0.1|00:00:00|Kind Brothers BBS|dev|1|2006-01-02 15:04:05|00:00:00|||2|E"),
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -307,16 +311,17 @@ func TestPreviewErrors(t *testing.T) {
 		{"preview", []string{"main", "--size", "80x101"}, "velourbbs preview: term.rows is 101, must be from 10 to 100", exitUsage},
 		{"preview", []string{"main", "--size", "+80x25"}, `invalid value "+80x25" for flag -size: cols: "+80" is not a decimal number`, exitUsage},
 		{"preview", []string{"main", "--size", "80"}, `invalid value "80" for flag -size: rows: "" is not a decimal number`, exitUsage},
-		{"preview", []string{"main", "--set", "term.cols=100"}, `invalid value "term.cols=100" for flag -set: cannot set "term.cols": only term.type, term.colors, term.name, term.images, arg.<name>, session.* and bbs.*`, exitUsage},
-		{"preview", []string{"main", "--set", "term.charset=koi8-r"}, `invalid value "term.charset=koi8-r" for flag -set: cannot set "term.charset": only term.type, term.colors, term.name, term.images, arg.<name>, session.* and bbs.*`, exitUsage},
+		{"preview", []string{"main", "--set", "term.cols=100"}, `invalid value "term.cols=100" for flag -set: cannot set "term.cols": only term.type, term.colors, term.name, term.images, term.ambiguous, arg.<name>, session.* and bbs.*`, exitUsage},
+		{"preview", []string{"main", "--set", "term.charset=koi8-r"}, `invalid value "term.charset=koi8-r" for flag -set: cannot set "term.charset": only term.type, term.colors, term.name, term.images, term.ambiguous, arg.<name>, session.* and bbs.*`, exitUsage},
 		{"preview", []string{"main", "--set", "term.colors=17"}, "velourbbs preview: term.colors is 17, must be 16, 256 or 16777216", exitUsage},
 		{"preview", []string{"main", "--set", "term.type"}, `invalid value "term.type" for flag -set: expected <path>=<value>`, exitUsage},
 		{"preview", []string{"main", "--set", "term.images=SIXEL"}, `invalid value "term.images=SIXEL" for flag -set: term.images is "SIXEL", must be sixel or empty`, exitUsage},
+		{"preview", []string{"main", "--set", "term.ambiguous=3"}, `invalid value "term.ambiguous=3" for flag -set: term.ambiguous is "3", must be 1 or 2`, exitUsage},
 		{"preview", []string{"fields", "--set", "bbs.name={x"}, `invalid value "bbs.name={x" for flag -set: bbs.name: value has "{"`, exitUsage},
 		{"preview", []string{"fields", "--set", "session.ip=a\tb"}, "invalid value \"session.ip=a\\tb\" for flag -set: session.ip: value has a control character", exitUsage},
 		{"preview", []string{"fields", "--set", "bbs.sessions=-1"}, `invalid value "bbs.sessions=-1" for flag -set: bbs.sessions: "-1" is not a decimal number`, exitUsage},
 		{"preview", []string{"fields", "--set", "bbs.sessions="}, `invalid value "bbs.sessions=" for flag -set: bbs.sessions: "" is not a decimal number`, exitUsage},
-		{"preview", []string{"fields", "--set", "session.node=1"}, `invalid value "session.node=1" for flag -set: cannot set "session.node": only term.type, term.colors, term.name, term.images, arg.<name>, session.* and bbs.*`, exitUsage},
+		{"preview", []string{"fields", "--set", "session.node=1"}, `invalid value "session.node=1" for flag -set: cannot set "session.node": only term.type, term.colors, term.name, term.images, term.ambiguous, arg.<name>, session.* and bbs.*`, exitUsage},
 		{"preview", []string{"nope"}, `velourbbs preview: unknown screen "nope"`, exitUsage},
 		{"preview", []string{}, "velourbbs preview: expected one screen name", exitUsage},
 		{"preview", []string{"main", "term"}, "velourbbs preview: expected one screen name", exitUsage},

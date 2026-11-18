@@ -162,19 +162,23 @@ func (pr *probe) log(log *slog.Logger, accepted time.Time, term screen.Term, utf
 	if pr.r.naws.Cols > 0 {
 		naws = fmt.Sprintf("%dx%d", pr.r.naws.Cols, pr.r.naws.Rows)
 	}
-	cpr := "-"
-	if pr.r.cprGot {
-		cpr = fmt.Sprintf("%d;%d", pr.r.cpr.Row, pr.r.cpr.Col)
+	logCPR := func(c CPR, got bool) string {
+		if !got {
+			return "-"
+		}
+		return fmt.Sprintf("%d;%d", c.Row, c.Col)
 	}
 	charset := term.Charset
 	if !utf8 {
 		charset = "not utf-8"
 	}
 	log.Info("probe",
-		"ttype", ttype, "naws", naws, "cpr", cpr,
+		"ttype", ttype, "naws", naws,
+		"cpr", logCPR(pr.r.cpr, pr.r.cprGot), "cpr_ambiguous", logCPR(pr.r.amb, pr.r.ambGot),
 		"decrqss", logReply(pr.r.decrqss), "xtversion", logReply(pr.r.xtversion),
 		"da2", logReply(pr.r.da2), "da1", logReply(pr.r.da1), "palette", pr.r.logPalette(),
 		"type", term.Type, "cols", term.Cols, "rows", term.Rows,
 		"charset", charset, "colors", term.Colors, "name", term.Name, "images", term.Images,
+		"ambiguous", term.Ambiguous,
 		"time", time.Since(accepted))
 }

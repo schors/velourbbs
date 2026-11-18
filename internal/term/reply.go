@@ -13,11 +13,12 @@ import (
 // paletteSize is the number of OSC 4 queries: the indexes 0–15 (section 5.7).
 const paletteSize = 16
 
-// probeWrite is the write of step 4 of section 5.1: the charset probe (section 5.4),
+// probeWrite is the write of step 4 of section 5.1: the CPR probes (section 5.4),
 // the terminal queries in the order of section 5.7 and the erase.
 var probeWrite = func() string {
 	var b strings.Builder
 	b.WriteString("\râ\x1b[6n")                            // charset probe
+	b.WriteString("\rж\x1b[6n")                            // ambiguous probe
 	b.WriteString("\x1b[38;2;1;2;3m\x1bP$qm\x1b\\\x1b[0m") // DECRQSS for SGR
 	b.WriteString("\x1b[>0q")                              // XTVERSION
 	b.WriteString("\x1b[>c")                               // DA2
@@ -41,6 +42,8 @@ type replies struct {
 	naws       telnet.NAWS // the last NAWS without 0 in a dimension; zero is no size
 	cpr        CPR         // the reply to the charset probe
 	cprGot     bool        // the reply to the charset probe arrived
+	amb        CPR         // the reply to the ambiguous probe
+	ambGot     bool        // the reply to the ambiguous probe arrived
 	decrqss    string
 	xtversion  string
 	da2        string
@@ -64,10 +67,14 @@ func (r *replies) add(rp Reply) bool {
 	switch rp.Intro {
 	case '[':
 		if c, ok := parseCPR(b); ok {
-			if r.cprGot {
+			switch {
+			case !r.cprGot:
+				r.cpr, r.cprGot = c, true
+			case !r.ambGot:
+				r.amb, r.ambGot = c, true
+			default:
 				return false
 			}
-			r.cpr, r.cprGot = c, true
 			return true
 		}
 		params, ok := strings.CutSuffix(b, "c")
@@ -121,6 +128,10 @@ func (r *replies) values() (t screen.Term, utf8 bool) {
 	}
 	if hasSixel(r.da1) {
 		t.Images = screen.ImagesSixel
+	}
+	t.Ambiguous = 1
+	if r.ambGot && r.amb.Col == 3 {
+		t.Ambiguous = 2
 	}
 	t.Cols, t.Rows = r.naws.Cols, r.naws.Rows
 	if t.Cols == 0 {
