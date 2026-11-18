@@ -74,7 +74,7 @@ do = "page next"
 when = "not file.last"
 [[item]]
 key = "ESC"
-do = "goto texts"
+do = "back"
 +++
 {!md_mark}■  {!}{file.section}
 {!md_h1}{file.title}
@@ -89,7 +89,7 @@ An item of the screen `texts` opens a file in it:
 ```
 [[item]]
 key = "1"
-do = "goto reader"
+do = "gosub reader"
 args = { file = "gold.md" }
 ```
 
@@ -103,7 +103,7 @@ args = { file = "gold.md" }
   in them, W is A.
 - The margin cells of a file row are spaces in `normal`.
 - The host can show each file that `file` names: the path of `file`, or each value
-  of the argument `<name>` that a `goto` to the screen gives ([bbt-format](bbt-format.md), section 8.5).
+  of the argument `<name>` that a `goto` or a `gosub` to the screen gives ([bbt-format](bbt-format.md), section 8.5).
 
 ### 3.2. Pages
 
@@ -311,7 +311,7 @@ Positions:
   ([screen-render](screen-render.md), section 3.1).
 - An error of a whole content file (it does not exist, it is not a regular file, it is over 1 MB)
   is an error of the key `file`.
-- An error of a file that a `goto` gives is an error of the item with the `goto`:
+- An error of a file that a `goto` or a `gosub` gives is an error of its item:
   the position of the first line of the front matter of its screen,
   and the start `item "<KEY>": args: <name>: ` ([menu-nav](menu-nav.md), section 6).
   This includes an error of `lines` and `numbers` for this file.

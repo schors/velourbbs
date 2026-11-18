@@ -180,7 +180,7 @@ Columns and rows are 1-based in the screen area of 80 columns.
 
 ### 6.1. `main`
 
-Items: `A` `goto about`, `R` `goto texts`, `T` `goto term`, `G` `logoff`.
+Items: `A` `gosub about`, `R` `gosub texts`, `T` `gosub term`, `G` `logoff`.
 
 ```text
 
@@ -212,7 +212,7 @@ Items: `A` `goto about`, `R` `goto texts`, `T` `goto term`, `G` `logoff`.
 
 ### 6.2. `about`
 
-Items: `ESC` `goto main`, `ENTER` `goto main`. The key row is `Esc Enter  back`.
+Items: `ESC` `back`, `ENTER` `back`. The key row is `Esc Enter  back`.
 
 ```text
        Lamp is a small station for friends.
@@ -226,7 +226,7 @@ Items: `ESC` `goto main`, `ENTER` `goto main`. The key row is `Esc Enter  back`.
 
 ### 6.3. `term`
 
-Items: `ESC` `goto main`, `ENTER` `goto main`. The key row is `Esc Enter  back`.
+Items: `ESC` `back`, `ENTER` `back`. The key row is `Esc Enter  back`.
 
 ```text
        Size     80×24
@@ -244,8 +244,8 @@ Items: `ESC` `goto main`, `ENTER` `goto main`. The key row is `Esc Enter  back`.
 
 ### 6.4. `texts`
 
-Items: `1` `goto reader` with `args = { file = "lamp.md" }`, `2` `goto reader`
-with `args = { file = "rules.txt" }`, `ESC` `goto main`.
+Items: `1` `gosub reader` with `args = { file = "lamp.md" }`, `2` `gosub reader`
+with `args = { file = "rules.txt" }`, `ESC` `back`.
 The key row is `1 2  choose   Esc  back`.
 
 ```text
@@ -272,7 +272,7 @@ The file screen: `file = "{arg.file}"`, `margin = [7, 2]`
 ([file-view](file-view.md), section 3).
 
 Items: `SPACE` `page next` with `when = "not file.last"`, `B` `page prev`
-with `when = "file.page > 1"`, `ESC` `goto texts`.
+with `when = "file.page > 1"`, `ESC` `back`.
 
 At 80x24:
 

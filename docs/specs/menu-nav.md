@@ -19,7 +19,9 @@ All sessions are anonymous. Login is a later idea.
 
 - A "menu", an "item" and an "enabled" item: [bbt-format](bbt-format.md), section 8.
 - The "current screen" is the one screen of the session that waits for a key.
-  There is no navigation stack.
+- The "navigation stack" is the list of the frames of the session (section 4.1).
+  A "frame" holds a screen, its arguments and the page of a file screen.
+  The "first frame" is at the bottom of the stack. The "top frame" holds the current screen.
 
 ## 3. Keys
 
@@ -60,19 +62,41 @@ ESC has no implicit action.
 
 The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
 
-- `goto` to the current screen renders it again, for example after a resize.
-  With `args`, it shows the screen with the new arguments.
+- `goto`, `gosub`, `back` and `top` change the navigation stack (section 4.1).
 - A `page` action shows a page of the current file screen (section 5.1).
 - `theme <choice>` sets the theme choice of the session to `<choice>`
   ([screens-toml](screens-toml.md), section 3.2). The choice lasts until the end of the session.
-  Then the host shows the current screen again, as `goto` to the current screen
-  with its arguments. In a file screen, it shows the current page again (section 5.1).
+  Then the host shows the screen of the top frame again (section 5). The stack does not change.
+  In a file screen, it shows the current page again (section 5.1).
 - `logoff` shows `screens/goodbye.bbt` if it exists. Then the host disconnects.
   The host does not wait for a key after the last page of `goodbye`.
+
+### 4.1. Navigation stack
+
+- The stack has 16 frames at most.
+- `goto <name>` replaces the top frame with a new frame: the screen `<name>`,
+  the `args` of the item and page 1.
+- `gosub <name>` adds a new frame on top: the screen `<name>`, the `args` of the item and page 1.
+  When the stack has 16 frames, the host first removes the second frame:
+  the oldest frame above the first frame.
+- `back` removes the top frame. On the first frame, it removes nothing.
+- `top` removes each frame above the first frame.
+- After each of these actions, the host shows the screen of the top frame
+  with its arguments (section 5). A file screen shows the page of the frame (section 5.1).
+- A `goto` to the current screen also gives a new frame with page 1.
+  The host reads the terminal size again (section 5).
+- A `goto` on the first frame replaces the first frame. Then `top` shows its screen,
+  not the start screen.
+
+Example: `main` runs `gosub texts`, `texts` runs `gosub reader` and the user goes to page 3.
+The stack is `main`, `texts`, `reader` on page 3. `back` shows `texts`. A second `back`
+shows `main`. From `reader`, `top` shows `main`. From `reader`, `goto main` gives the stack
+`main`, `texts`, `main`. `back` then shows `texts`.
 
 ## 5. Session
 
 - The first screen is `[menu] start` ([screens-toml](screens-toml.md), section 3.4).
+  The session starts with one frame: the start screen with no arguments.
 - The host shows a screen in these steps. Section 5.1 has the steps of a file screen.
   1. Read `term.cols` and `term.rows`. A resize takes effect at the next screen.
   2. Evaluate the `when` of each item.
@@ -94,9 +118,11 @@ The host shows a file screen ([file-view](file-view.md), section 3) in these ste
 1. Read `term.cols` and `term.rows`. Lay out the file into file pages.
    The size and the file pages stay until the next screen.
 2. For the current page, evaluate the `when` of each item, render the page and
-   clear the terminal screen and show it. The first page is page 1.
+   clear the terminal screen and show it. The first page that the host shows is the page
+   of the top frame (section 4.1), or the last file page when the file has fewer pages.
+   The host then sets the page of the top frame to the shown page.
 3. Wait for keys and match them (section 3.3). A `page` action sets the current page
-   and continues at step 2. A `theme` action continues at step 2.
+   and the page of the top frame, and continues at step 2. A `theme` action continues at step 2.
    Each other action leaves the screen.
 
 ### 5.2. Stop
@@ -113,13 +139,13 @@ When the host stops ([telnet-term](telnet-term.md), section 10.2), it shows
 `velourbbs check` ([screen-render](screen-render.md), section 3.1) finds the item errors
 of [bbt-format](bbt-format.md), section 8.4. It also finds these errors:
 
-- a `goto` to a screen that does not exist;
-- a `goto` to a screen without items, for example `goodbye` or `shutdown`;
+- a `goto` or a `gosub` to a screen that does not exist;
+- a `goto` or a `gosub` to a screen without items, for example `goodbye` or `shutdown`;
 - a screen without items, except `goodbye` and `shutdown`;
 - items in `goodbye` or `shutdown`;
 - a file screen as `goodbye` or `shutdown` ([file-view](file-view.md), section 3);
 - a start screen that does not exist or has no items;
-- a `goto` whose `args` differ from the arguments of the target screen
+- a `goto` or a `gosub` whose `args` differ from the arguments of the target screen
   ([bbt-format](bbt-format.md), section 8.5);
 - arguments of the start screen, of `goodbye` or of `shutdown`.
 
@@ -130,7 +156,7 @@ of [bbt-format](bbt-format.md), section 8.4. It also finds these errors:
 - An error of a screen without items has the position 1:1.
 - An error of the start screen has the position 1:1 in `screens/screens.toml`,
   also when the file is missing.
-- The checks of a `goto`, of a screen without items and of the start screen use all screens.
+- The checks of a `goto` and a `gosub`, of a screen without items and of the start screen use all screens.
   `velourbbs check` does them only when the files have no other errors.
 
 Examples:
@@ -154,11 +180,12 @@ It is the test harness for the navigation.
   except the comma and the space.
   Example: `S,ы,ESC,G`. An empty list is valid.
 - `<name>` must be a valid start screen (section 6), except the rule on arguments.
-  Else it is an invalid argument. `--set arg.<name>` gives the arguments of the screen
-  ([screen-render](screen-render.md), section 3.2).
+  Else it is an invalid argument. The session starts with one frame: this screen.
+  `--set arg.<name>` gives the arguments of the screen ([screen-render](screen-render.md), section 3.2).
 - The other arguments of `velourbbs preview` ([screen-render](screen-render.md), section 3.2) apply.
 - The output has one part for each event:
-  - `screen <name>` and the cell dump of the first page, when the host shows a screen;
+  - `screen <name>` and the cell dump of the first shown page, when the host shows a screen,
+    also after `back` and `top`;
   - the cell dump of the next page, after a key on a More row;
   - the cell dump of the page, after a `page` action or a `theme` action in a file screen;
   - `key <key>` before each key. `key <key> ignored` for an ignored key;
@@ -170,7 +197,7 @@ It is the test harness for the navigation.
   `velourbbs preview` exits with status 1.
 
 Example: `velourbbs preview main --keys S,X,G --size 80x25`, with the screens
-of [bbt-format](bbt-format.md), section 8:
+of [bbt-format](bbt-format.md), section 8. `S` runs `gosub sysinfo`, `X` runs `back`:
 
 ```
 screen main
@@ -209,7 +236,6 @@ page 1 80x25 fill none
 
 ## 9. Not in the MVP
 
-- `gosub`, `back`, `top` and a navigation stack: [menu-actions](https://github.com/schors/velourbbs/issues/13).
 - Typed command input.
 - A theme choice that lasts after the session. It needs users and login.
 - `page` for lists, and the actions `run` and `call`. They need lists, Lua or built-ins.

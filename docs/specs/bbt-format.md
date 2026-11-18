@@ -313,7 +313,7 @@ Example `screens/main.bbt`:
 +++
 [[item]]
 key = "S"
-do = "goto sysinfo"
+do = "gosub sysinfo"
 when = "term.cols >= 80"
 [[item]]
 key = "G"
@@ -329,7 +329,7 @@ Example `screens/sysinfo.bbt`:
 +++
 [[item]]
 key = "ANY"
-do = "goto main"
+do = "back"
 +++
 Terminal: {term.cols}x{term.rows}. Press any key.
 ```
@@ -356,7 +356,7 @@ are the same keys.
 | `key` | string | The key of the item. Section 8.1. |
 | `do` | string | The action. Section 8.3. |
 | `when` | string | Optional. A condition (section 5). |
-| `args` | table | Optional. The arguments of a `goto` (section 8.5). |
+| `args` | table | Optional. The arguments of a `goto` or a `gosub` (section 8.5). |
 
 - An item is "enabled" when it has no `when` or its `when` is true.
   A disabled item counts as absent.
@@ -368,12 +368,15 @@ are the same keys.
 
 | `do` | Action |
 |---|---|
-| `goto <name>` | Show the screen `<name>`. |
+| `goto <name>` | Show the screen `<name>` in place of the current screen. |
+| `gosub <name>` | Show the screen `<name>` over the current screen: [menu-nav](menu-nav.md), section 4.1. |
+| `back` | Show the screen below the current screen again: [menu-nav](menu-nav.md), section 4.1. |
+| `top` | Show the first screen of the navigation stack again: [menu-nav](menu-nav.md), section 4.1. |
 | `logoff` | End the session. |
 | `page next`, `page prev`, `page first`, `page last` | Show another page of a file screen: [file-view](file-view.md), section 3.3. |
 | `theme dark`, `theme light`, `theme auto` | Set the theme choice of the session: [screens-toml](screens-toml.md), section 3.2. |
 
-- The action words are lower case. `do` has no other spaces than the one space after `goto`, `page` or `theme`.
+- The action words are lower case. `do` has no other spaces than the one space after `goto`, `gosub`, `page` or `theme`.
 - `<name>` matches the screen name of section 2.
 - [menu-nav](menu-nav.md), section 4, defines how the host runs the actions.
 
@@ -386,9 +389,9 @@ Each of these is an error in a screen:
 - a duplicate key in a menu, also `ANY`;
 - an invalid `do`: an unknown action, or a wrong argument of the action;
 - an `item.<KEY>` path without an item in the screen;
-- `args` with an action other than `goto`, an invalid argument name or an invalid value (section 8.5).
+- `args` with an action other than `goto` or `gosub`, an invalid argument name or an invalid value (section 8.5).
 
-[menu-nav](menu-nav.md), section 6, has the other menu errors: the `goto` targets, the screens
+[menu-nav](menu-nav.md), section 6, has the other menu errors: the `goto` and `gosub` targets, the screens
 without items, the items of `goodbye` and `shutdown`, and the start screen. It also has the form of the item errors.
 
 ### 8.5. Arguments
@@ -399,9 +402,10 @@ without items, the items of `goodbye` and `shutdown`, and the start screen. It a
 - The "arguments of a screen" are the names of the `arg.<name>` fields of the screen:
   in its body, its fragments, its art, its `when` and its `file`
   ([file-view](file-view.md), section 3).
-- A `goto` gives exactly the arguments of its target screen. A missing argument
+- A `goto` or a `gosub` gives exactly the arguments of its target screen. A missing argument
   or another argument is an error.
-- The field `arg.<name>` gives the value of the `goto` that shows the screen.
+- The field `arg.<name>` gives the value of the `goto` or the `gosub` that shows the screen.
+  `back` and `top` show a screen with the same values.
 
 ## 9. Limits
 

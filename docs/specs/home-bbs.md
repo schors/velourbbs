@@ -40,13 +40,13 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 
 | Screen | Content | Items |
 |---|---|---|
-| `main` | The entry screen (section 3.1). | `R` `goto ru-menu`, `E` `goto en-menu`, `Q` `logoff`. |
-| `<lang>-menu` | The menu (section 3.2). | `1` `goto <lang>-texts`, `2` `goto <lang>-about`, `ESC` `goto main`, `Q` `logoff`. |
-| `<lang>-texts` | The catalog of the section Texts (section 3.3). | `1` `goto <lang>-setup`, `2` `goto <lang>-bbt`, `3` `goto <lang>-text-read` with the features text, `ESC` `goto <lang>-menu`. |
-| `<lang>-setup` | The parts of the setup guide. | `0` for `README.md`, `1`–`5` for the parts: `goto <lang>-setup-read` with the part. `ESC` `goto <lang>-texts`. |
-| `<lang>-bbt` | The parts of the BBT guide. | `0` for `README.md`, `1`–`9` for the parts: `goto <lang>-bbt-read` with the part. `ESC` `goto <lang>-texts`. |
-| `<lang>-setup-read`, `<lang>-bbt-read`, `<lang>-text-read` | File screens of the argument `file` (section 3.4). | `SPACE` `page next`, `B` `page prev`, `ESC` back to the screen that opened it. |
-| `<lang>-about` | The section About the station (section 3.5). | `ESC` `goto <lang>-menu`. |
+| `main` | The entry screen (section 3.1). | `R` `gosub ru-menu`, `E` `gosub en-menu`, `Q` `logoff`. |
+| `<lang>-menu` | The menu (section 3.2). | `1` `gosub <lang>-texts`, `2` `gosub <lang>-about`, `ESC` `back`, `Q` `logoff`. |
+| `<lang>-texts` | The catalog of the section Texts (section 3.3). | `1` `gosub <lang>-setup`, `2` `gosub <lang>-bbt`, `3` `gosub <lang>-text-read` with the features text, `ESC` `back`. |
+| `<lang>-setup` | The parts of the setup guide. | `0` for `README.md`, `1`–`5` for the parts: `gosub <lang>-setup-read` with the part. `ESC` `back`. |
+| `<lang>-bbt` | The parts of the BBT guide. | `0` for `README.md`, `1`–`9` for the parts: `gosub <lang>-bbt-read` with the part. `ESC` `back`. |
+| `<lang>-setup-read`, `<lang>-bbt-read`, `<lang>-text-read` | File screens of the argument `file` (section 3.4). | `SPACE` `page next`, `B` `page prev`, `ESC` `back`. |
+| `<lang>-about` | The section About the station (section 3.5). | `ESC` `back`. |
 | `goodbye` | The goodbye screen in both languages, with the repository address (section 3.5). | — |
 | `shutdown` | The restart notice in both languages: the station restarts, call again in a minute. | — |
 
