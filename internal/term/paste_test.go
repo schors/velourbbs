@@ -103,9 +103,26 @@ func TestReadLinePasteTwoReads(t *testing.T) {
 		if r := <-done; r.text != "one" || !r.ok || r.err != nil {
 			t.Fatalf("ReadLine() = %q, %v, %v; want one", r.text, r.ok, r.err)
 		}
+		// A paste has no time limit.
+		time.Sleep(2 * SeqWait)
 		f.write("o\r" + markEnd + "k")
 		if got := keys(t, term, 1); got[0] != "k" {
 			t.Errorf("key after the input %q, want k", got[0])
+		}
+	})
+}
+
+// TestReadLinePasteLate covers a late part of a paste in the line input: it is still
+// a part of the paste, so its BS is dropped (telnet-term, section 8.4).
+func TestReadLinePasteLate(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		term, f := connect(t, testTimeouts)
+		done := readLine(term, field)
+		f.write(markStart + "ab")
+		time.Sleep(2 * SeqWait)
+		f.write("\x7fc\r" + markEnd)
+		if r := <-done; r.text != "abc" || !r.ok || r.err != nil {
+			t.Errorf("ReadLine() = %q, %v, %v; want abc", r.text, r.ok, r.err)
 		}
 	})
 }

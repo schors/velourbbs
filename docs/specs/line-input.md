@@ -67,6 +67,9 @@ The line input takes the keys of [telnet-term](telnet-term.md), section 8, in th
 - The line input inserts a character when the line has fewer than M characters,
   the character is not a control character ([bbt-format](bbt-format.md), section 2.1)
   and the line after the insert keeps the grapheme rule. Else it drops the character.
+- The line input checks the grapheme rule with a letter before the line and a space after it.
+  So a character at the start or at the end of the line does not join the text around the field:
+  U+0903 at the start and U+0D4E (a Prepend character) at the end are invalid.
 - `BS` and `DEL` make no change when the line after the removal breaks the grapheme rule.
   Example: in `ᅡxᅡ` (U+1161, `x`, U+1161), the removal of `x` joins the two U+1161
   into one grapheme.
@@ -124,7 +127,8 @@ The line input takes the keys of [telnet-term](telnet-term.md), section 8, in th
 - A test covers each key of section 4 at the start, in the middle and at the end of the line,
   and the length limit M.
 - A test covers the characters of section 5: a control character, a wide character,
-  a character of width 0, U+0903 after a letter, an East Asian Ambiguous character
+  a character of width 0, U+0903 after a letter and at the start, U+0D4E at the end,
+  an East Asian Ambiguous character
   and a Cyrillic letter. A test covers `BS` and `DEL` in `ᅡxᅡ`.
 - A test covers the masked mode: the draw shows `*`, the caller gets the line.
 - A test covers an empty `ENTER` and `ESC`.

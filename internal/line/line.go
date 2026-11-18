@@ -52,7 +52,8 @@ func (l *Line) Key(k string, paste bool) Result {
 	if k == "SPACE" {
 		k = " "
 	}
-	if r, size := utf8.DecodeRuneInString(k); size == len(k) && r != utf8.RuneError {
+	// A U+FFFD of the input is valid UTF-8: the key decoder gives it.
+	if r, size := utf8.DecodeRuneInString(k); size == len(k) && (r != utf8.RuneError || size > 1) {
 		return l.insert(r)
 	}
 	if k == "ENTER" {
@@ -145,9 +146,10 @@ func (l *Line) remove(i int) bool {
 }
 
 // valid reports whether each character of text is one grapheme of width 1:
-// the grapheme rule of section 5.
+// the grapheme rule of section 5. It checks text between a letter and a space,
+// so a character at the start or at the end does not join the text around the field.
 func valid(text []rune) bool {
-	for g, w := range screen.Graphemes(string(text)) {
+	for g, w := range screen.Graphemes("a" + string(text) + " ") {
 		if w != 1 || utf8.RuneCountInString(g) != 1 {
 			return false
 		}

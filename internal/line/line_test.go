@@ -1,6 +1,7 @@
 package line
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -35,7 +36,9 @@ func TestKeys(t *testing.T) {
 		{"char at end", []string{"d"}, "abcd|", Changed},
 		{"char in middle", []string{"LEFT", "d"}, "abd|c", Changed},
 		{"char at start", []string{"HOME", "d"}, "d|abc", Changed},
-		{"space", []string{"SPACE"}, "abc |", Changed},
+		{"space at end", []string{"SPACE"}, "abc |", Changed},
+		{"space in middle", []string{"LEFT", "SPACE"}, "ab |c", Changed},
+		{"space at start", []string{"HOME", "SPACE"}, " |abc", Changed},
 		{"left at end", []string{"LEFT"}, "ab|c", Changed},
 		{"left in middle", []string{"LEFT", "LEFT"}, "a|bc", Changed},
 		{"left at start", []string{"HOME", "LEFT"}, "|abc", None},
@@ -61,7 +64,10 @@ func TestKeys(t *testing.T) {
 		{"esc in middle", []string{"LEFT", "ESC"}, "ab|c", Cancel},
 		{"esc at start", []string{"HOME", "ESC"}, "|abc", Cancel},
 	}
-	ignored := []string{"TAB", "UP", "DOWN", "PGUP", "PGDN", "F1", "F5", "F12"}
+	ignored := []string{"TAB", "UP", "DOWN", "PGUP", "PGDN"}
+	for i := 1; i <= 12; i++ {
+		ignored = append(ignored, fmt.Sprintf("F%d", i))
+	}
 	for _, k := range ignored {
 		for _, pos := range []string{"HOME", "LEFT", "END"} {
 			tests = append(tests, struct {
@@ -116,6 +122,11 @@ func TestChars(t *testing.T) {
 		{"combining mark after a letter", []string{"a"}, "\u0301", "a"},
 		{"variation selector", []string{"a"}, "\ufe0f", "a"},
 		{"U+0903 after a letter", []string{"\u0915"}, "\u0903", "\u0915"},
+		{"U+0903 at the start", nil, "\u0903", ""},
+		{"U+0903 at the start after a letter", []string{"\u0915", "HOME"}, "\u0903", "\u0915"},
+		{"Prepend U+0D4E at the end", []string{"a"}, "\u0d4e", "a"},
+		{"Prepend U+0D4E in the middle", []string{"a", "HOME"}, "\u0d4e", "a"},
+		{"valid U+FFFD", []string{"a"}, "\ufffd", "a\ufffd"},
 		{"East Asian Ambiguous", []string{"a"}, "\u00b1", "a\u00b1"},
 		{"Cyrillic letter", []string{"a"}, "ы", "aы"},
 	}
