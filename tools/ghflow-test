@@ -35,6 +35,7 @@ while (($#)); do
   esac
 done
 p=${url#https://api.github.com/repos/o/r}
+p=${p#https://api.github.com}
 printf '%s %s\n' "$m" "$p" >>"$LOG"
 [[ -n $data ]] && jq -c . "$data" >>"$LOG"
 f=$FIX/$(printf '%s %s' "$m" "$p" | tr -c 'A-Za-z0-9' '_')
@@ -164,6 +165,41 @@ has "$T/err" "created #12"
 has "$LOG" "POST /issues/12/dependencies/blocked_by"
 has "$LOG" '{"issue_id":1100}'
 
+name="new progress assigns the owner of the token"
+reset
+respond POST /issues 201 '{"number":12,"id":1200}'
+respond GET /user 200 '{"login":"op"}'
+respond POST /issues/12/assignees 201 '{}'
+run new one-shot progress "Fix menus" <<<"Body."
+ok
+has "$LOG" "GET /user"
+has "$LOG" '{"assignees":["op"]}'
+
+name="new todo assigns nobody"
+reset
+respond POST /issues 201 '{"number":12,"id":1200}'
+run new one-shot todo "Fix menus" <<<"Body."
+ok
+hasnt "$LOG" "assignees"
+
+name="new block before a sub-issue sets the priority"
+reset
+respond POST /issues 201 '{"number":12,"id":1200}'
+respond POST /issues/10/sub_issues 201 '{}'
+respond POST /issues/10/dependencies/blocked_by 201 '{}'
+respond GET /issues/11 200 '{"id":1100}'
+respond PATCH /issues/10/sub_issues/priority 200 '{}'
+run new block todo "Design: fix" --parent 10 --before 11 <<<"Body."
+ok
+has "$LOG" "PATCH /issues/10/sub_issues/priority"
+has "$LOG" '{"sub_issue_id":1200,"before_id":1100}'
+
+name="new refuses --before with no parent"
+reset
+run new block todo "X" --before 11 <<<"Body."
+refused
+nocall
+
 name="new refuses an unknown type"
 reset
 run new epic todo "X" <<<"Body."
@@ -175,10 +211,22 @@ reset
 respond GET /issues/4 200 '{"labels":[{"name":"dev"},{"name":"todo"}]}'
 respond DELETE /issues/4/labels/todo 200 '[]'
 respond POST /issues/4/labels 200 '[]'
+respond GET /user 200 '{"login":"op"}'
+respond POST /issues/4/assignees 201 '{}'
 run status 4 progress
 ok
 has "$LOG" "DELETE /issues/4/labels/todo"
 has "$LOG" '{"labels":["progress"]}'
+has "$LOG" '{"assignees":["op"]}'
+
+name="status review keeps the assignees"
+reset
+respond GET /issues/4 200 '{"labels":[{"name":"progress"}]}'
+respond DELETE /issues/4/labels/progress 200 '[]'
+respond POST /issues/4/labels 200 '[]'
+run status 4 review
+ok
+hasnt "$LOG" "assignees"
 
 name="close sets the reason"
 reset

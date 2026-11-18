@@ -23,12 +23,15 @@ Usage: ghflow <command> [arguments]
 Text input (a body) comes from stdin. Each post starts with the line
 "Agent: $GHFLOW_AGENT". The review command takes the model from its JSON.
 
-  new <type> <status> <title> [--parent <n>] [--after <n>]...
-                              create an issue; print its number
+  new <type> <status> <title> [--parent <n> [--before <n>]] [--after <n>]...
+                              create an issue; print its number; --before puts
+                              the sub-issue before that sub-issue of the parent
   list [<label>]...           list open issues with all these labels
   show <n> [--body]           show an issue or a PR, its comments and links;
                               --body prints only the raw body
   status <n> <status>         set the status label
+                              (new and status: progress also assigns the issue
+                              to the owner of the token)
   close <n> <reason>          close an issue (completed, not_planned, duplicate) or a PR
   body <n>                    replace the body of an agent post (a marker line in stdin is dropped)
   comment <n>                 add a comment to an issue or a PR
@@ -80,16 +83,18 @@ token() {
   printf '%s' "$t"
 }
 
-# api METHOD PATH [JSON_FILE]: print the response body. PATH is under /repos/<owner>/<repo>.
+# api METHOD PATH [JSON_FILE]: print the response body.
+# PATH is under /repos/<owner>/<repo>, except /user.
 # The token goes to curl through stdin, so it is not in the argument list of a process.
 api() {
-  local m=$1 p=$2 f=${3:-} out=$tmp/out code t
+  local m=$1 p=$2 f=${3:-} out=$tmp/out code t url=$API/repos/$R$2
+  [[ $p == /user ]] && url=$API/user
   t=$(token)
   local args=(-sS -K - -X "$m" -o "$out" -w '%{http_code}' --connect-timeout 10 --max-time 60
     -H 'Accept: application/vnd.github+json' -H 'X-GitHub-Api-Version: 2022-11-28')
   [[ -n $f ]] && args+=(-H 'Content-Type: application/json' --data-binary "@$f")
   code=$(printf 'header = "Authorization: Bearer %s"\n' "$t" |
-    curl "${args[@]}" "$API/repos/$R$p") || die "curl failed: $m $p"
+    curl "${args[@]}" "$url") || die "curl failed: $m $p"
   if ((code >= 300)); then
     die "$m $p: HTTP $code: $(jq -r '[.message, (.errors[]? | if type == "object"
       then (.message // .code // tostring) else tostring end)] | map(select(.)) | join("; ")' \
@@ -172,17 +177,19 @@ JQ_TAGS='def tags(u; b): u as $u | b as $b
 
 cmd_new() {
   (($# >= 3)) || die "usage: new <type> <status> <title> [--parent <n>] [--after <n>]..."
-  local type=$1 status=$2 title=$3 parent= after=() body res n id a
+  local type=$1 status=$2 title=$3 parent= before= after=() body res n id a
   shift 3
   in_list "$type" "${TYPES[@]}" || die "unknown type: $type"
   in_list "$status" "${STATUSES[@]}" || die "unknown status: $status"
   while (($#)); do
     case $1 in
       --parent) parent=${2:-}; num "$parent"; shift 2 ;;
+      --before) before=${2:-}; num "$before"; shift 2 ;;
       --after) num "${2:-}"; after+=("$2"); shift 2 ;;
       *) die "unknown option: $1" ;;
     esac
   done
+  [[ -z $before || -n $parent ]] || die "--before needs --parent"
   body=$(post)
   scan "$title"$'\n'"$body"
   res=$(send POST /issues '{title: $t, body: $b, labels: [$ty, $s]}' \
@@ -193,7 +200,12 @@ cmd_new() {
   if [[ -n $parent ]]; then
     send POST "/issues/$parent/sub_issues" '{sub_issue_id: $id}' --argjson id "$id" >/dev/null
     send POST "/issues/$parent/dependencies/blocked_by" '{issue_id: $id}' --argjson id "$id" >/dev/null
+    if [[ -n $before ]]; then
+      send PATCH "/issues/$parent/sub_issues/priority" '{sub_issue_id: $id, before_id: $b}' \
+        --argjson id "$id" --argjson b "$(api GET "/issues/$before" | jq -r .id)" >/dev/null
+    fi
   fi
+  [[ $status != progress ]] || assign "$n"
   for a in "${after[@]}"; do
     id=$(api GET "/issues/$a" | jq -r .id)
     send POST "/issues/$n/dependencies/blocked_by" '{issue_id: $id}' --argjson id "$id" >/dev/null
@@ -252,6 +264,12 @@ cmd_show() {
       text(.body)'
 }
 
+# assign N: assign the issue to the owner of the token, who does the work.
+assign() {
+  send POST "/issues/$1/assignees" '{assignees: [$l]}' \
+    --arg l "$(api GET /user | jq -r .login)" >/dev/null
+}
+
 cmd_status() {
   (($# == 2)) || die "usage: status <n> <status>"
   local n=$1 s=$2 cur l
@@ -264,6 +282,7 @@ cmd_status() {
     fi
   done
   grep -qxF "$s" <<<"$cur" || send POST "/issues/$n/labels" '{labels: [$s]}' --arg s "$s" >/dev/null
+  [[ $s != progress ]] || assign "$n"
 }
 
 cmd_close() {
@@ -435,7 +454,7 @@ request|a2eeef|Type: a feature request from a user
 bug|d73a4a|Type: a bug report
 backlog|ededed|Status: not planned yet
 todo|fbca04|Status: planned
-progress|f9d0c4|Status: in work
+progress|ff7b00|Status: in work
 review|e99695|Status: waiting for a maintainer
 EOF
   for name in "${DEFAULT_LABELS[@]}"; do

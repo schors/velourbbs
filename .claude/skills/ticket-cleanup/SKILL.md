@@ -23,8 +23,8 @@ Set `GHFLOW_AGENT` to your model name for each `tools/ghflow` call.
    2. Run `git worktree remove --force .ai/worktrees/GH-<n>-<slug>` and `git branch -D GH-<n>-<slug>`.
    3. Delete `.ai/issues/GH-<n>-<slug>/`.
    4. Close each open source issue (`Source: #<s>`) as `completed`.
-   5. For a block, tell the operator to run `/ticket <parent>`.
-6. Tell the operator what was removed. Show `git log --oneline -n 5`.
+   5. For a block, do the parent steps (`type-dev.md`).
+6. Tell the operator what was removed.
 
 ## Drop
 
@@ -38,4 +38,4 @@ If the arguments are `drop <n>`, stop the issue with no merge:
 3. Close each open source issue (`Source: #<s>`) as `not_planned`.
 4. Run `git worktree remove --force .ai/worktrees/GH-<n>-<slug>` and `git branch -D GH-<n>-<slug>`.
 5. Delete `.ai/issues/GH-<n>-<slug>/`.
-6. For a block, tell the operator to run `/ticket <parent>`.
+6. For a block, do the parent steps (`type-dev.md`).

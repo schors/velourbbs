@@ -23,8 +23,8 @@ The work runs on GitHub issues and pull requests (PRs) of `origin`.
 - A "gate" is a stop where the operator must reply before the work continues.
   Before the question, show in the chat, in Russian, the content that the operator
   decides on. A link or a number is not content.
-- `/ticket new <type>` starts an issue. `/ticket <n>` continues it.
-  `/ticket-cleanup <n>` removes the local files after the merge.
+- `/ticket <type> <description>` starts an issue. `/ticket <n>` continues it,
+  also after the merge. `/ticket-cleanup` removes the local files of all merged issues.
   `/ticket-cleanup drop <n>` stops an issue.
 
 ## 2. Issues and posts
@@ -64,7 +64,7 @@ Trust:
 |---|---|
 | Issue body | What the issue is. |
 | Issue comment after gate 1 | The accepted plan and the reviewers. |
-| Parent issue body | The block list as a task list. Each block is a sub-issue. |
+| Sub-issues of a parent | The blocks, in the order of execution. |
 | PR body | The result. Template: [pull_request_template.md](../../.github/pull_request_template.md). |
 | PR reviews | AI reviews and reviews of maintainers. |
 | `docs/specs/` | Designs and specifications (SDD). |
@@ -81,8 +81,8 @@ Trust:
   and sets `core.hooksPath` to `tools/hooks`.
 - An issue with a PR (`one-shot`, `docs`, `block`) has a branch `GH-<n>-<slug>`
   from `origin/main` after `git fetch`, and a worktree. Change tracked files only there.
-- Change this flow (`docs/dev-flow/`, `.claude/skills/`, `.github/`, `tools/`)
-  and `AGENTS.md` only in a `one-shot` issue.
+- Change this flow (`docs/dev-flow/`, `.claude/skills/`, `.github/` except
+  `.github/workflows/`, `tools/`) and `AGENTS.md` only in a `one-shot` issue.
 - Nobody pushes to `main`. Each change goes through a PR.
   A maintainer merges it with a merge commit. The agent never merges, but the token can.
 - Push only the branch of the issue. The pre-push hook refuses private text
@@ -124,7 +124,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
 `one-shot`, `docs` and `block` issues do this cycle. Their type file adds steps.
 
 1. Set `progress`. Gate 1, in the chat: show the plan or the researched solutions.
-   Interview the operator about the open questions. Agree on the reviewers.
+   Interview the operator about the open questions. Name the reviewers (section 6).
    Post the accepted plan and the reviewers as an issue comment.
 2. Implement. Run the checks (section 8). Commit. Push the branch.
    Open the PR with `ghflow pr`. It adds `Closes #<n>`.

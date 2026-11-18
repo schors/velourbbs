@@ -38,13 +38,6 @@ Remove the comments.
 ## Goal
 
 ## Scope
-
-## Blocks
-
-<!-- The order of execution. An item with no number has no block issue yet. -->
-
-- [ ] #<m>
-- [ ] <block name>
 ```
 
 ## `block`
