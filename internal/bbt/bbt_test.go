@@ -296,10 +296,20 @@ do = "theme light"
 [[item]]
 key = "3"
 do = "theme auto"
+[[item]]
+key = "4"
+do = "gosub info"
+args = { f = "a" }
+[[item]]
+key = "5"
+do = "back"
+[[item]]
+key = "6"
+do = "top"
 +++
 `})
 	items := screens["s"].Items
-	if len(items) != 5 || items[1].When == nil {
+	if len(items) != 8 || items[1].When == nil {
 		t.Fatalf("items %+v", items)
 	}
 	var got []screen.Item
@@ -312,6 +322,9 @@ do = "theme auto"
 		{Key: "1", Do: screen.Action{Op: screen.Theme, Theme: "dark"}},
 		{Key: "2", Do: screen.Action{Op: screen.Theme, Theme: "light"}},
 		{Key: "3", Do: screen.Action{Op: screen.Theme, Theme: "auto"}},
+		{Key: "4", Do: screen.Action{Op: screen.Gosub, Screen: "info", Args: map[string]string{"f": "a"}}},
+		{Key: "5", Do: screen.Action{Op: screen.Back}},
+		{Key: "6", Do: screen.Action{Op: screen.Top}},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("items %+v, want %+v", got, want)
@@ -343,6 +356,17 @@ func TestItemErrors(t *testing.T) {
 		{[]string{`key = "A"`, `do = "goto  main"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name " main"`}},
 		{[]string{`key = "A"`, `do = "goto Main"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name "Main"`}},
 		{[]string{`key = "A"`, `do = "goto _f"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name "_f"`}},
+		{[]string{`key = "A"`, `do = "gosub"`}, []string{`screens/s.bbt:2:1: item "A": do: gosub needs a screen name`}},
+		{[]string{`key = "A"`, `do = "gosub Main"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name "Main"`}},
+		{[]string{`key = "A"`, `do = "back main"`}, []string{`screens/s.bbt:2:1: item "A": do: back takes no argument`}},
+		{[]string{`key = "A"`, `do = "top "`}, []string{`screens/s.bbt:2:1: item "A": do: top takes no argument`}},
+		{[]string{`key = "A"`, `do = "Back"`}, []string{`screens/s.bbt:2:1: item "A": do: unknown action "Back"`}},
+		{[]string{`key = "A"`, `do = "back"`, `args = { f = "a" }`}, []string{
+			`screens/s.bbt:2:1: item "A": args: only goto and gosub take arguments`,
+		}},
+		{[]string{`key = "A"`, `do = "top"`, `args = { f = "a" }`}, []string{
+			`screens/s.bbt:2:1: item "A": args: only goto and gosub take arguments`,
+		}},
 		{[]string{`key = "A"`, `do = "logoff now"`}, []string{`screens/s.bbt:2:1: item "A": do: logoff takes no argument`}},
 		{[]string{`key = "A"`, `do = "logoff "`}, []string{`screens/s.bbt:2:1: item "A": do: logoff takes no argument`}},
 		{[]string{`key = "A"`, `do = "theme"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid theme action "theme"`}},
@@ -350,7 +374,7 @@ func TestItemErrors(t *testing.T) {
 		{[]string{`key = "A"`, `do = "theme Dark"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid theme action "theme Dark"`}},
 		{[]string{`key = "A"`, `do = "theme  dark"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid theme action "theme  dark"`}},
 		{[]string{`key = "A"`, `do = "theme dark"`, `args = { f = "a" }`}, []string{
-			`screens/s.bbt:2:1: item "A": args: only goto takes arguments`,
+			`screens/s.bbt:2:1: item "A": args: only goto and gosub take arguments`,
 		}},
 		{[]string{`key = "a"`, `do = 1`, `when = "item.A"`, `x = 1`}, []string{`screens/s.bbt:4:6: item.do: must be a string`}},
 		// Each when error is an other error at 2:1, also a syntax error.
@@ -363,7 +387,7 @@ func TestItemErrors(t *testing.T) {
 		}},
 		// The args errors of section 8.4 are other errors at 2:1. A type error has its position.
 		{[]string{`key = "A"`, `do = "logoff"`, `args = { file = "a.md" }`}, []string{
-			`screens/s.bbt:2:1: item "A": args: only goto takes arguments`,
+			`screens/s.bbt:2:1: item "A": args: only goto and gosub take arguments`,
 		}},
 		{[]string{`key = "A"`, `do = "x"`, `args = { file = "a.md" }`}, []string{
 			`screens/s.bbt:2:1: item "A": do: unknown action "x"`,
@@ -373,7 +397,7 @@ func TestItemErrors(t *testing.T) {
 			`screens/s.bbt:2:1: item "A": args: invalid argument name "File"`,
 		}},
 		{[]string{`key = "A"`, `do = "logoff"`, `args = { f = "\u202e" }`}, []string{
-			`screens/s.bbt:2:1: item "A": args: only goto takes arguments`,
+			`screens/s.bbt:2:1: item "A": args: only goto and gosub take arguments`,
 			`screens/s.bbt:2:1: item "A": args: f: value has a control character`,
 		}},
 		{[]string{`key = "A"`, `do = "goto r"`, `args = { File = "a.md", 2f = "b", "a-b" = "c" }`}, []string{

@@ -1,5 +1,5 @@
 // Package menu checks the menus between screens and runs the session.
-// Specification: docs/specs/menu-nav.md, sections 5 and 6.
+// Specification: docs/specs/menu-nav.md, sections 4, 5 and 6.
 package menu
 
 import (
@@ -11,7 +11,7 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// Check does the checks of section 6 between files: the goto actions and their args,
+// Check does the checks of section 6 between files: the goto and gosub actions and their args,
 // the screens without items, the start screen and the arguments of goodbye and shutdown. screens is the result of a load without errors.
 // Check adds the errors to ds with the limit of screen.MaxFileDiags for each file
 // and gives the sorted diagnostics.
@@ -38,7 +38,7 @@ func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags
 			fd(s.File).Errorf(1, 1, "the %s screen cannot have arguments", name)
 		}
 		for _, it := range s.Items {
-			if it.Do.Op != screen.Goto {
+			if !it.Do.Op.HasTarget() {
 				continue
 			}
 			// An error between an item and another screen has the position 2:1.
@@ -81,7 +81,7 @@ func CheckArgs(s *screen.Screen, args map[string]string) []error {
 	return errs
 }
 
-// CheckTarget checks the screen of a goto or of the start: it must exist and have items.
+// CheckTarget checks the screen of a goto, of a gosub or of the start: it must exist and have items.
 func CheckTarget(screens map[string]*screen.Screen, name string) error {
 	s, ok := screens[name]
 	switch {

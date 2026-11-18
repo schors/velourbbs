@@ -79,7 +79,7 @@ screens/main.bbt:5:3: key item already exists as a table, but should be an array
 screens/main.bbt:2:1: item "T": do: unknown screen "term"
 ```
 
-Для `goto term` нужен файл `screens/term.bbt`. Создай файл или исправь имя.
+Для `gosub term` нужен файл `screens/term.bbt`. Создай файл или исправь имя.
 
 ## `screen has no items`
 
@@ -99,7 +99,7 @@ screens/texts.bbt:2:1: item "1": args: file: content file "lmap.md" does not exi
 - Экран `code` содержит сниппет из задачи 7 («Исходный код»).
   Его ключ `file` называет `src/lamp.c`, а файла `content/src/lamp.c` нет.
   Положи файл по этому пути в `content/` или исправь путь.
-- Пункт `1` передаёт `goto reader` файл `lmap.md` в `args`, а этого файла нет в `content/`.
+- Пункт `1` передаёт `gosub reader` файл `lmap.md` в `args`, а этого файла нет в `content/`.
   Исправь имя в `args`.
 
 ## `front matter: no end line`

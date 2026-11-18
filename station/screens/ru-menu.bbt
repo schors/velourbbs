@@ -2,13 +2,13 @@
 width = [80, 132]
 [[item]]
 key = "1"
-do = "goto ru-texts"
+do = "gosub ru-texts"
 [[item]]
 key = "2"
-do = "goto ru-about"
+do = "gosub ru-about"
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 [[item]]
 key = "Q"
 do = "logoff"

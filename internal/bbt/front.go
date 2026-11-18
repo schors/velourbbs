@@ -1,7 +1,6 @@
 package bbt
 
 import (
-	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -87,8 +86,8 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 			item.Do = a
 		}
 		if it.Args != nil {
-			if item.Do.Op != 0 && item.Do.Op != screen.Goto { // Op 0: the do has an error
-				errorf("%s: args: only goto takes arguments", label)
+			if item.Do.Op != 0 && !item.Do.Op.HasTarget() { // Op 0: the do has an error
+				errorf("%s: args: only goto and gosub take arguments", label)
 			}
 			for _, name := range slices.Sorted(maps.Keys(*it.Args)) {
 				if err := screen.CheckArg(name, (*it.Args)[name]); err != nil {
@@ -172,19 +171,19 @@ func parseFileKeys(doc *frontDoc, errorf func(format string, args ...any)) *scre
 func parseAction(do string) (screen.Action, error) {
 	word, arg, hasArg := strings.Cut(do, " ")
 	switch word {
-	case "goto":
+	case "goto", "gosub":
 		if !hasArg {
-			return screen.Action{}, errors.New("goto needs a screen name")
+			return screen.Action{}, fmt.Errorf("%s needs a screen name", word)
 		}
 		if !screen.IsName(arg) {
 			return screen.Action{}, fmt.Errorf("invalid screen name %q", arg)
 		}
-		return screen.Action{Op: screen.Goto, Screen: arg}, nil
-	case "logoff":
+		return screen.Action{Op: targetOps[word], Screen: arg}, nil
+	case "logoff", "back", "top":
 		if hasArg {
-			return screen.Action{}, errors.New("logoff takes no argument")
+			return screen.Action{}, fmt.Errorf("%s takes no argument", word)
 		}
-		return screen.Action{Op: screen.Logoff}, nil
+		return screen.Action{Op: plainOps[word]}, nil
 	case "page":
 		if op, ok := pageOps[arg]; ok && hasArg {
 			return screen.Action{Op: op}, nil
@@ -198,6 +197,12 @@ func parseAction(do string) (screen.Action, error) {
 	}
 	return screen.Action{}, fmt.Errorf("unknown action %q", word)
 }
+
+// targetOps is the actions with a screen name, by their word.
+var targetOps = map[string]screen.Op{"goto": screen.Goto, "gosub": screen.Gosub}
+
+// plainOps is the actions without an argument, by their word.
+var plainOps = map[string]screen.Op{"logoff": screen.Logoff, "back": screen.Back, "top": screen.Top}
 
 // pageOps is the page actions of file-view, section 3.3, by their word after "page".
 var pageOps = map[string]screen.Op{

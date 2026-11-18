@@ -2,13 +2,13 @@
 width = [80, 132]
 [[item]]
 key = "1"
-do = "goto en-texts"
+do = "gosub en-texts"
 [[item]]
 key = "2"
-do = "goto en-about"
+do = "gosub en-about"
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 [[item]]
 key = "Q"
 do = "logoff"

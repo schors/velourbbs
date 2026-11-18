@@ -25,6 +25,9 @@ func screens(specs map[string][]string) map[string]*screen.Screen {
 			if target, ok := strings.CutPrefix(do, "goto "); ok {
 				act = screen.Action{Op: screen.Goto, Screen: target}
 			}
+			if target, ok := strings.CutPrefix(do, "gosub "); ok {
+				act = screen.Action{Op: screen.Gosub, Screen: target}
+			}
 			s.Items = append(s.Items, screen.Item{Key: k, Do: act})
 		}
 	}
@@ -41,7 +44,7 @@ func messages(ds screen.Diags) []string {
 
 // valid is a valid set of screens. Each case changes it.
 var valid = map[string][]string{
-	"main":     {"S goto sysinfo", "G logoff"},
+	"main":     {"S gosub sysinfo", "G logoff"},
 	"sysinfo":  {"ANY goto main"},
 	"goodbye":  {},
 	"shutdown": {},
@@ -58,6 +61,12 @@ func TestCheck(t *testing.T) {
 		{name: "valid"},
 		{name: "unknown screen", change: map[string][]string{"main": {"S goto sysinf", "G logoff"}}, want: []string{
 			`screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"`,
+		}},
+		{name: "gosub unknown screen", change: map[string][]string{"main": {"S gosub sysinf", "G logoff"}}, want: []string{
+			`screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"`,
+		}},
+		{name: "gosub goodbye", change: map[string][]string{"main": {"S gosub goodbye", "G logoff"}}, want: []string{
+			`screens/main.bbt:2:1: item "S": do: screen "goodbye" has no items`,
 		}},
 		{name: "goto goodbye", change: map[string][]string{"sysinfo": {"ESC goto main", "ANY goto goodbye"}}, want: []string{
 			`screens/sysinfo.bbt:2:1: item "ANY": do: screen "goodbye" has no items`,
@@ -128,11 +137,14 @@ func TestCheckLimit(t *testing.T) {
 	}
 }
 
-// The args of a goto must equal the arguments of the target. The start screen
+// The args of a goto or a gosub must equal the arguments of the target. The start screen
 // and goodbye and shutdown cannot have arguments (section 6).
 func TestCheckArgs(t *testing.T) {
 	goto_ := func(key, target string, args map[string]string) screen.Item {
 		return screen.Item{Key: key, Do: screen.Action{Op: screen.Goto, Screen: target, Args: args}}
+	}
+	gosub := func(key, target string, args map[string]string) screen.Item {
+		return screen.Item{Key: key, Do: screen.Action{Op: screen.Gosub, Screen: target, Args: args}}
 	}
 	ss := map[string]*screen.Screen{
 		"main": {Name: "main", File: "screens/main.bbt", Items: []screen.Item{
@@ -142,6 +154,8 @@ func TestCheckArgs(t *testing.T) {
 			goto_("4", "view", map[string]string{"f": "a", "n": "1", "x": "y"}),
 			goto_("5", "main", map[string]string{"x": "y"}),
 			goto_("6", "none", map[string]string{"x": "y"}),
+			gosub("7", "view", map[string]string{"f": "a", "n": "1"}),
+			gosub("8", "view", map[string]string{"f": "a", "x": "y"}),
 		}},
 		"view": {Name: "view", File: "screens/view.bbt", Args: []string{"f", "n"},
 			Items: []screen.Item{goto_("Q", "main", map[string]string{})}},
@@ -156,6 +170,8 @@ func TestCheckArgs(t *testing.T) {
 		`screens/main.bbt:2:1: item "4": args: screen "view" has no argument "x"`,
 		`screens/main.bbt:2:1: item "5": args: screen "main" has no argument "x"`,
 		`screens/main.bbt:2:1: item "6": do: unknown screen "none"`,
+		`screens/main.bbt:2:1: item "8": args: missing argument "n" of screen "view"`,
+		`screens/main.bbt:2:1: item "8": args: screen "view" has no argument "x"`,
 		`screens/shutdown.bbt:1:1: the shutdown screen cannot have arguments`,
 	}
 	got := messages(Check(config.Config{Start: "main"}, ss, nil))

@@ -82,9 +82,9 @@ type Item struct {
 // Action is the parsed do of an item (section 8.3) and its args.
 type Action struct {
 	Op     Op
-	Screen string            // the screen name of Goto
+	Screen string            // the screen name of Goto and Gosub
 	Theme  string            // the theme choice of Theme: dark, light or auto
-	Args   map[string]string // the args of Goto (section 8.5); nil without args
+	Args   map[string]string // the args of Goto and Gosub (section 8.5); nil without args
 }
 
 // Op is an action word of do.
@@ -93,6 +93,9 @@ type Op uint8
 // The actions of section 8.3.
 const (
 	Goto Op = iota + 1
+	Gosub
+	Back
+	Top
 	Logoff
 	Theme
 	PageNext
@@ -103,6 +106,9 @@ const (
 
 // IsPage reports whether o is a page action (file-view, section 3.3).
 func (o Op) IsPage() bool { return o >= PageNext }
+
+// HasTarget reports whether o shows the screen of Action.Screen with Action.Args: Goto or Gosub.
+func (o Op) HasTarget() bool { return o == Goto || o == Gosub }
 
 // Seg is one segment of a body: Text, Field, SetStyle, If, Include, ArtInsert, FileArea or LineEnd.
 // Blocks can start and end inside a line, so If holds segments, not lines.

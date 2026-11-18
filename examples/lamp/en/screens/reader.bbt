@@ -11,7 +11,7 @@ do = "page prev"
 when = "file.page > 1"
 [[item]]
 key = "ESC"
-do = "goto texts"
+do = "back"
 +++
 {>_head}
        {!title}{file.title}{!}

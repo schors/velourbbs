@@ -7,12 +7,14 @@ Each `[[item]]` in the front matter is one item of the menu:
 ```
 [[item]]
 key = "A"
-do = "goto about"
+do = "gosub about"
 ```
 
 - `key` is the key: a Latin letter, a digit or a named key, for example `ESC` or `ENTER`.
   Case does not matter. A Russian letter works as the Latin letter on the same key: `ф` is `A`.
-- `do` is the action: `goto <screen>` shows the screen, `logoff` ends the session.
+- `do` is the action: `gosub <screen>` opens the screen, `back` goes back to the screen
+  that opened it, `logoff` ends the session. The section "The navigation stack" has
+  the other actions `goto` and `top`.
 - The BBS does not show the items. Write the text of the items and the key row in the body.
   The key row shows all keys of the screen.
 
@@ -30,7 +32,7 @@ Write `screens/main.bbt` with this text:
 +++
 [[item]]
 key = "A"
-do = "goto about"
+do = "gosub about"
 [[item]]
 key = "G"
 do = "logoff"
@@ -88,12 +90,12 @@ The keys are in the orange `key`. The notes on the right and the word "choose" a
 
 ## The screen `about`
 
-The keys `Esc` and `Enter` go back to `main`:
+The keys `Esc` and `Enter` go back to the screen that opened `about`:
 
 ```
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 ```
 
 `examples/lamp/en/screens/about.bbt`:
@@ -101,10 +103,10 @@ do = "goto main"
 +++
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 [[item]]
 key = "ENTER"
-do = "goto main"
+do = "back"
 +++
 {>_head}
        Lamp is a small station for friends.
@@ -156,6 +158,29 @@ The screen:
 ```
 
 The keys `Esc Enter` are in the orange `key`. The word "back" is in the grey-brown `dim`.
+
+## The navigation stack
+
+The BBS keeps the open screens of a session in a stack. Each action changes the stack:
+
+| `do` | Action |
+|---|---|
+| `gosub <screen>` | Opens the screen over the current screen. |
+| `back` | Closes the current screen and shows the screen below it again. On the first screen, it shows the same screen again. |
+| `top` | Closes all screens over the first screen and shows the first screen. |
+| `goto <screen>` | Shows the screen in place of the current screen. `back` then goes to the screen below. |
+
+- A screen of `back` and `top` keeps its arguments (task 7) and the page of a text.
+- The stack holds 16 screens. A `gosub` on the 16th screen removes the second screen.
+  The first screen stays.
+
+Example: `main` opens `texts` with `gosub`, `texts` opens `reader` with `gosub`.
+In `reader`, `back` shows `texts` and `top` shows `main`.
+
+Use `gosub` to go to a deeper screen, and `back` to come back. Then a screen can have
+more than one way into it, and it does not need to know the screen before it.
+
+Full rules: [menu-nav](../../../specs/menu-nav.md), section 4.1.
 
 ## The screen `goodbye`
 

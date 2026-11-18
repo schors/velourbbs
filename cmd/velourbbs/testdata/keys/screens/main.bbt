@@ -1,7 +1,7 @@
 +++
 [[item]]
 key = "S"
-do = "goto sysinfo"
+do = "gosub sysinfo"
 when = "term.cols >= 80"
 [[item]]
 key = "G"

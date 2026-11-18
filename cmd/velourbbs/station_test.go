@@ -101,7 +101,7 @@ func TestStationGuideLinks(t *testing.T) {
 // TestStationItems checks that the ru- and the en- screens of the home BBS
 // have the same items: the front matter of each file equals the front matter
 // of the other file with the language replaced in the screen names and in the
-// content paths. Both directions catch a goto from a screen of one language
+// content paths. Both directions catch a goto or a gosub from a screen of one language
 // to a screen or a file of the other.
 func TestStationItems(t *testing.T) {
 	dir := filepath.Join("..", "..", "station", "screens")

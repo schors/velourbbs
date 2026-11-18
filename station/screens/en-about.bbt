@@ -2,7 +2,7 @@
 width = [80, 132]
 [[item]]
 key = "ESC"
-do = "goto en-menu"
+do = "back"
 +++
 {#if term.cols >= 132 and term.rows >= 43}
 

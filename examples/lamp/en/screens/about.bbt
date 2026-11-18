@@ -1,10 +1,10 @@
 +++
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 [[item]]
 key = "ENTER"
-do = "goto main"
+do = "back"
 +++
 {>_head}
        Lamp is a small station for friends.

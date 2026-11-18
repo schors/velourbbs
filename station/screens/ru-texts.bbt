@@ -2,17 +2,17 @@
 width = [80, 132]
 [[item]]
 key = "1"
-do = "goto ru-setup"
+do = "gosub ru-setup"
 [[item]]
 key = "2"
-do = "goto ru-bbt"
+do = "gosub ru-bbt"
 [[item]]
 key = "3"
-do = "goto ru-text-read"
+do = "gosub ru-text-read"
 args = { file = "ru/features.md" }
 [[item]]
 key = "ESC"
-do = "goto ru-menu"
+do = "back"
 +++
 {#if term.cols >= 132 and term.rows >= 43}
 
