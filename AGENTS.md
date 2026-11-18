@@ -1,7 +1,12 @@
 # Working instructions
 
-- Speak briefly in Russian. Write code comments and repository documentation in English.
-- Write Russian replies in plain language. This is a guideline:
+## Language
+
+- Use Russian only in the chat with the operator and in Russian-centric content,
+  for example Russian screens and Russian user documentation.
+- Use English for all other work: thinking, research, reviewer briefs, reviews,
+  posts, commits, documentation and code comments. An English context gives better results.
+- In the chat, speak briefly. Write Russian replies in plain language. This is a guideline:
   - Use short sentences, with one fact in each. Use verbs, not verbal nouns
     ("проверил", not "была произведена проверка").
   - Do not use filler, bureaucratic phrases or evaluations without facts.
@@ -11,6 +16,9 @@
 - Write English documents in plain style (ASD-STE100 as a guideline): short sentences
   with one fact in each, active voice, imperative instructions, one term for each thing.
   This is not a review check. Do not rewrite other text only for style.
+
+## Work
+
 - Keep changes in scope. Run the relevant checks.
 - Never weaken or bypass a check, precondition or its test to make a change pass.
 - Keep it simple: add no check, option or documentation that the change does not need.
