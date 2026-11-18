@@ -29,13 +29,7 @@ Full rules: [bbt-format](../../../specs/bbt-format.md), sections 3.4 and 6.2.
 ```
 ```
 
-The style `key` is a 256-colour index:
-
-```toml
-key    = "215 bold"
-```
-
-The orange 215 stays warm at 16 colours too: the BBS changes it to the nearest index 0–15.
+The file is empty: the BBS has the default settings.
 
 `examples/art/screens/screens.toml`:
 ```
@@ -43,6 +37,8 @@ The orange 215 stays warm at 16 colours too: the BBS changes it to the nearest i
 normal = "223/235"
 key    = "215 bold"
 ```
+
+The style `key` is the 256-colour index 215. The orange 215 stays warm at 16 colours too: the BBS changes it to the nearest index 0–15.
 
 `examples/art/screens/main.bbt`:
 ```
