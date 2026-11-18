@@ -482,11 +482,13 @@ The key decoder gives:
 
 - The key queue holds at most 256 keys. The host drops a key when the queue is full.
   So the queue holds a pasted line of the line input ([line-input](line-input.md), section 6):
-  `term.cols` is at most 255.
+  `term.cols` is at most 255. Section 8.4 has the rule
+  of a full queue in a paste.
 - After `idle_timeout` seconds without a key, the host disconnects.
 - The idle timeout starts at the end of the probe.
 - Keys reset the idle timeout, also a key that the full queue drops.
-  NOP, NAWS and dropped input do not reset it.
+  NOP, NAWS, the paste marks and dropped input do not reset it.
+  A key of a paste is a key, also when section 8.4 drops it.
 
 ### 8.4. Paste
 
@@ -494,15 +496,19 @@ The line input turns on the bracketed paste mode ([line-input](line-input.md), s
 Then the terminal sends a paste between two marks: `CSI 200~` (the paste start)
 and `CSI 201~` (the paste end).
 
-- A "paste" is the keys from a paste start to the next paste end.
-  A paste also ends at the next paste start and after 1 s without input bytes.
-  So a client that sends no paste end does not drop the keys after it.
+- A "paste" is the keys from a paste start to the next paste end or the next paste start.
+  It has no time limit: a late part of a paste is still a part of the paste.
 - The line input takes the keys of a paste with their paste mark.
 - Outside the line input, the host drops each key of a paste.
   A paste that the user starts in the line input can end after it.
-- Before the host disconnects while the mode is on, it sends `ESC[?2004l`:
-  at the idle timeout and at a stop (section 10.2). After a hangup, no output is possible.
+- When the key queue is full in a paste, the host drops the rest of the paste.
+  So a later part of a paste does not continue the line after a lost `ENTER`.
+- When the mode is on and the host ends the session or shows `shutdown` without the end
+  of the input, it first sends `ESC[?2004l`: at the idle timeout, at IP and BRK (section 4.2),
+  at a protocol error and at a stop (section 10.2). It ignores a write error.
 - A terminal without the mode ignores `ESC[?2004h` and sends no marks.
+- Tests cover each rule of this section: the marks, a paste in two reads, a full queue
+  in a paste, the keys of a paste outside the line input and `ESC[?2004l` at each end of the session.
 
 ## 9. Limits
 
@@ -599,7 +605,7 @@ At SIGINT or SIGTERM, the host does these steps:
 | Package | Content |
 |---|---|
 | `internal/telnet` | The telnet parser, the option states and the subnegotiations. |
-| `internal/term` | The probe, the encoder, the colour reduction, the key decoder, the paste and the terminal of [menu-nav](menu-nav.md), section 8. |
+| `internal/term` | The probe, the encoder, the colour reduction, the key decoder, the paste, the draw of the line input and the terminal of [menu-nav](menu-nav.md), section 8. |
 | `internal/server` | The listener, the limits, the PROXY protocol header and the sessions. |
 
 - `cmd/velourbbs` loads the screens and gives them to `internal/server`.
