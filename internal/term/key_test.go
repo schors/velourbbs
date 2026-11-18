@@ -252,7 +252,7 @@ func TestDeadline(t *testing.T) {
 		t.Error("Deadline: ok after the wait")
 	}
 	// 1 s after a later byte of a sequence or a control string.
-	for _, in := range []string{"\x1b[1", "\x1b[[", "\x1b]4", "\x1bPx\x1b"} {
+	for _, in := range []string{"\x1b[1", "\x1b[[", "\x1b]4", "\x1bPx\x1b", "\x1bP\xce", "\x1b]\xff", "\x1b[\xd1"} {
 		d.Feed(t0, []byte(in))
 		if dl, ok := d.Deadline(); !ok || !dl.Equal(t0.Add(SeqWait)) {
 			t.Errorf("%q: Deadline = %v, %v; want %v, true", in, dl, ok, t0.Add(SeqWait))
@@ -279,6 +279,8 @@ var lateReplies = []string{
 	"\x1bP>|tmux 3.6\x07",                       // XTVERSION with BEL
 	"\x1b_Gi=1;OK\x1b\\",                        // APC
 	"\x1bP>|Ωmega ы\x1b\\",                      // non-ASCII text
+	"\x1bPΩ\x1b\\",                              // non-ASCII directly after the introducer
+	"\x1b]\xff4\x07",                            // a byte that the UTF-8 decoder drops
 	"\x1b]" + strings.Repeat("x", 200) + "\x07", // longer than 128 bytes
 }
 

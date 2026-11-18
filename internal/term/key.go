@@ -69,6 +69,7 @@ type Decoder struct {
 	seq     [maxSeq]byte      // the bytes of the sequence or the control string, ESC included
 	nseq    int               // the bytes in seq
 	long    bool              // the sequence or the control string is longer than maxSeq
+	later   bool              // a byte arrived after the byte that starts the sequence
 	last    time.Time         // the arrival of the last byte while a sequence waits
 	keys    []string          // the output of Feed
 	cprs    []CPR             // the output of Feed
@@ -81,7 +82,7 @@ func (d *Decoder) Deadline() (t time.Time, ok bool) {
 	if d.st == seqNone {
 		return time.Time{}, false
 	}
-	if d.nseq > 2 { // after the ESC and the byte that starts the sequence
+	if d.later {
 		return d.last.Add(SeqWait), true
 	}
 	return d.last.Add(EscWait), true
@@ -100,6 +101,11 @@ func (d *Decoder) Feed(now time.Time, in []byte) (keys []string, cprs []CPR) {
 		d.st = seqNone
 	}
 	for _, b := range in {
+		// Each byte counts, also a byte of an incomplete character and a byte
+		// that the UTF-8 decoder drops.
+		if d.st != seqNone && d.st != seqESC {
+			d.later = true
+		}
 		d.enter(b)
 	}
 	if len(in) > 0 && d.st != seqNone {
@@ -279,7 +285,7 @@ func isFinal(r rune) bool {
 
 // startESC starts a new sequence with ESC.
 func (d *Decoder) startESC() {
-	d.st, d.nseq, d.long = seqESC, 0, false
+	d.st, d.nseq, d.long, d.later = seqESC, 0, false, false
 	d.push(0x1B)
 }
 
