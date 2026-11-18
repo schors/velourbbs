@@ -69,8 +69,10 @@ func TestTypeColors(t *testing.T) {
 
 func TestValues(t *testing.T) {
 	term := func(typ string, cols, rows, colors int) screen.Term {
-		return screen.Term{Type: typ, Cols: cols, Rows: rows, Charset: "utf-8", Colors: colors}
+		return screen.Term{Type: typ, Cols: cols, Rows: rows, Charset: "utf-8", Colors: colors, Ambiguous: 1}
 	}
+	wide := term("ansi", 80, 24, 16)
+	wide.Ambiguous = 2
 	tests := []struct {
 		name string
 		r    replies
@@ -90,6 +92,9 @@ func TestValues(t *testing.T) {
 		{"charset column 2", replies{cpr: CPR{1, 2}, cprGot: true}, term("ansi", 80, 24, 16), true},
 		{"charset column 3", replies{cpr: CPR{1, 3}, cprGot: true}, term("ansi", 80, 24, 16), false},
 		{"charset other column", replies{cpr: CPR{1, 4}, cprGot: true}, term("ansi", 80, 24, 16), true},
+		{"ambiguous column 3", replies{cpr: CPR{1, 2}, cprGot: true, amb: CPR{1, 3}, ambGot: true}, wide, true},
+		{"ambiguous column 2", replies{cpr: CPR{1, 2}, cprGot: true, amb: CPR{1, 2}, ambGot: true}, term("ansi", 80, 24, 16), true},
+		{"ambiguous other column", replies{cpr: CPR{1, 2}, cprGot: true, amb: CPR{1, 4}, ambGot: true}, term("ansi", 80, 24, 16), true},
 	}
 	for _, tt := range tests {
 		got, utf8 := tt.r.values()

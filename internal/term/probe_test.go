@@ -28,7 +28,7 @@ const (
 	dont = 254
 )
 
-// dsr is the cursor position request of the charset probe, da1 is the DA1 query.
+// dsr is the cursor position request of a CPR probe, da1 is the DA1 query.
 var (
 	dsr = []byte("\x1b[6n")
 	da1 = []byte("\x1b[c")
@@ -41,6 +41,7 @@ type client struct {
 	naws  []byte   // the NAWS data after WILL NAWS, 4 bytes; nil sends no NAWS
 	ttype []string // the names that the client sends for each SEND, each in its own subnegotiation
 	cpr   string   // the reply to each ESC[6n, for example "1;2"; "" gives no reply
+	cprs  []string // when not nil, the reply to the n-th ESC[6n in place of cpr; "" gives no reply
 	term  string   // the replies to the terminal queries, sent at the DA1 query
 	early string   // data that the client sends with its first reply
 	quiet bool     // the client sends nothing
@@ -58,6 +59,7 @@ type fake struct {
 	out    []byte // all bytes from the host
 	pos    int    // the parsed bytes of out
 	nsend  int    // the SEND requests
+	ndsr   int    // the ESC[6n requests
 	first  bool   // the first reply was sent
 	paused bool   // the reader stops
 }
@@ -138,8 +140,16 @@ func (f *fake) parse() []byte {
 			}
 			f.pos += 2 // another command
 		case bytes.HasPrefix(rest, dsr):
-			if f.cl.cpr != "" {
-				reply = append(reply, "\x1b["+f.cl.cpr+"R"...)
+			cpr := f.cl.cpr
+			if f.cl.cprs != nil {
+				cpr = ""
+				if f.ndsr < len(f.cl.cprs) {
+					cpr = f.cl.cprs[f.ndsr]
+				}
+			}
+			f.ndsr++
+			if cpr != "" {
+				reply = append(reply, "\x1b["+cpr+"R"...)
 			}
 			f.pos += len(dsr)
 		case bytes.HasPrefix(rest, da1):
@@ -243,7 +253,7 @@ var (
 
 func TestProbeClients(t *testing.T) {
 	term := func(typ string, cols, rows, colors int, name, images string) screen.Term {
-		return screen.Term{Type: typ, Cols: cols, Rows: rows, Charset: "utf-8", Colors: colors, Name: name, Images: images}
+		return screen.Term{Type: typ, Cols: cols, Rows: rows, Charset: "utf-8", Colors: colors, Name: name, Images: images, Ambiguous: 1}
 	}
 	inet := func(typ, replies string) client {
 		return client{will: allOpts, do: hostOpts, naws: naws(80, 24), ttype: []string{typ}, cpr: "1;2", term: replies}
@@ -263,6 +273,11 @@ func TestProbeClients(t *testing.T) {
 		{"PuTTY",
 			client{will: allOpts, do: hostOpts, naws: naws(120, 40), ttype: []string{"XTERM"}, cpr: "1;2", term: termPuTTY},
 			term("xterm", 120, 40, screen.ColorsTrue, "", "")},
+		// PuTTY with "Treat CJK ambiguous characters as wide": the ambiguous probe
+		// moves the cursor by two cells (section 5.4).
+		{"PuTTY with wide ambiguous characters",
+			client{will: allOpts, do: hostOpts, naws: naws(120, 40), ttype: []string{"XTERM"}, cprs: []string{"1;2", "1;3"}, term: termPuTTY},
+			ambiguous(term("xterm", 120, 40, screen.ColorsTrue, "", ""), 2)},
 		{"Tera Term in line mode",
 			client{
 				will: []byte{telnet.OptNAWS, telnet.OptTTYPE, telnet.OptBinary},
@@ -314,7 +329,7 @@ func TestProbeClients(t *testing.T) {
 			if n, want := f.nsend, min(len(tt.cl.ttype), 1); n != want {
 				t.Errorf("%s: %d SEND requests, want %d", tt.name, n, want)
 			}
-			if n := strings.Count(out, string(dsr)); n != 1 || !strings.Contains(out, probeWrite) {
+			if n := strings.Count(out, string(dsr)); n != 2 || !strings.Contains(out, probeWrite) {
 				t.Errorf("%s: output %q, want one write of step 4", tt.name, out)
 			}
 			if tt.cl.early != "" {
@@ -356,8 +371,8 @@ func TestProbePalette(t *testing.T) {
 }
 
 func TestProbeWrite(t *testing.T) {
-	// Section 5.7: the queries in one write, DA1 last, then the erase.
-	want := "\râ\x1b[6n\x1b[38;2;1;2;3m\x1bP$qm\x1b\\\x1b[0m\x1b[>0q\x1b[>c" +
+	// Section 5.7: the CPR probes first, the queries in one write, DA1 last, then the erase.
+	want := "\râ\x1b[6n\rж\x1b[6n\x1b[38;2;1;2;3m\x1bP$qm\x1b\\\x1b[0m\x1b[>0q\x1b[>c" +
 		"\x1b]4;0;?\x1b\\\x1b]4;1;?\x1b\\\x1b]4;2;?\x1b\\\x1b]4;3;?\x1b\\" +
 		"\x1b]4;4;?\x1b\\\x1b]4;5;?\x1b\\\x1b]4;6;?\x1b\\\x1b]4;7;?\x1b\\" +
 		"\x1b]4;8;?\x1b\\\x1b]4;9;?\x1b\\\x1b]4;10;?\x1b\\\x1b]4;11;?\x1b\\" +
@@ -396,6 +411,43 @@ func TestProbeLateDA1(t *testing.T) {
 	})
 }
 
+// ambiguous gives t with term.ambiguous n.
+func ambiguous(t screen.Term, n int) screen.Term {
+	t.Ambiguous = n
+	return t
+}
+
+// TestProbeAmbiguous: the second CPR reply is the reply to the ambiguous probe (section 5.4).
+func TestProbeAmbiguous(t *testing.T) {
+	tests := []struct {
+		name string
+		cprs []string
+		term string // the replies at the DA1 query
+		want int
+	}{
+		{"column 3", []string{"1;2", "1;3"}, "\x1b[?1;2c", 2},
+		{"column 3 in another row", []string{"5;2", "5;3"}, "\x1b[?1;2c", 2},
+		{"column 2", []string{"1;2", "1;2"}, "\x1b[?1;2c", 1},
+		{"another column", []string{"1;2", "1;4"}, "\x1b[?1;2c", 1},
+		{"no reply", []string{"1;2"}, "\x1b[?1;2c", 1},
+		// A third CPR reply is dropped: it changes neither the ambiguous width nor the charset.
+		{"third reply", []string{"1;2", "1;2"}, "\x1b[1;3R\x1b[?1;2c", 1},
+		{"third reply after column 3", []string{"1;2", "1;3"}, "\x1b[1;2R\x1b[?1;2c", 2},
+	}
+	for _, tt := range tests {
+		synctest.Test(t, func(t *testing.T) {
+			cl := client{will: allOpts, naws: naws(80, 24), ttype: []string{"xterm"}, cprs: tt.cprs, term: tt.term}
+			term, _, _, _, err := probeLog(t, cl, testTimeouts)
+			if err != nil {
+				t.Fatalf("%s: %v", tt.name, err)
+			}
+			if got := term.Term(); got.Ambiguous != tt.want || got.Charset != "utf-8" {
+				t.Errorf("%s: Term() = %+v, want term.ambiguous %d and utf-8", tt.name, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestProbeStart(t *testing.T) {
 	// Step 2: the requests of section 4.1 in one write, then TTYPE SEND after WILL TTYPE.
 	synctest.Test(t, func(t *testing.T) {
@@ -430,7 +482,7 @@ func TestProbeSendOnce(t *testing.T) {
 func TestProbeLog(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		cl := client{
-			will: allOpts, naws: naws(100, 30), ttype: []string{"X\x1bTERM-256color", "VT100"}, cpr: "1;2",
+			will: allOpts, naws: naws(100, 30), ttype: []string{"X\x1bTERM-256color", "VT100"}, cprs: []string{"1;2", "1;3"},
 			term: "\x1bP1$r0;38:2::1:2:3m\x1b\\\x1bP>|X\x01Term(412)" + strings.Repeat("ы", 40) + "\x1b\\" +
 				"\x1b]4;1;rgb:cdcd/0/80\x07\x1b]4;15;rgb:f/ff/fff\x1b\\\x1b[?64;1;4c",
 		}
@@ -438,11 +490,11 @@ func TestProbeLog(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want := "level=INFO msg=probe addr=192.0.2.1 ttype=XTERM-256color naws=100x30 cpr=1;2 " +
+		want := "level=INFO msg=probe addr=192.0.2.1 ttype=XTERM-256color naws=100x30 cpr=1;2 cpr_ambiguous=1;3 " +
 			"decrqss=1$r0;38:2::1:2:3m xtversion=>|XTerm(412)" + strings.Repeat("ы", 28) + " da2=- da1=?64;1;4c " +
 			"palette=-,cd0080,-,-,-,-,-,-,-,-,-,-,-,-,-,ffffff " +
 			"type=xterm-256color cols=100 rows=30 charset=utf-8 colors=16777216 " +
-			"name=XTerm(412)" + strings.Repeat("ы", 30) + " images=sixel time=0s\n"
+			"name=XTerm(412)" + strings.Repeat("ы", 30) + " images=sixel ambiguous=2 time=0s\n"
 		if _, line, _ := strings.Cut(log, " "); line != want {
 			t.Errorf("log %q, want %q after the time", log, want)
 		}
@@ -479,7 +531,7 @@ func TestProbeNoReplies(t *testing.T) {
 		if d != to.Probe {
 			t.Errorf("the probe took %v; want %v", d, to.Probe)
 		}
-		want := screen.Term{Type: "ansi", Cols: 80, Rows: 24, Charset: "utf-8", Colors: 16}
+		want := screen.Term{Type: "ansi", Cols: 80, Rows: 24, Charset: "utf-8", Colors: 16, Ambiguous: 1}
 		if got := term.Term(); got != want {
 			t.Errorf("Term() = %+v, want %+v", got, want)
 		}

@@ -6,6 +6,7 @@ package term
 
 import (
 	"strconv"
+	"unicode/utf8"
 
 	"github.com/schors/velourbbs/internal/screen"
 )
@@ -51,11 +52,22 @@ func AppendPage(dst []byte, p screen.Page, colors int, vgaRGB bool) []byte {
 	}
 	var line screen.Row
 	for i := range p.Rows {
-		dst = appendPos(dst, p.Top+i+1)
+		row := p.Top + i + 1
+		dst = appendPos(dst, row)
 		line = p.Line(i, line)
-		for _, c := range line {
-			if c.Grapheme != "" { // the second cell of a wide grapheme gives no output
-				appendCell(c)
+		for j, c := range line {
+			if c.Grapheme == "" { // the second cell of a wide grapheme gives no output
+				continue
+			}
+			appendCell(c)
+			// The re-sync (section 7.4). next is the index of the cell after the grapheme.
+			next := j + 1
+			if next < len(line) && line[next].Grapheme == "" {
+				next++
+			}
+			if next < len(line) && utf8.RuneCountInString(c.Grapheme) > 1 {
+				dst = append(dst, ' ')
+				dst = appendCUP(dst, row, next+1)
 			}
 		}
 	}
@@ -67,9 +79,16 @@ func AppendPage(dst []byte, p screen.Page, colors int, vgaRGB bool) []byte {
 
 // appendPos appends ESC[<row>;1H.
 func appendPos(dst []byte, row int) []byte {
+	return appendCUP(dst, row, 1)
+}
+
+// appendCUP appends ESC[<row>;<col>H.
+func appendCUP(dst []byte, row, col int) []byte {
 	dst = append(dst, "\x1b["...)
 	dst = strconv.AppendInt(dst, int64(row), 10)
-	return append(dst, ";1H"...)
+	dst = append(dst, ';')
+	dst = strconv.AppendInt(dst, int64(col), 10)
+	return append(dst, 'H')
 }
 
 // appendUTF8 is the encoder of section 7.4. The model holds valid UTF-8

@@ -10,6 +10,31 @@ do = "goto en-menu"
 key = "Q"
 do = "logoff"
 +++
+{#if term.ambiguous == 2}
+    {!white}Терминал рисует часть букв в две клетки.{!}
+    {!white}Из-за этого экраны станции ломаются.{!}
+    {!white}Your terminal shows some characters in two cells. This breaks the screens.{!}
+
+    Включите одну клетку и войдите снова.
+    Set them to one cell and connect again.
+
+    {!hi}PuTTY{!}             Window > Translation:
+                      clear "Treat CJK ambiguous characters as wide"
+    {!hi}Tera Term{!}         Setup > Additional settings > Encoding:
+                      Ambiguous Characters width = 1 Cell
+    {!hi}xterm{!}             XTerm*cjkWidth: false, or start without -cjk_width
+    {!hi}iTerm2{!}            Settings > Profiles > Text:
+                      clear "Ambiguous characters are double-width"
+    {!hi}Windows Terminal{!}  Settings > Compatibility:
+                      Width of ambiguous characters = Narrow, then restart
+    {!hi}GNOME Terminal{!}    Preferences > profile > Compatibility:
+                      Ambiguous-width characters = Narrow
+    {!hi}Ptyxis{!}            Preferences > Behavior > Compatibility:
+                      Ambiguous-width Characters = Narrow
+
+    {!hi}R{!} {!ctl}Русский{!}    {!hi}E{!} {!ctl}English{!}    {!hi}Q{!} {!ctl}Отключиться / Disconnect{!}
+
+{#else}
 {#if term.cols >= 132 and term.rows >= 43}
 
 
@@ -59,4 +84,5 @@ do = "logoff"
 
 
                     {!hi}R{!} {!ctl}Русский{!}    {!hi}E{!} {!ctl}English{!}    {!hi}Q{!} {!ctl}Отключиться / Disconnect{!}
+{/if}
 {/if}
