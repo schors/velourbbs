@@ -11,7 +11,6 @@ key = "Q"
 do = "logoff"
 +++
 {#if term.ambiguous == 2}
-
     {!white}Терминал рисует часть букв в две клетки.{!}
     {!white}Из-за этого экраны станции ломаются.{!}
     {!white}Your terminal shows some characters in two cells. This breaks the screens.{!}
@@ -34,6 +33,7 @@ do = "logoff"
                       Ambiguous-width Characters = Narrow
 
     {!hi}R{!} {!ctl}Русский{!}    {!hi}E{!} {!ctl}English{!}    {!hi}Q{!} {!ctl}Отключиться / Disconnect{!}
+
 {#else}
 {#if term.cols >= 132 and term.rows >= 43}
 
