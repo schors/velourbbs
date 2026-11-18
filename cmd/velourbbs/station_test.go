@@ -13,27 +13,38 @@ import (
 func TestStation(t *testing.T) {
 	type tcase struct {
 		screen, size, colors string
-		file                 string // The argument file of a file screen.
-		ambiguous            string // term.ambiguous; "" is the default 1.
+		file                 string   // The argument file of a file screen.
+		ambiguous            string   // term.ambiguous; "" is the default 1.
+		set                  []string // More --set values.
+		tag                  string   // The name suffix of a case with set.
 	}
 	cases := []tcase{
-		{"main", "80x24", "16", "", ""}, {"main", "80x24", "16777216", "", ""},
-		{"ru-texts", "80x24", "16", "", ""}, {"ru-texts", "80x24", "16777216", "", ""},
+		{screen: "main", size: "80x24", colors: "16"}, {screen: "main", size: "80x24", colors: "16777216"},
+		{screen: "ru-texts", size: "80x24", colors: "16"}, {screen: "ru-texts", size: "80x24", colors: "16777216"},
 		// The 80 form on a wide terminal with fewer than 43 rows.
-		{"main", "132x42", "256", "", ""},
+		{screen: "main", size: "132x42", colors: "256"},
 		// The hint of home-bbs, section 3.2, in both forms.
-		{"main", "80x24", "256", "", "2"}, {"main", "132x43", "256", "", "2"},
+		{screen: "main", size: "80x24", colors: "256", ambiguous: "2"},
+		{screen: "main", size: "132x43", colors: "256", ambiguous: "2"},
+	}
+	// The terminal rows of home-bbs, section 3.5, with each detected value.
+	for _, c := range []struct{ screen, bg string }{{"ru-about", "#1e1e1e"}, {"en-about", "#ffffff"}} {
+		for _, size := range []string{"80x24", "132x43"} {
+			cases = append(cases, tcase{screen: c.screen, size: size, colors: "16777216", ambiguous: "2",
+				set: []string{"term.name=WezTerm 20240203", "term.images=sixel", "term.bg_color=" + c.bg}, tag: "-detected"})
+		}
 	}
 	for _, screen := range []string{"main", "ru-menu", "en-menu", "ru-about", "en-about", "goodbye", "shutdown",
 		"ru-texts", "en-texts", "ru-setup", "en-setup", "ru-bbt", "en-bbt"} {
-		cases = append(cases, tcase{screen, "80x24", "256", "", ""}, tcase{screen, "132x43", "256", "", ""})
+		cases = append(cases, tcase{screen: screen, size: "80x24", colors: "256"},
+			tcase{screen: screen, size: "132x43", colors: "256"})
 	}
 	// Each file screen with its first file: 80 form only.
 	for _, lang := range []string{"ru", "en"} {
 		cases = append(cases,
-			tcase{lang + "-setup-read", "80x24", "256", lang + "/guide/setup/README.md", ""},
-			tcase{lang + "-bbt-read", "80x24", "256", lang + "/guide/bbt/README.md", ""},
-			tcase{lang + "-text-read", "80x24", "256", lang + "/features.md", ""})
+			tcase{screen: lang + "-setup-read", size: "80x24", colors: "256", file: lang + "/guide/setup/README.md"},
+			tcase{screen: lang + "-bbt-read", size: "80x24", colors: "256", file: lang + "/guide/bbt/README.md"},
+			tcase{screen: lang + "-text-read", size: "80x24", colors: "256", file: lang + "/features.md"})
 	}
 	fsys := os.DirFS(filepath.Join("..", "..", "station"))
 	var out, errOut bytes.Buffer
@@ -52,6 +63,10 @@ func TestStation(t *testing.T) {
 			args = append(args, "--set", "term.ambiguous="+c.ambiguous)
 			name += "-ambiguous" + c.ambiguous
 		}
+		for _, v := range c.set {
+			args = append(args, "--set", v)
+		}
+		name += c.tag
 		status := run(args, fsys, &out, &errOut)
 		file := filepath.Join("testdata", "station", name+".dump")
 		want, err := os.ReadFile(file)

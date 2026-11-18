@@ -121,6 +121,19 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 - The session and BBS fields as label and value rows: `session.ip`, `session.online`,
   `bbs.version`, `bbs.sessions` and `bbs.uptime` ([session-fields](session-fields.md), section 2).
   A label does not count the value, so it needs no plural form.
+- Below them, after an empty row, the terminal rows show the `term.*` fields
+  ([telnet-term](telnet-term.md), section 6):
+
+  | Label | Value |
+  |---|---|
+  | `Терминал`, `Terminal` | `{term.type}, {term.cols}x{term.rows}` |
+  | `Программа`, `Program` | `term.name`. When it is empty, `нет ответа`, `no reply`. |
+  | `Цвета`, `Colours` | `term.colors`, `truecolor` for 16777216. `, sixel` follows when `term.images` is `sixel`. |
+  | `Фон`, `Background` | `тёмный`, `dark` or `светлый`, `light` and `, {term.bg_color}`. When `term.background` is empty, `не определён`, `unknown`. |
+  | `Ширина кириллицы`, `Cyrillic width` | `1 клетка`, `1 cell` or `2 клетки`, `2 cells`: `term.ambiguous`. |
+
+- The 80 form has 23 rows: its text is one paragraph of two rows, and the repository row
+  has no empty row below it.
 - The station facts (the SysOp name, the address, the port) come from the operator.
   The screen does not invent them. Until the operator gives them, the screen has no facts.
 
@@ -187,6 +200,8 @@ The English table of section 7 of the brandbook:
   - each screen at 80x24 with 256 colours;
   - each screen except a file screen also at 132x43 with 256 colours;
   - `main` and `ru-texts` also with 16 and 16777216 colours;
+  - `ru-about` and `en-about` also with 16777216 colours, `term.ambiguous` 2,
+    a `term.name`, sixel and a `term.bg_color` (a dark one and a light one);
   - each file screen with its first file.
 - The `ru-` and the `en-` screens have the same items.
 - `content/ru/guide` and `content/en/guide` are symlinks into `docs/guide/`.
