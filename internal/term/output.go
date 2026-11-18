@@ -13,12 +13,14 @@ import (
 // AppendPage appends the output of page p (section 7.1) to dst for a terminal
 // with term.colors = colors. screen.ColorsTrue gives no reduction, screen.Colors256
 // gives the 256-colour rule and each other value gives the 16-colour rule (section 7.3).
+// vgaRGB is true when the palette of the terminal is not VGA (section 5.7):
+// then a VGA colour goes out as its RGB value.
 // The caller doubles IAC after it (section 4.3).
-func AppendPage(dst []byte, p screen.Page, colors int) []byte {
+func AppendPage(dst []byte, p screen.Page, colors int, vgaRGB bool) []byte {
 	var model, out screen.Style // the model style and the output style of the previous cell
 	dst = append(dst, "\x1b[?2026h"...)
 	if p.Fill == screen.FillErase {
-		model, out = p.Normal, reduceStyle(p.Normal, colors)
+		model, out = p.Normal, reduceStyle(p.Normal, colors, vgaRGB)
 		dst = appendSGR(dst, out)
 	} else {
 		dst = append(dst, "\x1b[0m"...)
@@ -27,7 +29,7 @@ func AppendPage(dst []byte, p screen.Page, colors int) []byte {
 	appendCell := func(c screen.Cell) {
 		if c.Style != model {
 			model = c.Style
-			if s := reduceStyle(model, colors); s != out {
+			if s := reduceStyle(model, colors, vgaRGB); s != out {
 				out = s
 				dst = appendSGR(dst, out)
 			}
@@ -121,14 +123,22 @@ func appendColour(dst []byte, c screen.Colour, low, high int64, ext string) []by
 }
 
 // reduceStyle reduces both colours of s to colors.
-func reduceStyle(s screen.Style, colors int) screen.Style {
-	s.Fg = reduce(s.Fg, colors)
-	s.Bg = reduce(s.Bg, colors)
+func reduceStyle(s screen.Style, colors int, vgaRGB bool) screen.Style {
+	s.Fg = reduce(s.Fg, colors, vgaRGB)
+	s.Bg = reduce(s.Bg, colors, vgaRGB)
 	return s
 }
 
-// reduce reduces colour c to colors (section 7.3).
-func reduce(c screen.Colour, colors int) screen.Colour {
+// reduce reduces colour c to colors (section 7.3). A VGA colour first becomes
+// its RGB value when vgaRGB is true, else its index.
+func reduce(c screen.Colour, colors int, vgaRGB bool) screen.Colour {
+	if c.Kind == screen.VGA {
+		if vgaRGB {
+			c = screen.Colour{Kind: screen.RGB, Value: vga[c.Value]}
+		} else {
+			c.Kind = screen.Index
+		}
+	}
 	switch {
 	case colors == screen.ColorsTrue || c.Kind == screen.Default:
 		return c

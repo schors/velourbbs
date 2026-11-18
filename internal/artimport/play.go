@@ -10,8 +10,8 @@ import (
 
 // The start style of the play and the style of a cell that the play does not write.
 var (
-	startPen  = pen{fg: screen.IndexColour(7), bg: screen.IndexColour(0)}
-	blankCell = screen.Cell{Grapheme: " ", Style: screen.Style{Fg: screen.IndexColour(7), Bg: screen.IndexColour(0)}}
+	startPen  = pen{fg: screen.VGAColour(7), bg: screen.VGAColour(0)}
+	blankCell = screen.Cell{Grapheme: " ", Style: screen.Style{Fg: screen.VGAColour(7), Bg: screen.VGAColour(0)}}
 )
 
 // pen is the current SGR state of the play.
@@ -23,13 +23,13 @@ type pen struct {
 // style gives the style of a written cell by the rules of section 5.
 func (p pen) style(ice bool) screen.Style {
 	s := screen.Style{Fg: p.fg, Bg: p.bg}
-	if p.bold && s.Fg.Kind == screen.Index && s.Fg.Value < 8 {
+	if p.bold && s.Fg.Kind == screen.VGA && s.Fg.Value < 8 {
 		s.Fg.Value += 8
 	}
 	if p.blink {
 		if !ice {
 			s.Attr |= screen.Blink
-		} else if s.Bg.Kind == screen.Index && s.Bg.Value < 8 {
+		} else if s.Bg.Kind == screen.VGA && s.Bg.Value < 8 {
 			s.Bg.Value += 8
 		}
 	}
@@ -454,7 +454,7 @@ func arg(ps []int, i int) int {
 // eraseStyle gives the style of an erased cell: the foreground 7,
 // the background of a written cell, no attributes.
 func (p *player) eraseStyle() screen.Style {
-	return screen.Style{Fg: screen.IndexColour(7), Bg: p.pen.style(p.ice).Bg}
+	return screen.Style{Fg: screen.VGAColour(7), Bg: p.pen.style(p.ice).Bg}
 }
 
 // erase does CSI n K: 0 to the end of the row, 1 to the start, 2 the whole row.
@@ -524,17 +524,17 @@ func (p *player) sgr(ps []int, seq art.CSI) {
 		case v == 7 || v == 27:
 			p.pen.reverse = v == 7
 		case 30 <= v && v <= 37:
-			p.pen.fg = screen.IndexColour(uint8(v - 30))
+			p.pen.fg = screen.VGAColour(uint8(v - 30))
 		case 90 <= v && v <= 97:
-			p.pen.fg = screen.IndexColour(uint8(v - 90 + 8))
+			p.pen.fg = screen.VGAColour(uint8(v - 90 + 8))
 		case v == 39:
-			p.pen.fg = screen.IndexColour(7)
+			p.pen.fg = screen.VGAColour(7)
 		case 40 <= v && v <= 47:
-			p.pen.bg = screen.IndexColour(uint8(v - 40))
+			p.pen.bg = screen.VGAColour(uint8(v - 40))
 		case 100 <= v && v <= 107:
-			p.pen.bg = screen.IndexColour(uint8(v - 100 + 8))
+			p.pen.bg = screen.VGAColour(uint8(v - 100 + 8))
 		case v == 49:
-			p.pen.bg = screen.IndexColour(0)
+			p.pen.bg = screen.VGAColour(0)
 		case v == 38 || v == 48:
 			c, n, ok := art.ExtColour(ps[k+1:])
 			if !ok {

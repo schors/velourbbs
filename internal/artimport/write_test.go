@@ -70,15 +70,15 @@ func TestImportBytes(t *testing.T) {
 }
 
 func TestSGR(t *testing.T) {
-	idx, rgb := screen.IndexColour, screen.RGBColour
+	idx, vga, rgb := screen.IndexColour, screen.VGAColour, screen.RGBColour
 	tests := []struct {
 		style screen.Style
 		want  string
 	}{
-		{screen.Style{Fg: idx(7), Bg: idx(0)}, "\x1b[0m"},
-		{screen.Style{Fg: idx(9), Bg: idx(4), Attr: screen.Underline | screen.Blink}, "\x1b[0;4;5;91;44m"},
-		{screen.Style{Fg: idx(0), Bg: idx(15)}, "\x1b[0;30;107m"},
-		{screen.Style{Fg: idx(8), Bg: idx(7)}, "\x1b[0;90;47m"},
+		{screen.Style{Fg: vga(7), Bg: vga(0)}, "\x1b[0m"},
+		{screen.Style{Fg: vga(9), Bg: vga(4), Attr: screen.Underline | screen.Blink}, "\x1b[0;4;5;91;44m"},
+		{screen.Style{Fg: vga(0), Bg: vga(15)}, "\x1b[0;30;107m"},
+		{screen.Style{Fg: vga(8), Bg: vga(7)}, "\x1b[0;90;47m"},
 		{screen.Style{Fg: idx(200), Bg: idx(16)}, "\x1b[0;38;5;200;48;5;16m"},
 		{screen.Style{Fg: rgb(1, 2, 3), Bg: rgb(255, 0, 16)}, "\x1b[0;38;2;1;2;3;48;2;255;0;16m"},
 	}

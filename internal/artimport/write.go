@@ -103,10 +103,10 @@ func appendSGR(out []byte, s screen.Style) []byte {
 	if s.Attr&screen.Blink != 0 {
 		out = append(out, ";5"...)
 	}
-	if s.Fg != screen.IndexColour(7) {
+	if s.Fg != screen.VGAColour(7) {
 		out = appendColour(out, s.Fg, 30, 90, 38)
 	}
-	if s.Bg != screen.IndexColour(0) {
+	if s.Bg != screen.VGAColour(0) {
 		out = appendColour(out, s.Bg, 40, 100, 48)
 	}
 	return append(out, 'm')

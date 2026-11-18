@@ -138,6 +138,17 @@ func logReply(b string) string {
 	return CleanName(b)
 }
 
+// notVGA reports whether the palette is not VGA: an OSC 4 reply has a colour
+// other than the VGA colour of its index (section 5.7).
+func (r *replies) notVGA() bool {
+	for n := range paletteSize {
+		if r.paletteGot[n] && r.palette[n] != vga[n] {
+			return true
+		}
+	}
+	return false
+}
+
 // logPalette gives the palette for the log line (section 5.6).
 func (r *replies) logPalette() string {
 	s := make([]string, paletteSize)

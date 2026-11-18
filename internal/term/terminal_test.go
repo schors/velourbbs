@@ -198,7 +198,7 @@ func TestTerminalPage(t *testing.T) {
 			t.Fatal(err)
 		}
 		// XTERM gives 256 colours, so the RGB colour becomes an index.
-		if out := f.output(); !strings.HasSuffix(out, string(AppendPage(nil, page, screen.Colors256))) {
+		if out := f.output(); !strings.HasSuffix(out, string(AppendPage(nil, page, screen.Colors256, false))) {
 			t.Errorf("output %q does not end with the page", out)
 		}
 	})

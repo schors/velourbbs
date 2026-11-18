@@ -63,9 +63,11 @@ func AppendParams(dst []int, b []byte) ([]int, bool) {
 }
 
 // ExtColour parses the SGR parameters after 38 or 48: "5;n" or "2;r;g;b".
-// It gives the colour and the count of parameters.
+// It gives the colour and the count of parameters. An index 0–15 is a VGA colour (section 3).
 func ExtColour(ps []int) (screen.Colour, int, bool) {
 	switch {
+	case len(ps) >= 2 && ps[0] == 5 && ps[1] <= 15:
+		return screen.VGAColour(uint8(ps[1])), 2, true
 	case len(ps) >= 2 && ps[0] == 5 && ps[1] <= 255:
 		return screen.IndexColour(uint8(ps[1])), 2, true
 	case len(ps) >= 4 && ps[0] == 2 && ps[1] <= 255 && ps[2] <= 255 && ps[3] <= 255:

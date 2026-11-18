@@ -75,7 +75,7 @@ func Probe(c Conn, accepted time.Time, to Timeouts, log *slog.Logger) (*Terminal
 			return nil, err
 		}
 	}
-	t.term = term
+	t.term, t.vgaRGB = term, pr.r.notVGA()
 	t.lastKey = time.Now()
 	return t, nil
 }

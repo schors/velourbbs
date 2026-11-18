@@ -13,10 +13,11 @@ const (
 	Default ColourKind = iota // the colour of the terminal
 	Index                     // an index from 0 to 255
 	RGB                       // a 24-bit colour
+	VGA                       // a colour 0–15 of art with the VGA value
 )
 
 // Colour is a foreground or a background colour.
-// Value is the index for Index and 0xRRGGBB for RGB.
+// Value is the index for Index and VGA, and 0xRRGGBB for RGB.
 type Colour struct {
 	Kind  ColourKind
 	Value uint32
@@ -25,15 +26,19 @@ type Colour struct {
 // IndexColour returns the colour with the index n.
 func IndexColour(n uint8) Colour { return Colour{Kind: Index, Value: uint32(n)} }
 
+// VGAColour returns the VGA colour with the index n, 0–15.
+func VGAColour(n uint8) Colour { return Colour{Kind: VGA, Value: uint32(n)} }
+
 // RGBColour returns the colour with the components r, g and b.
 func RGBColour(r, g, b uint8) Colour {
 	return Colour{Kind: RGB, Value: uint32(r)<<16 | uint32(g)<<8 | uint32(b)}
 }
 
 // String writes the colour in the style syntax of section 7.2.
+// A VGA colour gives its index (screen-render, section 3.3).
 func (c Colour) String() string {
 	switch c.Kind {
-	case Index:
+	case Index, VGA:
 		return fmt.Sprint(c.Value)
 	case RGB:
 		return fmt.Sprintf("#%06x", c.Value)
