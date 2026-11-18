@@ -32,6 +32,9 @@ var fileGoldens = []struct {
 	// Each page action; page next on the last page and page prev on the first page
 	// show the page again. SPACE on the last page of reader is disabled.
 	{"keys-40x10.dump", []string{"main", "--size", "40x10", "--keys", "1,SPACE,B,L,SPACE,F,ESC,5,N,N,N,P,P,P,Q,G"}},
+	// The action theme in a screen and on page 2 of a file screen: the theme changes,
+	// the page stays (menu-nav, section 4). session.theme gives the theme choice.
+	{"theme-40x10.dump", []string{"main", "--size", "40x10", "--keys", "T,1,SPACE,D,T,ESC,D"}},
 }
 
 func TestPreviewFile(t *testing.T) {

@@ -89,6 +89,9 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	if !svSet["bbs.time"] {
 		sv.Time = previewTime.Format(cfg.Time)
 	}
+	if svSet["session.theme"] { // the theme choice at the start
+		cfg.ThemeChoice = config.ThemeChoice(sv.Theme)
+	}
 	s, ok := screens[name]
 	if session {
 		if err := menu.CheckTarget(screens, name); err != nil {
@@ -256,6 +259,7 @@ func isRGB(s string) bool {
 }
 
 // setSession sets the session or BBS field path of sv to value (session-fields, section 4).
+// session.theme sets the theme choice at the start: preview gives it to the config.
 // It reports whether path is such a field.
 func setSession(sv *screen.SessionValues, path, value string) (bool, error) {
 	var p *string
@@ -267,6 +271,13 @@ func setSession(sv *screen.SessionValues, path, value string) (bool, error) {
 		}
 		sv.Sessions = n
 		return true, nil
+	case "session.theme":
+		switch c := config.ThemeChoice(value); c {
+		case config.ThemeDark, config.ThemeLight, config.ThemeAuto:
+			sv.Theme = value
+			return true, nil
+		}
+		return true, fmt.Errorf("session.theme is %q, must be dark, light or auto", value)
 	case "session.ip":
 		p = &sv.IP
 	case "session.online":
@@ -359,7 +370,7 @@ func (t *keysTerm) Logoff() error {
 // The end of the key list ends the session. A key after the end of the session at logoff is an error.
 func runKeys(t *keysTerm, cfg config.Config, screens map[string]*screen.Screen, start string, args map[string]string,
 	sv screen.SessionValues, stderr io.Writer) int {
-	err := menu.Run(t, cfg, screens, start, args, func() screen.SessionValues { return sv })
+	_, err := menu.Run(t, cfg, screens, start, args, func() screen.SessionValues { return sv })
 	switch {
 	case errors.Is(err, errNoKeys):
 		return 0

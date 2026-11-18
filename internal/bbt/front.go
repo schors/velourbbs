@@ -190,6 +190,11 @@ func parseAction(do string) (screen.Action, error) {
 			return screen.Action{Op: op}, nil
 		}
 		return screen.Action{}, fmt.Errorf("invalid page action %q", do)
+	case "theme":
+		if hasArg && (arg == "dark" || arg == "light" || arg == "auto") {
+			return screen.Action{Op: screen.Theme, Theme: arg}, nil
+		}
+		return screen.Action{}, fmt.Errorf("invalid theme action %q", do)
 	}
 	return screen.Action{}, fmt.Errorf("unknown action %q", word)
 }

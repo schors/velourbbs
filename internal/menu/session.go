@@ -57,26 +57,43 @@ type session struct {
 
 // Run runs a session from the screen start with the arguments args until logoff (section 5).
 // screens is the result of a load without errors and of Check, start passes
-// CheckTarget and args pass CheckArgs. values gives the session and BBS fields.
+// CheckTarget and args pass CheckArgs. values gives the session and BBS fields
+// except session.theme: Run gives it from the theme choice.
 // Run returns nil after logoff, else the first error of t unchanged.
+// It also returns the theme choice of the session at its end, for Shutdown.
 func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start string, args map[string]string,
-	values Values) error {
+	values Values) (config.ThemeChoice, error) {
 	ev, ok := t.(Events)
 	if !ok {
 		ev = noEvents{}
 	}
-	ss := &session{t: t, ev: ev, cfg: cfg, values: values, choice: cfg.ThemeChoice}
+	ss := &session{t: t, ev: ev, cfg: cfg, choice: cfg.ThemeChoice}
+	ss.values = func() screen.SessionValues {
+		sv := values()
+		sv.Theme = string(ss.choice)
+		return sv
+	}
+	err := ss.loop(screens, start, args)
+	return ss.choice, err
+}
+
+// loop runs the actions of the session from the screen start until logoff (section 4).
+func (ss *session) loop(screens map[string]*screen.Screen, start string, args map[string]string) error {
 	s := screens[start]
 	for {
 		it, err := ss.run(s, args)
 		if err != nil {
 			return err
 		}
-		if it.Do.Op == screen.Goto {
+		switch it.Do.Op {
+		case screen.Goto:
 			s, args = screens[it.Do.Screen], it.Do.Args
 			continue
+		case screen.Theme: // show the current screen again with its arguments
+			ss.choice = config.ThemeChoice(it.Do.Theme)
+			continue
 		}
-		if err := ev.Logoff(); err != nil {
+		if err := ss.ev.Logoff(); err != nil {
 			return err
 		}
 		if g, ok := screens["goodbye"]; ok {
@@ -87,13 +104,15 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 }
 
 // Shutdown shows the first page of the screen shutdown on t, when it exists,
-// with the size of t and without a key wait (section 5.2).
+// with the size of t, the theme choice choice of the session and without a key wait (section 5.2).
 // It gives the error of t. screens is the result of a load without errors and of Check.
-func Shutdown(t Terminal, cfg config.Config, screens map[string]*screen.Screen, values Values) error {
+func Shutdown(t Terminal, cfg config.Config, screens map[string]*screen.Screen, choice config.ThemeChoice,
+	values Values) error {
 	s, ok := screens["shutdown"]
 	if !ok {
 		return nil
 	}
+	cfg.ThemeChoice = choice
 	for p := range Pages(cfg, s, t.Term(), nil, values()) {
 		return t.Page(p)
 	}
@@ -101,7 +120,8 @@ func Shutdown(t Terminal, cfg config.Config, screens map[string]*screen.Screen, 
 }
 
 // run shows the screen s with the arguments args and gives the item that leaves it.
-// A page action of a file screen shows its page and waits for keys again (section 5.1).
+// A page action or a theme action of a file screen shows a page and waits for keys again
+// (section 5.1).
 func (ss *session) run(s *screen.Screen, args map[string]string) (screen.Item, error) {
 	if s.FileScreen == nil {
 		items, err := ss.show(s, args)
@@ -122,10 +142,16 @@ func (ss *session) run(s *screen.Screen, args map[string]string) (screen.Item, e
 			return screen.Item{}, err
 		}
 		it, err := ss.next(items)
-		if err != nil || !it.Do.Op.IsPage() {
+		if err != nil || !it.Do.Op.IsPage() && it.Do.Op != screen.Theme {
 			return it, err
 		}
 		switch it.Do.Op {
+		case screen.Theme:
+			// The size and the file pages stay (section 5.1). The layout holds the styles
+			// of the theme, so the new theme needs a new layout of the same size.
+			ss.choice = config.ThemeChoice(it.Do.Theme)
+			v = newFileView(s, term, args, ss.cfg.SessionTheme(ss.choice, term), ss.values)
+			n = min(n, len(v.pages))
 		case screen.PageNext:
 			n = min(n+1, len(v.pages))
 		case screen.PagePrev:
@@ -167,10 +193,12 @@ func (ss *session) show(s *screen.Screen, args map[string]string) (map[string]sc
 
 // Pages gives each page of the screen s for the terminal term with the arguments args
 // and the session and BBS fields sv: the pages of the render, or each file page of a file screen.
-// The theme choice is the key theme of [screen]. velourbbs preview uses it.
+// The theme choice is the key theme of [screen]. It also gives session.theme of sv.
+// velourbbs preview uses it.
 func Pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[string]string,
 	sv screen.SessionValues) iter.Seq[screen.Page] {
 	theme := cfg.SessionTheme(cfg.ThemeChoice, term)
+	sv.Theme = string(cfg.ThemeChoice)
 	if s.FileScreen == nil {
 		env, _ := Enabled(s, screen.Env{Term: term, Args: args, Session: sv})
 		return screen.Render(s, env, theme, cfg.More)

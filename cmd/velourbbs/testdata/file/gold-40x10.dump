@@ -8,7 +8,7 @@ page 1 40x10 fill none
 |with a Mr. William Legrand. He was of an|
 |ancient Huguenot family, and had once   |
 |──────────────   1/12   ──────────────  |
-|Space Next    Esc List                  |
+|Space Next    Esc List  dark            |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -30,7 +30,7 @@ page 2 40x10 fill none
 |autolink https://example.org, inline    |
 |<b>HTML</b> and a comment . A second    |
 |──────────────   2/12   ──────────────  |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -52,7 +52,7 @@ page 3 40x10 fill none
 |                                        |
 |                                        |
 |──────────────   3/12   ──────────────  |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -74,7 +74,7 @@ page 4 40x10 fill none
 |  ∙ Fort Moultrie                       |
 |      - the myrtle                      |
 |──────────────   4/12   ──────────────  |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -96,7 +96,7 @@ page 5 40x10 fill none
 |   9. The scarabaeus                    |
 |  10. The parchment                     |
 |──────────────   5/12   ──────────────  |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -118,7 +118,7 @@ page 6 40x10 fill none
 |│ func main() {                         |
 |│         x := 1  // a TAB before x a...|
 |──────────────   6/12   ──────────────  |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -140,7 +140,7 @@ page 7 40x10 fill none
 |∙   ∙   ∙                               |
 |                                        |
 |──────────────   7/12   ──────────────  |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -162,7 +162,7 @@ page 8 40x10 fill none
 |;         t        26                   |
 |                                        |
 |──────────────   8/12   ──────────────  |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -184,7 +184,7 @@ page 9 40x10 fill none
 |                                        |
 |                                        |
 |──────────────   9/12   ──────────────  |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -206,7 +206,7 @@ page 10 40x10 fill none
 |                                        |
 |                                        |
 |──────────────   10/12   ────────────── |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -228,7 +228,7 @@ page 11 40x10 fill none
 |                                        |
 |[1] https://example.com/gold            |
 |──────────────   11/12   ────────────── |
-|B Back    Space Next    Esc List        |
+|B Back    Space Next    Esc List  dark  |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0
@@ -250,7 +250,7 @@ page 12 40x10 fill none
 |                                        |
 |                                        |
 |──────────────   12/12   ────────────── |
-|B Back    Esc List                      |
+|B Back    Esc List  dark                |
 styles
 1: 1-3 11/0, 4-40 7/0
 2: 1-12 15/0 bold, 13-40 7/0

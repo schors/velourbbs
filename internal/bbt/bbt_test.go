@@ -287,19 +287,31 @@ do = "goto main"
 key = "any"
 do = "logoff"
 when = "w > 80"
+[[item]]
+key = "1"
+do = "theme dark"
+[[item]]
+key = "2"
+do = "theme light"
+[[item]]
+key = "3"
+do = "theme auto"
 +++
 `})
 	items := screens["s"].Items
-	if len(items) != 2 || items[1].When == nil {
+	if len(items) != 5 || items[1].When == nil {
 		t.Fatalf("items %+v", items)
 	}
-	got := []screen.Item{
-		{Key: items[0].Key, Do: items[0].Do},
-		{Key: items[1].Key, Do: items[1].Do},
+	var got []screen.Item
+	for _, it := range items {
+		got = append(got, screen.Item{Key: it.Key, Do: it.Do})
 	}
 	want := []screen.Item{
 		{Key: "ESC", Do: screen.Action{Op: screen.Goto, Screen: "main"}},
 		{Key: "ANY", Do: screen.Action{Op: screen.Logoff}},
+		{Key: "1", Do: screen.Action{Op: screen.Theme, Theme: "dark"}},
+		{Key: "2", Do: screen.Action{Op: screen.Theme, Theme: "light"}},
+		{Key: "3", Do: screen.Action{Op: screen.Theme, Theme: "auto"}},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("items %+v, want %+v", got, want)
@@ -333,6 +345,13 @@ func TestItemErrors(t *testing.T) {
 		{[]string{`key = "A"`, `do = "goto _f"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name "_f"`}},
 		{[]string{`key = "A"`, `do = "logoff now"`}, []string{`screens/s.bbt:2:1: item "A": do: logoff takes no argument`}},
 		{[]string{`key = "A"`, `do = "logoff "`}, []string{`screens/s.bbt:2:1: item "A": do: logoff takes no argument`}},
+		{[]string{`key = "A"`, `do = "theme"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid theme action "theme"`}},
+		{[]string{`key = "A"`, `do = "theme blue"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid theme action "theme blue"`}},
+		{[]string{`key = "A"`, `do = "theme Dark"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid theme action "theme Dark"`}},
+		{[]string{`key = "A"`, `do = "theme  dark"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid theme action "theme  dark"`}},
+		{[]string{`key = "A"`, `do = "theme dark"`, `args = { f = "a" }`}, []string{
+			`screens/s.bbt:2:1: item "A": args: only goto takes arguments`,
+		}},
 		{[]string{`key = "a"`, `do = 1`, `when = "item.A"`, `x = 1`}, []string{`screens/s.bbt:4:6: item.do: must be a string`}},
 		// Each when error is an other error at 2:1, also a syntax error.
 		{[]string{`key = "a"`, `do = "logoff"`, `when = "item.A"`}, []string{

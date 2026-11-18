@@ -291,28 +291,33 @@ styles
 		// term.bg_color gives term.background (telnet-term, section 6).
 		name: "terminal colours",
 		args: []string{"colours", "--set", "term.fg_color=#000000", "--set", "term.bg_color=#BCBCBC"},
-		want: page(80, 24, "C|#000000|#bcbcbc|light|E"),
+		want: page(80, 24, "C|#000000|#bcbcbc|light|dark|E"),
+	}, {
+		// session.theme is [screen] theme, else the value of --set (session-fields, section 4).
+		name: "theme choice",
+		args: []string{"colours", "--set", "session.theme=auto"},
+		want: page(80, 24, "C||||auto|E"),
 	}, {
 		name: "dark background colour",
 		args: []string{"colours", "--set", "term.bg_color=#bbbbbb"},
-		want: page(80, 24, "C||#bbbbbb|dark|E"),
+		want: page(80, 24, "C||#bbbbbb|dark|dark|E"),
 	}, {
 		name: "empty background colour",
 		args: []string{"colours", "--set", "term.bg_color=#ffffff", "--set", "term.bg_color="},
-		want: page(80, 24, "C||||E"),
+		want: page(80, 24, "C||||dark|E"),
 	}, {
 		// An explicit term.background overrides term.bg_color in each order.
 		name: "background before the colour",
 		args: []string{"colours", "--set", "term.background=dark", "--set", "term.bg_color=#ffffff"},
-		want: page(80, 24, "C||#ffffff|dark|E"),
+		want: page(80, 24, "C||#ffffff|dark|dark|E"),
 	}, {
 		name: "background after the colour",
 		args: []string{"colours", "--set", "term.bg_color=#000000", "--set", "term.background=light"},
-		want: page(80, 24, "C||#000000|light|E"),
+		want: page(80, 24, "C||#000000|light|dark|E"),
 	}, {
 		name: "empty background",
 		args: []string{"colours", "--set", "term.bg_color=#000000", "--set", "term.background="},
-		want: page(80, 24, "C||#000000||E"),
+		want: page(80, 24, "C||#000000||dark|E"),
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -351,6 +356,10 @@ styles
 		{"dark", []string{"--set", "term.background=light"}, dark},
 		{"auto", nil, dark},
 		{"light", nil, light},
+		// --set session.theme sets the theme choice at the start (session-fields, section 4).
+		{"dark", []string{"--set", "session.theme=light"}, light},
+		{"light", []string{"--set", "session.theme=dark"}, dark},
+		{"dark", []string{"--set", "session.theme=auto", "--set", "term.background=light"}, light},
 	}
 	for _, tt := range tests {
 		fsys := fstest.MapFS{
@@ -397,6 +406,8 @@ func TestPreviewErrors(t *testing.T) {
 		{"preview", []string{"fields", "--set", "session.ip=a\tb"}, "invalid value \"session.ip=a\\tb\" for flag -set: session.ip: value has a control character", exitUsage},
 		{"preview", []string{"fields", "--set", "bbs.sessions=-1"}, `invalid value "bbs.sessions=-1" for flag -set: bbs.sessions: "-1" is not a decimal number`, exitUsage},
 		{"preview", []string{"fields", "--set", "bbs.sessions="}, `invalid value "bbs.sessions=" for flag -set: bbs.sessions: "" is not a decimal number`, exitUsage},
+		{"preview", []string{"fields", "--set", "session.theme=Light"}, `invalid value "session.theme=Light" for flag -set: session.theme is "Light", must be dark, light or auto`, exitUsage},
+		{"preview", []string{"fields", "--set", "session.theme="}, `invalid value "session.theme=" for flag -set: session.theme is "", must be dark, light or auto`, exitUsage},
 		{"preview", []string{"fields", "--set", "session.node=1"}, `invalid value "session.node=1" for flag -set: cannot set "session.node": only term.type, term.colors, term.name, term.images, term.ambiguous, term.bg_color, term.fg_color, term.background, arg.<name>, session.* and bbs.*`, exitUsage},
 		{"preview", []string{"nope"}, `velourbbs preview: unknown screen "nope"`, exitUsage},
 		{"preview", []string{}, "velourbbs preview: expected one screen name", exitUsage},
