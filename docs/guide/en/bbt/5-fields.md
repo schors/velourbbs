@@ -44,7 +44,7 @@ Each token is 17 cells wide. The BBS shows:
 ```
 
 - `{` starts a token when a Latin letter, a space or an ASCII punctuation character follows it,
-  except `{` and `}`. A punctuation character other than `#`, `/`, `!`, `>` and `@` is reserved:
+  except `{` and `}`. A punctuation character other than `#`, `/`, `!` and `>` is reserved:
   its token is an error. `{{` gives a plain `{`. Example: `Write {{name} here.` shows `Write {name} here.`
 
 ## Session and BBS fields
