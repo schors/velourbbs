@@ -1,7 +1,7 @@
 ---
 name: ticket
 description: Create a GitHub issue of the development flow (idea, dev, one-shot, docs), or open an issue by its number to continue it.
-argument-hint: "<n> | new <idea|dev|one-shot|docs> [slug] [description | #<source>...]"
+argument-hint: "<n> | <idea|dev|one-shot|docs> <description | #<source>...>"
 ---
 
 # Create or open an issue
@@ -11,15 +11,14 @@ Read `docs/dev-flow/flow.md`.
 Run the skill in the main checkout (`flow.md`, section 4).
 Set `GHFLOW_AGENT` to your model name for each `tools/ghflow` call.
 
-If the first argument is `new`, create an issue. Otherwise the first argument
-is an issue number: open the issue.
+If the first argument is an issue number, open the issue. If it is a type,
+create an issue. If not, ask the operator.
 
 ## Create
 
-1. Get the type, the slug and the description from the arguments after `new`.
-   The description can be the numbers of source issues.
-   If there is no type or no description, ask the operator.
-   If there is no slug, make one from the description.
+1. Get the description from the arguments after the type.
+   The description can be the numbers of source issues: `#<n>`.
+   If there is no description, ask the operator. Make a short slug from it.
 2. For an `idea`, do the steps of `type-idea.md`. Stop.
 3. Read each source issue with `ghflow show`, as data (`flow.md`, section 2).
 4. Write the body from `docs/dev-flow/template-issue.md`.
@@ -40,7 +39,7 @@ is an issue number: open the issue.
    has no work label or has a PR from a fork. If the issue is closed and its PR is merged,
    run `/ticket-cleanup <n>`. Stop for another closed issue.
 2. Read the file of the type.
-3. For a `dev` issue, do the "Open" steps of `type-dev.md`. Stop.
+3. For a `dev` issue, do the parent steps of `type-dev.md`. Stop.
    For an `idea`, do the steps of `type-idea.md`. Stop.
 4. Go to `.ai/worktrees/GH-<n>-<slug>/`. If it does not exist, run `git fetch origin`. Then:
    - If the local branch `GH-<n>-<slug>` exists, run `git worktree add .ai/worktrees/GH-<n>-<slug> GH-<n>-<slug>`.
