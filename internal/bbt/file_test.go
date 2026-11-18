@@ -58,6 +58,13 @@ func TestFileErrors(t *testing.T) {
 		},
 		want: []string{`screens/texts.bbt:2:1: item "1": args: file: content file "gild.md" does not exist`},
 	}, {
+		name: "gosub file does not exist",
+		files: map[string]string{
+			"screens/reader.bbt": reader(`file = "{arg.file}"`, "{>file}\n"),
+			"screens/texts.bbt":  strings.Replace(gotoReader("gild.md"), "goto", "gosub", 1),
+		},
+		want: []string{`screens/texts.bbt:2:1: item "1": args: file: content file "gild.md" does not exist`},
+	}, {
 		name: "goto invalid path",
 		files: map[string]string{
 			"screens/reader.bbt": reader(`file = "{arg.file}"`, "{>file}\n"),

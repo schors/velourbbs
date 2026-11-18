@@ -2,47 +2,47 @@
 width = [80, 132]
 [[item]]
 key = "0"
-do = "goto ru-bbt-read"
+do = "gosub ru-bbt-read"
 args = { file = "ru/guide/bbt/README.md" }
 [[item]]
 key = "1"
-do = "goto ru-bbt-read"
+do = "gosub ru-bbt-read"
 args = { file = "ru/guide/bbt/1-bbs-directory.md" }
 [[item]]
 key = "2"
-do = "goto ru-bbt-read"
+do = "gosub ru-bbt-read"
 args = { file = "ru/guide/bbt/2-first-screen.md" }
 [[item]]
 key = "3"
-do = "goto ru-bbt-read"
+do = "gosub ru-bbt-read"
 args = { file = "ru/guide/bbt/3-header.md" }
 [[item]]
 key = "4"
-do = "goto ru-bbt-read"
+do = "gosub ru-bbt-read"
 args = { file = "ru/guide/bbt/4-menu.md" }
 [[item]]
 key = "5"
-do = "goto ru-bbt-read"
+do = "gosub ru-bbt-read"
 args = { file = "ru/guide/bbt/5-fields.md" }
 [[item]]
 key = "6"
-do = "goto ru-bbt-read"
+do = "gosub ru-bbt-read"
 args = { file = "ru/guide/bbt/6-colour-depth.md" }
 [[item]]
 key = "7"
-do = "goto ru-bbt-read"
+do = "gosub ru-bbt-read"
 args = { file = "ru/guide/bbt/7-texts.md" }
 [[item]]
 key = "8"
-do = "goto ru-bbt-read"
+do = "gosub ru-bbt-read"
 args = { file = "ru/guide/bbt/8-art.md" }
 [[item]]
 key = "9"
-do = "goto ru-bbt-read"
+do = "gosub ru-bbt-read"
 args = { file = "ru/guide/bbt/9-errors.md" }
 [[item]]
 key = "ESC"
-do = "goto ru-texts"
+do = "back"
 +++
 {#if term.cols >= 132 and term.rows >= 43}
 

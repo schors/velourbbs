@@ -36,13 +36,13 @@ Its row is between the rows of `A` and `T`. Remove two empty lines below the row
 +++
 [[item]]
 key = "A"
-do = "goto about"
+do = "gosub about"
 [[item]]
 key = "R"
-do = "goto texts"
+do = "gosub texts"
 [[item]]
 key = "T"
-do = "goto term"
+do = "gosub term"
 [[item]]
 key = "G"
 do = "logoff"
@@ -98,12 +98,12 @@ The screen:
 
 ## The list screen `texts`
 
-`args` gives an argument to the screen of a `goto`:
+`args` gives an argument to the screen of a `gosub` or a `goto`:
 
 ```
 [[item]]
 key = "1"
-do = "goto reader"
+do = "gosub reader"
 args = { file = "lamp.md" }
 ```
 
@@ -111,7 +111,7 @@ args = { file = "lamp.md" }
   The field `{arg.file}` gives this value.
 - An argument name has lower case Latin letters, digits and `_`, and starts with a letter.
   A value cannot have `{` or a control character.
-- A `goto` gives exactly the arguments that its screen uses.
+- A `gosub` or a `goto` gives exactly the arguments that its screen uses.
   A missing argument or another argument is an error.
 
 Full rules: [bbt-format](../../../specs/bbt-format.md), section 8.5.
@@ -121,15 +121,15 @@ Full rules: [bbt-format](../../../specs/bbt-format.md), section 8.5.
 +++
 [[item]]
 key = "1"
-do = "goto reader"
+do = "gosub reader"
 args = { file = "lamp.md" }
 [[item]]
 key = "2"
-do = "goto reader"
+do = "gosub reader"
 args = { file = "rules.txt" }
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 +++
 {>_head}
        The texts of the station.
@@ -262,7 +262,7 @@ do = "page prev"
 when = "file.page > 1"
 [[item]]
 key = "ESC"
-do = "goto texts"
+do = "back"
 +++
 {>_head}
        {!title}{file.title}{!}
@@ -517,7 +517,7 @@ numbers = true
 margin = [7, 2]
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 +++
 {>file}
 ```
@@ -549,13 +549,17 @@ velourbbs preview reader --set arg.file=lamp.md
 The command gives the cell dumps of all pages of the text, one after the other.
 Without `--set`, `velourbbs preview reader` gives the error `missing argument "file" of screen "reader"`.
 
-`--keys` shows the pages:
+`--keys` shows the pages. Start at `texts`: `1` opens the text in `reader`, `Esc` goes back to `texts`:
 
 ```
-velourbbs preview reader --set arg.file=lamp.md --keys SPACE,SPACE,B,ESC
+velourbbs preview texts --keys 1,SPACE,SPACE,B,ESC
 ```
 
 ```
+screen texts
+page 1 80x24 fill spaces
+...
+key 1
 screen reader
 page 1 80x24 fill spaces
 ...

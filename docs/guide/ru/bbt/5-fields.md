@@ -136,7 +136,7 @@ w = "term.cols"
 +++
 [[item]]
 key = "W"
-do = "goto wide"
+do = "gosub wide"
 when = "term.cols >= 132"
 [[item]]
 key = "G"
@@ -161,10 +161,10 @@ G  до свидания
 +++
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 [[item]]
 key = "ENTER"
-do = "goto main"
+do = "back"
 +++
 {>_head}
        {!dim}Размер{!}   {term.cols}×{term.rows}
@@ -224,7 +224,7 @@ do = "goto main"
 ```
 [[item]]
 key = "T"
-do = "goto term"
+do = "gosub term"
 ```
 
 В теле добавь строку `T` между строками `A` и `G`.

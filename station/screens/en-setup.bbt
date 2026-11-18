@@ -2,31 +2,31 @@
 width = [80, 132]
 [[item]]
 key = "0"
-do = "goto en-setup-read"
+do = "gosub en-setup-read"
 args = { file = "en/guide/setup/README.md" }
 [[item]]
 key = "1"
-do = "goto en-setup-read"
+do = "gosub en-setup-read"
 args = { file = "en/guide/setup/1-program.md" }
 [[item]]
 key = "2"
-do = "goto en-setup-read"
+do = "gosub en-setup-read"
 args = { file = "en/guide/setup/2-bbs-directory.md" }
 [[item]]
 key = "3"
-do = "goto en-setup-read"
+do = "gosub en-setup-read"
 args = { file = "en/guide/setup/3-bbs-toml.md" }
 [[item]]
 key = "4"
-do = "goto en-setup-read"
+do = "gosub en-setup-read"
 args = { file = "en/guide/setup/4-commands.md" }
 [[item]]
 key = "5"
-do = "goto en-setup-read"
+do = "gosub en-setup-read"
 args = { file = "en/guide/setup/5-systemd.md" }
 [[item]]
 key = "ESC"
-do = "goto en-texts"
+do = "back"
 +++
 {#if term.cols >= 132 and term.rows >= 43}
 

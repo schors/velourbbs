@@ -18,6 +18,7 @@ import (
 // fakeTerm is a Terminal without Events. It logs each page as "page: <row 1>".
 type fakeTerm struct {
 	cols    []int // the cols of each Term call; the last value stays
+	rows    []int // the rows of each Term call, as cols; 10 when empty
 	keys    []string
 	log     []string
 	pageErr error // the error of Page
@@ -28,7 +29,14 @@ func (f *fakeTerm) Term() screen.Term {
 	if len(f.cols) > 1 {
 		f.cols = f.cols[1:]
 	}
-	return screen.Term{Type: "ansi", Cols: c, Rows: 10, Charset: "utf-8", Colors: 16}
+	r := 10
+	if len(f.rows) > 0 {
+		r = f.rows[0]
+	}
+	if len(f.rows) > 1 {
+		f.rows = f.rows[1:]
+	}
+	return screen.Term{Type: "ansi", Cols: c, Rows: r, Charset: "utf-8", Colors: 16}
 }
 
 func (f *fakeTerm) Key() (string, error) {
@@ -259,6 +267,91 @@ File {arg.f}
 	}
 }
 
+// goto, gosub, back and top change the navigation stack (section 4.1).
+func TestRunStack(t *testing.T) {
+	item := func(k, do string) string { return "[[item]]\nkey = \"" + k + "\"\ndo = \"" + do + "\"\n" }
+	ss := load(t, map[string]string{
+		"main": "+++\n" + item("1", "gosub a") + item("X", "goto a") + item("B", "back") + item("G", "logoff") + "+++\nMain\n",
+		"a":    "+++\n" + item("1", "gosub b") + item("B", "back") + item("T", "top") + "+++\nA\n",
+		"b":    "+++\n" + item("B", "back") + item("T", "top") + item("M", "goto main") + "+++\nB\n",
+	})
+	tests := []struct {
+		name string
+		keys []string
+		want []string
+	}{{
+		name: "gosub and back",
+		keys: []string{"1", "1", "B", "B"},
+		want: []string{"Main", "1 A", "1 B", "B A", "B Main"},
+	}, {
+		name: "back on the first frame",
+		keys: []string{"B"},
+		want: []string{"Main", "B Main"},
+	}, {
+		name: "top",
+		keys: []string{"1", "1", "T", "B"},
+		want: []string{"Main", "1 A", "1 B", "T Main", "B Main"},
+	}, {
+		// The example of section 4.1: goto main from b gives the stack main, a, main.
+		name: "goto replaces the top frame",
+		keys: []string{"1", "1", "M", "B", "B"},
+		want: []string{"Main", "1 A", "1 B", "M Main", "B A", "B Main"},
+	}, {
+		name: "goto on the first frame",
+		keys: []string{"X", "T", "B", "1", "T"},
+		want: []string{"Main", "X A", "T A", "B A", "1 B", "T A"},
+	}}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ft := &fakeTerm{cols: []int{80}, keys: slices.Clone(tt.keys)}
+			_, err := Run(eventsTerm{ft}, config.Config{}, ss, "main", nil, noValues)
+			// Join each key with the screen that follows it.
+			var got []string
+			for _, l := range ft.log {
+				switch {
+				case strings.HasPrefix(l, "key "):
+					got = append(got, strings.TrimPrefix(l, "key ")+" ")
+				case strings.HasPrefix(l, "page: "):
+					if len(got) == 0 {
+						got = append(got, "")
+					}
+					got[len(got)-1] += strings.TrimPrefix(l, "page: ")
+				}
+			}
+			if !errors.Is(err, io.EOF) || !slices.Equal(got, tt.want) {
+				t.Errorf("err %v, got %q, want %q", err, got, tt.want)
+			}
+		})
+	}
+}
+
+// At 16 frames, gosub first removes the second frame (section 4.1).
+func TestNav(t *testing.T) {
+	var st []*frame
+	for i := range maxFrames {
+		st = append(st, &frame{s: &screen.Screen{Name: fmt.Sprint(i)}, page: 2})
+	}
+	x := &screen.Screen{Name: "x"}
+	args := map[string]string{"f": "a"}
+	st = nav(st, screen.Action{Op: screen.Gosub, Screen: "x", Args: args}, x)
+	var got []string
+	for _, f := range st {
+		got = append(got, f.s.Name)
+	}
+	want := []string{"0", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "x"}
+	if !slices.Equal(got, want) {
+		t.Errorf("stack %q, want %q", got, want)
+	}
+	if top := st[len(st)-1]; top.page != 1 || !maps.Equal(top.args, args) {
+		t.Errorf("top frame page %d, args %v; want page 1, args %v", top.page, top.args, args)
+	}
+	// A goto gives a new frame with page 1, also to the current screen.
+	st = nav(st, screen.Action{Op: screen.Goto, Screen: "x"}, x)
+	if top := st[len(st)-1]; len(st) != maxFrames || top.page != 1 || top.args != nil {
+		t.Errorf("goto: %d frames, page %d, args %v; want %d, 1, nil", len(st), top.page, top.args, maxFrames)
+	}
+}
+
 // An error of the terminal ends the session.
 func TestRunTermError(t *testing.T) {
 	errClosed := errors.New("closed")
@@ -419,6 +512,61 @@ do = "goto main"
 	}
 	if want := []string{"1:10", "2:10", "3:10"}; !slices.Equal(got, want) {
 		t.Errorf("Pages %q, want %q", got, want)
+	}
+}
+
+// A file screen starts at the page of its frame, or at the last page when the file
+// has fewer pages after a resize (section 5.1).
+func TestRunFilePage(t *testing.T) {
+	fsys := fstest.MapFS{
+		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"R\"\ndo = \"gosub read\"\n" +
+			"args = { file = \"a.txt\" }\n[[item]]\nkey = \"B\"\ndo = \"back\"\n+++\nMain\n")},
+		"screens/read.bbt": {Data: []byte(`+++
+file = "{arg.file}"
+[[item]]
+key = "N"
+do = "page next"
+[[item]]
+key = "P"
+do = "page prev"
+[[item]]
+key = "S"
+do = "gosub info"
+[[item]]
+key = "B"
+do = "back"
++++
+{file.page}/{file.pages}
+{>file}
+`)},
+		"screens/info.bbt": {Data: []byte("+++\n[[item]]\nkey = \"B\"\ndo = \"back\"\n+++\nInfo\n")},
+		"content/a.txt":    {Data: []byte(lines(20))},
+	}
+	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
+	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
+	ds = Check(config.Config{Start: "main"}, ss, ds)
+	if len(ds) > 0 {
+		t.Fatalf("load: %v", ds)
+	}
+	// 10 rows: H is 9 and 20 lines give 3 pages. 20 rows: H is 19 and 2 pages.
+	// The Term calls: main, read, info, read, info, read, main, read.
+	ft := &fakeTerm{
+		cols: []int{80},
+		rows: []int{10, 10, 10, 10, 10, 20, 20, 20},
+		keys: []string{"R", "N", "S", "B", "N", "S", "B", "P", "B", "R"},
+	}
+	_, err := Run(eventsTerm{ft}, config.Config{Start: "main"}, ss, "main", nil, noValues)
+	want := []string{
+		"screen main", "page: Main", "key R", "screen read", "page: 1/3",
+		"key N", "page: 2/3", "key S", "screen info", "page: Info",
+		"key B", "screen read", "page: 2/3",
+		"key N", "page: 3/3", "key S", "screen info", "page: Info",
+		"key B", "screen read", "page: 2/2",
+		"key P", "page: 1/2", "key B", "screen main", "page: Main",
+		"key R", "screen read", "page: 1/2",
+	}
+	if !errors.Is(err, io.EOF) || !slices.Equal(ft.log, want) {
+		t.Errorf("err %v, log:\n%s\nwant:\n%s", err, strings.Join(ft.log, "\n"), strings.Join(want, "\n"))
 	}
 }
 

@@ -1,6 +1,6 @@
 +++
 [[item]]
 key = "ANY"
-do = "goto main"
+do = "back"
 +++
 Terminal: {term.cols}x{term.rows}. Press any key.

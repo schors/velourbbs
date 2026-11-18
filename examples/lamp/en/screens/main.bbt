@@ -1,13 +1,13 @@
 +++
 [[item]]
 key = "A"
-do = "goto about"
+do = "gosub about"
 [[item]]
 key = "R"
-do = "goto texts"
+do = "gosub texts"
 [[item]]
 key = "T"
-do = "goto term"
+do = "gosub term"
 [[item]]
 key = "G"
 do = "logoff"

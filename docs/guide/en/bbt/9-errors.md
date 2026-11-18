@@ -79,7 +79,7 @@ The first message comes from a screen with one item. The other messages give the
 screens/main.bbt:2:1: item "T": do: unknown screen "term"
 ```
 
-`goto term` needs the file `screens/term.bbt`. Create the file, or correct the name.
+`gosub term` needs the file `screens/term.bbt`. Create the file, or correct the name.
 
 ## `screen has no items`
 
@@ -99,7 +99,7 @@ screens/texts.bbt:2:1: item "1": args: file: content file "lmap.md" does not exi
 - The screen `code` holds the snippet of task 7 ("A source file").
   Its key `file` names `src/lamp.c`, and `content/src/lamp.c` does not exist.
   Put the file at this path in `content/`, or correct the path.
-- The item `1` gives `goto reader` the file `lmap.md` in `args`, and the file is not in `content/`.
+- The item `1` gives `gosub reader` the file `lmap.md` in `args`, and the file is not in `content/`.
   Correct the name in `args`.
 
 ## `front matter: no end line`

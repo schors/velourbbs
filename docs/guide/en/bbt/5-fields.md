@@ -135,7 +135,7 @@ Full rules: [bbt-format](../../../specs/bbt-format.md), sections 5 and 6.2.
 +++
 [[item]]
 key = "W"
-do = "goto wide"
+do = "gosub wide"
 when = "term.cols >= 132"
 [[item]]
 key = "G"
@@ -160,10 +160,10 @@ Create `screens/term.bbt` with this text:
 +++
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 [[item]]
 key = "ENTER"
-do = "goto main"
+do = "back"
 +++
 {>_head}
        {!dim}Size{!}     {term.cols}×{term.rows}
@@ -223,7 +223,7 @@ Add the item `T` to the front matter of `screens/main.bbt`, after the item `A`:
 ```
 [[item]]
 key = "T"
-do = "goto term"
+do = "gosub term"
 ```
 
 In the body, add the row of `T` between the rows of `A` and `G`.

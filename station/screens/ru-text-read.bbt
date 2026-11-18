@@ -11,7 +11,7 @@ do = "page next"
 when = "not file.last"
 [[item]]
 key = "ESC"
-do = "goto ru-texts"
+do = "back"
 +++
 
     {!hi}V E L O U R{!}      {!white}Тексты{!}

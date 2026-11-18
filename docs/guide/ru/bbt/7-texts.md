@@ -36,13 +36,13 @@
 +++
 [[item]]
 key = "A"
-do = "goto about"
+do = "gosub about"
 [[item]]
 key = "R"
-do = "goto texts"
+do = "gosub texts"
 [[item]]
 key = "T"
-do = "goto term"
+do = "gosub term"
 [[item]]
 key = "G"
 do = "logoff"
@@ -98,12 +98,12 @@ do = "logoff"
 
 ## Экран-список `texts`
 
-`args` передаёт аргумент экрану из `goto`:
+`args` передаёт аргумент экрану из `gosub` или `goto`:
 
 ```
 [[item]]
 key = "1"
-do = "goto reader"
+do = "gosub reader"
 args = { file = "lamp.md" }
 ```
 
@@ -111,7 +111,7 @@ args = { file = "lamp.md" }
   Поле `{arg.file}` даёт это значение.
 - Имя аргумента состоит из строчных латинских букв, цифр и `_` и начинается с буквы.
   В значении не может быть `{` и управляющих символов.
-- `goto` передаёт ровно те аргументы, которые использует его экран.
+- `gosub` и `goto` передают ровно те аргументы, которые использует их экран.
   Недостающий или лишний аргумент — ошибка.
 
 Полные правила: [bbt-format](../../../specs/bbt-format.md), раздел 8.5.
@@ -121,15 +121,15 @@ args = { file = "lamp.md" }
 +++
 [[item]]
 key = "1"
-do = "goto reader"
+do = "gosub reader"
 args = { file = "lamp.md" }
 [[item]]
 key = "2"
-do = "goto reader"
+do = "gosub reader"
 args = { file = "rules.txt" }
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 +++
 {>_head}
        Тексты станции.
@@ -262,7 +262,7 @@ do = "page prev"
 when = "file.page > 1"
 [[item]]
 key = "ESC"
-do = "goto texts"
+do = "back"
 +++
 {>_head}
        {!title}{file.title}{!}
@@ -516,7 +516,7 @@ numbers = true
 margin = [7, 2]
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 +++
 {>file}
 ```
@@ -548,13 +548,17 @@ velourbbs preview reader --set arg.file=lamp.md
 Команда выводит cell dump каждой страницы текста, одну за другой.
 Без `--set` `velourbbs preview reader` выводит ошибку `missing argument "file" of screen "reader"`.
 
-`--keys` показывает страницы:
+`--keys` показывает страницы. Начни с `texts`: `1` открывает текст в `reader`, `Esc` возвращает на `texts`:
 
 ```
-velourbbs preview reader --set arg.file=lamp.md --keys SPACE,SPACE,B,ESC
+velourbbs preview texts --keys 1,SPACE,SPACE,B,ESC
 ```
 
 ```
+screen texts
+page 1 80x24 fill spaces
+...
+key 1
 screen reader
 page 1 80x24 fill spaces
 ...

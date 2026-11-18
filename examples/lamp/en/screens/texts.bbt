@@ -1,15 +1,15 @@
 +++
 [[item]]
 key = "1"
-do = "goto reader"
+do = "gosub reader"
 args = { file = "lamp.md" }
 [[item]]
 key = "2"
-do = "goto reader"
+do = "gosub reader"
 args = { file = "rules.txt" }
 [[item]]
 key = "ESC"
-do = "goto main"
+do = "back"
 +++
 {>_head}
        The texts of the station.

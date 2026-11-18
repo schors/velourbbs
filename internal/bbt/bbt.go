@@ -51,7 +51,7 @@ func Load(fsys fs.FS, theme map[string]screen.Style, layout screen.Layout, field
 	for _, u := range units {
 		l.screen(u)
 	}
-	l.gotoFiles(units)
+	l.targetFiles(units)
 	l.checkItems(units)
 	for _, e := range entries {
 		name := path.Join("screens", e.Name())
@@ -209,10 +209,10 @@ func (l *loader) literalFile(u *unit, f *screen.FileSpec) {
 	}
 }
 
-// gotoFiles loads the content file of each goto to a file screen with {arg.<name>}.
-// An error is an error of the item with the goto (file-view, section 7).
-// The menu checks report a goto to a screen that does not exist and a missing argument.
-func (l *loader) gotoFiles(units []*unit) {
+// targetFiles loads the content file of each goto and gosub to a file screen with {arg.<name>}.
+// An error is an error of the item with the goto or the gosub (file-view, section 7).
+// The menu checks report a target screen that does not exist and a missing argument.
+func (l *loader) targetFiles(units []*unit) {
 	byName := map[string]*unit{}
 	for _, u := range units {
 		byName[u.s.Name] = u
@@ -223,7 +223,7 @@ func (l *loader) gotoFiles(units []*unit) {
 		}
 		for _, it := range u.s.Items {
 			t := byName[it.Do.Screen]
-			if it.Do.Op != screen.Goto || t == nil || !t.done || t.s.FileScreen == nil || t.s.FileScreen.Arg == "" {
+			if !it.Do.Op.HasTarget() || t == nil || !t.done || t.s.FileScreen == nil || t.s.FileScreen.Arg == "" {
 				continue
 			}
 			f := t.s.FileScreen

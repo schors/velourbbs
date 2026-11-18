@@ -2,6 +2,7 @@ package menu
 
 import (
 	"iter"
+	"slices"
 
 	"github.com/schors/velourbbs/internal/config"
 	"github.com/schors/velourbbs/internal/key"
@@ -79,17 +80,17 @@ func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start
 
 // loop runs the actions of the session from the screen start until logoff (section 4).
 func (ss *session) loop(screens map[string]*screen.Screen, start string, args map[string]string) error {
-	s := screens[start]
+	st := []*frame{{s: screens[start], args: args, page: 1}}
 	for {
-		it, err := ss.run(s, args)
+		it, err := ss.run(st[len(st)-1])
 		if err != nil {
 			return err
 		}
 		switch it.Do.Op {
-		case screen.Goto:
-			s, args = screens[it.Do.Screen], it.Do.Args
+		case screen.Goto, screen.Gosub, screen.Back, screen.Top:
+			st = nav(st, it.Do, screens[it.Do.Screen])
 			continue
-		case screen.Theme: // show the current screen again with its arguments
+		case screen.Theme: // show the screen of the top frame again
 			ss.choice = config.ThemeChoice(it.Do.Theme)
 			continue
 		}
@@ -101,6 +102,37 @@ func (ss *session) loop(screens map[string]*screen.Screen, start string, args ma
 		}
 		return err
 	}
+}
+
+// maxFrames is the most frames of the navigation stack (section 4.1).
+const maxFrames = 16
+
+// frame is a frame of the navigation stack (section 4.1).
+type frame struct {
+	s    *screen.Screen
+	args map[string]string
+	page int // the page of a file screen, 1-based
+}
+
+// nav changes the navigation stack st with the action a: goto, gosub, back or top (section 4.1).
+// t is the target screen of a goto or a gosub. nav gives the new stack.
+func nav(st []*frame, a screen.Action, t *screen.Screen) []*frame {
+	switch a.Op {
+	case screen.Goto:
+		st[len(st)-1] = &frame{s: t, args: a.Args, page: 1}
+	case screen.Gosub:
+		if len(st) == maxFrames {
+			st = slices.Delete(st, 1, 2)
+		}
+		st = append(st, &frame{s: t, args: a.Args, page: 1})
+	case screen.Back:
+		if len(st) > 1 {
+			st = st[:len(st)-1]
+		}
+	case screen.Top:
+		st = st[:1]
+	}
+	return st
 }
 
 // Shutdown shows the first page of the screen shutdown on t, when it exists,
@@ -119,12 +151,13 @@ func Shutdown(t Terminal, cfg config.Config, screens map[string]*screen.Screen, 
 	return nil
 }
 
-// run shows the screen s with the arguments args and gives the item that leaves it.
-// A page action or a theme action of a file screen shows a page and waits for keys again
-// (section 5.1).
-func (ss *session) run(s *screen.Screen, args map[string]string) (screen.Item, error) {
+// run shows the screen of the frame f and gives the item that leaves it.
+// A page action or a theme action of a file screen shows a page and waits for keys again.
+// A file screen starts at the page of f and sets the page of f to each shown page (section 5.1).
+func (ss *session) run(f *frame) (screen.Item, error) {
+	s := f.s
 	if s.FileScreen == nil {
-		items, err := ss.show(s, args)
+		items, err := ss.show(s, f.args)
 		if err != nil {
 			return screen.Item{}, err
 		}
@@ -134,9 +167,10 @@ func (ss *session) run(s *screen.Screen, args map[string]string) (screen.Item, e
 		return screen.Item{}, err
 	}
 	term := ss.t.Term()
-	v := newFileView(s, term, args, ss.cfg.SessionTheme(ss.choice, term), ss.values)
-	n := 1
+	v := newFileView(s, term, f.args, ss.cfg.SessionTheme(ss.choice, term), ss.values)
+	n := min(f.page, len(v.pages))
 	for {
+		f.page = n
 		p, items := v.page(n)
 		if err := ss.t.Page(p); err != nil {
 			return screen.Item{}, err
