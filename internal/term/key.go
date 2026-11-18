@@ -24,6 +24,7 @@ const maxSeq = 128
 type Reply struct {
 	Intro byte   // the byte after ESC: '[' (CSI), ']' (OSC), 'P' (DCS) or '_' (APC)
 	Body  string // the bytes after Intro, without the terminator of a control string
+	BEL   bool   // the control string ends with BEL, not with ST
 }
 
 // csiKeys maps the bytes of a CSI sequence after ESC[ to the key (section 8.2).
@@ -151,8 +152,7 @@ func (d *Decoder) key(r rune) {
 	if d.st == seqStringESC {
 		d.st = seqNone
 		if r == '\\' { // ST ends the control string
-			d.nseq-- // the ESC of ST
-			d.reply()
+			d.reply(d.nseq-1, 1, false) // the ESC of ST is in seq, \ is not
 			return
 		}
 		// Another byte ends the control string. ESC is new input.
@@ -180,7 +180,7 @@ func (d *Decoder) key(r rune) {
 		switch r {
 		case 0x07: // BEL ends the control string
 			d.st = seqNone
-			d.reply()
+			d.reply(d.nseq, 1, true)
 		case 0x1B:
 			d.st = seqStringESC
 			d.push(r)
@@ -256,14 +256,15 @@ func (d *Decoder) csiEnd(body string) {
 		d.emit(k)
 		return
 	}
-	d.reply()
+	d.reply(d.nseq, 0, false)
 }
 
-// reply gives the complete sequence or control string as a reply,
-// unless it is longer than maxSeq.
-func (d *Decoder) reply() {
-	if !d.long {
-		d.replies = append(d.replies, Reply{Intro: d.seq[1], Body: string(d.seq[2:d.nseq])})
+// reply gives the complete sequence or control string as a reply: its body is
+// seq[2:end]. term is the bytes of the terminator that are not in seq, bel tells
+// that BEL ends a control string. A reply longer than maxSeq with its terminator is dropped.
+func (d *Decoder) reply(end, term int, bel bool) {
+	if !d.long && d.nseq+term <= maxSeq {
+		d.replies = append(d.replies, Reply{Intro: d.seq[1], Body: string(d.seq[2:end]), BEL: bel})
 	}
 }
 

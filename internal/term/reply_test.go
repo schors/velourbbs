@@ -87,7 +87,7 @@ func TestRepliesAdd(t *testing.T) {
 	var r replies
 	add := func(intro byte, body string, want bool) {
 		t.Helper()
-		if got := r.add(Reply{intro, body}); got != want {
+		if got := r.add(Reply{intro, body, false}); got != want {
 			t.Errorf("add(%c %q) = %v, want %v", intro, body, got, want)
 		}
 	}
@@ -99,6 +99,10 @@ func TestRepliesAdd(t *testing.T) {
 		add('P', b, false)
 	}
 	add('_', ">|x", false)
+	// A DCS reply ends with ST. An OSC 4 reply can end with BEL.
+	if r.add(Reply{'P', "1$r0;38;2;1;2;3m", true}) || r.add(Reply{'P', ">|x", true}) {
+		t.Error("add() takes a DCS reply with BEL")
+	}
 	add(']', "11;rgb:0/0/0", false)
 	if r != (replies{}) {
 		t.Fatalf("replies after invalid replies: %+v", r)
@@ -115,7 +119,9 @@ func TestRepliesAdd(t *testing.T) {
 	add('[', ">84c", false)
 	add(']', "4;2;rgb:0/0/0", true)
 	add(']', "4;2;rgb:f/f/f", false)
-	add(']', "4;3;rgb:f/f/f", true)
+	if !r.add(Reply{']', "4;3;rgb:f/f/f", true}) {
+		t.Error("add() drops an OSC 4 reply with BEL")
+	}
 	if r.done() {
 		t.Error("done() before DA1")
 	}
@@ -156,6 +162,11 @@ func TestQueryValues(t *testing.T) {
 		{replies{ttype: "vt100", da2: ">0;136;1c"}, 16, "", ""},
 		{replies{ttype: "screen", da2: ">84;0;0c"}, 16777216, "", ""},
 		{replies{ttype: "screen", da2: ">841;0;0c"}, 256, "", ""},
+		// The parameters are numbers.
+		{replies{ttype: "screen", da2: ">084;0;0c"}, 16777216, "", ""},
+		{replies{ttype: "vt100", da2: ">00;136;000c"}, 16777216, "", ""},
+		{replies{da1: "?61;04c"}, 16, "", "sixel"},
+		{replies{da1: "?61;99999999999999999999;14c"}, 16, "", ""},
 		{replies{xtversion: ">|\x1b[1m" + strings.Repeat("x", 50)}, 16, "[1m" + strings.Repeat("x", 37), ""},
 		{replies{xtversion: ">|\x01"}, 16, "", ""},
 		{replies{da1: "?4c"}, 16, "", ""},

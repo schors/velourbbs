@@ -20,7 +20,7 @@ On a terminal of 80 columns and 24 rows, this line shows `Size     80×24`.
 | `term.type` | The terminal type that the client sends, in lower case. Without a type, `ansi`. |
 | `term.charset` | Always `utf-8`. |
 | `term.name` | The name and the version that the terminal reports, for example `XTerm(412)`. Can be empty. Use it only to show it. |
-| `term.images` | `sixel` when the terminal shows sixel images. Else empty. |
+| `term.images` | `sixel` when the terminal reports sixel graphics. Else empty. Some terminals report it, but do not show sixel. |
 
 - A field without spaces in its braces takes the width of its value.
 - A field with spaces in its braces has a "fixed width": the width of the token with the braces.

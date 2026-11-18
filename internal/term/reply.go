@@ -2,6 +2,7 @@ package term
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -79,6 +80,7 @@ func (r *replies) add(rp Reply) bool {
 		}
 	case 'P':
 		switch {
+		case rp.BEL: // a DCS reply ends with ST
 		case b == "0$r" || isSGRReply(b):
 			return first(&r.decrqss)
 		case strings.HasPrefix(b, ">|"):
@@ -219,30 +221,34 @@ func isRGBReply(b string) bool {
 	return false
 }
 
+// daParams gives the numbers of the DA1 or DA2 reply b with the prefix prefix
+// (section 5.7). A number too large for an int is -1.
+func daParams(b, prefix string) []int {
+	p, ok := strings.CutPrefix(b, prefix)
+	if !ok {
+		return nil
+	}
+	var ns []int
+	for s := range strings.SplitSeq(strings.TrimSuffix(p, "c"), ";") {
+		n, err := strconv.Atoi(s)
+		if err != nil {
+			n = -1
+		}
+		ns = append(ns, n)
+	}
+	return ns
+}
+
 // inClientTable reports whether the DA2 reply b is in the client table of section 6.
 func inClientTable(b string) bool {
-	p, ok := strings.CutPrefix(b, ">")
-	if !ok {
-		return false
-	}
-	p = strings.TrimSuffix(p, "c")
-	class, _, _ := strings.Cut(p, ";")
-	return p == "0;136;0" || class == "84"
+	ns := daParams(b, ">")
+	return slices.Equal(ns, []int{0, 136, 0}) || len(ns) > 0 && ns[0] == 84
 }
 
 // hasSixel reports whether the DA1 reply b has the feature 4 (section 6).
 func hasSixel(b string) bool {
-	p, ok := strings.CutPrefix(b, "?")
-	if !ok {
-		return false
-	}
-	ps := strings.Split(strings.TrimSuffix(p, "c"), ";")
-	for _, f := range ps[1:] {
-		if f == "4" {
-			return true
-		}
-	}
-	return false
+	ns := daParams(b, "?")
+	return len(ns) > 1 && slices.Contains(ns[1:], 4)
 }
 
 // parseOSC4 parses the body of an OSC 4 reply (section 5.7): the index n

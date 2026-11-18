@@ -329,31 +329,38 @@ func TestControlString(t *testing.T) {
 
 func TestReplies(t *testing.T) {
 	cases := map[string][]Reply{
-		"\x1b[12;80R":                       {{'[', "12;80R"}},
-		"\x1b[?61;4;6c":                     {{'[', "?61;4;6c"}},
-		"\x1b[>0;136;0c":                    {{'[', ">0;136;0c"}},
-		"\x1b[1;5A":                         {{'[', "1;5A"}},
-		"\x1b]4;1;rgb:cdcd/0000/0000\x1b\\": {{']', "4;1;rgb:cdcd/0000/0000"}},
-		"\x1b]4;15;rgb:ff/ff/ff\x07":        {{']', "4;15;rgb:ff/ff/ff"}},
-		"\x1bP1$r0;38:2::1:2:3m\x1b\\":      {{'P', "1$r0;38:2::1:2:3m"}},
-		"\x1bP>|Ωmega ы\x07":                {{'P', ">|Ωmega ы"}},
-		"\x1b_Gi=1;OK\x1b\\":                {{'_', "Gi=1;OK"}},
-		"\x1b]0;a\rb\x1b\\":                 {{']', "0;a\rb"}},
+		"\x1b[12;80R":                       {{'[', "12;80R", false}},
+		"\x1b[?61;4;6c":                     {{'[', "?61;4;6c", false}},
+		"\x1b[>0;136;0c":                    {{'[', ">0;136;0c", false}},
+		"\x1b[1;5A":                         {{'[', "1;5A", false}},
+		"\x1b]4;1;rgb:cdcd/0000/0000\x1b\\": {{']', "4;1;rgb:cdcd/0000/0000", false}},
+		"\x1b]4;15;rgb:ff/ff/ff\x07":        {{']', "4;15;rgb:ff/ff/ff", true}},
+		"\x1bP1$r0;38:2::1:2:3m\x1b\\":      {{'P', "1$r0;38:2::1:2:3m", false}},
+		"\x1bP>|Ωmega ы\x07":                {{'P', ">|Ωmega ы", true}},
+		"\x1b_Gi=1;OK\x1b\\":                {{'_', "Gi=1;OK", false}},
+		"\x1b]0;a\rb\x1b\\":                 {{']', "0;a\rb", false}},
 		// Keys, a broken string and long input give no reply.
 		"\x1b[A\x1bOP\x1b[[A":                       nil,
 		"\x1b]4;1;rgb\x1bx":                         nil,
 		"\x1b]" + strings.Repeat("x", 200) + "\x07": nil,
 		"\x1b[" + strings.Repeat("1", maxSeq) + "c": nil,
+		// The limit of 128 bytes counts the terminator.
+		"\x1bP>|" + strings.Repeat("x", 122) + "\x1b\\": {{'P', ">|" + strings.Repeat("x", 122), false}},
+		"\x1bP>|" + strings.Repeat("x", 123) + "\x1b\\": nil,
+		"\x1b]" + strings.Repeat("x", 125) + "\x07":     {{']', strings.Repeat("x", 125), true}},
+		"\x1b]" + strings.Repeat("x", 126) + "\x07":     nil,
+		"\x1b[" + strings.Repeat("1", 125) + "c":        {{'[', strings.Repeat("1", 125) + "c", false}},
+		"\x1b[" + strings.Repeat("1", 126) + "c":        nil,
 	}
 	for in, want := range cases {
 		if _, got := decode(in); !slices.Equal(got, want) {
-			t.Errorf("decode(%q) replies = %q, want %q", in, got, want)
+			t.Errorf("decode(%q) replies = %+v, want %+v", in, got, want)
 		}
 	}
 
 	keys, replies := decode("a\x1b[3;2Rb\x1bP0$r\x1b\\c")
-	if !slices.Equal(keys, []string{"a", "b", "c"}) || !slices.Equal(replies, []Reply{{'[', "3;2R"}, {'P', "0$r"}}) {
-		t.Errorf("keys and replies: %q, %q", keys, replies)
+	if !slices.Equal(keys, []string{"a", "b", "c"}) || !slices.Equal(replies, []Reply{{'[', "3;2R", false}, {'P', "0$r", false}}) {
+		t.Errorf("keys and replies: %q, %+v", keys, replies)
 	}
 }
 
@@ -380,7 +387,7 @@ func FuzzDecoderFeed(f *testing.F) {
 		k, r := d.Feed(t0.Add(SeqWait), nil)
 		gotKeys, gotReplies = append(gotKeys, k...), append(gotReplies, r...)
 		if !slices.Equal(gotKeys, keys) || !slices.Equal(gotReplies, replies) {
-			t.Fatalf("one byte in each Feed: %q %q; one Feed: %q %q", gotKeys, gotReplies, keys, replies)
+			t.Fatalf("one byte in each Feed: %q %+v; one Feed: %q %+v", gotKeys, gotReplies, keys, replies)
 		}
 		for _, k := range keys {
 			if !isKey(k) {
@@ -389,7 +396,7 @@ func FuzzDecoderFeed(f *testing.F) {
 		}
 		for _, r := range replies {
 			if !strings.ContainsRune("[]P_", rune(r.Intro)) || len(r.Body) > maxSeq-2 {
-				t.Fatalf("reply %q", r)
+				t.Fatalf("reply %+v", r)
 			}
 		}
 	})
