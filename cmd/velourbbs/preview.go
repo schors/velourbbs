@@ -29,7 +29,7 @@ var previewTime = time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC)
 func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	term := screen.Term{Type: "xterm", Cols: 80, Rows: 24, Charset: "utf-8", Colors: screen.Colors256}
 	// The values of session-fields, section 4. bbs.name and bbs.time come from the config.
-	sv := screen.SessionValues{IP: "127.0.0.1", Online: "00:00", Version: version(), Sessions: 1, Uptime: "00:00"}
+	sv := screen.SessionValues{IP: "127.0.0.1", Online: "00:00:00", Version: version(), Sessions: 1, Uptime: "00:00:00"}
 	svSet := map[string]bool{} // the session and BBS fields of --set
 	fl := flag.NewFlagSet("velourbbs preview", flag.ContinueOnError)
 	fl.SetOutput(stderr)

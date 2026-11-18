@@ -262,17 +262,17 @@ styles
 		// The values of session-fields, section 4. A test binary has no tag: bbs.version is dev.
 		name: "session fields",
 		args: []string{"fields"},
-		want: page(80, 24, "F|127.0.0.1|00:00|Kind Brothers BBS|dev|1|2006-01-02 15:04|00:00|E"),
+		want: page(80, 24, "F|127.0.0.1|00:00:00|Kind Brothers BBS|dev|1|2006-01-02 15:04:05|00:00:00|E"),
 	}, {
 		name: "set session fields",
-		args: []string{"fields", "--set", "session.ip=2001:db8::1", "--set", "session.online=01:25",
+		args: []string{"fields", "--set", "session.ip=2001:db8::1", "--set", "session.online=01:25:07",
 			"--set", "bbs.name=Мир BBS", "--set", "bbs.version=v1.2.0", "--set", "bbs.sessions=12",
-			"--set", "bbs.time=16.11.2026", "--set", "bbs.uptime=3d 04:17"},
-		want: page(80, 24, "F|2001:db8::1|01:25|Мир BBS|v1.2.0|12|16.11.2026|3d 04:17|E"),
+			"--set", "bbs.time=16.11.2026", "--set", "bbs.uptime=3d 04:17:09"},
+		want: page(80, 24, "F|2001:db8::1|01:25:07|Мир BBS|v1.2.0|12|16.11.2026|3d 04:17:09|E"),
 	}, {
 		name: "empty session fields",
 		args: []string{"fields", "--set", "session.ip=", "--set", "bbs.name=", "--set", "bbs.time="},
-		want: page(80, 24, "F||00:00||dev|1||00:00|E"),
+		want: page(80, 24, "F||00:00:00||dev|1||00:00:00|E"),
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

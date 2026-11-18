@@ -13,7 +13,7 @@ import (
 var (
 	defaultLayout    = screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}
 	defaultMore      = "-- More --"
-	defaultTime      = "2006-01-02 15:04"
+	defaultTime      = "2006-01-02 15:04:05"
 	defaultNormal    = screen.Style{Fg: screen.IndexColour(7), Bg: screen.IndexColour(0)}
 	defaultMoreStyle = screen.StyleSpec{
 		Fg: screen.IndexColour(15), Bg: screen.IndexColour(0), HasFg: true, HasBg: true,

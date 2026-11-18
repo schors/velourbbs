@@ -35,7 +35,7 @@ The other specifications define the effect of a key and refer to this specificat
 | `align` | string | `"center"` | The horizontal position of a screen: [bbt-format](bbt-format.md), section 6.1. |
 | `valign` | string | `"top"` | The vertical position of a screen: [bbt-format](bbt-format.md), section 6.5. |
 | `fill` | string | `"none"` | The fill rows: [bbt-format](bbt-format.md), section 6.5. |
-| `time` | string | `"2006-01-02 15:04"` | The layout of the Go package `time` for the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
+| `time` | string | `"2006-01-02 15:04:05"` | The layout of the Go package `time` for the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 
 - `width`, `align`, `valign` and `fill` have the rules of the front matter keys
   ([bbt-format](bbt-format.md), section 3.2).

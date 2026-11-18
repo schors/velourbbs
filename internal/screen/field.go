@@ -367,13 +367,13 @@ type SessionValues struct {
 }
 
 // FormatDuration gives d in the duration form of session-fields, section 3.3:
-// "hh:mm", or "<d>d hh:mm" from 24 hours, rounded down to whole minutes.
+// "hh:mm:ss", or "<d>d hh:mm:ss" from 24 hours, rounded down to whole seconds.
 func FormatDuration(d time.Duration) string {
-	m := int64(d / time.Minute)
-	if days := m / (24 * 60); days > 0 {
-		return fmt.Sprintf("%dd %02d:%02d", days, m/60%24, m%60)
+	s := int64(d / time.Second)
+	if days := s / (24 * 3600); days > 0 {
+		return fmt.Sprintf("%dd %02d:%02d:%02d", days, s/3600%24, s/60%60, s%60)
 	}
-	return fmt.Sprintf("%02d:%02d", m/60, m%60)
+	return fmt.Sprintf("%02d:%02d:%02d", s/3600, s/60%60, s%60)
 }
 
 // FileValues holds the values of the fields of a file screen for one page (file-view, section 3.4).
