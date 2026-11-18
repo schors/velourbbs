@@ -45,6 +45,9 @@ const (
 	termName
 	termImages
 	termAmbiguous
+	termBackground
+	termBgColor
+	termFgColor
 )
 
 // termFields is the term.* fields of the registry of section 4.1.
@@ -52,14 +55,17 @@ var termFields = [...]struct {
 	path string
 	typ  Type
 }{
-	termType:      {"term.type", TypeString},
-	termCols:      {"term.cols", TypeInt},
-	termRows:      {"term.rows", TypeInt},
-	termCharset:   {"term.charset", TypeString},
-	termColors:    {"term.colors", TypeInt},
-	termName:      {"term.name", TypeString},
-	termImages:    {"term.images", TypeString},
-	termAmbiguous: {"term.ambiguous", TypeInt},
+	termType:       {"term.type", TypeString},
+	termCols:       {"term.cols", TypeInt},
+	termRows:       {"term.rows", TypeInt},
+	termCharset:    {"term.charset", TypeString},
+	termColors:     {"term.colors", TypeInt},
+	termName:       {"term.name", TypeString},
+	termImages:     {"term.images", TypeString},
+	termAmbiguous:  {"term.ambiguous", TypeInt},
+	termBackground: {"term.background", TypeString},
+	termBgColor:    {"term.bg_color", TypeString},
+	termFgColor:    {"term.fg_color", TypeString},
 }
 
 // fileField is a file.* field of a file screen (file-view, section 3.4).
@@ -303,6 +309,10 @@ type Term struct {
 	Images  string
 	// Ambiguous is the cells of an East Asian Ambiguous character: 1 or 2.
 	Ambiguous int
+	// Background is dark, light or empty. BgColor and FgColor are #rrggbb or empty.
+	Background string
+	BgColor    string
+	FgColor    string
 }
 
 // The ranges of term.cols and term.rows (section 4.1).
@@ -425,6 +435,12 @@ func (e *Env) value(r Ref) any {
 		return e.Term.Images
 	case termAmbiguous:
 		return e.Term.Ambiguous
+	case termBackground:
+		return e.Term.Background
+	case termBgColor:
+		return e.Term.BgColor
+	case termFgColor:
+		return e.Term.FgColor
 	}
 	return e.Term.Colors
 }

@@ -1,0 +1,6 @@
++++
+[[item]]
+key = "G"
+do = "goto main"
++++
+C|{term.fg_color}|{term.bg_color}|{term.background}|E

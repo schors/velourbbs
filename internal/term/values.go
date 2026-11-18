@@ -1,6 +1,8 @@
 package term
 
 import (
+	"math"
+	"strconv"
 	"strings"
 
 	"github.com/schors/velourbbs/internal/screen"
@@ -61,4 +63,36 @@ func colorDepth(typ string) int {
 // clamp gives the size cols x rows in the range of section 5.2.
 func clamp(cols, rows int) (int, int) {
 	return min(max(cols, screen.MinCols), screen.MaxCols), min(max(rows, screen.MinRows), screen.MaxRows)
+}
+
+// The values of term.background (section 6).
+const (
+	BackgroundDark  = "dark"
+	BackgroundLight = "light"
+)
+
+// Background gives term.background for term.bg_color bg: light when the relative
+// luminance of bg is more than 0.5, else dark (section 6). bg is #rrggbb or empty.
+// An empty bg gives an empty value.
+func Background(bg string) string {
+	v, err := strconv.ParseUint(strings.TrimPrefix(bg, "#"), 16, 32)
+	if bg == "" || err != nil {
+		return ""
+	}
+	if luminance(uint32(v)) > 0.5 {
+		return BackgroundLight
+	}
+	return BackgroundDark
+}
+
+// luminance gives the relative luminance of the colour 0xRRGGBB (section 6).
+func luminance(rgb uint32) float64 {
+	lin := func(v uint32) float64 {
+		c := float64(v&0xff) / 255
+		if c <= 0.04045 {
+			return c / 12.92
+		}
+		return math.Pow((c+0.055)/1.055, 2.4)
+	}
+	return 0.2126*lin(rgb>>16) + 0.7152*lin(rgb>>8) + 0.0722*lin(rgb)
 }

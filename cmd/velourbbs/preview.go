@@ -35,7 +35,7 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	fl.SetOutput(stderr)
 	fl.Usage = func() { _, _ = io.WriteString(stderr, usage) }
 	fl.Func("size", "", func(v string) error { return parseSize(v, &term) })
-	colorsSet := false
+	var set termSet
 	argVals := map[string]string{} // the arguments of --set arg.<name>
 	fl.Func("set", "", func(v string) error {
 		path, value, ok := strings.Cut(v, "=")
@@ -45,7 +45,7 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 				return err
 			}
 		}
-		return setField(v, &term, &colorsSet, argVals)
+		return setField(v, &term, &set, argVals)
 	})
 	var keys []string
 	session := false
@@ -173,9 +173,17 @@ func decimal(s string) (int, error) {
 	return strconv.Atoi(s)
 }
 
+// termSet tells which term.* fields an explicit --set gave. Such a field is not
+// derived from another field.
+type termSet struct {
+	colors     bool // term.colors
+	background bool // term.background
+}
+
 // setField sets a term.* field of t, or an argument of args, from "<path>=<value>".
-// term.type also gives term.colors, unless colorsSet: an explicit term.colors overrides it.
-func setField(v string, t *screen.Term, colorsSet *bool, args map[string]string) error {
+// term.type also gives term.colors and term.bg_color gives term.background,
+// unless set tells that an explicit --set gave them.
+func setField(v string, t *screen.Term, set *termSet, args map[string]string) error {
 	path, value, ok := strings.Cut(v, "=")
 	name, isArg := strings.CutPrefix(path, "arg.")
 	switch {
@@ -190,7 +198,7 @@ func setField(v string, t *screen.Term, colorsSet *bool, args map[string]string)
 	case path == "term.type":
 		typ, colors := term.TypeColors(value)
 		t.Type = typ
-		if !*colorsSet {
+		if !set.colors {
 			t.Colors = colors
 		}
 		return nil
@@ -199,7 +207,7 @@ func setField(v string, t *screen.Term, colorsSet *bool, args map[string]string)
 		if err != nil {
 			return err
 		}
-		t.Colors, *colorsSet = n, true
+		t.Colors, set.colors = n, true
 		return nil
 	case path == "term.name":
 		t.Name = term.CleanName(value)
@@ -216,8 +224,35 @@ func setField(v string, t *screen.Term, colorsSet *bool, args map[string]string)
 		}
 		t.Ambiguous = int(value[0] - '0')
 		return nil
+	case path == "term.bg_color" || path == "term.fg_color":
+		if value != "" && !isRGB(value) {
+			return fmt.Errorf("%s is %q, must be #rrggbb or empty", path, value)
+		}
+		value = strings.ToLower(value)
+		if path == "term.fg_color" {
+			t.FgColor = value
+			return nil
+		}
+		t.BgColor = value
+		if !set.background {
+			t.Background = term.Background(value)
+		}
+		return nil
+	case path == "term.background":
+		if value != "" && value != term.BackgroundDark && value != term.BackgroundLight {
+			return fmt.Errorf("term.background is %q, must be dark, light or empty", value)
+		}
+		t.Background, set.background = value, true
+		return nil
 	}
-	return fmt.Errorf("cannot set %q: only term.type, term.colors, term.name, term.images, term.ambiguous, arg.<name>, session.* and bbs.*", path)
+	return fmt.Errorf("cannot set %q: only term.type, term.colors, term.name, term.images, term.ambiguous, "+
+		"term.bg_color, term.fg_color, term.background, arg.<name>, session.* and bbs.*", path)
+}
+
+// isRGB reports whether s is #rrggbb with hex digits in each case.
+func isRGB(s string) bool {
+	hex, ok := strings.CutPrefix(s, "#")
+	return ok && len(hex) == 6 && strings.Trim(hex, "0123456789abcdefABCDEF") == ""
 }
 
 // setSession sets the session or BBS field path of sv to value (session-fields, section 4).

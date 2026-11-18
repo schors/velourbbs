@@ -177,8 +177,10 @@ func (pr *probe) log(log *slog.Logger, accepted time.Time, term screen.Term, utf
 		"cpr", logCPR(pr.r.cpr, pr.r.cprGot), "cpr_ambiguous", logCPR(pr.r.amb, pr.r.ambGot),
 		"decrqss", logReply(pr.r.decrqss), "xtversion", logReply(pr.r.xtversion),
 		"da2", logReply(pr.r.da2), "da1", logReply(pr.r.da1), "palette", pr.r.logPalette(),
+		"osc10", pr.r.fg.log(), "osc11", pr.r.bg.log(), "osc4_256", pr.r.fg4.log(), "osc4_258", pr.r.bg4.log(),
 		"type", term.Type, "cols", term.Cols, "rows", term.Rows,
 		"charset", charset, "colors", term.Colors, "name", term.Name, "images", term.Images,
-		"ambiguous", term.Ambiguous,
+		"ambiguous", term.Ambiguous, "fg_color", term.FgColor, "bg_color", term.BgColor,
+		"background", term.Background,
 		"time", time.Since(accepted))
 }
