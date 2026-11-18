@@ -147,11 +147,8 @@ func (ss *session) run(s *screen.Screen, args map[string]string) (screen.Item, e
 		}
 		switch it.Do.Op {
 		case screen.Theme:
-			// The size and the file pages stay (section 5.1). The layout holds the styles
-			// of the theme, so the new theme needs a new layout of the same size.
 			ss.choice = config.ThemeChoice(it.Do.Theme)
-			v = newFileView(s, term, args, ss.cfg.SessionTheme(ss.choice, term), ss.values)
-			n = min(n, len(v.pages))
+			v.setTheme(ss.cfg.SessionTheme(ss.choice, term))
 		case screen.PageNext:
 			n = min(n+1, len(v.pages))
 		case screen.PagePrev:
@@ -241,6 +238,14 @@ func newFileView(s *screen.Screen, term screen.Term, args map[string]string, the
 	v.h = max(1, term.Rows-screen.FrameRows(s, env, theme))
 	v.pages = screen.SplitPages(v.layout, v.h)
 	return v
+}
+
+// setTheme sets the session theme of v. The layout holds the styles of the theme,
+// so it lays out the file again. The size, the area height and the file pages stay (section 5.1):
+// the width of the layout does not depend on the theme.
+func (v *fileView) setTheme(theme map[string]screen.Style) {
+	v.theme = theme
+	v.layout = screen.ContentLayout(v.s.FileScreen, v.values.Content, v.s.RenderWidth(v.term.Cols), theme)
 }
 
 // page renders the page n, 1-based, with the fields of this page, and gives its enabled items

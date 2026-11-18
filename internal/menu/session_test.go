@@ -551,8 +551,27 @@ do = "goto main"
 {!title}{session.theme} {file.page}/{file.pages}
 {>file}
 `)},
+		"screens/tall.bbt": {Data: []byte(`+++
+file = "b.txt"
+[[item]]
+key = "E"
+do = "page last"
+[[item]]
+key = "T"
+do = "theme light"
+[[item]]
+key = "G"
+do = "logoff"
++++
+{!title}{session.theme} {file.page}/{file.pages}
+{#if session.theme == "light"}
+Light
+{/if}
+{>file}
+`)},
 		"screens/shutdown.bbt": {Data: []byte("{!title}{session.theme}\n")},
 		"content/a.txt":        {Data: []byte(lines(20))},
+		"content/b.txt":        {Data: []byte(lines(18))},
 	}
 	cfg, ds := config.Load(fsys)
 	ss, lds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
@@ -574,6 +593,20 @@ do = "goto main"
 	}
 	if !errors.Is(err, io.EOF) || choice != config.ThemeDark || !slices.Equal(ft.log, want) {
 		t.Errorf("err %v, choice %q, log:\n%s\nwant dark and:\n%s", err, choice, strings.Join(ft.log, "\n"), strings.Join(want, "\n"))
+	}
+
+	// The file pages stay after a theme action, also when a frame row depends on session.theme
+	// (section 5.1). Auto without a reply is dark: H is 9 and 18 lines give 2 pages.
+	// Light: H would be 8 and 3 pages.
+	ft = &fakeTerm{cols: []int{80}, keys: []string{"E", "T"}}
+	_, err = Run(themeTerm{eventsTerm{ft}}, cfg, ss, "tall", nil, noValues)
+	want = []string{
+		"screen tall", "page: auto 1/2 15/4",
+		"key E", "page: auto 2/2 15/4",
+		"key T", "page: light 2/2 4/15",
+	}
+	if !errors.Is(err, io.EOF) || !slices.Equal(ft.log, want) {
+		t.Errorf("tall: err %v, log:\n%s\nwant:\n%s", err, strings.Join(ft.log, "\n"), strings.Join(want, "\n"))
 	}
 
 	ft = &fakeTerm{cols: []int{80}}
