@@ -16,12 +16,12 @@ the online time, the BBS name, the version, the open sessions, the server time a
 | Path | Type | Value | Example |
 |---|---|---|---|
 | `session.ip` | string | The client address (section 3.1). | `203.0.113.7` |
-| `session.online` | string | The time from the accept of the connection, in the duration form (section 3.3). | `01:25` |
+| `session.online` | string | The time from the accept of the connection, in the duration form (section 3.3). | `01:25:07` |
 | `bbs.name` | string | `[bbs] name` of [bbs-toml](bbs-toml.md), section 3.2. | `Kind Brothers BBS` |
 | `bbs.version` | string | The version of the `velourbbs` binary (section 3.4). | `v1.2.0` |
 | `bbs.sessions` | integer | The open sessions, with the current session (section 3.2). | `3` |
-| `bbs.time` | string | The local time of the server (section 3.5) in the layout `[screen] time` of [screens-toml](screens-toml.md), section 3.1. | `2026-11-16 15:04` |
-| `bbs.uptime` | string | The time from the start of the listen of `velourbbs serve`, in the duration form (section 3.3). | `3d 04:17` |
+| `bbs.time` | string | The local time of the server (section 3.5) in the layout `[screen] time` of [screens-toml](screens-toml.md), section 3.1. | `2026-11-16 15:04:05` |
+| `bbs.uptime` | string | The time from the start of the listen of `velourbbs serve`, in the duration form (section 3.3). | `3d 04:17:09` |
 
 - The host takes the values once for each screen, before the `when` of the items
   ([menu-nav](menu-nav.md), section 5, step 2). The `when` and the render use these values.
@@ -45,11 +45,11 @@ the online time, the BBS name, the version, the open sessions, the server time a
 
 ### 3.3. Duration form
 
-- The host rounds a duration down to whole minutes.
-- Less than 24 hours gives `hh:mm`. Example: `04:17`.
-- 24 hours or more gives `<d>d hh:mm`, where `<d>` is the number of whole days in decimal.
-  Example: `3d 04:17`.
-- `hh` and `mm` have 2 digits.
+- The host rounds a duration down to whole seconds.
+- Less than 24 hours gives `hh:mm:ss`. Example: `04:17:09`.
+- 24 hours or more gives `<d>d hh:mm:ss`, where `<d>` is the number of whole days in decimal.
+  Example: `3d 04:17:09`.
+- `hh`, `mm` and `ss` have 2 digits.
 
 ### 3.4. Version
 
@@ -77,10 +77,10 @@ the online time, the BBS name, the version, the open sessions, the server time a
 | Field | Value |
 |---|---|
 | `session.ip` | `127.0.0.1` |
-| `session.online` | `00:00` |
+| `session.online` | `00:00:00` |
 | `bbs.sessions` | `1` |
 | `bbs.time` | 2006-01-02 15:04:05 in UTC, in the layout `[screen] time`. |
-| `bbs.uptime` | `00:00` |
+| `bbs.uptime` | `00:00:00` |
 
 - `--set <path>=<value>` replaces the value ([screen-render](screen-render.md), section 3.2).
 - A string field takes the value as it is. The value has the rules of an argument value
@@ -105,7 +105,7 @@ the online time, the BBS name, the version, the open sessions, the server time a
 
 ## 6. Acceptance
 
-- A test covers the duration form: 0 minutes, 59 seconds, 23:59, 24:00 and several days.
+- A test covers the duration form: 0 seconds, 59 seconds, 23:59:59, 24:00:00 and several days.
 - A test covers the version: a tag, an empty version, `(devel)`, a pseudo-version and `+dirty`.
 - A server test shows a screen with each field of section 2 through a PROXY protocol
   header of version 1. `session.ip` is the address of the header.

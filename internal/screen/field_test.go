@@ -121,8 +121,8 @@ func TestEnvText(t *testing.T) {
 			Page:    2, Pages: 3, Minutes: 4, Section: "Intro",
 		},
 		Session: SessionValues{
-			IP: "192.0.2.1", Online: "01:25", Name: "Kind\x1b BBS", Version: "v1.2.0",
-			Sessions: 3, Time: "2026-11-16 15:04", Uptime: "3d 04:17",
+			IP: "192.0.2.1", Online: "01:25:07", Name: "Kind\x1b BBS", Version: "v1.2.0",
+			Sessions: 3, Time: "2026-11-16 15:04:05", Uptime: "3d 04:17:09",
 		},
 	}
 	tests := []struct {
@@ -143,12 +143,12 @@ func TestEnvText(t *testing.T) {
 		{"meta.author", "Ann"},
 		{"meta.date", ""},
 		{"session.ip", "192.0.2.1"},
-		{"session.online", "01:25"},
+		{"session.online", "01:25:07"},
 		{"bbs.name", "Kind BBS"},
 		{"bbs.version", "v1.2.0"},
 		{"bbs.sessions", "3"},
-		{"bbs.time", "2026-11-16 15:04"},
-		{"bbs.uptime", "3d 04:17"},
+		{"bbs.time", "2026-11-16 15:04:05"},
+		{"bbs.uptime", "3d 04:17:09"},
 	}
 	for _, tt := range tests {
 		r, err := LookupField(tt.path, nil)
@@ -196,13 +196,14 @@ func TestFormatDuration(t *testing.T) {
 		d    time.Duration
 		want string
 	}{
-		{0, "00:00"},
-		{59 * time.Second, "00:00"},
-		{time.Minute, "00:01"},
-		{23*time.Hour + 59*time.Minute + 59*time.Second, "23:59"},
-		{24 * time.Hour, "1d 00:00"},
-		{3*24*time.Hour + 4*time.Hour + 17*time.Minute + 30*time.Second, "3d 04:17"},
-		{400 * 24 * time.Hour, "400d 00:00"},
+		{0, "00:00:00"},
+		{999 * time.Millisecond, "00:00:00"},
+		{59 * time.Second, "00:00:59"},
+		{time.Minute, "00:01:00"},
+		{23*time.Hour + 59*time.Minute + 59*time.Second + 999*time.Millisecond, "23:59:59"},
+		{24 * time.Hour, "1d 00:00:00"},
+		{3*24*time.Hour + 4*time.Hour + 17*time.Minute + 9*time.Second + 500*time.Millisecond, "3d 04:17:09"},
+		{400 * 24 * time.Hour, "400d 00:00:00"},
 	}
 	for _, tt := range tests {
 		if got := FormatDuration(tt.d); got != tt.want {

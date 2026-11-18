@@ -646,20 +646,29 @@ var fieldsRow = regexp.MustCompile(`F\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]
 const fieldsScreen = "+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n" +
 	"F|{session.ip}|{session.online}|{bbs.name}|{bbs.version}|{bbs.sessions}|{bbs.time}|{bbs.uptime}|E\n"
 
-// fields reads from c until the row of fieldsScreen and gives its fields.
-// It checks bbs.time against the time before and after the read.
+// underMinute matches a duration of less than one minute in the duration form.
+var underMinute = regexp.MustCompile(`^00:00:[0-5][0-9]$`)
+
+// fields reads from c until the row of fieldsScreen and gives session.ip, bbs.name,
+// bbs.version and bbs.sessions. It checks bbs.time against the time before and after
+// the read, and session.online and bbs.uptime against one minute.
 func fields(t *testing.T, c net.Conn) []string {
 	t.Helper()
-	before := time.Now().Format("2006-01-02 15:04")
+	before := time.Now().Truncate(time.Second)
 	m := fieldsRow.FindStringSubmatch(readUntil(t, c, "|E", 1))
-	after := time.Now().Format("2006-01-02 15:04")
+	after := time.Now()
 	if m == nil {
 		t.Fatal("output has no row of the fields")
 	}
-	if m[6] != before && m[6] != after {
-		t.Errorf("bbs.time %q, want %q or %q", m[6], before, after)
+	if at, err := time.ParseInLocation("2006-01-02 15:04:05", m[6], time.Local); err != nil || at.Before(before) || at.After(after) {
+		t.Errorf("bbs.time %q, want a time from %v to %v", m[6], before, after)
 	}
-	return slices.Delete(m[1:], 5, 6)
+	for _, i := range []int{2, 7} {
+		if !underMinute.MatchString(m[i]) {
+			t.Errorf("duration field %d = %q, want less than one minute", i, m[i])
+		}
+	}
+	return []string{m[1], m[3], m[4], m[5]}
 }
 
 // A screen shows each session and BBS field. session.ip is the address of the PROXY
@@ -675,7 +684,7 @@ func TestServeFields(t *testing.T) {
 	write(t, c1, header("192.0.2.1")+wontReplies)
 	readUntil(t, c1, "\x1b[6n", 1)
 	write(t, c1, cprReply)
-	if got, want := fields(t, c1), []string{"192.0.2.1", "00:00", "Test BBS", testVersion, "1", "00:00"}; !slices.Equal(got, want) {
+	if got, want := fields(t, c1), []string{"192.0.2.1", "Test BBS", testVersion, "1"}; !slices.Equal(got, want) {
 		t.Errorf("session 1: fields %q, want %q", got, want)
 	}
 	// c2 stays in the probe: it does not answer the charset probe.
@@ -686,13 +695,13 @@ func TestServeFields(t *testing.T) {
 	write(t, c3, header("192.0.2.3")+wontReplies)
 	readUntil(t, c3, "\x1b[6n", 1)
 	write(t, c3, cprReply)
-	if got, want := fields(t, c3), []string{"192.0.2.3", "00:00", "Test BBS", testVersion, "2", "00:00"}; !slices.Equal(got, want) {
+	if got, want := fields(t, c3), []string{"192.0.2.3", "Test BBS", testVersion, "2"}; !slices.Equal(got, want) {
 		t.Errorf("session 3: fields %q, want %q", got, want)
 	}
 	// c2 ends the probe after c3: its session is the third.
 	write(t, c2, cprReply)
-	if got := fields(t, c2); got[4] != "3" {
-		t.Errorf("session 2: bbs.sessions %q, want 3", got[4])
+	if got := fields(t, c2); got[3] != "3" {
+		t.Errorf("session 2: bbs.sessions %q, want 3", got[3])
 	}
 }
 

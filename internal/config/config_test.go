@@ -57,7 +57,7 @@ func TestDefaults(t *testing.T) {
 		}
 	}
 	if cfg.Start != "main" || len(cfg.Fields) != 0 || !reflect.DeepEqual(cfg.Telnet, defaultTelnet) ||
-		cfg.Time != "2006-01-02 15:04" || cfg.Name != "Kind Brothers BBS" {
+		cfg.Time != "2006-01-02 15:04:05" || cfg.Name != "Kind Brothers BBS" {
 		t.Errorf("cfg = %+v", cfg)
 	}
 	for _, colors := range []int{16, 256, 16777216} {

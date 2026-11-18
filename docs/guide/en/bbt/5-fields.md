@@ -53,7 +53,7 @@ Users online {bbs.sessions}, up {bbs.uptime}
 | Field | Value |
 |---|---|
 | `session.ip` | The address of the user. Example: `203.0.113.7`. |
-| `session.online` | The time from the connect of the user: `hh:mm`, from 24 hours `<d>d hh:mm`. |
+| `session.online` | The time from the connect of the user: `hh:mm:ss`, from 24 hours `<d>d hh:mm:ss`. |
 | `bbs.name` | The key `name` of `[bbs]` in `bbs.toml`. The default is `Kind Brothers BBS`. |
 | `bbs.version` | The version of `velourbbs`, for example `v1.2.0`. A build that is not of a release tag gives `dev`. |
 | `bbs.sessions` | The users online now, with this user. |
@@ -63,14 +63,14 @@ Users online {bbs.sessions}, up {bbs.uptime}
 - The BBS takes the values when it shows the screen. A value on the screen does not change
   until the next screen.
 - `[screen] time` in `screens/screens.toml` sets the form of `bbs.time` with the Go reference time
-  `2006-01-02 15:04:05`. The default is `"2006-01-02 15:04"`. Example for `16.11.2026 15:04`:
+  `2006-01-02 15:04:05`. The default is `"2006-01-02 15:04:05"`. Example for `16.11.2026 15:04`:
 
 ```toml
 [screen]
 time = "02.01.2006 15:04"
 ```
 
-- `velourbbs preview` has no session. It shows `127.0.0.1`, `00:00`, `1` users
+- `velourbbs preview` has no session. It shows `127.0.0.1`, `00:00:00`, `1` users
   and the time `2006-01-02 15:04:05`. `--set` changes a value, for example
   `--set bbs.sessions=12`.
 
