@@ -7,6 +7,10 @@ import (
 	"bytes"
 	"errors"
 	"io/fs"
+	"time"
+	// The zone database in the binary: [screen] zone gives the same zones on each host
+	// (screens-toml, section 3.1).
+	_ "time/tzdata"
 
 	"github.com/schors/velourbbs/internal/screen"
 	"github.com/schors/velourbbs/internal/term"
@@ -29,6 +33,9 @@ type Config struct {
 	Fields screen.Fields
 	// Time is the layout of the field bbs.time: the key time of [screen] (screens-toml, section 3.1).
 	Time string
+	// Zone is the time zone of the field bbs.time: the key zone of [screen] (screens-toml, section 3.1).
+	// The default is time.Local.
+	Zone *time.Location
 	// Start is the name of the first screen of a session (screens-toml, section 3.4).
 	Start string
 	// Telnet is the table [telnet] (bbs-toml, section 3.1).

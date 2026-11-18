@@ -20,8 +20,15 @@ import (
 	"github.com/schors/velourbbs/internal/term"
 )
 
-// previewTime is the default time of bbs.time in velourbbs preview (session-fields, section 4).
-var previewTime = time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC)
+// previewTime gives the default time of bbs.time in velourbbs preview (session-fields, section 4):
+// the date and the clock of the reference time of the package time in the zone zone.
+// The zone Local gives UTC, so the dump is the same on each machine.
+func previewTime(zone *time.Location) time.Time {
+	if zone == time.Local {
+		zone = time.UTC
+	}
+	return time.Date(2006, 1, 2, 15, 4, 5, 0, zone)
+}
 
 // preview runs velourbbs preview (screen-render, section 3.2): it renders a screen and writes its cell dump
 // to stdout. With --keys, it runs a session (menu-nav, section 7).
@@ -87,7 +94,7 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		sv.Name = cfg.Name
 	}
 	if !svSet["bbs.time"] {
-		sv.Time = previewTime.Format(cfg.Time)
+		sv.Time = previewTime(cfg.Zone).Format(cfg.Time)
 	}
 	if svSet["session.theme"] { // the theme choice at the start
 		cfg.ThemeChoice = config.ThemeChoice(sv.Theme)

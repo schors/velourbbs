@@ -21,7 +21,7 @@ the online time, the BBS name, the version, the open sessions, the server time a
 | `bbs.name` | string | `[bbs] name` of [bbs-toml](bbs-toml.md), section 3.2. | `Kind Brothers BBS` |
 | `bbs.version` | string | The version of the `velourbbs` binary (section 3.4). | `v1.2.0` |
 | `bbs.sessions` | integer | The open sessions, with the current session (section 3.2). | `3` |
-| `bbs.time` | string | The local time of the server (section 3.5) in the layout `[screen] time` of [screens-toml](screens-toml.md), section 3.1. | `2026-11-16 15:04:05` |
+| `bbs.time` | string | The time of the server in its time zone (section 3.5), in the layout `[screen] time` of [screens-toml](screens-toml.md), section 3.1. | `2026-11-16 15:04:05` |
 | `bbs.uptime` | string | The time from the start of the listen of `velourbbs serve`, in the duration form (section 3.3). | `3d 04:17:09` |
 
 - The host takes the values once for each screen, before the `when` of the items
@@ -69,7 +69,8 @@ the online time, the BBS name, the version, the open sessions, the server time a
 
 ### 3.5. Server time
 
-- The time zone is `time.Local` of Go: `TZ`, else `/etc/localtime`.
+- The time zone is `[screen] zone` of [screens-toml](screens-toml.md), section 3.1.
+- `Local` is `time.Local` of Go: `TZ`, else `/etc/localtime`.
 
 ## 4. `velourbbs preview`
 
@@ -80,7 +81,7 @@ the online time, the BBS name, the version, the open sessions, the server time a
 | `session.ip` | `127.0.0.1` |
 | `session.online` | `00:00:00` |
 | `bbs.sessions` | `1` |
-| `bbs.time` | 2006-01-02 15:04:05 in UTC, in the layout `[screen] time`. |
+| `bbs.time` | 2006-01-02 15:04:05 in `[screen] zone`, in the layout `[screen] time`. `Local` gives UTC. |
 | `bbs.uptime` | `00:00:00` |
 | `session.theme` | `[screen] theme`. |
 
@@ -92,14 +93,14 @@ the online time, the BBS name, the version, the open sessions, the server time a
   An invalid value is an invalid argument.
 - `bbs.name` and `bbs.version` have the values of section 2.
 - The default time has the date and the clock of the reference time of the Go package `time`.
-  UTC makes the dump the same on each machine.
+  UTC in place of `Local` makes the dump the same on each machine.
 
 ## 5. Code
 
 | Package | Content |
 |---|---|
 | `internal/screen` | The fields of section 2 in the registry and the duration form. |
-| `internal/config` | `[bbs] name`, `[screen] time` and `[screen] theme`. |
+| `internal/config` | `[bbs] name`, `[screen] time`, `[screen] zone` and `[screen] theme`. |
 | `internal/menu` | The values of section 2 for each screen and each page of a file screen, and the theme choice. |
 | `internal/server` | The client address, the open sessions and the start of the listen. |
 | `cmd/velourbbs` | The version and the values of section 4. |
@@ -110,6 +111,8 @@ the online time, the BBS name, the version, the open sessions, the server time a
 ## 6. Acceptance
 
 - A test covers the duration form: 0 seconds, 59 seconds, 23:59:59, 24:00:00 and several days.
+- A test covers `[screen] zone`: `Local`, `UTC`, a name of the database and an unknown name.
+  A server test and a test of `velourbbs preview` show `bbs.time` in a zone.
 - A test covers the version: a tag, an empty version, `(devel)`, a pseudo-version and `+dirty`.
 - A server test shows a screen with each field of section 2 through a PROXY protocol
   header of version 1. `session.ip` is the address of the header.

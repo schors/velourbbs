@@ -291,7 +291,7 @@ func (s *Server) values(addr netip.Addr, accepted time.Time) menu.Values {
 		return screen.SessionValues{
 			IP: ip, Online: screen.FormatDuration(now.Sub(accepted)),
 			Name: s.cfg.Name, Version: s.version, Sessions: int(s.sessions.Load()),
-			Time: now.Format(s.cfg.Time), Uptime: screen.FormatDuration(now.Sub(s.started)),
+			Time: now.In(s.cfg.Zone).Format(s.cfg.Time), Uptime: screen.FormatDuration(now.Sub(s.started)),
 		}
 	}
 }

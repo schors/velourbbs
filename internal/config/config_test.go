@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/schors/velourbbs/internal/screen"
 )
@@ -67,7 +68,7 @@ func TestDefaults(t *testing.T) {
 		}
 	}
 	if cfg.Start != "main" || len(cfg.Fields) != 0 || !reflect.DeepEqual(cfg.Telnet, defaultTelnet) ||
-		cfg.Time != "2006-01-02 15:04:05" || cfg.Name != "Kind Brothers BBS" {
+		cfg.Time != "2006-01-02 15:04:05" || cfg.Zone != time.Local || cfg.Name != "Kind Brothers BBS" {
 		t.Errorf("cfg = %+v", cfg)
 	}
 	if cfg.ThemeChoice != ThemeDark {
@@ -180,6 +181,7 @@ func TestErrors(t *testing.T) {
 		`valign = "Top"`,
 		`fill = ""`,
 		`theme = "Dark"`,
+		`zone = "Mars/Olympus"`,
 		`[theme.default]`,
 		`Title = "1"`,
 		`normal = "7/0"`,
@@ -208,6 +210,7 @@ func TestErrors(t *testing.T) {
 		`screens/screens.toml:1:1: screen.valign: invalid value "Top", want "top", "middle" or "bottom"`,
 		`screens/screens.toml:1:1: screen.fill: invalid value "", want "none", "spaces" or "erase"`,
 		`screens/screens.toml:1:1: screen.more: zero-width grapheme U+200B`,
+		`screens/screens.toml:1:1: screen.zone: unknown time zone "Mars/Olympus"`,
 		`screens/screens.toml:1:1: screen.theme: invalid value "Dark", want "dark", "light" or "auto"`,
 		`screens/screens.toml:1:1: menu.start: invalid screen name "Main"`,
 		`screens/screens.toml:1:1: theme.default: invalid style name "Title"`,
@@ -227,7 +230,8 @@ func TestErrors(t *testing.T) {
 	if !ds.HasErrors() {
 		t.Error("HasErrors = false")
 	}
-	if cfg.Layout != defaultLayout || cfg.More != "-- More --" || cfg.Start != "main" || cfg.ThemeChoice != ThemeDark {
+	if cfg.Layout != defaultLayout || cfg.More != "-- More --" || cfg.Start != "main" || cfg.ThemeChoice != ThemeDark ||
+		cfg.Zone != time.Local {
 		t.Errorf("an invalid value replaced a default: %+v", cfg)
 	}
 	if dark(cfg, 16)["normal"] != style(t, "7/0") || dark(cfg, 16)["bad"] != style(t, "2/0") {
@@ -313,6 +317,29 @@ func TestTimeAndName(t *testing.T) {
 	}
 	if cfg.Time != "02.01.2006 15:04" || cfg.Name != "" {
 		t.Errorf("time %q, name %q", cfg.Time, cfg.Name)
+	}
+}
+
+// [screen] zone takes Local, UTC or a name of the IANA database (screens-toml, section 3.1).
+func TestZone(t *testing.T) {
+	for _, name := range []string{"Local", "UTC", "Europe/Berlin", "Asia/Tokyo"} {
+		cfg, ds := parseScreens([]byte("[screen]\nzone = \"" + name + "\"\n"))
+		if len(ds) != 0 {
+			t.Fatalf("%s: diags %q", name, messages(ds))
+		}
+		if got := cfg.Zone.String(); got != name {
+			t.Errorf("zone %q = %q", name, got)
+		}
+	}
+	for _, name := range []string{"", "Europe/Nowhere", "../etc/passwd", "/etc/localtime"} {
+		cfg, ds := parseScreens([]byte("[screen]\nzone = \"" + name + "\"\n"))
+		want := []string{ScreensFile + `:1:1: screen.zone: unknown time zone "` + name + `"`}
+		if got := messages(ds); !slices.Equal(got, want) {
+			t.Errorf("zone %q: got %q, want %q", name, got, want)
+		}
+		if cfg.Zone != time.Local {
+			t.Errorf("zone %q replaced the default: %v", name, cfg.Zone)
+		}
 	}
 }
 

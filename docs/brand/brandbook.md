@@ -33,7 +33,7 @@ The screens of this book and the ANSI files show the same text. Change both toge
 
 
 
-    Enter Открыть    Esc Ко входу    Q Выход
+    Enter Открыть    Esc Ко входу    Q Выход               21:40 UTC
 
 ```
 
@@ -354,6 +354,14 @@ Folders fold with Enter; their counts sit at the right edge like any other entry
 
 Paging keys on the left, `B` before `Пробел`; actions flush with the column's right edge. Key in `hi`, label in `ctl`, four spaces between pairs. A key appears only where it works: `K Написать` shows on pages with comments.
 
+### Clock
+
+```text
+    Enter Открыть    Esc Ко входу    Q Выход               21:40 UTC
+```
+
+Only the menu shows the station time. It ends the key row, flush with the column's right edge, in `dim`. Hours and minutes, then the zone: `21:40 UTC`. No date, no seconds, no label. The time is the time of the draw and does not tick.
+
 ### Comment and the next entry
 
 ```text
@@ -548,7 +556,7 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 
 
-    Enter Открыть    Esc Ко входу    Q Выход
+    Enter Открыть    Esc Ко входу    Q Выход               21:40 UTC
 
 ```
 
@@ -595,7 +603,7 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 
 
-              Enter Открыть    Esc Ко входу    Q Выход
+              Enter Открыть    Esc Ко входу    Q Выход                                                       21:40 UTC
 
 ```
 

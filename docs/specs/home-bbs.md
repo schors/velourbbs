@@ -91,6 +91,8 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 - `<lang>-menu` is the brandbook screen "Меню" with two items:
   Texts (gem `emer`) and About the station (gem `gold`).
   A hotkey is the digit of the item. The menu has no selection mark.
+- The key row of `<lang>-menu` ends in the clock of the brandbook, section 6:
+  `bbs.time` with `time = "15:04 MST"` and `zone = "UTC"` in `screens.toml`.
 
 ### 3.3. Section screens
 

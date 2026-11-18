@@ -64,7 +64,7 @@ Users online {bbs.sessions}, up {bbs.uptime}
 | `bbs.name` | The key `name` of `[bbs]` in `bbs.toml`. The default is `Kind Brothers BBS`. |
 | `bbs.version` | The version of `velourbbs`, for example `v1.2.0`. A build that is not of a release tag gives `dev`. |
 | `bbs.sessions` | The users online now, with this user. |
-| `bbs.time` | The date and the time of the server. |
+| `bbs.time` | The date and the time of the server, in `[screen] zone`. |
 | `bbs.uptime` | The time from the start of `velourbbs serve`, in the form of `session.online`. |
 
 - The BBS takes the values when it shows the screen. A value on the screen does not change
@@ -77,8 +77,18 @@ Users online {bbs.sessions}, up {bbs.uptime}
 time = "02.01.2006 15:04"
 ```
 
+- `[screen] zone` sets the time zone of `bbs.time`: `"Local"`, `"UTC"` or a zone name
+  such as `"Europe/Berlin"`. The default `"Local"` is the zone of the server.
+  `MST` in `time` shows the zone. Example for `14:05 UTC`:
+
+```toml
+[screen]
+time = "15:04 MST"
+zone = "UTC"
+```
+
 - `velourbbs preview` has no session. It shows `127.0.0.1`, `00:00:00`, `1` users
-  and the time `2006-01-02 15:04:05`. `--set` changes a value, for example
+  and the time `2006-01-02 15:04:05` in `[screen] zone`, with UTC for `"Local"`. `--set` changes a value, for example
   `--set bbs.sessions=12`.
 
 Full rules: [session-fields](../../../specs/session-fields.md), sections 2–4.

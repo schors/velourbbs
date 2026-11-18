@@ -704,6 +704,36 @@ func TestServeFields(t *testing.T) {
 	}
 }
 
+// bbs.time is the time in [screen] zone (session-fields, section 3.5).
+func TestServeZone(t *testing.T) {
+	const layout = "2006-01-02 15:04:05 MST"
+	ts := startFS(t, fstest.MapFS{
+		"bbs.toml":             {Data: []byte("")},
+		"screens/screens.toml": {Data: []byte("[screen]\ntime = \"" + layout + "\"\nzone = \"Asia/Tokyo\"\n")},
+		"screens/main.bbt":     {Data: []byte("+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\nZ|{bbs.time}|E\n")},
+		"screens/goodbye.bbt":  {Data: []byte(goodbyeScreen)},
+	}, nil, nil, 0)
+	c := ts.dial(t)
+	before := time.Now().Truncate(time.Second)
+	write(t, c, wontReplies)
+	readUntil(t, c, "\x1b[6n", 1)
+	write(t, c, probeReply)
+	out := readUntil(t, c, "|E", 1)
+	after := time.Now()
+	m := regexp.MustCompile(`Z\|([^|]*)\|E`).FindStringSubmatch(out)
+	if m == nil {
+		t.Fatal("output has no row of bbs.time")
+	}
+	tokyo, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	at, err := time.ParseInLocation(layout, m[1], tokyo)
+	if err != nil || !strings.HasSuffix(m[1], " JST") || at.Before(before) || at.After(after) {
+		t.Errorf("bbs.time %q, want a time in JST from %v to %v", m[1], before, after)
+	}
+}
+
 // A session that writes a page when the stop starts gets the reason shutdown
 // after the close of step 3 (section 10.2).
 func TestServeStopPage(t *testing.T) {
