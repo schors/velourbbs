@@ -16,6 +16,7 @@ import (
 // The caller doubles IAC after it (section 4.3).
 func AppendPage(dst []byte, p screen.Page, colors int) []byte {
 	var model, out screen.Style // the model style and the output style of the previous cell
+	dst = append(dst, "\x1b[?2026h"...)
 	if p.Fill == screen.FillErase {
 		model, out = p.Normal, reduceStyle(p.Normal, colors)
 		dst = appendSGR(dst, out)
@@ -59,7 +60,7 @@ func AppendPage(dst []byte, p screen.Page, colors int) []byte {
 	for row := p.Top + len(p.Rows); row < p.Height; row++ {
 		fillRow(row + 1)
 	}
-	return append(dst, "\x1b[0m"...)
+	return append(dst, "\x1b[0m\x1b[?2026l"...)
 }
 
 // appendPos appends ESC[<row>;1H.

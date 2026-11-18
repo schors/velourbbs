@@ -69,7 +69,7 @@ func (t *Terminal) Term() screen.Term {
 
 // Key gives the next key of the queue. With an empty queue, it reads the input
 // until a key arrives. While the key decoder waits for the next byte of a sequence,
-// it also reads: a busy host must not end the 150 ms wait of bytes that arrived in time.
+// it also reads: a busy host must not end the wait of bytes that arrived in time.
 // It gives ErrIdle at the idle timeout, ErrStop after Stop and the errors of the connection
 // and of the telnet parser.
 func (t *Terminal) Key() (string, error) {
@@ -109,7 +109,7 @@ func (t *Terminal) Page(p screen.Page) error {
 
 // read writes the waiting replies, then reads the input once, until the deadline dl
 // at the latest. It gives the telnet events and the CPR replies. The keys go to the queue.
-// The 150 ms wait of the key decoder and the 10 s of a subnegotiation also end a read,
+// The wait of the key decoder and the 10 s of a subnegotiation also end a read,
 // so a read can give nothing.
 func (t *Terminal) read(dl time.Time) ([]telnet.Event, []CPR, error) {
 	if len(t.out) > 0 {

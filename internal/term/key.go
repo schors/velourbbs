@@ -9,12 +9,17 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// EscWait is the wait for the next byte after ESC and after each byte
-// of an escape sequence (section 8.2).
+// EscWait is the wait for the next byte after ESC and after the byte that starts
+// a sequence or a control string (section 8.2).
 const EscWait = 150 * time.Millisecond
 
-// maxSeq is the maximum length of an escape sequence, ESC included (section 8.2).
-const maxSeq = 32
+// SeqWait is the wait for the next byte after each later byte of a sequence
+// or a control string (section 8.2).
+const SeqWait = time.Second
+
+// maxSeq is the maximum length of a sequence or a control string in bytes,
+// ESC included (section 8.2).
+const maxSeq = 128
 
 // CPR is a cursor position report ESC[<row>;<col>R with 1–5 digits in each number
 // (section 5.4). A number can be 0.
@@ -42,11 +47,13 @@ var ss3Keys = map[rune]string{
 type seqState uint8
 
 const (
-	seqNone    seqState = iota
-	seqESC              // after ESC
-	seqCSI              // in a CSI sequence
-	seqBracket          // after CSI [ (Linux console F1–F5)
-	seqSS3              // after ESC O
+	seqNone      seqState = iota
+	seqESC                // after ESC
+	seqCSI                // in a CSI sequence
+	seqBracket            // after CSI [ (Linux console F1–F5)
+	seqSS3                // after ESC O
+	seqString             // in an OSC, DCS or APC control string
+	seqStringESC          // after ESC in a control string
 )
 
 // Decoder is the key decoder of one connection (section 8.1, steps 2–4, and section 8.2).
@@ -59,27 +66,31 @@ type Decoder struct {
 	utf     [utf8.UTFMax]byte // an incomplete UTF-8 character
 	nutf    int               // the bytes in utf
 	st      seqState          // the escape sequence state
-	seq     [maxSeq]byte      // the bytes of the sequence, ESC included
+	seq     [maxSeq]byte      // the bytes of the sequence or the control string, ESC included
 	nseq    int               // the bytes in seq
-	long    bool              // the sequence is longer than maxSeq
+	long    bool              // the sequence or the control string is longer than maxSeq
+	later   bool              // a byte arrived after the byte that starts the sequence
 	last    time.Time         // the arrival of the last byte while a sequence waits
 	keys    []string          // the output of Feed
 	cprs    []CPR             // the output of Feed
 }
 
 // Deadline gives the time at which the wait for the next byte after ESC
-// or after a byte of a sequence ends. ok is false when no ESC or sequence waits.
-// At this time the caller calls Feed with no input.
+// or after a byte of a sequence or a control string ends. ok is false when no ESC,
+// sequence or control string waits. At this time the caller calls Feed with no input.
 func (d *Decoder) Deadline() (t time.Time, ok bool) {
 	if d.st == seqNone {
 		return time.Time{}, false
+	}
+	if d.later {
+		return d.last.Add(SeqWait), true
 	}
 	return d.last.Add(EscWait), true
 }
 
 // Feed decodes the data bytes that arrived at the time now. All bytes of one call
 // arrive together. First Feed ends the wait when now is at or after Deadline:
-// ESC alone gives ESC, and a started sequence is dropped.
+// ESC alone gives ESC, and a started sequence or control string is dropped.
 // The CPR replies are for the probe. After the probe, the caller drops them.
 func (d *Decoder) Feed(now time.Time, in []byte) (keys []string, cprs []CPR) {
 	d.keys, d.cprs = nil, nil
@@ -90,6 +101,11 @@ func (d *Decoder) Feed(now time.Time, in []byte) (keys []string, cprs []CPR) {
 		d.st = seqNone
 	}
 	for _, b := range in {
+		// Each byte counts, also a byte of an incomplete character and a byte
+		// that the UTF-8 decoder drops.
+		if d.st != seqNone && d.st != seqESC {
+			d.later = true
+		}
 		d.enter(b)
 	}
 	if len(in) > 0 && d.st != seqNone {
@@ -128,8 +144,17 @@ func (d *Decoder) decodeUTF8(b byte) {
 	}
 }
 
-// key is step 4 of section 8.1 with the escape sequences of section 8.2.
+// key is step 4 of section 8.1 with the escape sequences and the control strings
+// of section 8.2.
 func (d *Decoder) key(r rune) {
+	if d.st == seqStringESC {
+		d.st = seqNone
+		if r == '\\' { // ST ends the control string
+			return
+		}
+		// Another byte ends the control string. ESC is new input.
+		d.startESC()
+	}
 	switch d.st {
 	case seqESC:
 		switch r {
@@ -141,9 +166,24 @@ func (d *Decoder) key(r rune) {
 			d.st = seqSS3
 			d.push(r)
 			return
+		case ']', 'P', '_':
+			d.st = seqString
+			d.push(r)
+			return
 		}
 		d.st = seqNone
 		d.emit("ESC")
+	case seqString:
+		switch r {
+		case 0x07: // BEL ends the control string
+			d.st = seqNone
+		case 0x1B:
+			d.st = seqStringESC
+			d.push(r)
+		default:
+			d.push(r)
+		}
+		return
 	case seqCSI:
 		if d.csi(r) {
 			return
@@ -166,8 +206,7 @@ func (d *Decoder) key(r rune) {
 	// New input.
 	switch {
 	case r == 0x1B:
-		d.st, d.nseq, d.long = seqESC, 0, false
-		d.push(r)
+		d.startESC()
 	case r == '\r':
 		d.emit("ENTER")
 	case r == 0x08 || r == 0x7F:
@@ -244,16 +283,21 @@ func isFinal(r rune) bool {
 	return 0x40 <= r && r <= 0x7E
 }
 
-// push adds the byte r to the sequence. After maxSeq bytes it only marks
-// the sequence as too long, so the sequence is dropped up to its end.
-// r is ASCII.
+// startESC starts a new sequence with ESC.
+func (d *Decoder) startESC() {
+	d.st, d.nseq, d.long, d.later = seqESC, 0, false, false
+	d.push(0x1B)
+}
+
+// push adds the UTF-8 bytes of r to the sequence or the control string.
+// After maxSeq bytes it only marks it as too long, so it is dropped up to its end.
 func (d *Decoder) push(r rune) {
-	if d.nseq == maxSeq {
+	n := utf8.RuneLen(r)
+	if d.long || d.nseq+n > maxSeq {
 		d.long = true
 		return
 	}
-	d.seq[d.nseq] = byte(r)
-	d.nseq++
+	d.nseq += utf8.EncodeRune(d.seq[d.nseq:], r)
 }
 
 func (d *Decoder) emit(k string) {

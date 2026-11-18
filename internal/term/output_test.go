@@ -93,10 +93,10 @@ func TestAppendPage(t *testing.T) {
 		screen.Row{cell("a", idx(7), idx(0), 0), cell("b", idx(7), idx(0), 0), cell("c", idx(15), idx(4), screen.Bold)},
 		screen.Row{cell(" ", idx(7), idx(0), 0), cell("é", def, def, 0), cell("d", def, def, 0)},
 	)
-	want := "\x1b[0m\x1b[2J" +
+	want := "\x1b[?2026h\x1b[0m\x1b[2J" +
 		"\x1b[1;1H\x1b[0;37;40mab\x1b[0;1;97;44mc" +
 		"\x1b[2;1H\x1b[0;37;40m \x1b[0mé" + "d" +
-		"\x1b[0m"
+		"\x1b[0m\x1b[?2026l"
 	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
 		t.Errorf("AppendPage =\n%q\nwant\n%q", got, want)
 	}
@@ -113,7 +113,7 @@ func TestAppendPageMargin(t *testing.T) {
 		Rows: []screen.Row{{cell("x", idx(15), idx(4), 0)}},
 		Cols: 4, Margin: 1, Normal: screen.Style{Fg: idx(7), Bg: idx(0)},
 	}
-	want := "\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;37;40m \x1b[0;97;44mx\x1b[0;37;40m  \x1b[0m"
+	want := "\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;37;40m \x1b[0;97;44mx\x1b[0;37;40m  \x1b[0m\x1b[?2026l"
 	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
 	}
@@ -122,7 +122,7 @@ func TestAppendPageMargin(t *testing.T) {
 // TestAppendPageDefaultStart: the first cell in the default style needs no SGR.
 func TestAppendPageDefaultStart(t *testing.T) {
 	page := rows(screen.Row{cell("x", def, def, 0)})
-	want := "\x1b[0m\x1b[2J\x1b[1;1Hx\x1b[0m"
+	want := "\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1Hx\x1b[0m\x1b[?2026l"
 	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
 	}
@@ -151,7 +151,7 @@ func TestAppendPageReducedEqual(t *testing.T) {
 		{screen.ColorsTrue, "\x1b[0;38;2;250;250;250ma\x1b[0;38;2;255;255;255mb"},
 	}
 	for _, tt := range tests {
-		want := "\x1b[0m\x1b[2J\x1b[1;1H" + tt.want + "\x1b[0m"
+		want := "\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1H" + tt.want + "\x1b[0m\x1b[?2026l"
 		if got := string(AppendPage(nil, page, tt.colors)); got != want {
 			t.Errorf("colors %d: AppendPage = %q, want %q", tt.colors, got, want)
 		}
@@ -168,12 +168,12 @@ func TestAppendPageFill(t *testing.T) {
 		top  int
 		want string
 	}{
-		{screen.FillNone, 2, "\x1b[0m\x1b[2J\x1b[3;1H\x1b[0;97;44mx\x1b[0;37;40m \x1b[0m"},
-		{screen.FillSpaces, 2, "\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;37;40m  \x1b[2;1H  " +
-			"\x1b[3;1H\x1b[0;97;44mx\x1b[0;37;40m \x1b[0m"},
-		{screen.FillSpaces, 0, "\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;97;44mx\x1b[0;37;40m " +
-			"\x1b[2;1H  \x1b[3;1H  \x1b[0m"},
-		{screen.FillErase, 2, "\x1b[0;37;40m\x1b[2J\x1b[3;1H\x1b[0;97;44mx\x1b[0;37;40m \x1b[0m"},
+		{screen.FillNone, 2, "\x1b[?2026h\x1b[0m\x1b[2J\x1b[3;1H\x1b[0;97;44mx\x1b[0;37;40m \x1b[0m\x1b[?2026l"},
+		{screen.FillSpaces, 2, "\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;37;40m  \x1b[2;1H  " +
+			"\x1b[3;1H\x1b[0;97;44mx\x1b[0;37;40m \x1b[0m\x1b[?2026l"},
+		{screen.FillSpaces, 0, "\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;97;44mx\x1b[0;37;40m " +
+			"\x1b[2;1H  \x1b[3;1H  \x1b[0m\x1b[?2026l"},
+		{screen.FillErase, 2, "\x1b[?2026h\x1b[0;37;40m\x1b[2J\x1b[3;1H\x1b[0;97;44mx\x1b[0;37;40m \x1b[0m\x1b[?2026l"},
 	}
 	for _, tt := range tests {
 		page := screen.Page{Rows: []screen.Row{row}, Cols: 2, Height: 3, Top: tt.top, Normal: normal, Fill: tt.fill}
@@ -190,7 +190,7 @@ func TestAppendPageErase(t *testing.T) {
 	page := screen.Page{
 		Rows: []screen.Row{{{Grapheme: "a", Style: normal}}}, Cols: 1, Height: 1, Normal: normal, Fill: screen.FillErase,
 	}
-	want := "\x1b[0;97;40m\x1b[2J\x1b[1;1Ha\x1b[0m"
+	want := "\x1b[?2026h\x1b[0;97;40m\x1b[2J\x1b[1;1Ha\x1b[0m\x1b[?2026l"
 	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
 	}
@@ -198,7 +198,7 @@ func TestAppendPageErase(t *testing.T) {
 
 func TestAppendPageAppends(t *testing.T) {
 	got := string(AppendPage([]byte("x"), screen.Page{}, screen.Colors16))
-	if want := "x\x1b[0m\x1b[2J\x1b[0m"; got != want {
+	if want := "x\x1b[?2026h\x1b[0m\x1b[2J\x1b[0m\x1b[?2026l"; got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
 	}
 }

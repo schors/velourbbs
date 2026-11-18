@@ -17,7 +17,7 @@ var t0 = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 func decode(in string) ([]string, []CPR) {
 	var d Decoder
 	keys, cprs := d.Feed(t0, []byte(in))
-	k, c := d.Feed(t0.Add(EscWait), nil)
+	k, c := d.Feed(t0.Add(SeqWait), nil)
 	return append(keys, k...), append(cprs, c...)
 }
 
@@ -174,10 +174,10 @@ func TestEscapeDrop(t *testing.T) {
 	checkKeys(t, "\x1b[[a", "a")
 	checkKeys(t, "\x1b[[\x1b[[E", "F5")
 
-	// The 32-byte limit, ESC included.
-	n32 := "\x1b[" + strings.Repeat("1", 29) + "~"
-	checkKeys(t, n32+"z", "z")
-	long := "\x1b[" + strings.Repeat("1;", 20)
+	// The 128-byte limit, ESC included.
+	n128 := "\x1b[" + strings.Repeat("1", 125) + "~"
+	checkKeys(t, n128+"z", "z")
+	long := "\x1b[" + strings.Repeat("1;", 70)
 	checkKeys(t, long+"A"+"z", "z")
 	checkKeys(t, long+"\r", "ENTER")
 	checkKeys(t, long+"\x1b[A", "UP")
@@ -210,15 +210,20 @@ func TestEscWait(t *testing.T) {
 		{[]step{{0, "\x1b"}, {150 * ms, "[A"}}, []string{"ESC", "[", "A"}},
 		{[]step{{0, "\x1b"}, {150 * ms, ""}}, []string{"ESC"}},
 		{[]step{{0, "\x1b"}, {100 * ms, ""}, {149 * ms, "x"}}, []string{"ESC", "x"}},
-		// The wait restarts after each byte of a sequence.
+		// The wait restarts after each byte of a sequence: 150 ms after the byte
+		// that starts it, 1 s after each later byte.
 		{[]step{{0, "\x1b[1"}, {100 * ms, "5"}, {200 * ms, "~"}}, []string{"F5"}},
 		{[]step{{0, "\x1b["}, {100 * ms, "["}, {200 * ms, "A"}}, []string{"F1"}},
+		{[]step{{0, "\x1b["}, {149 * ms, "1"}, {1148 * ms, "5~"}}, []string{"F5"}},
+		{[]step{{0, "\x1b[1"}, {999 * ms, "5~"}}, []string{"F5"}},
+		{[]step{{0, "\x1b[["}, {999 * ms, "A"}}, []string{"F1"}},
 		// A started sequence is dropped. The next bytes are new input.
-		{[]step{{0, "\x1b[1"}, {150 * ms, ""}}, nil},
-		{[]step{{0, "\x1b[1"}, {150 * ms, "5~"}}, []string{"5", "~"}},
+		{[]step{{0, "\x1b["}, {150 * ms, "A"}}, []string{"A"}},
+		{[]step{{0, "\x1b[1"}, {time.Second, ""}}, nil},
+		{[]step{{0, "\x1b[1"}, {time.Second, "5~"}}, []string{"5", "~"}},
 		{[]step{{0, "\x1bO"}, {150 * ms, "A"}}, []string{"A"}},
-		{[]step{{0, "\x1b[["}, {150 * ms, "A"}}, []string{"A"}},
-		{[]step{{0, "\x1b[" + strings.Repeat("1", 40)}, {150 * ms, "2"}}, []string{"2"}},
+		{[]step{{0, "\x1b[["}, {time.Second, "A"}}, []string{"A"}},
+		{[]step{{0, "\x1b[" + strings.Repeat("1", 140)}, {time.Second, "2"}}, []string{"2"}},
 		// A byte of an incomplete character also restarts the wait.
 		{[]step{{0, "\x1b"}, {100 * ms, "\xd1"}, {200 * ms, "\x8b"}}, []string{"ESC", "ы"}},
 	}
@@ -246,6 +251,80 @@ func TestDeadline(t *testing.T) {
 	if _, ok := d.Deadline(); ok {
 		t.Error("Deadline: ok after the wait")
 	}
+	// 1 s after a later byte of a sequence or a control string.
+	for _, in := range []string{"\x1b[1", "\x1b[[", "\x1b]4", "\x1bPx\x1b", "\x1bP\xce", "\x1b]\xff", "\x1b[\xd1"} {
+		d.Feed(t0, []byte(in))
+		if dl, ok := d.Deadline(); !ok || !dl.Equal(t0.Add(SeqWait)) {
+			t.Errorf("%q: Deadline = %v, %v; want %v, true", in, dl, ok, t0.Add(SeqWait))
+		}
+		d.Feed(t0.Add(SeqWait), nil)
+	}
+	// 150 ms after the byte that starts a control string.
+	for _, in := range []string{"\x1b]", "\x1bP", "\x1b_"} {
+		d.Feed(t0, []byte(in))
+		if dl, ok := d.Deadline(); !ok || !dl.Equal(t0.Add(EscWait)) {
+			t.Errorf("%q: Deadline = %v, %v; want %v, true", in, dl, ok, t0.Add(EscWait))
+		}
+		d.Feed(t0.Add(EscWait), nil)
+	}
+}
+
+// Late replies to the queries of section 5.7.
+var lateReplies = []string{
+	"\x1b]4;1;rgb:cdcd/0000/0000\x1b\\",         // OSC 4 with ST
+	"\x1b]4;15;rgb:ff/ff/ff\x07",                // OSC 4 with BEL
+	"\x1bP1$r0;38:2::1:2:3m\x1b\\",              // DECRQSS
+	"\x1bP0$r\x1b\\",                            // DECRQSS, not valid
+	"\x1bP>|XTerm(412)\x1b\\",                   // XTVERSION
+	"\x1bP>|tmux 3.6\x07",                       // XTVERSION with BEL
+	"\x1b_Gi=1;OK\x1b\\",                        // APC
+	"\x1bP>|Ωmega ы\x1b\\",                      // non-ASCII text
+	"\x1bPΩ\x1b\\",                              // non-ASCII directly after the introducer
+	"\x1b]\xff4\x07",                            // a byte that the UTF-8 decoder drops
+	"\x1b]" + strings.Repeat("x", 200) + "\x07", // longer than 128 bytes
+}
+
+func TestControlString(t *testing.T) {
+	for _, s := range lateReplies {
+		checkKeys(t, s)
+		checkKeys(t, "a"+s+"b", "a", "b")
+		checkKeys(t, s+"\x1b[A", "UP")
+	}
+	// Other control characters do not end a control string.
+	checkKeys(t, "\x1b]0;a\rb\x00c\x18d\x1a\x1b\\z", "z")
+	// ESC followed by a byte other than \\ ends the string. ESC is new input.
+	checkKeys(t, "\x1b]4;1;rgb\x1b[A", "UP")
+	checkKeys(t, "\x1bP1$r\x1bx", "ESC", "x")
+	checkKeys(t, "\x1b_abc\x1b\x1b\\", "ESC", "ESC", "\\")
+
+	// A reply in two parts gives no keys: the parts arrive within 150 ms after
+	// the introducer and within 1 s after a later byte.
+	for _, s := range lateReplies {
+		for i := 1; i < len(s); i++ {
+			gap := SeqWait - time.Millisecond
+			if i <= 2 {
+				gap = EscWait - time.Millisecond
+			}
+			var d Decoder
+			k1, _ := d.Feed(t0, []byte(s[:i]))
+			k2, _ := d.Feed(t0.Add(gap), []byte(s[i:]+"z"))
+			if got := append(k1, k2...); !slices.Equal(got, []string{"z"}) {
+				t.Errorf("%q split at %d: %q, want z", s, i, got)
+			}
+		}
+	}
+
+	// Alt+], Alt+P and Alt+_ give no key. A key after 150 ms gives the key.
+	for _, s := range []string{"\x1b]", "\x1bP", "\x1b_"} {
+		var d Decoder
+		k1, _ := d.Feed(t0, []byte(s))
+		k2, _ := d.Feed(t0.Add(EscWait), []byte("a"))
+		if got := append(k1, k2...); !slices.Equal(got, []string{"a"}) {
+			t.Errorf("%q, a after 150 ms: %q, want a", s, got)
+		}
+	}
+	// A control string that stops at its ESC is dropped at the timeout.
+	checkKeys(t, "\x1b]4;1\x1b")
 }
 
 func TestCPR(t *testing.T) {
@@ -288,6 +367,7 @@ func FuzzDecoderFeed(f *testing.F) {
 	for _, s := range []string{
 		"a\x1b[3;2Rb\x1b[24;80R", "\x1b[99999;1R\x1b[100000;1R", "\r\n\r\x00\n\r",
 		"\x1b[A\x1bOP\x1b[[A\x1b[15~\x1b", "ы\xd0\x1b[1;2 R\x7f\t ", "\x1b[" + strings.Repeat("1", maxSeq),
+		"a\x1b]4;1;rgb:cd/00/00\x07b\x1bP>|XTerm(412)\x1b\\c", "\x1b]4\x1bx\x1b_\x1b\x1b\\",
 	} {
 		f.Add([]byte(s))
 	}
@@ -301,7 +381,7 @@ func FuzzDecoderFeed(f *testing.F) {
 			k, c := d.Feed(t0, in[i:i+1])
 			gotKeys, gotCPRs = append(gotKeys, k...), append(gotCPRs, c...)
 		}
-		k, c := d.Feed(t0.Add(EscWait), nil)
+		k, c := d.Feed(t0.Add(SeqWait), nil)
 		gotKeys, gotCPRs = append(gotKeys, k...), append(gotCPRs, c...)
 		if !slices.Equal(gotKeys, keys) || !slices.Equal(gotCPRs, cprs) {
 			t.Fatalf("one byte in each Feed: %q %v; one Feed: %q %v", gotKeys, gotCPRs, keys, cprs)
