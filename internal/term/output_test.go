@@ -70,7 +70,7 @@ func TestReduce(t *testing.T) {
 		{"16 default", def, screen.Colors16, def},
 	}
 	for _, tt := range tests {
-		if got := reduce(tt.c, tt.colors); got != tt.want {
+		if got := reduce(tt.c, tt.colors, false); got != tt.want {
 			t.Errorf("%s: reduce(%v, %d) = %v, want %v", tt.name, tt.c, tt.colors, got, tt.want)
 		}
 	}
@@ -97,7 +97,7 @@ func TestAppendPage(t *testing.T) {
 		"\x1b[1;1H\x1b[0;37;40mab\x1b[0;1;97;44mc" +
 		"\x1b[2;1H\x1b[0;37;40m \x1b[0mé" + "d" +
 		"\x1b[0m\x1b[?2026l"
-	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
+	if got := string(AppendPage(nil, page, screen.Colors16, false)); got != want {
 		t.Errorf("AppendPage =\n%q\nwant\n%q", got, want)
 	}
 }
@@ -114,7 +114,7 @@ func TestAppendPageMargin(t *testing.T) {
 		Cols: 4, Margin: 1, Normal: screen.Style{Fg: idx(7), Bg: idx(0)},
 	}
 	want := "\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;37;40m \x1b[0;97;44mx\x1b[0;37;40m  \x1b[0m\x1b[?2026l"
-	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
+	if got := string(AppendPage(nil, page, screen.Colors16, false)); got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
 	}
 }
@@ -123,7 +123,7 @@ func TestAppendPageMargin(t *testing.T) {
 func TestAppendPageDefaultStart(t *testing.T) {
 	page := rows(screen.Row{cell("x", def, def, 0)})
 	want := "\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1Hx\x1b[0m\x1b[?2026l"
-	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
+	if got := string(AppendPage(nil, page, screen.Colors16, false)); got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
 	}
 }
@@ -131,7 +131,7 @@ func TestAppendPageDefaultStart(t *testing.T) {
 func TestAppendPageWide(t *testing.T) {
 	s := screen.Style{Fg: idx(7), Bg: idx(0)}
 	page := rows(screen.Row{{Grapheme: "中", Style: s}, {Grapheme: "", Style: s}, {Grapheme: "a", Style: s}})
-	got := string(AppendPage(nil, page, screen.Colors16))
+	got := string(AppendPage(nil, page, screen.Colors16, false))
 	if n := strings.Count(got, "中"); n != 1 {
 		t.Errorf("AppendPage gives %q %d times, want 1: %q", "中", n, got)
 	}
@@ -152,7 +152,7 @@ func TestAppendPageReducedEqual(t *testing.T) {
 	}
 	for _, tt := range tests {
 		want := "\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1H" + tt.want + "\x1b[0m\x1b[?2026l"
-		if got := string(AppendPage(nil, page, tt.colors)); got != want {
+		if got := string(AppendPage(nil, page, tt.colors, false)); got != want {
 			t.Errorf("colors %d: AppendPage = %q, want %q", tt.colors, got, want)
 		}
 	}
@@ -177,7 +177,7 @@ func TestAppendPageFill(t *testing.T) {
 	}
 	for _, tt := range tests {
 		page := screen.Page{Rows: []screen.Row{row}, Cols: 2, Height: 3, Top: tt.top, Normal: normal, Fill: tt.fill}
-		if got := string(AppendPage(nil, page, screen.Colors16)); got != tt.want {
+		if got := string(AppendPage(nil, page, screen.Colors16, false)); got != tt.want {
 			t.Errorf("fill %s, top %d: AppendPage =\n%q\nwant\n%q", tt.fill, tt.top, got, tt.want)
 		}
 	}
@@ -191,14 +191,50 @@ func TestAppendPageErase(t *testing.T) {
 		Rows: []screen.Row{{{Grapheme: "a", Style: normal}}}, Cols: 1, Height: 1, Normal: normal, Fill: screen.FillErase,
 	}
 	want := "\x1b[?2026h\x1b[0;97;40m\x1b[2J\x1b[1;1Ha\x1b[0m\x1b[?2026l"
-	if got := string(AppendPage(nil, page, screen.Colors16)); got != want {
+	if got := string(AppendPage(nil, page, screen.Colors16, false)); got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
 	}
 }
 
 func TestAppendPageAppends(t *testing.T) {
-	got := string(AppendPage([]byte("x"), screen.Page{}, screen.Colors16))
+	got := string(AppendPage([]byte("x"), screen.Page{}, screen.Colors16, false))
 	if want := "x\x1b[?2026h\x1b[0m\x1b[2J\x1b[0m\x1b[?2026l"; got != want {
 		t.Errorf("AppendPage = %q, want %q", got, want)
+	}
+}
+
+// TestAppendPageVGA: a VGA colour of art goes out as its index with a VGA palette,
+// and as its RGB value reduced to term.colors with a palette that is not VGA.
+// A theme index does not change (section 7.3).
+func TestAppendPageVGA(t *testing.T) {
+	vga := screen.VGAColour
+	page := rows(screen.Row{cell("a", vga(1), vga(0), 0), cell("b", idx(1), idx(0), 0)})
+	tests := []struct {
+		colors int
+		vgaRGB bool
+		want   string
+	}{
+		{screen.Colors16, false, "\x1b[0;31;40mab"},
+		{screen.Colors256, false, "\x1b[0;31;40mab"},
+		{screen.ColorsTrue, false, "\x1b[0;31;40mab"},
+		{screen.Colors16, true, "\x1b[0;31;40mab"},
+		{screen.Colors256, true, "\x1b[0;38;5;124;48;5;16ma\x1b[0;31;40mb"},
+		{screen.ColorsTrue, true, "\x1b[0;38;2;170;0;0;48;2;0;0;0ma\x1b[0;31;40mb"},
+	}
+	for _, tt := range tests {
+		want := "\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1H" + tt.want + "\x1b[0m\x1b[?2026l"
+		if got := string(AppendPage(nil, page, tt.colors, tt.vgaRGB)); got != want {
+			t.Errorf("colors %d, vgaRGB %v: AppendPage = %q, want %q", tt.colors, tt.vgaRGB, got, want)
+		}
+	}
+}
+
+// TestReduceVGA16: with 16 colours, the RGB value of each VGA colour becomes
+// the same index again (section 7.3).
+func TestReduceVGA16(t *testing.T) {
+	for n := range uint8(16) {
+		if got := reduce(screen.VGAColour(n), screen.Colors16, true); got != idx(n) {
+			t.Errorf("reduce(VGA %d, 16, true) = %v, want %d", n, got, n)
+		}
 	}
 }

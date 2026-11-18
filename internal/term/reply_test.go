@@ -184,3 +184,29 @@ func TestQueryValues(t *testing.T) {
 		t.Errorf("logPalette() of no replies has %d items", len(s))
 	}
 }
+
+// TestNotVGA: the palette is not VGA when an OSC 4 reply differs from the VGA
+// colour of its index (section 5.7). No reply gives a VGA palette.
+func TestNotVGA(t *testing.T) {
+	tests := []struct {
+		name    string
+		replies []string
+		want    bool
+	}{
+		{"no reply", nil, false},
+		{"VGA", []string{"4;0;rgb:00/00/00", "4;1;rgb:aaaa/0000/0000", "4;15;rgb:f/f/f"}, false},
+		{"not VGA", []string{"4;0;rgb:00/00/00", "4;1;rgb:c5/0f/1f"}, true},
+		{"not VGA at the last index", []string{"4;15;rgb:f2/f2/f2"}, true},
+	}
+	for _, tt := range tests {
+		var r replies
+		for _, b := range tt.replies {
+			if !r.add(Reply{']', b, true}) {
+				t.Fatalf("%s: add(%q) = false", tt.name, b)
+			}
+		}
+		if got := r.notVGA(); got != tt.want {
+			t.Errorf("%s: notVGA() = %v, want %v", tt.name, got, tt.want)
+		}
+	}
+}

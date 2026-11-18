@@ -8,7 +8,7 @@ import (
 
 // The start style and the cell that the data does not write (section 3).
 var (
-	startStyle = screen.Style{Fg: screen.IndexColour(7), Bg: screen.IndexColour(0)}
+	startStyle = screen.Style{Fg: screen.VGAColour(7), Bg: screen.VGAColour(0)}
 	blankCell  = screen.Cell{Grapheme: " ", Style: startStyle}
 )
 
@@ -180,17 +180,17 @@ func (r *reader) sgr(ps []int, raw [][]byte, text string) {
 		case v == 25:
 			s.Attr &^= screen.Blink
 		case 30 <= v && v <= 37:
-			s.Fg = screen.IndexColour(uint8(v - 30))
+			s.Fg = screen.VGAColour(uint8(v - 30))
 		case 90 <= v && v <= 97:
-			s.Fg = screen.IndexColour(uint8(v - 90 + 8))
+			s.Fg = screen.VGAColour(uint8(v - 90 + 8))
 		case v == 39:
-			s.Fg = screen.IndexColour(7)
+			s.Fg = screen.VGAColour(7)
 		case 40 <= v && v <= 47:
-			s.Bg = screen.IndexColour(uint8(v - 40))
+			s.Bg = screen.VGAColour(uint8(v - 40))
 		case 100 <= v && v <= 107:
-			s.Bg = screen.IndexColour(uint8(v - 100 + 8))
+			s.Bg = screen.VGAColour(uint8(v - 100 + 8))
 		case v == 49:
-			s.Bg = screen.IndexColour(0)
+			s.Bg = screen.VGAColour(0)
 		case v == 38 || v == 48:
 			c, n, ok := ExtColour(ps[k+1:])
 			if !ok {

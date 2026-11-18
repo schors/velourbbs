@@ -73,3 +73,19 @@ styles
 }
 
 func rgbStyle() Style { return Style{Fg: RGBColour(0x10, 0x20, 0x30)} }
+
+// TestWriteDumpVGA: a VGA colour appears as its index, and a VGA colour
+// and the same index are one run (section 3.3).
+func TestWriteDumpVGA(t *testing.T) {
+	art := Style{Fg: VGAColour(7), Bg: VGAColour(0)}
+	normal := Style{Fg: IndexColour(7), Bg: IndexColour(0)}
+	page := Page{Num: 1, Rows: []Row{row(4, "ab", art, normal)}, Cols: 4, Height: 1}
+	var b strings.Builder
+	if err := WriteDump(&b, slices.Values([]Page{page})); err != nil {
+		t.Fatal(err)
+	}
+	want := "page 1 4x1 fill none\n|ab  |\nstyles\n1: 1-4 7/0\n"
+	if b.String() != want {
+		t.Errorf("got\n%s\nwant\n%s", b.String(), want)
+	}
+}

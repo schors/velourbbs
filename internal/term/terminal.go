@@ -46,6 +46,7 @@ type Terminal struct {
 	p       *telnet.Parser
 	d       Decoder
 	term    screen.Term
+	vgaRGB  bool      // the palette is not VGA (section 5.7)
 	keys    []string  // the key queue
 	lastKey time.Time // the start of the idle timeout
 	out     []byte    // the replies that wait for the next read
@@ -104,7 +105,7 @@ func (t *Terminal) Key() (string, error) {
 
 // Page writes the page p in one write (sections 7.1 and 9.4).
 func (t *Terminal) Page(p screen.Page) error {
-	return t.write(telnet.Escape(nil, AppendPage(nil, p, t.term.Colors)))
+	return t.write(telnet.Escape(nil, AppendPage(nil, p, t.term.Colors, t.vgaRGB)))
 }
 
 // read writes the waiting replies, then reads the input once, until the deadline dl

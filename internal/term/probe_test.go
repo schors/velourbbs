@@ -326,6 +326,35 @@ func TestProbeClients(t *testing.T) {
 	}
 }
 
+// TestProbePalette: the OSC 4 replies give the output of a VGA colour (section 7.3).
+// A VGA palette and no OSC 4 reply give the index. A palette that is not VGA gives RGB.
+func TestProbePalette(t *testing.T) {
+	campbell := strings.Replace(osc4(st), "rgb:aaaa/0000/0000", "rgb:c5c5/0f0f/1f1f", 1)
+	tests := []struct {
+		name, replies, want string
+	}{
+		{"VGA palette", osc4(st) + "\x1b[?1;2c", "\x1b[0;31;40m"},
+		{"palette that is not VGA", campbell + "\x1b[?1;2c", "\x1b[0;38;2;170;0;0;48;2;0;0;0m"},
+		{"no OSC 4 reply", "\x1b[?1;2c", "\x1b[0;31;40m"},
+	}
+	for _, tt := range tests {
+		synctest.Test(t, func(t *testing.T) {
+			cl := client{will: allOpts, naws: naws(80, 24), ttype: []string{"xterm-direct"}, cpr: "1;2", term: tt.replies}
+			term, f, _, _, err := probeLog(t, cl, testTimeouts)
+			if err != nil {
+				t.Fatalf("%s: %v", tt.name, err)
+			}
+			s := screen.Style{Fg: screen.VGAColour(1), Bg: screen.VGAColour(0)}
+			if err := term.Page(screen.Page{Rows: []screen.Row{{{Grapheme: "a", Style: s}}}, Cols: 1}); err != nil {
+				t.Fatal(err)
+			}
+			if out := f.output(); !strings.HasSuffix(out, tt.want+"a\x1b[0m\x1b[?2026l") {
+				t.Errorf("%s: output %q does not end with %q", tt.name, out, tt.want+"a")
+			}
+		})
+	}
+}
+
 func TestProbeWrite(t *testing.T) {
 	// Section 5.7: the queries in one write, DA1 last, then the erase.
 	want := "\râ\x1b[6n\x1b[38;2;1;2;3m\x1bP$qm\x1b\\\x1b[0m\x1b[>0q\x1b[>c" +

@@ -127,6 +127,24 @@ func TestStyles(t *testing.T) {
 	}
 }
 
+// TestVGA: each index 0–15 of art is a VGA colour, also from 38;5;n and 48;5;n,
+// and also in a cell that the data does not write (section 3).
+func TestVGA(t *testing.T) {
+	vga, idx := screen.VGAColour, screen.IndexColour
+	a := parse(t, flat("\x1b[31;104mA\x1b[0;38;5;15;48;5;16mB\x1b[0;39;49mC", 4, 0))
+	want := []screen.Style{
+		{Fg: vga(1), Bg: vga(12)},
+		{Fg: vga(15), Bg: idx(16)},
+		{Fg: vga(7), Bg: vga(0)},
+		{Fg: vga(7), Bg: vga(0)},
+	}
+	for c, w := range want {
+		if got := a.Rows[0][c].Style; got != w {
+			t.Errorf("cell %d: style %+v, want %+v", c+1, got, w)
+		}
+	}
+}
+
 // withField sets the byte at the offset of the SAUCE record of file to v.
 func withField(file []byte, offset int, v byte) []byte {
 	file[len(file)-128+offset] = v

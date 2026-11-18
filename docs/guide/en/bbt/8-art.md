@@ -122,6 +122,22 @@ The BBS finds the field in the art and puts the value in its place.
 
 Full rules: [art-format](../../../specs/art-format.md), section 4.
 
+## The colours of art
+
+The colours 0–15 of art are the VGA colours: the colours of the art editors.
+A terminal can show the colours 0–15 with other values. For example, Windows Terminal
+shows the colour 1 as `c50f1f`, not as the VGA `aa0000`.
+
+- At the connect, the BBS asks the terminal for its colours 0–15.
+- When they differ from VGA, the BBS sends the VGA values of art as RGB colours.
+  To a terminal with 256 colours, the BBS sends the nearest index 16–255.
+- To a terminal with 16 colours, and when the terminal does not reply, the BBS sends
+  the indexes 0–15. The terminal shows them in its own colours.
+- The theme and the style tokens, for example `{!14}`, always give indexes.
+  The terminal shows them in its own colours.
+
+Full rules: [telnet-term](../../../specs/telnet-term.md), section 7.3.
+
 ## Art for small terminals
 
 A screen can show other content on a narrow terminal. Example with art of 80 columns:

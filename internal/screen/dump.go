@@ -37,7 +37,7 @@ func WritePage(w io.Writer, p Page) error {
 		sep := " "
 		for start := 0; start < len(line); {
 			end := start + 1
-			for end < len(line) && line[end].Style == line[start].Style {
+			for end < len(line) && dumpStyle(line[end].Style) == dumpStyle(line[start].Style) {
 				end++
 			}
 			fmt.Fprintf(&b, "%s%d-%d %s", sep, start+1, end, line[start].Style)
@@ -48,4 +48,15 @@ func WritePage(w io.Writer, p Page) error {
 	}
 	_, err := b.WriteTo(w)
 	return err
+}
+
+// dumpStyle gives the style s with each VGA colour as its index.
+// So a VGA colour and the same index are one run (section 3.3).
+func dumpStyle(s Style) Style {
+	for _, c := range []*Colour{&s.Fg, &s.Bg} {
+		if c.Kind == VGA {
+			c.Kind = Index
+		}
+	}
+	return s
 }
