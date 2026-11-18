@@ -2,28 +2,28 @@
 width = [80, 132]
 [[item]]
 key = "0"
-do = "gosub en-setup-read"
-args = { file = "en/guide/setup/README.md" }
+do = "gosub en-read"
+args = { file = "en/guide/setup/README.md", title = "Setup guide" }
 [[item]]
 key = "1"
-do = "gosub en-setup-read"
-args = { file = "en/guide/setup/1-program.md" }
+do = "gosub en-read"
+args = { file = "en/guide/setup/1-program.md", title = "Setup guide" }
 [[item]]
 key = "2"
-do = "gosub en-setup-read"
-args = { file = "en/guide/setup/2-bbs-directory.md" }
+do = "gosub en-read"
+args = { file = "en/guide/setup/2-bbs-directory.md", title = "Setup guide" }
 [[item]]
 key = "3"
-do = "gosub en-setup-read"
-args = { file = "en/guide/setup/3-bbs-toml.md" }
+do = "gosub en-read"
+args = { file = "en/guide/setup/3-bbs-toml.md", title = "Setup guide" }
 [[item]]
 key = "4"
-do = "gosub en-setup-read"
-args = { file = "en/guide/setup/4-commands.md" }
+do = "gosub en-read"
+args = { file = "en/guide/setup/4-commands.md", title = "Setup guide" }
 [[item]]
 key = "5"
-do = "gosub en-setup-read"
-args = { file = "en/guide/setup/5-systemd.md" }
+do = "gosub en-read"
+args = { file = "en/guide/setup/5-systemd.md", title = "Setup guide" }
 [[item]]
 key = "ESC"
 do = "back"

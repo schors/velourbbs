@@ -8,8 +8,8 @@ key = "2"
 do = "gosub ru-bbt"
 [[item]]
 key = "3"
-do = "gosub ru-text-read"
-args = { file = "ru/features.md" }
+do = "gosub ru-read"
+args = { file = "ru/features.md", title = "Velour" }
 [[item]]
 key = "ESC"
 do = "back"

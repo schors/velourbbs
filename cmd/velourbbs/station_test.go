@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -43,12 +44,16 @@ func TestStation(t *testing.T) {
 		cases = append(cases, tcase{screen: screen, size: "80x24", colors: "256"},
 			tcase{screen: screen, size: "132x43", colors: "256"})
 	}
-	// Each file screen with its first file: 80 form only.
-	for _, lang := range []string{"ru", "en"} {
-		cases = append(cases,
-			tcase{screen: lang + "-setup-read", size: "80x24", colors: "256", file: lang + "/guide/setup/README.md"},
-			tcase{screen: lang + "-bbt-read", size: "80x24", colors: "256", file: lang + "/guide/bbt/README.md"},
-			tcase{screen: lang + "-text-read", size: "80x24", colors: "256", file: lang + "/features.md"})
+	// The file screen with the first file of each catalog: 80 form only.
+	for _, c := range []struct{ lang, setup, bbt string }{
+		{"ru", "Руководство по установке", "Руководство по BBT"}, {"en", "Setup guide", "BBT guide"},
+	} {
+		read := func(file, title, tag string) tcase {
+			return tcase{screen: c.lang + "-read", size: "80x24", colors: "256", file: c.lang + "/" + file,
+				set: []string{"arg.title=" + title}, tag: "-" + tag}
+		}
+		cases = append(cases, read("guide/setup/README.md", c.setup, "setup"),
+			read("guide/bbt/README.md", c.bbt, "bbt"), read("features.md", "Velour", "features"))
 	}
 	fsys := os.DirFS(filepath.Join("..", "..", "station"))
 	var out, errOut bytes.Buffer
@@ -101,8 +106,12 @@ func TestStationGuideLinks(t *testing.T) {
 // TestStationItems checks that the ru- and the en- screens of the home BBS
 // have the same items: the front matter of each file equals the front matter
 // of the other file with the language replaced in the screen names and in the
-// content paths. Both directions catch a goto or a gosub from a screen of one language
+// content paths. The title args are text of the language, so the test ignores their values.
+// Both directions catch a goto or a gosub from a screen of one language
 // to a screen or a file of the other.
+// titleArg is the title arg of an item.
+var titleArg = regexp.MustCompile(`title = "[^"]*"`)
+
 func TestStationItems(t *testing.T) {
 	dir := filepath.Join("..", "..", "station", "screens")
 	ru, err := filepath.Glob(filepath.Join(dir, "ru-*.bbt"))
@@ -120,7 +129,8 @@ func TestStationItems(t *testing.T) {
 	toRu := strings.NewReplacer("en-", "ru-", `"en/`, `"ru/`)
 	for _, ruFile := range ru {
 		enFile := filepath.Join(dir, "en-"+strings.TrimPrefix(filepath.Base(ruFile), "ru-"))
-		ruFront, enFront := frontMatter(t, ruFile), frontMatter(t, enFile)
+		ruFront := titleArg.ReplaceAllString(frontMatter(t, ruFile), `title = ""`)
+		enFront := titleArg.ReplaceAllString(frontMatter(t, enFile), `title = ""`)
 		if want := toEn.Replace(ruFront); enFront != want {
 			t.Errorf("%s: front matter\n%s\nwant\n%s", enFile, enFront, want)
 		}
