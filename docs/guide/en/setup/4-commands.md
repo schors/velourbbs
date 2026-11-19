@@ -3,7 +3,8 @@
 ## `velourbbs check`
 
 Run it after each change of a file and before each restart of the BBS.
-It checks `bbs.toml` and the screens. When the files are correct, it gives no output.
+It checks `bbs.toml`, the screens and the data file. It reads the data file only when the file exists.
+It never writes the data file. When the files are correct, it gives no output.
 Else it gives one line for each error or warning:
 
 ```
@@ -53,6 +54,8 @@ Details: task 8 of the [BBT guide](../bbt/8-art.md).
 It starts the telnet server. The server listens on port 2323.
 
 - It does the checks of `velourbbs check` first. After an error, it exits with status 1.
+- Then it reads the data file. When the file does not exist, it creates it.
+  After an error of the data file, it exits with status 1.
 - If it cannot listen on the address of `listen`, it exits with status 1.
 - It writes the log to the standard error: a `listen` line with the address and its source,
   a line with the values of the terminal of each client, and a `close` line
@@ -73,7 +76,7 @@ Full rules: [telnet-term](../../../specs/telnet-term.md), section 10.
 
 ## Result
 
-1. In `/srv/velourbbs`, run `velourbbs serve`. It writes the `listen` line.
+1. In `/srv/velourbbs`, run `sudo -u velourbbs velourbbs serve`. It writes the `listen` line.
 2. Connect a telnet client to the host, port 2323, for example `telnet localhost 2323`.
    The client shows the screen `main`: the header "Lamp" and the menu `A R T G`.
    Press `G` to end the session.

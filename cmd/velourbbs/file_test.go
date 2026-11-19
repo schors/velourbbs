@@ -101,7 +101,7 @@ func TestPreviewFileArg(t *testing.T) {
 			fsys[name] = &fstest.MapFile{Data: data}
 		}
 		var out, errOut bytes.Buffer
-		status := run(append([]string{"preview"}, tt.args...), fsys, &out, &errOut)
+		status := run(append([]string{"preview"}, tt.args...), t.TempDir(), fsys, &out, &errOut)
 		if out.Len() != 0 || errOut.String() != tt.errOut || status != exitError {
 			t.Errorf("%q: stdout %q, stderr %q, status %d; want stderr %q, status 1", tt.args, out.String(), errOut.String(), status, tt.errOut)
 		}
@@ -117,7 +117,7 @@ func TestPreviewFileArgLines(t *testing.T) {
 		"content/a.md":     {Data: []byte("# A\n")},
 	}
 	var out, errOut bytes.Buffer
-	status := run([]string{"preview", "view", "--set", "arg.file=a.md"}, fsys, &out, &errOut)
+	status := run([]string{"preview", "view", "--set", "arg.file=a.md"}, t.TempDir(), fsys, &out, &errOut)
 	want := "velourbbs preview: arg.file: lines: \"a.md\" is a Markdown file\n"
 	if out.Len() != 0 || errOut.String() != want || status != exitError {
 		t.Errorf("stdout %q, stderr %q, status %d; want stderr %q, status 1", out.String(), errOut.String(), status, want)
@@ -150,12 +150,12 @@ func TestFileSymlink(t *testing.T) {
 	}
 	fsys := os.DirFS(bbs)
 	var out, errOut bytes.Buffer
-	if status := run([]string{"check"}, fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
+	if status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
 		t.Errorf("check: stdout %q, stderr %q, status %d; want no output and status 0", out.String(), errOut.String(), status)
 	}
 	out.Reset()
 	errOut.Reset()
-	status := run([]string{"preview", "main", "--size", "40x10"}, fsys, &out, &errOut)
+	status := run([]string{"preview", "main", "--size", "40x10"}, t.TempDir(), fsys, &out, &errOut)
 	if !strings.Contains(out.String(), "|A file outside the BBS directory.       |") || errOut.Len() != 0 || status != 0 {
 		t.Errorf("preview: stderr %q, status %d, stdout:\n%s", errOut.String(), status, out.String())
 	}

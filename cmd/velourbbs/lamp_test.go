@@ -25,7 +25,7 @@ func TestLamp(t *testing.T) {
 	for _, lang := range []string{"en", "ru"} {
 		fsys := os.DirFS(filepath.Join("..", "..", "examples", "lamp", lang))
 		var out, errOut bytes.Buffer
-		if status := run([]string{"check"}, fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
+		if status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
 			t.Errorf("%s: check: stdout %q, stderr %q, status %d; want no output and status 0", lang, out.String(), errOut.String(), status)
 		}
 		for _, c := range cases {
@@ -39,7 +39,7 @@ func TestLamp(t *testing.T) {
 			if dump == "" {
 				dump = c.screen + "-" + c.size + "-" + c.colors
 			}
-			status := run(args, fsys, &out, &errOut)
+			status := run(args, t.TempDir(), fsys, &out, &errOut)
 			file := filepath.Join("testdata", "lamp", lang, dump+".dump")
 			want, err := os.ReadFile(file)
 			if err != nil {

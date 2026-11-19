@@ -10,7 +10,7 @@ sudo chmod -R a+rX /srv/velourbbs
 
 `/srv/velourbbs` must not exist before the copy.
 `chmod` makes the files readable and the directories readable and searchable for each user.
-The BBS runs as a user without privileges (section 5). This user must read the files.
+The BBS runs as the user `velourbbs` (below). This user must read the files.
 The files belong to root. Edit them as root, for example with `sudoedit`.
 
 The files of Lamp:
@@ -31,16 +31,29 @@ The files of Lamp:
 
 To change the screens, read the [BBT guide](../bbt/README.md).
 
+## The BBS user
+
+The BBS runs as the system user `velourbbs`, without privileges.
+The user has no login and no home directory.
+The BBS writes its data file to the directory `/var/lib/velourbbs` (section 3).
+Create the user and the directory:
+
+```
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin velourbbs
+sudo install -d -o velourbbs -g velourbbs /var/lib/velourbbs
+```
+
 Run each `velourbbs` command in the BBS directory.
-Run `velourbbs check` as your user, not as root: root can read a file
-that the BBS user cannot read.
+Run `velourbbs check` and `velourbbs serve` as the user `velourbbs`:
+`sudo -u velourbbs velourbbs check`. Root can read a file
+that the user `velourbbs` cannot read.
 Full rules: [bbs-toml](../../../specs/bbs-toml.md), section 2.
 
 ## Result
 
 ```
 cd /srv/velourbbs
-velourbbs check
+sudo -u velourbbs velourbbs check
 ```
 
 The command gives no output.

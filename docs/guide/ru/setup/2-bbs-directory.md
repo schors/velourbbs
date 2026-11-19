@@ -10,7 +10,7 @@ sudo chmod -R a+rX /srv/velourbbs
 
 До копирования `/srv/velourbbs` не должен существовать.
 `chmod` делает для каждого пользователя файлы доступными для чтения,
-а каталоги — для чтения и поиска. BBS работает от пользователя без привилегий (раздел 5).
+а каталоги — для чтения и поиска. BBS работает от пользователя `velourbbs` (ниже).
 Этот пользователь должен читать файлы.
 Файлы принадлежат root. Редактируй их от root, например с помощью `sudoedit`.
 
@@ -32,16 +32,29 @@ sudo chmod -R a+rX /srv/velourbbs
 
 Как менять экраны, читай в [руководстве по BBT](../bbt/README.md).
 
+## Пользователь BBS
+
+BBS работает от системного пользователя `velourbbs`, без привилегий.
+У пользователя нет входа в систему и нет домашнего каталога.
+BBS пишет свой файл данных в каталог `/var/lib/velourbbs` (раздел 3).
+Создай пользователя и каталог:
+
+```
+sudo useradd --system --no-create-home --shell /usr/sbin/nologin velourbbs
+sudo install -d -o velourbbs -g velourbbs /var/lib/velourbbs
+```
+
 Запускай каждую команду `velourbbs` в каталоге BBS.
-Запускай `velourbbs check` от своего пользователя, не от root: root может прочитать файл,
-который пользователь BBS прочитать не может.
+Запускай `velourbbs check` и `velourbbs serve` от пользователя `velourbbs`:
+`sudo -u velourbbs velourbbs check`. Root может прочитать файл,
+который пользователь `velourbbs` прочитать не может.
 Полные правила: [bbs-toml](../../../specs/bbs-toml.md), раздел 2.
 
 ## Результат
 
 ```
 cd /srv/velourbbs
-velourbbs check
+sudo -u velourbbs velourbbs check
 ```
 
 Команда ничего не выводит.

@@ -28,6 +28,9 @@ trap on_exit EXIT
 cd "$base"
 
 next "check the station"
+# The data file stays in ~/velourbbs/data/ between releases.
+mkdir -p data
+ln -sfn "$base/data" "$in/station/data"
 (cd "$in/station" && ../velourbbs check)
 
 next "install releases/$tag"

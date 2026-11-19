@@ -34,8 +34,15 @@ type Limits struct {
 	OutputTimeout time.Duration
 }
 
-// The defaults of bbs-toml, sections 3.1 and 3.3.
+// Store is the table [store] (bbs-toml, section 3.4).
+type Store struct {
+	// Path is the data file. A relative path is relative to the BBS directory.
+	Path string
+}
+
+// The defaults of bbs-toml, sections 3.1, 3.3 and 3.4.
 var (
+	defaultStore  = Store{Path: "velourbbs.jsonl"}
 	defaultTelnet = Telnet{Listen: ":2323", ProbeTimeout: 5 * time.Second}
 	defaultLimits = Limits{
 		MaxConns:          64,
@@ -66,6 +73,11 @@ type limitsDoc struct {
 	OutputTimeout     *int64    `toml:"output_timeout"`
 }
 
+// storeDoc is the plain decode of [store]. A nil pointer is a key that is not set.
+type storeDoc struct {
+	Path *string `toml:"path"`
+}
+
 // errorFunc reports an error of a value.
 type errorFunc func(format string, args ...any)
 
@@ -93,6 +105,19 @@ func limits(d limitsDoc, errorf errorFunc) Limits {
 	setPrefixes("limits.allow", d.Allow, &c.Allow, errorf)
 	setSeconds("limits.idle_timeout", d.IdleTimeout, &c.IdleTimeout, errorf)
 	setSeconds("limits.output_timeout", d.OutputTimeout, &c.OutputTimeout, errorf)
+	return c
+}
+
+// store gives the settings of [store]. An invalid value keeps its default.
+func store(d storeDoc, errorf errorFunc) Store {
+	c := defaultStore
+	if d.Path != nil {
+		if *d.Path == "" {
+			errorf("store.path: must not be empty")
+		} else {
+			c.Path = *d.Path
+		}
+	}
 	return c
 }
 

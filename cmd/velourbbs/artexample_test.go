@@ -12,12 +12,12 @@ import (
 func TestArtExample(t *testing.T) {
 	fsys := os.DirFS(filepath.Join("..", "..", "examples", "art"))
 	var out, errOut bytes.Buffer
-	if status := run([]string{"check"}, fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
+	if status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
 		t.Errorf("check: stdout %q, stderr %q, status %d; want no output and status 0", out.String(), errOut.String(), status)
 	}
 	out.Reset()
 	errOut.Reset()
-	status := run([]string{"preview", "main", "--size", "80x24", "--set", "term.colors=256"}, fsys, &out, &errOut)
+	status := run([]string{"preview", "main", "--size", "80x24", "--set", "term.colors=256"}, t.TempDir(), fsys, &out, &errOut)
 	file := filepath.Join("testdata", "art", "main-80x24-256.dump")
 	want, err := os.ReadFile(file)
 	if err != nil {

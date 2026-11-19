@@ -57,7 +57,7 @@ func TestStation(t *testing.T) {
 	}
 	fsys := os.DirFS(filepath.Join("..", "..", "station"))
 	var out, errOut bytes.Buffer
-	if status := run([]string{"check"}, fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
+	if status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
 		t.Errorf("check: stdout %q, stderr %q, status %d; want no output and status 0", out.String(), errOut.String(), status)
 	}
 	for _, c := range cases {
@@ -76,7 +76,7 @@ func TestStation(t *testing.T) {
 			args = append(args, "--set", v)
 		}
 		name += c.tag
-		status := run(args, fsys, &out, &errOut)
+		status := run(args, t.TempDir(), fsys, &out, &errOut)
 		file := filepath.Join("testdata", "station", name+".dump")
 		want, err := os.ReadFile(file)
 		if err != nil {

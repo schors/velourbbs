@@ -14,7 +14,7 @@ import (
 func runIn(t *testing.T, dir string, args ...string) (stdout, stderr string, status int) {
 	t.Helper()
 	var out, errOut bytes.Buffer
-	status = run(args, os.DirFS("testdata/"+dir), &out, &errOut)
+	status = run(args, "testdata/"+dir, os.DirFS("testdata/"+dir), &out, &errOut)
 	return out.String(), errOut.String(), status
 }
 
@@ -57,7 +57,7 @@ screens/main.bbt:2:1: item 3: key is missing
 			"screens/about.bbt":    {Data: []byte("About\n")},
 		}
 		var out, errOut bytes.Buffer
-		status := run([]string{"check"}, fsys, &out, &errOut)
+		status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut)
 		if out.String() != "" || errOut.String() != tt.want || status != exitError {
 			t.Errorf("stdout %q, stderr:\n%s\nstatus %d; want stderr:\n%s\nstatus 1", out.String(), errOut.String(), status, tt.want)
 		}
@@ -81,7 +81,7 @@ func TestCheckLimits(t *testing.T) {
 bbs.toml:1:1: limits.allow: invalid address or prefix "x"
 `
 	var out, errOut bytes.Buffer
-	status := run([]string{"check"}, fsys, &out, &errOut)
+	status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut)
 	if out.String() != "" || errOut.String() != want || status != exitError {
 		t.Errorf("stdout %q, stderr:\n%s\nstatus %d; want stderr:\n%s\nstatus 1", out.String(), errOut.String(), status, want)
 	}
@@ -108,7 +108,7 @@ screens/screens.toml:3:5: fields.r: must be a string
 			"screens/_f.bbt":       {Data: []byte("{w} {r}\n")},
 		}
 		var out, errOut bytes.Buffer
-		status := run([]string{"check"}, fsys, &out, &errOut)
+		status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut)
 		wantStatus := 0
 		if tt.want != "" {
 			wantStatus = exitError
@@ -127,7 +127,7 @@ func TestCheckDepthTheme(t *testing.T) {
 		"screens/main.bbt":     {Data: []byte("+++\n[[item]]\nkey = \"g\"\ndo = \"logoff\"\n+++\n{!title}a{!x}\n")},
 	}
 	var out, errOut bytes.Buffer
-	status := run([]string{"check"}, fsys, &out, &errOut)
+	status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut)
 	want := "screens/main.bbt:6:10: unknown style \"x\"\n"
 	if errOut.String() != want || status != exitError {
 		t.Errorf("stderr %q, status %d; want %q, status %d", errOut.String(), status, want, exitError)
@@ -137,7 +137,7 @@ func TestCheckDepthTheme(t *testing.T) {
 func TestCheckNoConfig(t *testing.T) {
 	fsys := fstest.MapFS{"screens/main.bbt": {Data: []byte("Hello\n")}}
 	var out, errOut bytes.Buffer
-	status := run([]string{"check"}, fsys, &out, &errOut)
+	status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut)
 	if !strings.HasPrefix(errOut.String(), "bbs.toml:1:1: ") || status != exitError {
 		t.Errorf("stderr %q, status %d; want an error at bbs.toml:1:1 and status 1", errOut.String(), status)
 	}
@@ -371,7 +371,7 @@ styles
 				"{!title}Welcome!{!}\n{!prompt}[G]oodbye\n")},
 		}
 		var out, errOut bytes.Buffer
-		status := run(append([]string{"preview", "main"}, tt.args...), fsys, &out, &errOut)
+		status := run(append([]string{"preview", "main"}, tt.args...), t.TempDir(), fsys, &out, &errOut)
 		if out.String() != tt.want || errOut.Len() != 0 || status != 0 {
 			t.Errorf("theme %s %q: stdout:\n%s\nstderr %q, status %d; want stdout:\n%s",
 				tt.choice, tt.args, out.String(), errOut.String(), status, tt.want)
@@ -522,7 +522,7 @@ func TestPreviewKeysNoGoodbye(t *testing.T) {
 	want := "screen main\n" + page(40, 10, "Bye") + "key G\nlogoff\n"
 	wantErr := "velourbbs preview: key \"X\" after logoff\n"
 	var out, errOut bytes.Buffer
-	status := run([]string{"preview", "main", "--size", "40x10", "--keys", "G,x"}, fsys, &out, &errOut)
+	status := run([]string{"preview", "main", "--size", "40x10", "--keys", "G,x"}, t.TempDir(), fsys, &out, &errOut)
 	if out.String() != want || errOut.String() != wantErr || status != exitError {
 		t.Errorf("stdout:\n%s\nstderr %q, status %d; want stdout:\n%s\nstderr %q, status 1",
 			out.String(), errOut.String(), status, want, wantErr)
@@ -541,7 +541,7 @@ func TestPreviewKeysPages(t *testing.T) {
 			"[[item]]\nkey = \"ANY\"\ndo = \"goto main\"\n+++\n" + body.String())},
 	}
 	var out, errOut bytes.Buffer
-	status := run([]string{"preview", "main", "--size", "40x10", "--keys", "X,Y"}, fsys, &out, &errOut)
+	status := run([]string{"preview", "main", "--size", "40x10", "--keys", "X,Y"}, t.TempDir(), fsys, &out, &errOut)
 	var events []string
 	for line := range strings.Lines(out.String()) {
 		if !strings.HasPrefix(line, "|") && !strings.HasPrefix(line, "styles") && !strings.Contains(line, ": ") {
@@ -570,7 +570,7 @@ func TestPreviewZone(t *testing.T) {
 			"screens/main.bbt":     {Data: []byte("+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n{bbs.time}\n")},
 		}
 		var out, errOut bytes.Buffer
-		status := run([]string{"preview", "main", "--size", "40x10"}, fsys, &out, &errOut)
+		status := run([]string{"preview", "main", "--size", "40x10"}, t.TempDir(), fsys, &out, &errOut)
 		if !strings.Contains(out.String(), "|"+tt.want+" ") || errOut.String() != "" || status != 0 {
 			t.Errorf("%q: stdout:\n%s\nstderr %q, status %d; want %q", tt.zone, out.String(), errOut.String(), status, tt.want)
 		}

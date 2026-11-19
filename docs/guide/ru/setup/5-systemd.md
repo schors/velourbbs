@@ -17,7 +17,10 @@ Type=exec
 ExecStart=/usr/local/bin/velourbbs serve
 WorkingDirectory=/srv/velourbbs
 Restart=on-failure
-DynamicUser=yes
+User=velourbbs
+ProtectSystem=strict
+ProtectHome=read-only
+StateDirectory=velourbbs
 MemoryMax=128M
 TasksMax=64
 LimitNOFILE=1024
@@ -34,7 +37,9 @@ WantedBy=multi-user.target
 | `ExecStart=/usr/local/bin/velourbbs serve` | Команда. |
 | `WorkingDirectory=/srv/velourbbs` | Каталог BBS. |
 | `Restart=on-failure` | systemd снова запускает BBS после сбоя. |
-| `DynamicUser=yes` | BBS работает от нового пользователя без привилегий. Система для него только для чтения, и `/home` только для чтения. BBS только читает каталог BBS, поэтому это ей не мешает. |
+| `User=velourbbs` | BBS работает от пользователя из раздела 2, без привилегий. Файл данных принадлежит этому пользователю. |
+| `ProtectSystem=strict`, `ProtectHome=read-only` | Система и `/home` для BBS только для чтения. BBS только читает каталог BBS, поэтому это ей не мешает. |
+| `StateDirectory=velourbbs` | `/var/lib/velourbbs/` остаётся доступным BBS для записи. Там файл данных. |
 | `MemoryMax=128M` | Лимит памяти. Он рассчитан на значения `bbs.toml` по умолчанию. «Лампа» использовала 6,8 МБ при запуске, 11,9 МБ с 64 сеансами и 15,8 МБ с 300 сеансами. |
 | `TasksMax=64` | Лимит потоков. |
 | `LimitNOFILE=1024` | Лимит открытых файлов. |
@@ -65,7 +70,7 @@ sudo journalctl -u velourbbs
 ```
 cd /srv/velourbbs
 sudo chmod -R a+rX /srv/velourbbs
-velourbbs check && sudo systemctl restart velourbbs
+sudo -u velourbbs velourbbs check && sudo systemctl restart velourbbs
 ```
 
 После изменения `/etc/systemd/system/velourbbs.service`:
@@ -74,6 +79,38 @@ velourbbs check && sudo systemctl restart velourbbs
 sudo systemctl daemon-reload
 sudo systemctl restart velourbbs
 ```
+
+## Файл данных
+
+BBS пишет файл данных `/var/lib/velourbbs/velourbbs.jsonl`, пока работает.
+Это текстовый файл: по одному объекту JSON на строку. Останови BBS, прежде чем копировать
+или редактировать файл. Используй `sudo -u velourbbs cp` и `sudoedit`: тогда владельцем файла
+остаётся `velourbbs`.
+
+Сделай резервную копию:
+
+```
+sudo systemctl stop velourbbs
+cd /var/lib/velourbbs
+sudo -u velourbbs cp velourbbs.jsonl velourbbs.jsonl.bak
+sudo systemctl start velourbbs
+```
+
+Чтобы восстановить её, останови BBS и так же скопируй `velourbbs.jsonl.bak` обратно в `velourbbs.jsonl`.
+
+Новый выпуск `velourbbs` может изменить формат файла. Тогда старый выпуск
+не может прочитать файл. Сделай резервную копию перед установкой нового выпуска.
+
+Отредактируй файл:
+
+```
+sudo systemctl stop velourbbs
+sudoedit /var/lib/velourbbs/velourbbs.jsonl
+cd /srv/velourbbs
+sudo -u velourbbs velourbbs check && sudo systemctl start velourbbs
+```
+
+Полные правила: [data-store](../../../specs/data-store.md), раздел 8.
 
 ## Лимиты
 
