@@ -2,14 +2,14 @@
 width = [80, 132]
 [[item]]
 key = "1"
-do = "gosub ru-setup"
+do = "gosub setup"
 [[item]]
 key = "2"
-do = "gosub ru-bbt"
+do = "gosub bbt"
 [[item]]
 key = "3"
-do = "gosub ru-read"
-args = { file = "ru/features.md", title = "Velour" }
+do = "gosub read"
+args = { file = "features.md", title = "Velour" }
 [[item]]
 key = "ESC"
 do = "back"
