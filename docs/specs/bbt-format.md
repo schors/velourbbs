@@ -65,7 +65,7 @@ The front matter is TOML 1.1. An unknown key is an error.
 | `align` | string | The horizontal position: `"left"`, `"center"` or `"right"`. Section 6.1. |
 | `valign` | string | The vertical position: `"top"`, `"middle"` or `"bottom"`. Section 6.5. |
 | `fill` | string | The fill rows: `"none"`, `"spaces"` or `"erase"`. Section 6.5. |
-| `gutter` | integer | The least empty cells on each side of the screen area, from 0 to 100. Section 6.1. |
+| `gutter` | integer | The cells that the render width leaves on each side of the screen area, from 0 to 100. Section 6.1. |
 | `file`, `lines`, `numbers`, `margin` | — | The file of a file screen: [file-view](file-view.md), section 3. |
 | `data`, `rows`, `select` | — | The list of a list screen: [list-view](list-view.md), section 3. |
 | `[[item]]` | array of tables | Menu items with `key`, `do`, an optional `when` and optional `args`. Section 8. An array of inline tables is the same: `item = [{ key = "G", do = "logoff" }]`. |
@@ -205,10 +205,12 @@ string  = '"' { any character except '"' and '}' } '"' ;
 - When `term.cols` > W, the "screen area" has a left margin. F is `term.cols - W`.
   The margin is `F - min(gutter, F)` cells with `align = "right"`, `F / 2` cells, rounded down,
   with `"center"`, and `min(gutter, F)` cells with `"left"`.
-- Example: `width = [64, 104]`, `align = "center"` and `gutter = 8` give W = 64 and a margin
-  of 8 at 80 columns, and W = 104 and a margin of 14 at 132 columns.
+- Example: `width = [68, 108]`, `align = "center"` and `gutter = 6` give W = 68 and a margin
+  of 6 at 80 columns, and W = 108 and a margin of 12 at 132 columns.
+  Source lines that start with 2 spaces then start at the columns 8 and 14,
+  and a mark 2 cells left of them is in the screen area.
 - When `term.cols` < `min`, the host renders at W = `min` and cuts each row at `term.cols`.
-- A screen with art of width `a` for smaller terminals has `width = [40, a]` and this body:
+- A screen with art of width `a` for smaller terminals has `width = [40, a]`, `gutter = 0` and this body:
 
 ```
 {#if term.cols < a}

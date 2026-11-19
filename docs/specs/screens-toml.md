@@ -35,7 +35,7 @@ The other specifications define the effect of a key and refer to this specificat
 | `align` | string | `"center"` | The horizontal position of a screen: [bbt-format](bbt-format.md), section 6.1. |
 | `valign` | string | `"top"` | The vertical position of a screen: [bbt-format](bbt-format.md), section 6.5. |
 | `fill` | string | `"none"` | The fill rows: [bbt-format](bbt-format.md), section 6.5. |
-| `gutter` | integer | `0` | The least empty cells on each side of the screen area: [bbt-format](bbt-format.md), section 6.1. |
+| `gutter` | integer | `0` | The cells that the render width leaves on each side of the screen area: [bbt-format](bbt-format.md), section 6.1. |
 | `time` | string | `"2006-01-02 15:04:05"` | The layout of the Go package `time` for the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 | `zone` | string | `"Local"` | The time zone of the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 | `theme` | string | `"dark"` | The theme choice at the start of a session: `dark`, `light` or `auto` (section 3.2). |
