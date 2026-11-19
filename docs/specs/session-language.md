@@ -74,7 +74,8 @@ The host finds a file by its name in the session language `<code>`:
   is an error, not a step to the common file.
 
 - The search applies to a screen of `goto`, `gosub` and `[menu] start`, to `goodbye` and `shutdown`,
-  to an include, to an art insert and to the file of a file screen.
+  to an include, to an art insert, to the file of a file screen and to the directory
+  of the provider `files` ([list-view](list-view.md), section 4.1).
 - An include, an art insert and a file of a screen use the session language,
   also in a common screen. Example: the common screen `main` with `{>_logo}` in the language `ru`
   shows `screens/ru/_logo.bbt` if it exists, else `screens/_logo.bbt`.

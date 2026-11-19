@@ -346,6 +346,9 @@ The host shows a page ([menu-nav](menu-nav.md), section 5) in this order:
    - a fill row with `fill = "spaces"`: `ESC[<row>;1H`, then `term.cols` spaces in `normal`.
 3. `ESC[0m ESC[?2026l`: reset the style and end the synchronized output.
 
+- An update of a page ([menu-nav](menu-nav.md), section 5.3) has the same steps,
+  without the clear of step 1 and without the fill rows. Step 2 sends only each row
+  whose cells differ from the row of the shown page.
 - With the synchronized output (mode 2026), the terminal shows the page at once, not row
   by row. The host sends it without a query. A terminal without the mode ignores it.
 - A wide grapheme appears once. Its second cell gives no output.

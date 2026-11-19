@@ -3,7 +3,7 @@
 This specification defines the BBT files and the layout of a screen.
 Related parts: [art-format](art-format.md), [screens-toml](screens-toml.md),
 [bbs-toml](bbs-toml.md), [screen-render](screen-render.md), [menu-nav](menu-nav.md),
-[file-view](file-view.md), [session-fields](session-fields.md) and [telnet-term](telnet-term.md).
+[file-view](file-view.md), [list-view](list-view.md), [session-fields](session-fields.md) and [telnet-term](telnet-term.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -66,6 +66,7 @@ The front matter is TOML 1.1. An unknown key is an error.
 | `valign` | string | The vertical position: `"top"`, `"middle"` or `"bottom"`. Section 6.5. |
 | `fill` | string | The fill rows: `"none"`, `"spaces"` or `"erase"`. Section 6.5. |
 | `file`, `lines`, `numbers`, `margin` | — | The file of a file screen: [file-view](file-view.md), section 3. |
+| `data`, `rows`, `select` | — | The list of a list screen: [list-view](list-view.md), section 3. |
 | `[[item]]` | array of tables | Menu items with `key`, `do`, an optional `when` and optional `args`. Section 8. An array of inline tables is the same: `item = [{ key = "G", do = "logoff" }]`. |
 
 Example:
@@ -94,7 +95,7 @@ do = "logoff"
 `{` starts a token when an ASCII letter, a space or ASCII punctuation other than `{` and `}` follows it.
 Each other `{` is a plain character. In the body, `{{` gives a plain `{`.
 A token ends at the first `}` on the same line. A token without `}` is an error.
-In art, only [art-format](art-format.md), section 4, defines the field tokens.
+In art, only [art-format](art-format.md), sections 4 and 5, defines the tokens.
 
 | Token | Meaning |
 |---|---|
@@ -106,6 +107,7 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `{>_<name>}` | Include of the fragment `_<name>.bbt`. Section 3.4. |
 | `{><name>.ans}` | Art insert of the art `<name>.ans`. Sections 3.4 and 6.2. |
 | `{>file}` | The file area of a file screen: [file-view](file-view.md), section 3.1. |
+| `{#each}` `{/each}` | A list line of a list screen: [list-view](list-view.md), section 5. |
 | `{@<id>}` `{/@}` | Reserved for marks. An error in the MVP. |
 | `{<punctuation>...}` | Each other token that starts with ASCII punctuation is reserved for new tokens. An error. |
 
@@ -144,6 +146,7 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `item.<KEY>` | boolean | True when the item with the key `<KEY>` exists and is enabled (section 8.2). |
 | `arg.<name>` | string | The argument `<name>` of the screen (section 8.5). |
 | `file.*`, `meta.<key>` | — | The fields of a file screen: [file-view](file-view.md), section 3.4. |
+| `row.*`, `list.*` | — | The fields of a list screen: [list-view](list-view.md), section 6. |
 | `session.*`, `bbs.*` | — | The fields of the session and of the BBS: [session-fields](session-fields.md), section 2. |
 
 - A path matches `[a-z][a-z0-9_]*(\.[A-Za-z0-9_]+)?`. A path without a dot is an alias.
@@ -219,6 +222,7 @@ The body gives rows in source order:
 
 - The content of a false block gives nothing: no text, no line end, no art and no include.
 - A source line with a block token gives no row when it has only spaces after the evaluation.
+  A list line is an exception ([list-view](list-view.md), section 5).
 - An art insert gives the rows of the art. Each row starts at the left edge of the screen area.
   The host cuts the art at W. `velourbbs check` warns when the art is wider than `max`.
 - A cut of a row at W or at `term.cols` through a wide grapheme leaves a space in its style.
@@ -241,6 +245,7 @@ The body gives rows in source order:
 
 - A screen has no height limit.
 - A file screen has its own pages: [file-view](file-view.md), section 3.2.
+- A list screen has its own pages: [list-view](list-view.md), section 7.
 - When another screen has more rows than `term.rows`, the host shows it in pages of `term.rows - 1` rows.
   After each page except the last, the host shows the "More row" ([menu-nav](menu-nav.md), section 5).
 - The More row is the text of [session-language](session-language.md), section 7.2,
@@ -379,7 +384,7 @@ are the same keys.
 | `back` | Show the screen below the current screen again: [menu-nav](menu-nav.md), section 4.1. |
 | `top` | Show the first screen of the navigation stack again: [menu-nav](menu-nav.md), section 4.1. |
 | `logoff` | End the session. |
-| `page next`, `page prev`, `page first`, `page last` | Show another page of a file screen: [file-view](file-view.md), section 3.3. |
+| `page next`, `page prev`, `page first`, `page last` | Show another page of a file screen or a list screen: [file-view](file-view.md), section 3.3. |
 | `theme dark`, `theme light`, `theme auto` | Set the theme choice of the session: [screens-toml](screens-toml.md), section 3.2. |
 | `lang <code>` | Set the session language: [menu-nav](menu-nav.md), section 4. |
 
@@ -407,9 +412,10 @@ without items, the items of `goodbye` and `shutdown`, and the start screen. It a
 - `args` is a table of strings: an inline table or the table `[item.args]`.
   Example: `args = { file = "gold.md" }`.
 - A name matches `[a-z][a-z0-9_]*`. A value cannot have a control character or `{`.
+  `select` of a list screen is an exception ([list-view](list-view.md), section 8).
 - The "arguments of a screen" are the names of the `arg.<name>` fields of the screen:
-  in its body, its fragments, its art, its `when` and its `file`
-  ([file-view](file-view.md), section 3).
+  in its body, its fragments, its art, its `when`, its `file`
+  ([file-view](file-view.md), section 3) and its `data` ([list-view](list-view.md), section 4).
 - A `goto` or a `gosub` gives exactly the arguments of its target screen. A missing argument
   or another argument is an error.
 - The field `arg.<name>` gives the value of the `goto` or the `gosub` that shows the screen.
@@ -428,16 +434,14 @@ without items, the items of `goodbye` and `shutdown`, and the start screen. It a
 - A file or a part of a file over a limit is an error. The loader counts the lines while it expands
   the includes, and stops at the limit.
 - The render stops at the row limit.
-- [art-format](art-format.md), section 5, has the limits of art.
+- [art-format](art-format.md), section 6, has the limits of art.
 
 ## 10. Not in the MVP
 
-- `#each`, list rows in art, data providers and `{#if}` inside art:
-  [lists](https://github.com/schors/velourbbs/issues/9). In the MVP, logic is in the BBS template only.
-- Marks and arrow-key selection: [marks](https://github.com/schors/velourbbs/issues/67).
-  The MVP selects items by hotkey only.
+- Marks and arrow-key selection of items: [marks](https://github.com/schors/velourbbs/issues/67).
+  Items have hotkeys only. A list screen selects a row with the arrow keys ([list-view](list-view.md), section 8).
 - `require` (access checks). It needs users.
-- `ask`, and a field token in an `args` value: [args](https://github.com/schors/velourbbs/issues/66).
+- `ask`, and a field token in an `args` value of an item: [args](https://github.com/schors/velourbbs/issues/66).
 - Punctuation keys, for example `?`.
 - A `label` for an item. The host does not print item text.
 

@@ -61,11 +61,12 @@ section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), sectio
 - `[theme.light]` has only the tables `default`, `16` and `256`: the "light tables".
   They give other styles in the light theme (below).
 - A style name matches `[a-z][a-z0-9_]*`. Its value is a string.
-- The "base theme" is `normal = "7/0"`, `more = "15/0"`, the `md_*` styles of
+- The "base theme" is `normal = "7/0"`, `more = "15/0"`, `select = "0/7"`, the `md_*` styles of
   [file-view](file-view.md), section 4, and the styles of `[theme.default]`.
   A style of `[theme.default]` replaces the style with the same name.
   A "name of the theme" is a name of the base theme.
   The effect of `normal` and `more`: [bbt-format](bbt-format.md), sections 6.2, 6.4 and 7.3.
+  The effect of `select`: [list-view](list-view.md), section 9.
 - Each name of a depth theme and of a light table must be a name of the theme.
 - The "dark theme" of one `term.colors` is the base theme with each style of the depth theme
   of `term.colors` in place of the style with the same name.
@@ -113,10 +114,11 @@ the foreground to an index from 0 to 15.
 `[fields]` maps an alias to a registry path: [bbt-format](bbt-format.md), sections 4.1 and 4.2.
 
 - An alias matches `[a-z][a-z0-9_]*`. Each value is a string. The default `[fields]` is empty.
-- An alias cannot be `term`, `item`, `arg`, `file`, `meta`, `session`, `bbs`, `and`, `or` or `not`.
+- An alias cannot be `term`, `item`, `arg`, `file`, `meta`, `row`, `list`, `session`, `bbs`, `and`, `or` or `not`.
 - A field token with an alias is a field token with its path. So an alias to `arg.<name>`
-  gives an argument of the screen ([bbt-format](bbt-format.md), section 8.5), and an alias to a field
-  of a file screen is valid only in a file screen ([file-view](file-view.md), section 3.4).
+  gives an argument of the screen ([bbt-format](bbt-format.md), section 8.5), an alias to a field
+  of a file screen is valid only in a file screen ([file-view](file-view.md), section 3.4),
+  and an alias to a field of a list screen has the rules of [list-view](list-view.md), section 6.
 - The path is a path of the registry with a dot. It cannot be `item.<KEY>`.
 
 ### 3.4. `[menu]`
