@@ -9,10 +9,9 @@ import (
 	"net/netip"
 	"runtime/debug"
 	"sync"
-	"sync/atomic"
 	"time"
 
-	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/bbs"
 	"github.com/schors/velourbbs/internal/menu"
 	"github.com/schors/velourbbs/internal/screen"
 	"github.com/schors/velourbbs/internal/term"
@@ -36,15 +35,14 @@ const reasonShutdown = "shutdown"
 
 // connState is the state of an open connection for the stop (section 10.2).
 type connState struct {
-	t       *term.Terminal // the terminal of the open session; nil before the session
-	closing bool           // the connection is in its close
-	stopped bool           // the stop closed the connection before the session, or stopped its session
+	probe   bool // the probe started: the context of the sessions stops the connection
+	closing bool // the connection is in its close
+	stopped bool // the stop closed the connection before the probe
 }
 
 // Server is the telnet server of section 10.
 type Server struct {
-	cfg      config.Config
-	screens  map[string]*screen.Screen
+	m        *bbs.Model
 	log      *slog.Logger
 	limits   *Limits
 	to       term.Timeouts
@@ -52,20 +50,23 @@ type Server struct {
 	started  time.Time     // the start of Serve: the start of the listen
 	stopTime time.Duration // the longest time of the stop
 
-	sessions atomic.Int64 // the open sessions (session-fields, section 3.2)
+	ctx    context.Context    // the context of the sessions (session, section 6)
+	cancel context.CancelFunc // the stop cancels ctx
 
-	mu      sync.Mutex
-	conns   map[net.Conn]*connState // the open connections
-	closed  bool                    // the stop started
-	lingers int                     // the connections in the close after output
-	wg      sync.WaitGroup
+	mu       sync.Mutex
+	conns    map[net.Conn]*connState    // the open connections
+	sessions map[*menu.Session]struct{} // the open sessions (session, section 5)
+	closed   bool                       // the stop started
+	lingers  int                        // the connections in the close after output
+	wg       sync.WaitGroup
 }
 
-// New makes a server for the screens of a load without errors and of menu.Check.
-// log is the log of the server. version is the field bbs.version (session-fields, section 3.4).
-func New(cfg config.Config, screens map[string]*screen.Screen, log *slog.Logger, version string) *Server {
+// New makes a server for the model m. log is the log of the server.
+// version is the field bbs.version (session-fields, section 3.4).
+func New(m *bbs.Model, log *slog.Logger, version string) *Server {
+	cfg := m.Config
 	return &Server{
-		cfg: cfg, screens: screens, log: log, version: version,
+		m: m, log: log, version: version,
 		limits: NewLimits(cfg.Limits),
 		to: term.Timeouts{
 			Probe:  cfg.Telnet.ProbeTimeout,
@@ -73,6 +74,7 @@ func New(cfg config.Config, screens map[string]*screen.Screen, log *slog.Logger,
 			Output: cfg.Limits.OutputTimeout,
 		},
 		conns:    map[net.Conn]*connState{},
+		sessions: map[*menu.Session]struct{}{},
 		stopTime: stopTime,
 	}
 }
@@ -82,8 +84,11 @@ func New(cfg config.Config, screens map[string]*screen.Screen, log *slog.Logger,
 // When ctx ends, it stops (section 10.2) and returns nil. After an accept error,
 // it waits acceptWait and accepts again.
 // When ln closes for another reason, Serve stops the same way and returns the error.
+// Call it once.
 func (s *Server) Serve(ctx context.Context, ln net.Listener, source string) error {
 	s.started = time.Now()
+	// Only the stop cancels the context of the sessions: it does it under the lock with closed.
+	s.ctx, s.cancel = context.WithCancel(context.WithoutCancel(ctx))
 	s.log.Info("listen", "addr", ln.Addr().String(), "source", source)
 	stop := func() {
 		_ = ln.Close()
@@ -123,7 +128,7 @@ func (s *Server) Serve(ctx context.Context, ln net.Listener, source string) erro
 }
 
 // stop does steps 1 and 2 of section 10.2 after the close of the listener:
-// it closes each connection before its session and stops each open session.
+// it cancels the context of the sessions and closes each connection before its probe.
 // A connection in its close stays. Only the first call has an effect.
 func (s *Server) stop() {
 	s.mu.Lock()
@@ -132,13 +137,9 @@ func (s *Server) stop() {
 		return
 	}
 	s.closed = true
+	s.cancel()
 	for c, st := range s.conns {
-		switch {
-		case st.closing:
-		case st.t != nil:
-			st.stopped = true
-			st.t.Stop()
-		default:
+		if !st.closing && !st.probe {
 			st.stopped = true
 			_ = c.Close()
 		}
@@ -177,25 +178,41 @@ func (s *Server) add(c net.Conn) bool {
 	return true
 }
 
-// open makes t the terminal of the session on c. It returns false after the stop:
-// the connection was in the probe, and the stop closes it.
-func (s *Server) open(c net.Conn, t *term.Terminal) bool {
+// startProbe marks the start of the probe on c: from here, the context of the sessions
+// stops the connection. It returns false after the stop: the stop closed c.
+func (s *Server) startProbe(c net.Conn) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.closed {
-		s.conns[c].stopped = true
-		_ = c.Close()
 		return false
 	}
-	s.conns[c].t = t
+	s.conns[c].probe = true
 	return true
 }
 
-// stopped reports whether the stop stopped the session on c.
-func (s *Server) stopped(c net.Conn) bool {
+// open adds ss to the open sessions. It returns false after the stop.
+func (s *Server) open(ss *menu.Session) bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.conns[c].stopped
+	if s.closed {
+		return false
+	}
+	s.sessions[ss] = struct{}{}
+	return true
+}
+
+// closeSession removes ss from the open sessions.
+func (s *Server) closeSession(ss *menu.Session) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.sessions, ss)
+}
+
+// openSessions gives the number of open sessions: the field bbs.sessions.
+func (s *Server) openSessions() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.sessions)
 }
 
 // handle runs the connection c and logs its end.
@@ -205,7 +222,7 @@ func (s *Server) handle(c net.Conn) {
 	s.mu.Lock()
 	st := s.conns[c]
 	st.closing = true
-	if st.stopped && st.t == nil {
+	if st.stopped {
 		reason, output = reasonShutdown, false
 	}
 	s.mu.Unlock()
@@ -256,24 +273,32 @@ func (s *Server) session(c net.Conn, accepted time.Time) (addr netip.Addr, reaso
 		defer s.limits.CloseAddr(addr)
 	}
 
-	t, err := term.Probe(&prefixConn{Conn: c, rest: rest}, accepted, s.to, s.log.With("addr", addr))
-	if err != nil {
+	if !s.startProbe(c) {
+		return addr, reasonShutdown, false
+	}
+	t, err := term.Probe(s.ctx, &prefixConn{Conn: c, rest: rest}, accepted, s.to, s.log.With("addr", addr))
+	switch {
+	case errors.Is(err, term.ErrStop):
+		return addr, reasonShutdown, false
+	case err != nil:
 		return addr, err.Error(), errors.Is(err, term.ErrNotUTF8)
 	}
-	if !s.open(c, t) {
+	cfg := s.m.Config
+	ss := menu.New(s.m, t, cfg.Start, nil, cfg.ThemeChoice, s.values)
+	ss.Addr, ss.Accepted = addr, accepted
+	if !s.open(ss) {
+		// The stop came after the probe: the connection closes with no output.
 		return addr, reasonShutdown, false
 	}
 	// The session is open from here until the close (session-fields, section 3.2).
-	s.sessions.Add(1)
-	defer s.sessions.Add(-1)
-	values := s.values(addr, accepted)
-	choice, err := menu.Run(t, s.cfg, s.screens, s.cfg.Start, nil, values)
+	defer s.closeSession(ss)
+	err = ss.Run(s.ctx)
 	switch {
 	case errors.Is(err, term.ErrStop):
 		// Without the screen shutdown, there is no output (menu-nav, section 5.2).
-		_, ok := s.screens["shutdown"]
-		return addr, reasonShutdown, ok && menu.Shutdown(t, s.cfg, s.screens, choice, values) == nil
-	case err != nil && s.stopped(c):
+		_, ok := s.m.Screens["shutdown"]
+		return addr, reasonShutdown, ok && ss.Shutdown() == nil
+	case err != nil && s.ctx.Err() != nil:
 		// The close of step 3 ended a page of the session.
 		return addr, reasonShutdown, false
 	case err != nil:
@@ -282,17 +307,15 @@ func (s *Server) session(c net.Conn, accepted time.Time) (addr netip.Addr, reaso
 	return addr, "logoff", true
 }
 
-// values gives the session and BBS fields of the session with the client address addr
-// and the accept time accepted (session-fields, section 3).
-func (s *Server) values(addr netip.Addr, accepted time.Time) menu.Values {
-	ip := addr.WithZone("").String()
-	return func() screen.SessionValues {
-		now := time.Now()
-		return screen.SessionValues{
-			IP: ip, Online: screen.FormatDuration(now.Sub(accepted)),
-			Name: s.cfg.Name, Version: s.version, Sessions: int(s.sessions.Load()),
-			Time: now.In(s.cfg.Zone).Format(s.cfg.Time), Uptime: screen.FormatDuration(now.Sub(s.started)),
-		}
+// values gives the session and BBS fields of the session ss from its client address
+// and its accept time (session-fields, section 3).
+func (s *Server) values(ss *menu.Session) screen.SessionValues {
+	cfg := s.m.Config
+	now := time.Now()
+	return screen.SessionValues{
+		IP: ss.Addr.WithZone("").String(), Online: screen.FormatDuration(now.Sub(ss.Accepted)),
+		Name: cfg.Name, Version: s.version, Sessions: s.openSessions(),
+		Time: now.In(cfg.Zone).Format(cfg.Time), Uptime: screen.FormatDuration(now.Sub(s.started)),
 	}
 }
 
@@ -334,7 +357,7 @@ func (s *Server) close(c net.Conn, output bool) {
 func (s *Server) startLinger() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.lingers >= s.cfg.Limits.MaxConns {
+	if s.lingers >= s.m.Config.Limits.MaxConns {
 		return false
 	}
 	s.lingers++
@@ -343,7 +366,7 @@ func (s *Server) startLinger() bool {
 
 // isProxy reports whether a is in proxy (section 9.3).
 func (s *Server) isProxy(a netip.Addr) bool {
-	for _, p := range s.cfg.Telnet.Proxy {
+	for _, p := range s.m.Config.Telnet.Proxy {
 		if p.Contains(a) {
 			return true
 		}

@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+
+	"github.com/schors/velourbbs/internal/bbs"
 )
 
 // fileGoldens is the golden dumps of the test BBS testdata/file (file-view, section 11):
@@ -67,11 +69,11 @@ func TestPreviewFileArg(t *testing.T) {
 	}
 
 	// The preview uses a copy of the screen: the model of the load does not change.
-	_, screens, ds := load(os.DirFS(filepath.Join("testdata", "file")))
+	m, ds := bbs.Load(os.DirFS(filepath.Join("testdata", "file")))
 	if ds.HasErrors() {
 		t.Fatal(ds)
 	}
-	s := screens["reader"]
+	s := m.Screens["reader"]
 	ns, status := argFile(os.DirFS(filepath.Join("testdata", "file")), s, "extra.txt", io.Discard)
 	if ns == nil || status != 0 || ns.FileScreen.Contents["extra.txt"] == nil {
 		t.Fatalf("argFile: %v, status %d", ns, status)

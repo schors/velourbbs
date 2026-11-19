@@ -13,9 +13,6 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/schors/velourbbs/internal/bbt"
-	"github.com/schors/velourbbs/internal/config"
-	"github.com/schors/velourbbs/internal/menu"
 	"github.com/schors/velourbbs/internal/screen"
 )
 
@@ -54,25 +51,6 @@ func run(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	}
 	_, _ = fmt.Fprintf(stderr, "velourbbs: unknown command %q\n%s", args[0], usage)
 	return exitUsage
-}
-
-// load reads bbs.toml, screens/screens.toml and the screens of fsys and does the menu checks.
-// The screens are nil when the diagnostics have an error.
-func load(fsys fs.FS) (config.Config, map[string]*screen.Screen, screen.Diags) {
-	// Load also gives the defaults after an error, so the screens load with them.
-	cfg, ds := config.Load(fsys)
-	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
-	ds = append(ds, sds...)
-	ds.Sort()
-	if ds.HasErrors() {
-		return cfg, nil, ds
-	}
-	// The menu checks between files need all screens (menu-nav, section 6).
-	ds = menu.Check(cfg, screens, ds)
-	if ds.HasErrors() {
-		screens = nil
-	}
-	return cfg, screens, ds
 }
 
 // pseudoVersion matches the end of a pseudo-version (session-fields, section 3.4).

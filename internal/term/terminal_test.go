@@ -1,6 +1,7 @@
 package term
 
 import (
+	"context"
 	"errors"
 	"os"
 	"slices"
@@ -31,7 +32,7 @@ func keys(t *testing.T, term *Terminal, n int) []string {
 	t.Helper()
 	var ks []string
 	for range n {
-		k, err := term.Key()
+		k, err := term.Key(t.Context())
 		if err != nil {
 			t.Fatalf("Key() after %q: %v", ks, err)
 		}
@@ -89,7 +90,7 @@ func TestTerminalQueueIdle(t *testing.T) {
 		// the full queue drops it, and the idle timeout restarts.
 		f.write(strings.Repeat("a", maxKeys) + "\x1b")
 		keys(t, term, maxKeys)
-		if k, err := term.Key(); !errors.Is(err, ErrIdle) {
+		if k, err := term.Key(t.Context()); !errors.Is(err, ErrIdle) {
 			t.Fatalf("Key() = %q, %v; want ErrIdle", k, err)
 		}
 		if d := time.Since(start); d != EscWait+to.Idle {
@@ -108,7 +109,7 @@ func TestTerminalQueue(t *testing.T) {
 		if got := keys(t, term, maxKeys); slices.ContainsFunc(got, func(k string) bool { return k != "a" }) {
 			t.Errorf("keys %q, want %d times a", got, maxKeys)
 		}
-		if k, err := term.Key(); !errors.Is(err, ErrIdle) {
+		if k, err := term.Key(t.Context()); !errors.Is(err, ErrIdle) {
 			t.Errorf("Key() = %q, %v; want ErrIdle", k, err)
 		}
 	})
@@ -128,7 +129,7 @@ func TestTerminalIdle(t *testing.T) {
 		f.write("\xff\xfa\x1f" + string(naws(132, 50)) + "\xff\xf0")
 		time.Sleep(100 * time.Millisecond)
 		f.write("\xff\xf1")
-		if k, err := term.Key(); !errors.Is(err, ErrIdle) {
+		if k, err := term.Key(t.Context()); !errors.Is(err, ErrIdle) {
 			t.Fatalf("Key() = %q, %v; want ErrIdle", k, err)
 		}
 		if d := time.Since(start); d != 500*time.Millisecond {
@@ -171,7 +172,7 @@ func TestTerminalHangup(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		term, f := connect(t, testTimeouts)
 		f.write("a\xff\xf4")
-		if k, err := term.Key(); !errors.Is(err, telnet.ErrHangup) {
+		if k, err := term.Key(t.Context()); !errors.Is(err, telnet.ErrHangup) {
 			t.Errorf("Key() = %q, %v; want ErrHangup", k, err)
 		}
 	})
@@ -259,7 +260,7 @@ func TestReadDeadline(t *testing.T) {
 	term := &Terminal{c: c, p: telnet.New(), buf: make([]byte, readSize)}
 	far := time.Now().Add(time.Hour)
 	for range 2 {
-		if _, _, err := term.read(far); err != nil {
+		if _, _, err := term.read(t.Context(), far); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -269,25 +270,51 @@ func TestReadDeadline(t *testing.T) {
 	}
 }
 
-// Stop ends a Key that waits and each later Key with ErrStop, also with keys
-// in the queue (telnet-term, section 10.2). A Page after Stop writes.
+// The stop function of onDone waits for a call of f that started, also when ctx ended
+// before onDone: a late deadline must not follow the wait.
+func TestOnDoneWaits(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		ended := false
+		stop := onDone(ctx, func() {
+			time.Sleep(time.Second)
+			ended = true
+		})
+		stop()
+		if !ended {
+			t.Error("stop returned before the end of f")
+		}
+	})
+}
+
+// The end of the context ends a Key that waits and each later Key with ErrStop at once,
+// also with keys in the queue (session, section 6). A Page after the end writes.
 func TestTerminalStop(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		term, f := connect(t, testTimeouts)
+		ctx, cancel := context.WithCancel(t.Context())
 		done := make(chan error, 1)
 		go func() {
-			_, err := term.Key()
+			_, err := term.Key(ctx)
 			done <- err
 		}()
 		synctest.Wait()
-		term.Stop()
-		if err := <-done; !errors.Is(err, ErrStop) {
-			t.Errorf("waiting Key: %v, want ErrStop", err)
+		start := time.Now()
+		cancel()
+		if err := <-done; !errors.Is(err, ErrStop) || time.Since(start) != 0 {
+			t.Errorf("waiting Key: %v after %v, want ErrStop at once", err, time.Since(start))
 		}
-		f.write("ab")
-		synctest.Wait()
-		if _, err := term.Key(); !errors.Is(err, ErrStop) {
-			t.Errorf("Key after Stop: %v, want ErrStop", err)
+		// One read puts "a", "b" and "c" into the queue.
+		f.write("abc")
+		if got := keys(t, term, 1); got[0] != "a" || len(term.keys) != 2 {
+			t.Fatalf("key %q, queue %v; want a and 2 keys in the queue", got, term.keys)
+		}
+		if _, err := term.Key(ctx); !errors.Is(err, ErrStop) {
+			t.Errorf("Key with keys in the queue after the end: %v, want ErrStop", err)
+		}
+		if got := keys(t, term, 2); !slices.Equal(got, []string{"b", "c"}) {
+			t.Errorf("keys %q with a new context, want the queue \"b\", \"c\"", got)
 		}
 		before := len(f.output())
 		if err := term.Page(screen.Page{Rows: []screen.Row{{{Grapheme: "x"}}}, Cols: 1, Height: 1}); err != nil {

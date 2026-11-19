@@ -2,6 +2,7 @@ package term
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -217,7 +218,7 @@ func probeLog(t *testing.T, cl client, to Timeouts) (*Terminal, *fake, string, t
 	host, f := start(t, cl)
 	var log bytes.Buffer
 	start := time.Now()
-	term, err := Probe(host, start, to, slog.New(slog.NewTextHandler(&log, nil)).With("addr", "192.0.2.1"))
+	term, err := Probe(t.Context(), host, start, to, slog.New(slog.NewTextHandler(&log, nil)).With("addr", "192.0.2.1"))
 	return term, f, log.String(), time.Since(start), err
 }
 
@@ -352,7 +353,7 @@ func TestProbeClients(t *testing.T) {
 				t.Errorf("%s: output %q, want one write of step 4", tt.name, out)
 			}
 			if tt.cl.early != "" {
-				if k, err := term.Key(); k != "x" || err != nil {
+				if k, err := term.Key(t.Context()); k != "x" || err != nil {
 					t.Errorf("%s: Key() = %q, %v; want x", tt.name, k, err)
 				}
 			}
@@ -418,7 +419,7 @@ func TestProbeLateDA1(t *testing.T) {
 			f.write("\x1b[>84;0;0c") // a second reply is not a reply
 		}()
 		start := time.Now()
-		term, err := Probe(host, start, testTimeouts, slog.New(slog.DiscardHandler))
+		term, err := Probe(t.Context(), host, start, testTimeouts, slog.New(slog.DiscardHandler))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -592,8 +593,63 @@ func TestProbeHangup(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		host, f := start(t, client{quiet: true})
 		go func() { _ = f.c.Close() }()
-		if _, err := Probe(host, time.Now(), testTimeouts, slog.New(slog.DiscardHandler)); !errors.Is(err, io.ErrClosedPipe) && !errors.Is(err, io.EOF) {
+		if _, err := Probe(t.Context(), host, time.Now(), testTimeouts, slog.New(slog.DiscardHandler)); !errors.Is(err, io.ErrClosedPipe) && !errors.Is(err, io.EOF) {
 			t.Errorf("Probe() error = %v, want a closed connection", err)
+		}
+	})
+}
+
+// The end of the context ends the probe at once with ErrStop and no more output
+// (session, section 6). A context that ended before the probe gives no output.
+func TestProbeStop(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		host, f := start(t, client{quiet: true})
+		ctx, cancel := context.WithCancel(t.Context())
+		done := make(chan error, 1)
+		go func() {
+			_, err := Probe(ctx, host, time.Now(), testTimeouts, slog.New(slog.DiscardHandler))
+			done <- err
+		}()
+		synctest.Wait()
+		start := time.Now()
+		cancel()
+		if err := <-done; !errors.Is(err, ErrStop) || time.Since(start) != 0 {
+			t.Errorf("Probe() error = %v after %v, want ErrStop at once", err, time.Since(start))
+		}
+		if out := f.output(); out != string(telnet.New().Start()) {
+			t.Errorf("output %q, want only the requests", out)
+		}
+	})
+	synctest.Test(t, func(t *testing.T) {
+		host, f := start(t, client{quiet: true})
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		if _, err := Probe(ctx, host, time.Now(), testTimeouts, slog.New(slog.DiscardHandler)); !errors.Is(err, ErrStop) {
+			t.Errorf("Probe() after the end error = %v, want ErrStop", err)
+		}
+		synctest.Wait()
+		if out := f.output(); out != "" {
+			t.Errorf("output %q after the end, want none", out)
+		}
+	})
+}
+
+// The end of the context also ends a write of the probe to a client that does not read.
+func TestProbeStopWrite(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		host, cc := net.Pipe()
+		defer func() { _ = cc.Close() }()
+		ctx, cancel := context.WithCancel(t.Context())
+		done := make(chan error, 1)
+		go func() {
+			_, err := Probe(ctx, host, time.Now(), testTimeouts, slog.New(slog.DiscardHandler))
+			done <- err
+		}()
+		synctest.Wait()
+		start := time.Now()
+		cancel()
+		if err := <-done; !errors.Is(err, ErrStop) || time.Since(start) != 0 {
+			t.Errorf("Probe() error = %v after %v, want ErrStop at once", err, time.Since(start))
 		}
 	})
 }
@@ -603,7 +659,7 @@ func TestProbeLate(t *testing.T) {
 	// The requests go out before Probe returns, so before the first screen.
 	synctest.Test(t, func(t *testing.T) {
 		host, f := start(t, client{quiet: true})
-		term, err := Probe(host, time.Now().Add(-testTimeouts.Probe), testTimeouts, slog.New(slog.DiscardHandler))
+		term, err := Probe(t.Context(), host, time.Now().Add(-testTimeouts.Probe), testTimeouts, slog.New(slog.DiscardHandler))
 		if err != nil {
 			t.Fatal(err)
 		}
