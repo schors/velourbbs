@@ -28,6 +28,8 @@ var listGoldens = []struct {
 	// ENTER and DOWN in an empty list do nothing.
 	{"cursor-40x10.dump", []string{"main", "--size", "40x10", "--keys",
 		"1,DOWN,UP,UP,DOWN,DOWN,DOWN,DOWN,UP,END,DOWN,DOWN,DOWN,ENTER,ESC,HOME,ESC,2,ENTER,DOWN,ESC,G"}},
+	// The rows of a --set value that no goto gives: ENTER shows the file of the row.
+	{"set-40x10.dump", []string{"parts", "--set", "arg.dir=more", "--size", "40x10", "--keys", "ENTER,ESC"}},
 }
 
 func TestPreviewList(t *testing.T) {

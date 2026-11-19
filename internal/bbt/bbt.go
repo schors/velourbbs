@@ -358,7 +358,7 @@ func targetFiles(loaders []*loader) {
 			}
 		}
 	}
-	values := slices.Concat(items, selectValues(loaders))
+	values := slices.Concat(items, selects, selectValues(loaders))
 	for _, l := range loaders {
 		byName := l.byName()
 		for _, v := range values {
@@ -386,7 +386,7 @@ func (l *loader) byName() map[string]*unit {
 	return m
 }
 
-// selectValues gives the goto or the gosub of select of each list screen with the values of each row
+// selectValues gives the goto or the gosub of select with {row.<field>} values of each list screen with the values of each row
 // of each list of the screen, in each set. A value with the same arguments appears once for each screen file.
 func selectValues(loaders []*loader) []target {
 	var values []target
@@ -394,7 +394,8 @@ func selectValues(loaders []*loader) []target {
 	for _, l := range loaders {
 		for _, u := range l.units {
 			ls := u.s.List
-			if !u.done || ls == nil || ls.Select == nil || !ls.Select.Do.Op.HasTarget() {
+			// A select without {row.<field>} values is one value of the literal values.
+			if !u.done || ls == nil || ls.Select == nil || !ls.Select.Do.Op.HasTarget() || len(ls.Select.Refs) == 0 {
 				continue
 			}
 			for _, key := range slices.Sorted(maps.Keys(ls.Lists)) {

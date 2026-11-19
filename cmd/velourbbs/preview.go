@@ -159,13 +159,24 @@ func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, std
 	var msgs []string              // the errors in the order of the first set that finds them
 	found := map[string][]string{} // the sets that find each error
 	for _, lang := range langs {
-		s := m.Sets[lang][name] // the check of the sets makes sure that each set has the screen
-		var ns *screen.Screen
+		s := m.Sets[lang][name]       // the check of the sets makes sure that each set has the screen
+		var ns, target *screen.Screen // target: the file screen of select with new files, else nil
 		var errs []string
 		if s.List != nil {
 			ns, errs = argRows(fsys, lang, s, args, sd)
+			if ns != nil && ns != s {
+				target, errs = selectFiles(fsys, lang, m, ns, args, sd)
+			}
 		} else {
-			ns, errs = argFile(fsys, lang, s, args, sd)
+			ns, errs = argFile(fsys, lang, s, args, "arg.", sd)
+		}
+		if target != nil && nm != nil {
+			tl := lang
+			if a := ns.List.Select.Do; a.Lang != "" {
+				tl = a.Lang
+			}
+			nm.Sets[tl] = maps.Clone(nm.Sets[tl])
+			nm.Sets[tl][target.Name] = target
 		}
 		for _, msg := range errs {
 			if found[msg] == nil {
@@ -177,7 +188,7 @@ func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, std
 		case ns == nil:
 			nm = nil
 		case ns != s && nm != nil:
-			nm.Sets[lang] = maps.Clone(m.Sets[lang])
+			nm.Sets[lang] = maps.Clone(nm.Sets[lang])
 			nm.Sets[lang][name] = ns
 		}
 	}
@@ -196,8 +207,9 @@ func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, std
 
 // argFile loads the content file of the argument of the file screen s in the set lang.
 // It gives s when it needs no file, a new screen with the file, or nil and the errors.
-// It adds the diagnostics of the file to sd.
-func argFile(fsys fs.FS, lang string, s *screen.Screen, args map[string]string, sd *bbt.SetDiags) (*screen.Screen, []string) {
+// Each error starts with prefix and the argument name. It adds the diagnostics of the file to sd.
+func argFile(fsys fs.FS, lang string, s *screen.Screen, args map[string]string, prefix string,
+	sd *bbt.SetDiags) (*screen.Screen, []string) {
 	f := s.FileScreen
 	if f == nil || f.Arg == "" || f.Contents[args[f.Arg]] != nil {
 		return s, nil
@@ -213,7 +225,7 @@ func argFile(fsys fs.FS, lang string, s *screen.Screen, args map[string]string, 
 	}
 	var msgs []string
 	for _, err := range errs {
-		msgs = append(msgs, fmt.Sprintf("arg.%s: %v", f.Arg, err))
+		msgs = append(msgs, fmt.Sprintf("%s%s: %v", prefix, f.Arg, err))
 	}
 	if c == nil || len(errs) > 0 {
 		return nil, msgs
@@ -257,6 +269,35 @@ func argRows(fsys fs.FS, lang string, s *screen.Screen, args map[string]string, 
 	ns := *s
 	ns.List = &nl
 	return &ns, nil
+}
+
+// selectFiles loads the content file of the value of select of each row of the list screen s
+// for the arguments args, when the target of select is a file screen (list-view, section 8,
+// and screen-render, section 3.2). s holds rows that the load did not read. It gives the target
+// with the new files, else nil, and the errors. It adds the diagnostics of the files to sd.
+func selectFiles(fsys fs.FS, lang string, m *bbs.Model, s *screen.Screen, args map[string]string,
+	sd *bbt.SetDiags) (*screen.Screen, []string) {
+	sel := s.List.Select
+	if sel == nil || !sel.Do.Op.HasTarget() {
+		return nil, nil
+	}
+	t := bbs.Target(m.Sets, lang, sel.Do) // the check of the sets makes sure that it exists
+	nt := t
+	var msgs []string
+	for i, r := range s.List.List(args) {
+		next, errs := argFile(fsys, lang, nt, sel.Action(r, i+1).Args, "select: args: ", sd)
+		msgs = append(msgs, errs...)
+		if next != nil {
+			nt = next
+		}
+	}
+	if len(msgs) > 0 {
+		return nil, msgs
+	}
+	if nt == t {
+		return nil, nil
+	}
+	return nt, nil
 }
 
 // parseSize sets the size of term from "<cols>x<rows>". term.Check checks the ranges.

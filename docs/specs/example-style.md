@@ -20,6 +20,7 @@ can edit without counting cells.
 - Two hairlines frame the content: one above and one below. There are no side lines,
   so a text line needs no padding. There are no shadows.
 - One ornament `☼` on a screen: the light of the lamp.
+  The list screen `log` also marks its selected row with `☼` (section 6.7).
 - Much empty space. A screen has few lines.
 - The keys of a screen are always visible in the key row.
 

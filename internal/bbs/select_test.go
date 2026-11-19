@@ -88,6 +88,12 @@ func TestSelectTargetErrors(t *testing.T) {
 			`screens/sel.bbt:2:1: select: args: file: content file "Three" does not exist`,
 			`screens/sel.bbt:2:1: select: args: file: content file "Two" does not exist`,
 		}},
+		// A literal value is checked also when the list has no rows.
+		{"literal", `select = { do = "gosub read", args = { file = "missing.md" } }`, map[string]string{
+			"screens/sel.bbt": strings.Replace(listScreen(`select = { do = "gosub read", args = { file = "missing.md" } }`),
+				`dir = "parts"`, `dir = "empty"`, 1),
+			"content/empty/.keep": "",
+		}, []string{`screens/sel.bbt:2:1: select: args: file: content file "missing.md" does not exist`}},
 		{"numbers", `select = { do = "gosub num", args = { file = "{row.path}" } }`, map[string]string{
 			"screens/num.bbt": "+++\nfile = \"{arg.file}\"\nnumbers = true\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{>file}\n",
 		}, []string{
