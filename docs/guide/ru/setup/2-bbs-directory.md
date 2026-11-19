@@ -46,15 +46,16 @@ sudo install -d -o velourbbs -g velourbbs /var/lib/velourbbs
 
 Запускай каждую команду `velourbbs` в каталоге BBS.
 Запускай `velourbbs check` и `velourbbs serve` от пользователя `velourbbs`:
-`sudo -u velourbbs velourbbs check`. Root может прочитать файл,
+`sudo -u velourbbs /usr/local/bin/velourbbs check`. Root может прочитать файл,
 который пользователь `velourbbs` прочитать не может.
+Указывай полный путь: `sudo` на некоторых хостах, например в RHEL 9, не ищет в `/usr/local/bin`.
 Полные правила: [bbs-toml](../../../specs/bbs-toml.md), раздел 2.
 
 ## Результат
 
 ```
 cd /srv/velourbbs
-sudo -u velourbbs velourbbs check
+sudo -u velourbbs /usr/local/bin/velourbbs check
 ```
 
 Команда ничего не выводит.

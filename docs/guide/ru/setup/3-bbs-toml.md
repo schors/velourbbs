@@ -109,11 +109,11 @@ path = "/var/lib/velourbbs/velourbbs.jsonl"
 ```
 
 Запиши его в `/srv/velourbbs/bbs.toml`. Затем измени нужные значения.
-После каждого изменения выполни `sudo chmod -R a+rX /srv/velourbbs` и `sudo -u velourbbs velourbbs check`.
+После каждого изменения выполни `sudo chmod -R a+rX /srv/velourbbs` и `sudo -u velourbbs /usr/local/bin/velourbbs check`.
 
 Полные правила: [bbs-toml](../../../specs/bbs-toml.md), раздел 3,
 и [data-store](../../../specs/data-store.md).
 
 ## Результат
 
-`sudo -u velourbbs velourbbs check` ничего не выводит.
+`sudo -u velourbbs /usr/local/bin/velourbbs check` ничего не выводит.

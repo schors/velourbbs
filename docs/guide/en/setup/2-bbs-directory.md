@@ -45,15 +45,16 @@ sudo install -d -o velourbbs -g velourbbs /var/lib/velourbbs
 
 Run each `velourbbs` command in the BBS directory.
 Run `velourbbs check` and `velourbbs serve` as the user `velourbbs`:
-`sudo -u velourbbs velourbbs check`. Root can read a file
+`sudo -u velourbbs /usr/local/bin/velourbbs check`. Root can read a file
 that the user `velourbbs` cannot read.
+Give the full path: `sudo` on some hosts, for example RHEL 9, does not search `/usr/local/bin`.
 Full rules: [bbs-toml](../../../specs/bbs-toml.md), section 2.
 
 ## Result
 
 ```
 cd /srv/velourbbs
-sudo -u velourbbs velourbbs check
+sudo -u velourbbs /usr/local/bin/velourbbs check
 ```
 
 The command gives no output.

@@ -70,7 +70,7 @@ After a change of a file in the BBS directory:
 ```
 cd /srv/velourbbs
 sudo chmod -R a+rX /srv/velourbbs
-sudo -u velourbbs velourbbs check && sudo systemctl restart velourbbs
+sudo -u velourbbs /usr/local/bin/velourbbs check && sudo systemctl restart velourbbs
 ```
 
 After a change of `/etc/systemd/system/velourbbs.service`:
@@ -106,7 +106,7 @@ Edit the file:
 sudo systemctl stop velourbbs
 sudoedit /var/lib/velourbbs/velourbbs.jsonl
 cd /srv/velourbbs
-sudo -u velourbbs velourbbs check && sudo systemctl start velourbbs
+sudo -u velourbbs /usr/local/bin/velourbbs check && sudo systemctl start velourbbs
 ```
 
 Full rules: [data-store](../../../specs/data-store.md), section 8.

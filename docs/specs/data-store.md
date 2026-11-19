@@ -65,8 +65,8 @@ The read (section 7) and each change (section 5) use these checks.
 
 - The store keeps all records in memory. Each change writes the whole file:
   1. Check the new records (section 4). An error ends the change.
-  2. Create or truncate `<file>.tmp` in the same directory with the mode 600.
-     Write the records and sync the file.
+  2. Remove an old `<file>.tmp`. Create the new `<file>.tmp` in the same directory
+     with the mode 600. Write the records and sync the file.
   3. Rename it over the file. The rename is the commit point.
   4. Sync the directory. On Windows, skip this step.
 - An error before the rename removes `<file>.tmp`. The records and the file stay as before.

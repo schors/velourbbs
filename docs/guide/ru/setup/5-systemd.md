@@ -70,7 +70,7 @@ sudo journalctl -u velourbbs
 ```
 cd /srv/velourbbs
 sudo chmod -R a+rX /srv/velourbbs
-sudo -u velourbbs velourbbs check && sudo systemctl restart velourbbs
+sudo -u velourbbs /usr/local/bin/velourbbs check && sudo systemctl restart velourbbs
 ```
 
 После изменения `/etc/systemd/system/velourbbs.service`:
@@ -107,7 +107,7 @@ sudo systemctl start velourbbs
 sudo systemctl stop velourbbs
 sudoedit /var/lib/velourbbs/velourbbs.jsonl
 cd /srv/velourbbs
-sudo -u velourbbs velourbbs check && sudo systemctl start velourbbs
+sudo -u velourbbs /usr/local/bin/velourbbs check && sudo systemctl start velourbbs
 ```
 
 Полные правила: [data-store](../../../specs/data-store.md), раздел 8.

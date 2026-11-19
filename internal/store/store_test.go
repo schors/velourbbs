@@ -343,6 +343,35 @@ func TestAddWriteError(t *testing.T) {
 	}
 }
 
+// An old <file>.tmp is removed before the write: a link there to the file does not change
+// the file after a write error. The new <file>.tmp has the mode 600.
+func TestAddOldTemp(t *testing.T) {
+	path := writeData(t, header+`{"kind":"count","n":1}`+"\n")
+	st := openTest(t, path)
+	before := readData(t, path)
+	if err := os.Symlink(path, path+".tmp"); err != nil {
+		t.Fatal(err)
+	}
+	syncFile = func(*os.File) error { return errors.New("sync failed") }
+	defer func() { syncFile = (*os.File).Sync }()
+	if err := st.Add(count(2)); err == nil {
+		t.Error("Add: no error, want the sync error")
+	}
+	if got := readData(t, path); got != before {
+		t.Errorf("file changed to %q", got)
+	}
+	syncFile = (*os.File).Sync
+	if err := os.WriteFile(path+".tmp", nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Add(count(2)); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Stat(path); err != nil || info.Mode().Perm() != 0o600 {
+		t.Errorf("mode %v, %v; want 600", info.Mode(), err)
+	}
+}
+
 // A written file reads back with the same records. The write does not escape <, > and &,
 // keeps non-ASCII text and escapes U+2028 and U+2029. It groups the records by kind.
 // A time goes to UTC with no fraction.

@@ -133,9 +133,13 @@ func (st *Store) write(recs map[string][]Record) error {
 	return nil
 }
 
-// writeTemp creates or truncates the file tmp with the mode 600, writes data and syncs it.
+// writeTemp creates the new file tmp with the mode 600, writes data and syncs it.
+// It removes an old tmp first: a link there must not change another file.
 func writeTemp(tmp string, data []byte) error {
-	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err := os.Remove(tmp); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	f, err := os.OpenFile(tmp, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return err
 	}
@@ -175,29 +179,26 @@ func read(s *schema, path, name string) (recs map[string][]Record, found, migrat
 		fd.Errorf(1, 1, "%v", err)
 		return nil, true, false, fd.Diags
 	}
-	lines := bytes.Split(bytes.TrimPrefix(data, screen.BOM), []byte("\n"))
-	if len(lines[len(lines)-1]) == 0 {
-		lines = lines[:len(lines)-1] // the end of the last line
-	}
-	if len(lines) == 0 {
-		lines = [][]byte{nil}
-	}
-	version, err := s.header(lines[0])
+	// The loop cuts one line at a time: a slice of all lines can need more memory than the file.
+	first, rest, _ := bytes.Cut(bytes.TrimPrefix(data, screen.BOM), []byte("\n"))
+	version, err := s.header(first)
 	if err != nil {
 		fd.Errorf(1, 1, "%v", err)
 		return nil, true, false, fd.Diags
 	}
 	var raws []raw
-	for i, line := range lines[1:] {
+	for n := 2; len(rest) > 0; n++ {
+		var line []byte
+		line, rest, _ = bytes.Cut(rest, []byte("\n"))
 		if blank(line) {
 			continue
 		}
 		fields, err := parseLine(line)
 		if err != nil {
-			fd.Errorf(i+2, 1, "%v", err)
+			fd.Errorf(n, 1, "%v", err)
 			continue
 		}
-		raws = append(raws, raw{Line: i + 2, Fields: fields})
+		raws = append(raws, raw{Line: n, Fields: fields})
 	}
 	for v := version; v < s.version(); v++ {
 		raws = s.migrations[v-1](raws)
