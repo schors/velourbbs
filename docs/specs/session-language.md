@@ -201,11 +201,11 @@ The text of the More row is the first of:
 
 | Package | Content |
 |---|---|
-| `internal/config` | `[screen] lang` and `[lang.<code>]` with their checks. |
+| `internal/config` | `[screen] lang` and `[lang.<code>]` with their checks, and the More text of section 7.2. |
 | `internal/bbt` | The search of section 4, the load of the screens of one screen set, and the parse of `lang <code>`, `goto <code>/<name>` and `gosub <code>/<name>`. |
 | `internal/bbs` | The screen sets in the model and the checks of section 6. |
 | `internal/i18n` | The dictionaries in the binary, their parser and the engine texts. |
-| `internal/menu` | The session language, its actions ([menu-nav](menu-nav.md), section 4) and the More text of section 7.2. |
+| `internal/menu` | The session language and its actions ([menu-nav](menu-nav.md), section 4). |
 | `internal/screen` | The field `session.lang`. |
 | `cmd/velourbbs` | `--set session.lang`. |
 

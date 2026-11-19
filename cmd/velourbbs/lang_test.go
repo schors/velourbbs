@@ -33,7 +33,8 @@ func TestLangKeys(t *testing.T) {
 	}
 }
 
-// The More row is [lang.<code>] more, else [screen] more, else the engine text (session-language, section 7.2).
+// The More row is [lang.<code>] more, else [screen] more, else the engine text in the session language
+// (session-language, section 7.2). lang-more-en.dump shows the engine text in English.
 func TestLangMore(t *testing.T) {
 	for _, tt := range []struct{ lang, dump string }{{"en", "lang-more-en.dump"}, {"ru", "lang-more-ru.dump"}} {
 		out, errOut, status := runIn(t, "lang", "preview", "long", "--size", "40x10", "--set", "session.lang="+tt.lang)
@@ -55,6 +56,14 @@ func TestLangMore(t *testing.T) {
 	status := run([]string{"preview", "long", "--size", "40x10"}, t.TempDir(), fsys, &out, &errOut)
 	if want := golden(t, "lang-more-screen.dump"); out.String() != want || errOut.Len() != 0 || status != 0 {
 		t.Errorf("[screen] more: stderr %q, status %d, got\n%s\nwant\n%s", errOut.String(), status, out.String(), want)
+	}
+	// The engine text in Russian: [lang.ru] and [screen] without more.
+	fsys["screens/screens.toml"] = &fstest.MapFile{Data: []byte("[lang.ru]\n\n[menu]\nstart = \"long\"\n")}
+	out.Reset()
+	errOut.Reset()
+	status = run([]string{"preview", "long", "--size", "40x10", "--set", "session.lang=ru"}, t.TempDir(), fsys, &out, &errOut)
+	if want := golden(t, "lang-more-engine-ru.dump"); out.String() != want || errOut.Len() != 0 || status != 0 {
+		t.Errorf("engine text ru: stderr %q, status %d, got\n%s\nwant\n%s", errOut.String(), status, out.String(), want)
 	}
 }
 

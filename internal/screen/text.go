@@ -54,6 +54,17 @@ func CheckGrapheme(g string, w int) error {
 	return nil
 }
 
+// CheckText checks each grapheme of s with CheckGrapheme: the rules of a text
+// such as [screen] more (screens-toml, section 3.1). It gives the first error.
+func CheckText(s string) error {
+	for g, w := range Graphemes(s) {
+		if err := CheckGrapheme(g, w); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // codePoints writes g as code points. Example: "U+0009".
 func codePoints(g string) string {
 	var b strings.Builder

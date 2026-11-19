@@ -137,7 +137,7 @@ func more(p *string, key string, errorf func(format string, args ...any)) *strin
 	if p == nil {
 		return nil
 	}
-	if err := checkText(*p); err != nil {
+	if err := screen.CheckText(*p); err != nil {
 		errorf("%s: %v", key, err)
 		return nil
 	}
@@ -159,15 +159,6 @@ func langs(cfg *Config, d screensDoc, errorf func(format string, args ...any)) {
 		codes[code] = true
 	}
 	cfg.Langs = slices.Sorted(maps.Keys(codes))
-}
-
-func checkText(s string) error {
-	for g, w := range screen.Graphemes(s) {
-		if err := screen.CheckGrapheme(g, w); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 // theme sets the base theme, and the dark theme and the light theme of each term.colors of d
