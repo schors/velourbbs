@@ -1,49 +1,8 @@
 +++
 width = [80, 132]
-[[item]]
-key = "0"
-do = "gosub read"
-args = { file = "guide/bbt/README.md", title = "BBT guide" }
-[[item]]
-key = "1"
-do = "gosub read"
-args = { file = "guide/bbt/1-bbs-directory.md", title = "BBT guide" }
-[[item]]
-key = "2"
-do = "gosub read"
-args = { file = "guide/bbt/2-first-screen.md", title = "BBT guide" }
-[[item]]
-key = "3"
-do = "gosub read"
-args = { file = "guide/bbt/3-header.md", title = "BBT guide" }
-[[item]]
-key = "4"
-do = "gosub read"
-args = { file = "guide/bbt/4-menu.md", title = "BBT guide" }
-[[item]]
-key = "5"
-do = "gosub read"
-args = { file = "guide/bbt/5-fields.md", title = "BBT guide" }
-[[item]]
-key = "6"
-do = "gosub read"
-args = { file = "guide/bbt/6-colour-depth.md", title = "BBT guide" }
-[[item]]
-key = "7"
-do = "gosub read"
-args = { file = "guide/bbt/7-texts.md", title = "BBT guide" }
-[[item]]
-key = "8"
-do = "gosub read"
-args = { file = "guide/bbt/8-lists.md", title = "BBT guide" }
-[[item]]
-key = "9"
-do = "gosub read"
-args = { file = "guide/bbt/9-art.md", title = "BBT guide" }
-[[item]]
-key = "A"
-do = "gosub read"
-args = { file = "guide/bbt/10-errors.md", title = "BBT guide" }
+data = { from = "files", args = { dir = "guide/bbt" } }
+rows = 16
+select = { do = "gosub read", args = { file = "{row.path}", title = "BBT guide" } }
 [[item]]
 key = "ESC"
 do = "back"
@@ -56,29 +15,9 @@ do = "back"
 
               {!emer}■{!gold}  Texts{!}
 
-              {!dim}BBT guide{!}
 
-              {!gold}0{!}  {!emer}■{!}  {!ctl}Introduction{!}
 
-              {!gold}1{!}  {!emer}■{!}  {!ctl}The BBS directory{!}
-
-              {!gold}2{!}  {!emer}■{!}  {!ctl}The first screen{!}
-
-              {!gold}3{!}  {!emer}■{!}  {!ctl}The header{!}
-
-              {!gold}4{!}  {!emer}■{!}  {!ctl}A menu with hotkeys{!}
-
-              {!gold}5{!}  {!emer}■{!}  {!ctl}Fields and conditions{!}
-
-              {!gold}6{!}  {!emer}■{!}  {!ctl}The colour depth{!}
-
-              {!gold}7{!}  {!emer}■{!}  {!ctl}Texts{!}
-
-              {!gold}8{!}  {!emer}■{!}  {!ctl}Lists{!}
-
-              {!gold}9{!}  {!emer}■{!}  {!ctl}Art{!}
-
-              {!gold}A{!}  {!emer}■{!}  {!ctl}Errors{!}
+{#each}            {#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
 
 
 
@@ -88,30 +27,20 @@ do = "back"
 
 
 
-              {!frame}────────────────────────────────────────────────────────────────────────────────────────────────────────{!}
-              {!hi}0-9 A{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
+
+
+
+
+
+              {!frame}{#if list.pages == 1}────────────────────────────────────────────────────────────────────────────────────────────────────────{#else}{#if list.pages < 10}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}────────────────────────────────────────────────{#else}{#if list.page < 10}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}───────────────────────────────────────────────{#else}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}──────────────────────────────────────────────{/if}{/if}{/if}{!}
+              {!hi}Enter{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
 {#else}
 
     {!hi}V E L O U R{!}      {!white}Texts{!}
     {!gold}───────────{!frame}───────────────────────────────────────────────────{!} {!emer}■{!}
 
-    {!dim}BBT guide{!}
-    {!gold}0{!}  {!emer}■{!}  {!ctl}Introduction{!}
-    {!gold}1{!}  {!emer}■{!}  {!ctl}The BBS directory{!}
-    {!gold}2{!}  {!emer}■{!}  {!ctl}The first screen{!}
-    {!gold}3{!}  {!emer}■{!}  {!ctl}The header{!}
-    {!gold}4{!}  {!emer}■{!}  {!ctl}A menu with hotkeys{!}
-    {!gold}5{!}  {!emer}■{!}  {!ctl}Fields and conditions{!}
-    {!gold}6{!}  {!emer}■{!}  {!ctl}The colour depth{!}
-    {!gold}7{!}  {!emer}■{!}  {!ctl}Texts{!}
-    {!gold}8{!}  {!emer}■{!}  {!ctl}Lists{!}
-    {!gold}9{!}  {!emer}■{!}  {!ctl}Art{!}
-    {!gold}A{!}  {!emer}■{!}  {!ctl}Errors{!}
 
-
-
-
-
-    {!frame}────────────────────────────────────────────────────────────────{!}
-    {!hi}0-9 A{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
+{#each}  {#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
+    {!frame}{#if list.pages == 1}────────────────────────────────────────────────────────────────{#else}{#if list.pages < 10}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}────────────────────────────{#else}{#if list.page < 10}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}───────────────────────────{#else}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}──────────────────────────{/if}{/if}{/if}{!}
+    {!hi}Enter{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
 {/if}

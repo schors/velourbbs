@@ -1,29 +1,8 @@
 +++
 width = [80, 132]
-[[item]]
-key = "0"
-do = "gosub read"
-args = { file = "guide/setup/README.md", title = "Руководство по установке" }
-[[item]]
-key = "1"
-do = "gosub read"
-args = { file = "guide/setup/1-program.md", title = "Руководство по установке" }
-[[item]]
-key = "2"
-do = "gosub read"
-args = { file = "guide/setup/2-bbs-directory.md", title = "Руководство по установке" }
-[[item]]
-key = "3"
-do = "gosub read"
-args = { file = "guide/setup/3-bbs-toml.md", title = "Руководство по установке" }
-[[item]]
-key = "4"
-do = "gosub read"
-args = { file = "guide/setup/4-commands.md", title = "Руководство по установке" }
-[[item]]
-key = "5"
-do = "gosub read"
-args = { file = "guide/setup/5-systemd.md", title = "Руководство по установке" }
+data = { from = "files", args = { dir = "guide/setup" } }
+rows = 16
+select = { do = "gosub read", args = { file = "{row.path}", title = "Руководство по установке" } }
 [[item]]
 key = "ESC"
 do = "back"
@@ -36,19 +15,9 @@ do = "back"
 
               {!emer}■{!gold}  Тексты{!}
 
-              {!dim}Руководство по установке{!}
 
-              {!gold}0{!}  {!emer}■{!}  {!ctl}Введение{!}
 
-              {!gold}1{!}  {!emer}■{!}  {!ctl}Программа{!}
-
-              {!gold}2{!}  {!emer}■{!}  {!ctl}Каталог BBS{!}
-
-              {!gold}3{!}  {!emer}■{!}  {!ctl}bbs.toml{!}
-
-              {!gold}4{!}  {!emer}■{!}  {!ctl}Команды{!}
-
-              {!gold}5{!}  {!emer}■{!}  {!ctl}systemd{!}
+{#each}            {#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
 
 
 
@@ -63,35 +32,15 @@ do = "back"
 
 
 
-
-
-
-
-
-              {!frame}────────────────────────────────────────────────────────────────────────────────────────────────────────{!}
-              {!hi}0-5{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К текстам{!}
+              {!frame}{#if list.pages == 1}────────────────────────────────────────────────────────────────────────────────────────────────────────{#else}{#if list.pages < 10}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}────────────────────────────────────────────────{#else}{#if list.page < 10}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}───────────────────────────────────────────────{#else}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}──────────────────────────────────────────────{/if}{/if}{/if}{!}
+              {!hi}Enter{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К текстам{!}
 {#else}
 
     {!hi}V E L O U R{!}      {!white}Тексты{!}
     {!gold}───────────{!frame}───────────────────────────────────────────────────{!} {!emer}■{!}
 
-    {!dim}Руководство по установке{!}
-    {!gold}0{!}  {!emer}■{!}  {!ctl}Введение{!}
-    {!gold}1{!}  {!emer}■{!}  {!ctl}Программа{!}
-    {!gold}2{!}  {!emer}■{!}  {!ctl}Каталог BBS{!}
-    {!gold}3{!}  {!emer}■{!}  {!ctl}bbs.toml{!}
-    {!gold}4{!}  {!emer}■{!}  {!ctl}Команды{!}
-    {!gold}5{!}  {!emer}■{!}  {!ctl}systemd{!}
 
-
-
-
-
-
-
-
-
-
-    {!frame}────────────────────────────────────────────────────────────────{!}
-    {!hi}0-5{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К текстам{!}
+{#each}  {#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
+    {!frame}{#if list.pages == 1}────────────────────────────────────────────────────────────────{#else}{#if list.pages < 10}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}────────────────────────────{#else}{#if list.page < 10}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}───────────────────────────{#else}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}──────────────────────────{/if}{/if}{/if}{!}
+    {!hi}Enter{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К текстам{!}
 {/if}

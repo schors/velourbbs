@@ -23,6 +23,8 @@ func TestStation(t *testing.T) {
 	cases := []tcase{
 		{screen: "main", size: "80x24", colors: "16"}, {screen: "main", size: "80x24", colors: "16777216"},
 		{screen: "ru-texts", size: "80x24", colors: "16"}, {screen: "ru-texts", size: "80x24", colors: "16777216"},
+		// A list of guide parts on two pages: the page in the footer hairline.
+		{screen: "en-bbt", size: "80x16", colors: "256"},
 		// The 80 form on a wide terminal with fewer than 43 rows.
 		{screen: "main", size: "132x42", colors: "256"},
 		// The hint of home-bbs, section 3.2, in both forms.
@@ -156,7 +158,7 @@ func TestStationItems(t *testing.T) {
 	}
 }
 
-// TestStationTitles checks the title of each item that opens a reading screen
+// TestStationTitles checks the title of each item and select that opens a reading screen
 // (home-bbs, section 3.4): the name of the guide, or Velour for the features text.
 func TestStationTitles(t *testing.T) {
 	want := map[string]string{
