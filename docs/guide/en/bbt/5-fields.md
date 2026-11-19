@@ -153,6 +153,31 @@ On a narrower terminal, the line gives no row, and the BBS ignores `W`.
 
 Full rules: [bbt-format](../../../specs/bbt-format.md), section 8.2.
 
+## The list of fields
+
+`velourbbs fields` lists the fields of your BBS. A part of its output:
+
+```
+velourbbs fields
+```
+
+```text
+term.type        string   -   -      xterm
+term.cols        integer  3   -      80
+term.colors      integer  8   -      256
+term.background  string   5   -
+session.lang     string   2   -      en
+bbs.name         string   -   -      Kind Brothers BBS
+```
+
+- Each line gives the path, the type, the width, the provider (task 8) and the sample value.
+- The width is the most cells that a value can have. `-` means that the value has no limit.
+  Use the width for a fixed-width field: `{term.cols}` needs 3 cells, `{term.background}` needs 5.
+- The sample value is the value of `velourbbs preview`.
+- The command does the checks of `velourbbs check` first. After an error, it gives only the errors.
+
+Full rules: [screen-render](../../../specs/screen-render.md), section 3.4.
+
 ## The screen `term`
 
 Create `screens/term.bbt` with this text:

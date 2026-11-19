@@ -40,6 +40,17 @@ velourbbs preview main --keys A,ESC,G
 
 Подробно: задача 4 [руководства по BBT](../bbt/4-menu.md).
 
+## `velourbbs fields`
+
+Она выводит поля BBS с их шириной и примерами значений:
+
+```
+velourbbs fields
+```
+
+`velourbbs fields --sample` пишет наборы примеров для `velourbbs preview` в `sample.toml`.
+Подробно: задачи 5 и 8 [руководства по BBT](../bbt/5-fields.md).
+
 ## `velourbbs art import`
 
 Она переводит файл редактора арта в форму, которую читает BBS:

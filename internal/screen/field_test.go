@@ -287,3 +287,22 @@ func TestFileLast(t *testing.T) {
 		t.Errorf("FileField of no file field: %q", c.FileField())
 	}
 }
+
+// Registry gives each path of section 4.1 without <...>, in the order of the registry.
+func TestRegistry(t *testing.T) {
+	var paths []string
+	for _, r := range Registry() {
+		if got, err := resolve(r.String(), nil); err != nil || got != r {
+			t.Errorf("resolve(%q) = %v, %v; want %v", r, got, err, r)
+		}
+		paths = append(paths, r.String())
+	}
+	want := "term.type term.cols term.rows term.charset term.colors term.name term.images term.ambiguous " +
+		"term.background term.bg_color term.fg_color " +
+		"file.title file.page file.pages file.last file.section file.minutes " +
+		"list.page list.pages list.last list.empty " +
+		"session.ip session.theme session.lang session.online bbs.name bbs.version bbs.sessions bbs.time bbs.uptime"
+	if got := strings.Join(paths, " "); got != want {
+		t.Errorf("Registry:\n%s\nwant\n%s", got, want)
+	}
+}

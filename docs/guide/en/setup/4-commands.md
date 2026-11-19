@@ -39,6 +39,17 @@ velourbbs preview main --keys A,ESC,G
 
 Details: task 4 of the [BBT guide](../bbt/4-menu.md).
 
+## `velourbbs fields`
+
+It lists the fields of the BBS with their widths and sample values:
+
+```
+velourbbs fields
+```
+
+`velourbbs fields --sample` writes the sample sets of `velourbbs preview` to `sample.toml`.
+Details: tasks 5 and 8 of the [BBT guide](../bbt/5-fields.md).
+
 ## `velourbbs art import`
 
 It converts a file of an art editor to the form that the BBS reads:
