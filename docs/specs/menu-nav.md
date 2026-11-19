@@ -68,6 +68,9 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
   ([screens-toml](screens-toml.md), section 3.2). The choice lasts until the end of the session.
   Then the host shows the screen of the top frame again (section 5). The stack does not change.
   In a file screen, it shows the current page again (section 5.1).
+- `goto <code>/<name>` and `gosub <code>/<name>` set the session language to `<code>`
+  until the end of the session. Then they run `goto <name>` or `gosub <name>`
+  ([session-language](session-language.md), section 5).
 - `lang <code>` sets the session language to `<code>` until the end of the session
   ([session-language](session-language.md), section 5). Then the host shows the screen of the top frame
   again from the screen set of the new language (section 5). The stack does not change.
@@ -147,7 +150,7 @@ the screen `shutdown` to each open session if it exists
 
 `velourbbs check` ([screen-render](screen-render.md), section 3.1) finds the item errors
 of [bbt-format](bbt-format.md), section 8.4. It also finds these errors in the screen set
-of each session language ([session-language](session-language.md), section 6):
+of each language of the BBS ([session-language](session-language.md), section 6):
 
 - a `goto` or a `gosub` to a screen that does not exist;
 - a `goto` or a `gosub` to a screen without items, for example `goodbye` or `shutdown`;

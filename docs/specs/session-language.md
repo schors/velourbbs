@@ -20,9 +20,10 @@ for example a logo, is one file for all languages.
 ## 2. Concepts
 
 - A "language code" matches `[a-z]{2,3}(-[a-z0-9]{2,8})?`. Examples: `en`, `ru`, `pt-br`.
-- The "languages of the BBS" are the tables `[lang.<code>]` of `screens/screens.toml`
-  ([screens-toml](screens-toml.md), section 3.5). A BBS without these tables has no languages.
-- The "session language" is a language of the BBS, or "no language".
+- The "languages of the BBS" are `[screen] lang` and the codes of the tables `[lang.<code>]`
+  of `screens/screens.toml` ([screens-toml](screens-toml.md), sections 3.1 and 3.5).
+  `[screen] lang` is `en` by default. So a BBS without `[lang]` has one language: `en`.
+- The "session language" is a language of the BBS. A session always has one.
 - A "language file" is a file in `screens/<code>/` or `content/<code>/`,
   where `<code>` is a language of the BBS.
   A "common file" is another file in `screens/` or `content/`.
@@ -40,7 +41,7 @@ for example a logo, is one file for all languages.
   [bbt-format](bbt-format.md), section 2, and [file-view](file-view.md), section 2.
 - The load ignores a subdirectory and a `screens.toml` in `screens/<code>/`,
   as it ignores each other file that section 2 of [bbt-format](bbt-format.md) does not name.
-- In a BBS with languages, a directory in `screens/` whose name is not a language of the BBS
+- In a BBS with `[lang]` tables, a directory in `screens/` whose name is not a language of the BBS
   gives a warning of `velourbbs check`: `screens/rus:1:1: warning: "rus" is not a language of [lang]`.
 
 Example:
@@ -51,9 +52,9 @@ screens/
   main.bbt          the choice of the language
   _logo.bbt         one logo for all languages
   goodbye.bbt
-  en/main.bbt       the menu in English
+  en/menu.bbt       the menu in English
   en/texts.bbt
-  ru/main.bbt       the menu in Russian
+  ru/menu.bbt       the menu in Russian
   ru/texts.bbt
 content/
   en/features.md
@@ -62,51 +63,53 @@ content/
 
 ## 4. Search
 
-The host finds a file by its name and the session language:
+The host finds a file by its name in the session language `<code>`:
 
-1. In a language `<code>`: the language file `screens/<code>/<file>` or `content/<code>/<path>`.
-2. Else the common file `screens/<file>` or `content/<path>`.
-
-With no language, the host uses only step 2.
+1. the language file `screens/<code>/<file>` or `content/<code>/<path>`;
+2. else the common file `screens/<file>` or `content/<path>`.
 
 - The search applies to a screen of `goto`, `gosub` and `[menu] start`, to `goodbye` and `shutdown`,
   to an include, to an art insert and to the file of a file screen.
 - An include, an art insert and a file of a screen use the session language,
   also in a common screen. Example: the common screen `main` with `{>_logo}` in the language `ru`
   shows `screens/ru/_logo.bbt` if it exists, else `screens/_logo.bbt`.
-- The "screen set" of a session language is the result of the search for each screen name.
-  The model holds one screen set for each language that a session can have (section 5).
+- The name of a `goto` or a `gosub` is a screen name. A code before it, as in `gosub ru/menu`,
+  is not a path: it sets the language (section 5).
+- The "screen set" of a language is the result of the search for each screen name.
+  The model holds one screen set for each language of the BBS.
 
 ## 5. Session
 
 - The session starts with `[screen] lang` ([screens-toml](screens-toml.md), section 3.1).
-  Without it, the session starts with no language.
-- The action `lang <code>` sets the session language to `<code>`
-  ([menu-nav](menu-nav.md), section 4). There is no action to go back to no language.
-- The field `session.lang` gives the session language: the code, or empty for no language
-  ([session-fields](session-fields.md), section 2).
-- A session can have each language of the BBS. It can have no language only when
-  `[screen] lang` is missing.
+- Two actions set the session language until the end of the session:
+  - `goto <code>/<name>` and `gosub <code>/<name>` set the session language to `<code>`.
+    Then they run `goto <name>` or `gosub <name>` in the new language ([menu-nav](menu-nav.md), section 4.1).
+    The new frame holds `<name>`, without `<code>`;
+  - `lang <code>` sets the session language to `<code>` and shows the screen of the top frame again
+    ([menu-nav](menu-nav.md), section 4).
+- The field `session.lang` gives the session language ([session-fields](session-fields.md), section 2).
 
-Example: the station starts with no language. The common screen `main` asks for the language.
-The item `R` runs `lang ru`. The host shows `main` again: now `screens/ru/main.bbt`, the menu in Russian.
+Example: the station starts in `en`. The common screen `main` asks for the language.
+The item `R` runs `gosub ru/menu`: the session language is `ru`, and the host shows `screens/ru/menu.bbt`.
+`ESC` in the menu runs `back` and shows the common `main` again.
 
 ## 6. Checks
 
-`velourbbs check` checks the screen set of each language that a session can have (section 5).
+`velourbbs check` checks the screen set of each language of the BBS.
 
 - Each screen set has the checks of [menu-nav](menu-nav.md), section 6, and of
   [file-view](file-view.md), section 7. The includes, the art inserts and the content files
   of the set use the search of its language.
+- A `goto <code>/<name>` or a `gosub <code>/<name>` has the checks of a `goto` or a `gosub`
+  to `<name>` in the screen set of `<code>`.
 - These are errors too:
-  - `lang <code>` with a code that is not a language of the BBS: an invalid `do`
-    ([bbt-format](bbt-format.md), section 8.4);
-  - `[screen] lang` that is not a language of the BBS ([screens-toml](screens-toml.md), section 3.1);
-  - a screen name of a screen set that is not in the screen set of each language of the BBS,
+  - `lang <code>`, `goto <code>/<name>` or `gosub <code>/<name>` with a code that is not
+    a language of the BBS: an invalid `do` ([bbt-format](bbt-format.md), section 8.4);
+  - a screen name of a screen set that is not in the screen set of each other language,
     or that has other arguments there ([bbt-format](bbt-format.md), section 8.5).
     The action `lang` shows the frames of the stack in the new screen set, so they must fit.
-    The order of the sets is no language, then the codes in order. The error has the position 1:1
-    of the screen file in the first set, with the suffix of the other set:
+    The error has the position 1:1 of the screen file in the set of the first code in order,
+    with the suffix of the other set:
     `screens/ru/news.bbt:1:1: no screen "news" (language "en")`,
     `screens/en/read.bbt:1:1: arguments differ (language "ru")`.
 - The values of an argument of a file screen ([file-view](file-view.md), section 3.1) are the values
@@ -114,14 +117,14 @@ The item `R` runs `lang ru`. The host shows `main` again: now `screens/ru/main.b
   with its own search. An error is an error of the item, with the suffix of the set:
   `screens/ru/texts.bbt:2:1: item "3": args: file: content file "x.md" does not exist (language "en")`.
 - The check reports an equal diagnostic once.
-- An error of a common file that the check finds only in some screen sets ends with
-  ` (language "<code>")` or ` (no language)`, one diagnostic for each screen set.
-  Example: `screens/about.bbt:2:1: item "M": do: unknown screen "menu" (no language)`.
+- In a BBS with more than one language, an error of a common file that the check finds
+  only in some screen sets ends with ` (language "<code>")`, one diagnostic for each screen set.
+  Example: `screens/about.bbt:2:1: item "M": do: unknown screen "menu" (language "de")`.
 - The warning "no screen uses this file" ([screen-render](screen-render.md), section 3.1)
   applies to a fragment or an art file that no screen set uses.
   A common screen that no screen set holds gives the warning `no screen set uses this file`.
-  Example: `screens/main.bbt` next to `screens/en/main.bbt` and `screens/ru/main.bbt`
-  with `[screen] lang`.
+  Example: `screens/menu.bbt` next to `screens/en/menu.bbt` and `screens/ru/menu.bbt`
+  in a BBS with the languages `en` and `ru`.
 
 ## 7. Engine texts
 
@@ -133,8 +136,8 @@ An "engine text" is a text that the host shows and the sysop does not write.
 
 - The English text is the key. English needs no dictionary.
 - A dictionary is a GNU gettext `.po` file in the binary: `internal/i18n/po/<code>.po`.
-  The host uses the dictionary of the session language. With no dictionary,
-  with no language, or with no translation of a text, the host shows the English text.
+  The host uses the dictionary of the session language. With no dictionary
+  or with no translation of a text, the host shows the English text.
 - A new engine text adds a row to the table of this section.
 
 ### 7.1. Dictionary format
@@ -184,34 +187,36 @@ The text of the More row is the first of:
 ## 8. `velourbbs preview`
 
 - `--set session.lang=<code>` sets the session language ([screen-render](screen-render.md), section 3.2).
-  An empty value gives no language. The default is `[screen] lang`, else no language.
-  A value that a session cannot have (section 5) is an invalid argument.
+  The default is `[screen] lang`. A value that is not a language of the BBS is an invalid argument.
 - `velourbbs preview <name>` shows the screen `<name>` of the screen set of the session language.
-- In `--keys` ([menu-nav](menu-nav.md), section 7), the action `lang` changes the session language.
+- In `--keys` ([menu-nav](menu-nav.md), section 7), `lang`, `goto <code>/<name>`
+  and `gosub <code>/<name>` change the session language.
 
 ## 9. Code
 
 | Package | Content |
 |---|---|
 | `internal/config` | `[screen] lang` and `[lang.<code>]` with their checks. |
-| `internal/bbt` | The search of section 4 and the load of the screens of one screen set. |
+| `internal/bbt` | The search of section 4, the load of the screens of one screen set, and the parse of `lang <code>`, `goto <code>/<name>` and `gosub <code>/<name>`. |
 | `internal/bbs` | The screen sets in the model and the checks of section 6. |
 | `internal/i18n` | The dictionaries in the binary, their parser and the engine texts. |
-| `internal/menu` | The session language, the action `lang` and the More text of section 7.2. |
+| `internal/menu` | The session language, the actions of section 5 and the More text of section 7.2. |
 | `internal/screen` | The field `session.lang`. |
 | `cmd/velourbbs` | `--set session.lang`. |
 
 ## 10. Acceptance
 
-- A test covers the search: a language file, a common file, no language,
+- A test covers the search: a language file, a common file,
   and an include and an art insert of a common screen in a language.
 - A test covers the checks of section 6, each error and the language suffix.
 - A test covers the dictionary format: each rule of section 7.1, `fuzzy`, the header,
   a continued string and each error.
-- A golden output of `velourbbs preview --keys` shows the action `lang` in a screen and in a file screen.
+- A golden output of `velourbbs preview --keys` shows `gosub <code>/<name>`, and the action `lang`
+  in a screen and in a file screen.
 - Golden cell dumps show the More row of section 7.2: `[lang.<code>] more`, `[screen] more`,
   and the engine text in Russian and in English.
-- `velourbbs check` in a BBS directory without `[lang]` gives the same output as before.
+- `velourbbs check` in a BBS directory without `[lang]` and without `screens/en/`
+  gives the same output as before.
 - `go vet ./...`, `go test ./...` and `golangci-lint run ./...` pass.
 
 ## 11. Not in this specification

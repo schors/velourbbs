@@ -38,7 +38,7 @@ The other specifications define the effect of a key and refer to this specificat
 | `time` | string | `"2006-01-02 15:04:05"` | The layout of the Go package `time` for the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 | `zone` | string | `"Local"` | The time zone of the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 | `theme` | string | `"dark"` | The theme choice at the start of a session: `dark`, `light` or `auto` (section 3.2). |
-| `lang` | string | — | The session language at the start of a session: a language of section 3.5. Without it, a session starts with no language ([session-language](session-language.md), section 5). |
+| `lang` | string | `"en"` | The session language at the start of a session ([session-language](session-language.md), section 5). It is a language of the BBS, also without a table of section 3.5. |
 
 - `width`, `align`, `valign` and `fill` have the rules of the front matter keys
   ([bbt-format](bbt-format.md), section 3.2).
@@ -137,7 +137,7 @@ Each table `[lang.<code>]` makes `<code>` a language of the BBS
 |---|---|---|---|
 | `more` | string | — | The text of the More row in this language: [session-language](session-language.md), section 7.2. |
 
-- `<code>` is a language code of [session-language](session-language.md), section 2.
+- `<code>` and `[screen] lang` are language codes of [session-language](session-language.md), section 2.
 - `more` has the rules of `[screen] more`.
 
 ## 4. Example
@@ -150,8 +150,6 @@ valign = "middle"
 fill = "spaces"
 theme = "auto"
 lang = "en"
-
-[lang.en]
 
 [lang.ru]
 more = "-- Дальше --"

@@ -17,7 +17,7 @@ the online time, the BBS name, the version, the open sessions, the server time a
 |---|---|---|---|
 | `session.ip` | string | The client address (section 3.1). | `203.0.113.7` |
 | `session.theme` | string | The theme choice of the session: `dark`, `light` or `auto` ([screens-toml](screens-toml.md), section 3.2). | `auto` |
-| `session.lang` | string | The session language: a language code, or empty for no language ([session-language](session-language.md), section 5). | `ru` |
+| `session.lang` | string | The session language: a language code ([session-language](session-language.md), section 5). | `ru` |
 | `session.online` | string | The time from the accept of the connection, in the duration form (section 3.3). | `01:25:07` |
 | `bbs.name` | string | `[bbs] name` of [bbs-toml](bbs-toml.md), section 3.2. | `Kind Brothers BBS` |
 | `bbs.version` | string | The version of the `velourbbs` binary (section 3.4). | `v1.2.0` |
@@ -85,7 +85,7 @@ the online time, the BBS name, the version, the open sessions, the server time a
 | `bbs.time` | 2006-01-02 15:04:05 in `[screen] zone`, in the layout `[screen] time`. `Local` gives UTC. |
 | `bbs.uptime` | `00:00:00` |
 | `session.theme` | `[screen] theme`. |
-| `session.lang` | `[screen] lang`, else empty. |
+| `session.lang` | `[screen] lang`. |
 
 - `--set <path>=<value>` replaces the value ([screen-render](screen-render.md), section 3.2).
 - A string field takes the value as it is. The value has the rules of an argument value

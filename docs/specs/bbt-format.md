@@ -372,6 +372,7 @@ are the same keys.
 |---|---|
 | `goto <name>` | Show the screen `<name>` in place of the current screen. |
 | `gosub <name>` | Show the screen `<name>` over the current screen: [menu-nav](menu-nav.md), section 4.1. |
+| `goto <code>/<name>`, `gosub <code>/<name>` | Set the session language to `<code>`, then run `goto <name>` or `gosub <name>`: [session-language](session-language.md), section 5. |
 | `back` | Show the screen below the current screen again: [menu-nav](menu-nav.md), section 4.1. |
 | `top` | Show the first screen of the navigation stack again: [menu-nav](menu-nav.md), section 4.1. |
 | `logoff` | End the session. |
@@ -380,7 +381,8 @@ are the same keys.
 | `lang <code>` | Set the session language: [session-language](session-language.md), section 5. |
 
 - The action words are lower case. `do` has no other spaces than the one space after `goto`, `gosub`, `page`, `theme` or `lang`.
-- `<name>` matches the screen name of section 2.
+- `<name>` matches the screen name of section 2. `<code>` is a language code
+  of [session-language](session-language.md), section 2.
 - [menu-nav](menu-nav.md), section 4, defines how the host runs the actions.
 
 ### 8.4. Errors
