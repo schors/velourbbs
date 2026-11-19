@@ -54,6 +54,9 @@ func (p *parser) line(s string) error {
 			for f := range strings.SplitSeq(flags, ",") {
 				p.fuzzy = p.fuzzy || strings.TrimSpace(f) == "fuzzy"
 			}
+		} else if strings.HasPrefix(s, "#~") && !strings.HasPrefix(s, "#~|") {
+			// An obsolete entry: msgmerge writes its #, comment before it without #~.
+			p.fuzzy = false
 		}
 		p.cont = nil
 	case s[0] == '"':

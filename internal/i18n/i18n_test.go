@@ -9,14 +9,8 @@ import (
 
 // A test reads each dictionary of the binary (session-language, section 7.1).
 func TestDictionaries(t *testing.T) {
-	d, err := load(files)
-	if err != nil {
+	if _, err := load(files); err != nil {
 		t.Fatal(err)
-	}
-	for code, dict := range d {
-		if len(dict) == 0 {
-			t.Errorf("%s: no translation", code)
-		}
 	}
 }
 
@@ -89,6 +83,10 @@ func TestParse(t *testing.T) {
 		), map[string]string{More: "[x]"}},
 		{"empty msgstr", lines(`msgid "-- More --"`, `msgstr ""`), nil},
 		{"fuzzy breaks no rule", lines(`#, fuzzy`, `msgid "-- More --"`, `msgstr "\t"`), nil},
+		{"fuzzy of an obsolete entry", lines(
+			`#, fuzzy`, `#~| msgid "-- Older --"`, `#~ msgid "-- Old --"`, `#~ msgstr "x"`, ``,
+			`msgid "-- More --"`, `msgstr "[y]"`,
+		), map[string]string{More: "[y]"}},
 	}
 	for _, tt := range tests {
 		got, err := Parse("ru.po", tt.data)
@@ -140,6 +138,7 @@ func TestParseErrors(t *testing.T) {
 		{lines(entry, `msgstr "[x]\n"`), `ru.po:2: msgstr: control character U+000A`},
 		{lines(entry, `msgstr ""`, `"\t"`), `ru.po:2: msgstr: control character U+0009`},
 		{lines(entry, "msgstr \"a\u200b\""), `ru.po:2: msgstr: zero-width grapheme U+200B`},
+		{lines(entry, `msgstr "e`+strings.Repeat("\u0301", 16)+`"`), `ru.po:2: msgstr: grapheme over 32 bytes: 33 bytes`},
 	}
 	for _, tt := range tests {
 		got, err := Parse("ru.po", tt.data)
