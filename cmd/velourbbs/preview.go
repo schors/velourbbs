@@ -20,6 +20,7 @@ import (
 	"github.com/schors/velourbbs/internal/content"
 	"github.com/schors/velourbbs/internal/key"
 	"github.com/schors/velourbbs/internal/menu"
+	"github.com/schors/velourbbs/internal/provider"
 	"github.com/schors/velourbbs/internal/screen"
 	"github.com/schors/velourbbs/internal/term"
 )
@@ -146,9 +147,10 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 
 // argFiles loads the content file of the argument of the screen name in the screen set
 // of each language, when the screen is a file screen with {arg.<name>}, with the checks
-// of file-view, section 7 (session-language, section 8). It merges the diagnostics and the errors
+// of file-view, section 7 (session-language, section 8). For a list screen with {arg.<name>} in data,
+// it reads the rows of the value (screen-render, section 3.2). It merges the diagnostics and the errors
 // of the sets as bbt.SetDiags does. It gives m, or a new model with the screens that can show
-// the files. It writes the errors and gives nil after an error.
+// the files and the rows. It writes the errors and gives nil after an error.
 // The model of the load stays immutable (session, section 4).
 func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, stderr io.Writer) *bbs.Model {
 	langs := m.Config.Langs
@@ -158,38 +160,25 @@ func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, std
 	found := map[string][]string{} // the sets that find each error
 	for _, lang := range langs {
 		s := m.Sets[lang][name] // the check of the sets makes sure that each set has the screen
-		f := s.FileScreen
-		if f == nil || f.Arg == "" || f.Contents[args[f.Arg]] != nil {
-			continue
+		var ns *screen.Screen
+		var errs []string
+		if s.List != nil {
+			ns, errs = argRows(fsys, lang, s, args, sd)
+		} else {
+			ns, errs = argFile(fsys, lang, s, args, sd)
 		}
-		p := args[f.Arg]
-		c, ds, err := content.Load(fsys, lang, p)
-		sd.Add(lang, ds)
-		var errs []error
-		if err != nil {
-			errs = []error{err}
-		} else if c != nil {
-			errs = f.Check(p, c)
-		}
-		for _, err := range errs {
-			msg := fmt.Sprintf("arg.%s: %v", f.Arg, err)
+		for _, msg := range errs {
 			if found[msg] == nil {
 				msgs = append(msgs, msg)
 			}
 			found[msg] = append(found[msg], lang)
 		}
-		if c == nil || len(errs) > 0 {
+		switch {
+		case ns == nil:
 			nm = nil
-			continue
-		}
-		if nm != nil {
-			nf := *f
-			nf.Contents = maps.Clone(f.Contents)
-			nf.Contents[p] = c
-			ns := *s
-			ns.FileScreen = &nf
+		case ns != s && nm != nil:
 			nm.Sets[lang] = maps.Clone(m.Sets[lang])
-			nm.Sets[lang][name] = &ns
+			nm.Sets[lang][name] = ns
 		}
 	}
 	writeDiags(stderr, sd.Diags())
@@ -203,6 +192,71 @@ func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, std
 		}
 	}
 	return nm
+}
+
+// argFile loads the content file of the argument of the file screen s in the set lang.
+// It gives s when it needs no file, a new screen with the file, or nil and the errors.
+// It adds the diagnostics of the file to sd.
+func argFile(fsys fs.FS, lang string, s *screen.Screen, args map[string]string, sd *bbt.SetDiags) (*screen.Screen, []string) {
+	f := s.FileScreen
+	if f == nil || f.Arg == "" || f.Contents[args[f.Arg]] != nil {
+		return s, nil
+	}
+	p := args[f.Arg]
+	c, ds, err := content.Load(fsys, lang, p)
+	sd.Add(lang, ds)
+	var errs []error
+	if err != nil {
+		errs = []error{err}
+	} else if c != nil {
+		errs = f.Check(p, c)
+	}
+	var msgs []string
+	for _, err := range errs {
+		msgs = append(msgs, fmt.Sprintf("arg.%s: %v", f.Arg, err))
+	}
+	if c == nil || len(errs) > 0 {
+		return nil, msgs
+	}
+	nf := *f
+	nf.Contents = maps.Clone(f.Contents)
+	nf.Contents[p] = c
+	ns := *s
+	ns.FileScreen = &nf
+	return &ns, nil
+}
+
+// argRows reads the rows of the list screen s for the arguments args in the set lang.
+// It gives s when it has the rows, a new screen with the rows, or nil and the errors.
+// It adds the diagnostics of the content files to sd.
+func argRows(fsys fs.FS, lang string, s *screen.Screen, args map[string]string, sd *bbt.SetDiags) (*screen.Screen, []string) {
+	l := s.List
+	values := l.Values(args)
+	key := screen.ListKey(values)
+	if _, ok := l.Lists[key]; ok {
+		return s, nil
+	}
+	p, _ := provider.Lookup(l.From)
+	diags := false
+	rows, errs := p.Rows(fsys, lang, values, func(path string) (*screen.Content, error) {
+		c, ds, err := content.Load(fsys, lang, path)
+		sd.Add(lang, ds)
+		diags = diags || ds.HasErrors()
+		return c, err
+	})
+	var msgs []string
+	for _, err := range errs {
+		msgs = append(msgs, fmt.Sprintf("data: args: %v", err))
+	}
+	if len(errs) > 0 || diags {
+		return nil, msgs
+	}
+	nl := *l
+	nl.Lists = maps.Clone(l.Lists)
+	nl.Lists[key] = rows
+	ns := *s
+	ns.List = &nl
+	return &ns, nil
 }
 
 // parseSize sets the size of term from "<cols>x<rows>". term.Check checks the ranges.

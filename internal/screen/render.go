@@ -75,6 +75,39 @@ func renderFrame(s *Screen, env *Env, theme map[string]Style) *renderer {
 	return r
 }
 
+// ListRows gives the rows R of page 1 of the list screen s with the page size rows
+// (list-view, section 7). env has the list values of page 1 with this page size.
+// The count stops at MaxRenderRows.
+func ListRows(s *Screen, env *Env, theme map[string]Style, list []ListRow, rows int) int {
+	return renderList(s, env, theme, list, rows).count
+}
+
+// RenderList renders the list page n of the list screen s with the page size p (list-view, section 7).
+// env has the list values of page n. The page is cut at term.rows. A page with fewer rows
+// has the vertical position of section 6.5.
+func RenderList(s *Screen, env *Env, theme map[string]Style, list []ListRow, n, p int) Page {
+	r := renderList(s, env, theme, list, p)
+	pg := r.page(r.rows)
+	pg.Num = n
+	switch s.VAlign {
+	case VAlignMiddle:
+		pg.Top = (r.height - len(r.rows)) / 2
+	case VAlignBottom:
+		pg.Top = r.height - len(r.rows)
+	}
+	return pg
+}
+
+// renderList renders the rows of the list screen s with the page size p, without pages.
+// It keeps the first term.rows rows and counts all rows.
+func renderList(s *Screen, env *Env, theme map[string]Style, list []ListRow, p int) *renderer {
+	r := newRenderer(s, env, theme)
+	r.frame = true
+	r.list, r.pageSize = list, p
+	r.walk(s.Body, r.normal)
+	return r
+}
+
 // RenderWidth gives the render width W for cols columns (section 6.1).
 func (l Layout) RenderWidth(cols int) int {
 	return min(max(cols, l.Width.Min), l.Width.Max)
@@ -124,9 +157,13 @@ type renderer struct {
 	done    bool // the render stops: the rows are at MaxRenderRows, or the consumer stopped
 	pages   int  // the pages so far
 
-	// The frame render of a file screen: no pages. rows keeps the first term.rows rows.
+	// The frame render of a file screen or a list screen: no pages. rows keeps the first term.rows rows.
 	frame bool
 	split int // the rows before the file area
+
+	// The list of a list screen and the page size P (list-view, section 7).
+	list     []ListRow
+	pageSize int
 
 	wrapper // the current source line
 }
@@ -156,6 +193,8 @@ func (r *renderer) walk(segs []Seg, cur Style) Style {
 			r.art(seg) // the art does not change the style of the text (section 7.3)
 		case FileArea:
 			r.split = r.count
+		case ListLine:
+			r.listLine(seg, cur)
 		case LineEnd:
 			r.endLine(seg.Block)
 		}
@@ -171,6 +210,65 @@ func (r *renderer) value(ref Ref) []Grapheme {
 		r.values[ref] = gs
 	}
 	return gs
+}
+
+// listLine adds the P rows of a list line: one row for each row of the list page,
+// then empty rows up to P (list-view, section 5). A row does not wrap: row cuts it.
+// Each row starts with the style cur; the list line does not change the style after it.
+func (r *renderer) listLine(l ListLine, cur Style) {
+	first := (r.env.List.Page - 1) * r.pageSize
+	for i := range r.pageSize {
+		if r.done {
+			return
+		}
+		n := first + i
+		if n >= len(r.list) {
+			r.addRow(nil)
+			continue
+		}
+		env := *r.env
+		env.Row = &RowValues{Num: n + 1, Row: r.list[n]}
+		cells, _ := r.rowText(l.Row, cur, &env, nil)
+		r.addRow(cells)
+	}
+}
+
+// rowText appends the cells of the row text segs with the style cur and the values of env
+// to cells. It stops after W cells. It gives the cells and the style after them.
+func (r *renderer) rowText(segs []Seg, cur Style, env *Env, cells []Cell) ([]Cell, Style) {
+	for _, seg := range segs {
+		if len(cells) > r.w {
+			break
+		}
+		switch seg := seg.(type) {
+		case Text:
+			for _, g := range seg.Graphemes {
+				cells = appendCell(cells, g, cur)
+			}
+		case Field:
+			var gs []Grapheme
+			if seg.Ref.Row() != "" { // the value of each row: not in the cache of the render
+				gs = env.Text(seg.Ref)
+			} else {
+				gs = r.value(seg.Ref)
+			}
+			if seg.Width > 0 {
+				gs = FitValue(gs, min(seg.Width, r.w), seg.Right)
+			}
+			for _, g := range gs {
+				cells = appendCell(cells, g, cur)
+			}
+		case SetStyle:
+			cur = seg.Apply(cur, r.theme)
+		case If:
+			if seg.Cond.Eval(env) {
+				cells, cur = r.rowText(seg.Then, cur, env, cells)
+			} else {
+				cells, cur = r.rowText(seg.Else, cur, env, cells)
+			}
+		}
+	}
+	return cells, cur
 }
 
 // text adds graphemes to the line. A space is a break.

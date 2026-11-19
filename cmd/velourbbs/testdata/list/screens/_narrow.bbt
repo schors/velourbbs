@@ -1,0 +1,1 @@
+{#each}{row.num}.{#if row.num == 1} {!title}{/if}{row.title} {!dim}{row.path                                        }{/each}

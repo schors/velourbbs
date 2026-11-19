@@ -93,6 +93,40 @@ var fileFields = [...]struct {
 	fileMinutes: {"file.minutes", TypeInt},
 }
 
+// listField is a list.* field of a list screen (list-view, section 6).
+type listField uint8
+
+const (
+	listPage listField = iota + 1
+	listPages
+	listLast
+	listEmpty
+)
+
+// listFields is the list.* fields of list-view, section 6.
+var listFields = [...]struct {
+	path string
+	typ  Type
+}{
+	listPage:  {"list.page", TypeInt},
+	listPages: {"list.pages", TypeInt},
+	listLast:  {"list.last", TypeBool},
+	listEmpty: {"list.empty", TypeBool},
+}
+
+// RowNum and RowSelected are the row.* fields of each list (list-view, section 6).
+const (
+	RowNum      = "num"
+	RowSelected = "selected"
+)
+
+// rowTypes is the type of each row.<field> of the providers (list-view, sections 4 and 6),
+// with row.num and row.selected. A provider gives a subset of these fields.
+var rowTypes = map[string]Type{
+	RowNum: TypeInt, RowSelected: TypeBool,
+	"path": TypeString, "title": TypeString, "minutes": TypeInt, // files (list-view, section 4.1)
+}
+
 // sessionField is a session.* or bbs.* field (session-fields, section 2).
 type sessionField uint8
 
@@ -134,16 +168,21 @@ const (
 	refFile
 	refMeta
 	refSession
+	refList
+	refRow
 )
 
 // Ref is a resolved field path: a term.* field, item.<KEY>, arg.<name>,
-// a file.* field, meta.<key>, or a session.* or bbs.* field.
+// a file.* field, meta.<key>, a session.* or bbs.* field, a list.* field or row.<field>.
 type Ref struct {
 	kind    refKind
 	term    termField
 	file    fileField
 	session sessionField
-	name    string // the <KEY> of item.<KEY> in upper case, the <name> of arg.<name>, the <key> of meta.<key>
+	list    listField
+	// name is the <KEY> of item.<KEY> in upper case, the <name> of arg.<name>,
+	// the <key> of meta.<key> and the <field> of row.<field>.
+	name string
 }
 
 // Type gives the type of the field.
@@ -157,6 +196,10 @@ func (r Ref) Type() Type {
 		return fileFields[r.file].typ
 	case refSession:
 		return sessionFields[r.session].typ
+	case refList:
+		return listFields[r.list].typ
+	case refRow:
+		return rowTypes[r.name] // 0 for a field that no provider gives: the load reports it
 	case refArg, refMeta:
 		return TypeString
 	}
@@ -178,6 +221,10 @@ func (r Ref) String() string {
 		return sessionFields[r.session].path
 	case refMeta:
 		return "meta." + r.name
+	case refList:
+		return listFields[r.list].path
+	case refRow:
+		return "row." + r.name
 	}
 	return ""
 }
@@ -193,13 +240,24 @@ func (r Ref) Arg() string {
 // IsFile reports whether r is a field of a file screen: file.* or meta.<key> (file-view, section 3.4).
 func (r Ref) IsFile() bool { return r.kind == refFile || r.kind == refMeta }
 
+// IsList reports whether r is a list.* field (list-view, section 6).
+func (r Ref) IsList() bool { return r.kind == refList }
+
+// Row gives the <field> of row.<field>, else "".
+func (r Ref) Row() string {
+	if r.kind == refRow {
+		return r.name
+	}
+	return ""
+}
+
 func (r Ref) isItem() bool { return r.kind == refItem }
 
 // Fields maps an alias to its field (section 4.2).
 type Fields map[string]Ref
 
 // reserved are the names that an alias cannot have (screens-toml, section 3.3).
-var reserved = []string{"term", "item", "arg", "file", "meta", "session", "bbs", "and", "or", "not"}
+var reserved = []string{"term", "item", "arg", "file", "meta", "row", "list", "session", "bbs", "and", "or", "not"}
 
 // NewAlias checks the alias name and its path against screens-toml, section 3.3,
 // and gives the field of the path.
@@ -268,6 +326,11 @@ func resolve(path string, fields Fields) (Ref, error) {
 				return Ref{}, fmt.Errorf("invalid meta key %q", tail)
 			}
 			return Ref{kind: refMeta, name: tail}, nil
+		case "row":
+			if !IsIdent(tail) {
+				return Ref{}, fmt.Errorf("invalid row field %q", tail)
+			}
+			return Ref{kind: refRow, name: tail}, nil
 		}
 	}
 	for i, f := range termFields {
@@ -283,6 +346,11 @@ func resolve(path string, fields Fields) (Ref, error) {
 	for i, f := range sessionFields {
 		if i > 0 && f.path == path {
 			return Ref{kind: refSession, session: sessionField(i)}, nil
+		}
+	}
+	for i, f := range listFields {
+		if i > 0 && f.path == path {
+			return Ref{kind: refList, list: listField(i)}, nil
 		}
 	}
 	return Ref{}, fmt.Errorf("unknown field %q", path)
@@ -381,7 +449,21 @@ type Env struct {
 	Items   map[string]bool   // the keys of the enabled items
 	Args    map[string]string // the arguments of the screen (section 8.5)
 	File    *FileValues       // the values of a file screen, else nil
+	List    *ListValues       // the values of a list screen, else nil
+	Row     *RowValues        // the values of the row of a row text, else nil
 	Session SessionValues
+}
+
+// ListValues holds the values of the list.* fields for one list page (list-view, section 6).
+type ListValues struct {
+	Page, Pages int
+	Empty       bool
+}
+
+// RowValues holds the values of the row.* fields of one row (list-view, section 6).
+type RowValues struct {
+	Num int
+	Row ListRow
 }
 
 // SessionValues holds the values of the session.* and bbs.* fields (session-fields, section 2).
@@ -426,6 +508,13 @@ func (e *Env) value(r Ref) any {
 		return e.File.value(r.file)
 	case refSession:
 		return e.Session.value(r.session)
+	case refList:
+		return e.List.value(r.list)
+	case refRow:
+		if r.name == RowNum {
+			return e.Row.Num
+		}
+		return e.Row.Row[r.name]
 	}
 	switch r.term {
 	case termType:
@@ -467,6 +556,19 @@ func (v *FileValues) value(f fileField) any {
 		return v.Section
 	}
 	return v.Minutes
+}
+
+// value gives the value of the list.* field f.
+func (v *ListValues) value(f listField) any {
+	switch f {
+	case listPage:
+		return v.Page
+	case listPages:
+		return v.Pages
+	case listLast:
+		return v.Page == v.Pages
+	}
+	return v.Empty
 }
 
 // value gives the value of the session.* or bbs.* field f.

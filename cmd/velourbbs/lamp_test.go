@@ -15,6 +15,7 @@ func TestLamp(t *testing.T) {
 		{screen: "about", size: "80x24", colors: "16"}, {screen: "about", size: "80x24", colors: "256"}, {screen: "about", size: "80x24", colors: "16777216"},
 		{screen: "term", size: "80x24", colors: "16"}, {screen: "term", size: "80x24", colors: "256"}, {screen: "term", size: "80x24", colors: "16777216"},
 		{screen: "texts", size: "80x24", colors: "16"}, {screen: "texts", size: "80x24", colors: "256"}, {screen: "texts", size: "80x24", colors: "16777216"},
+		{screen: "log", size: "80x24", colors: "16"}, {screen: "log", size: "80x24", colors: "256"}, {screen: "log", size: "80x24", colors: "16777216"},
 		{screen: "reader", size: "80x24", colors: "16", set: "arg.file=lamp.md"},
 		{screen: "reader", size: "80x24", colors: "256", set: "arg.file=lamp.md"},
 		{screen: "reader", size: "80x24", colors: "16777216", set: "arg.file=lamp.md"},

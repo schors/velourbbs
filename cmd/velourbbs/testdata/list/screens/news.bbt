@@ -1,0 +1,15 @@
++++
+data = { from = "files", args = { dir = "parts" } }
+rows = 12
+[[item]]
+key = "PGDN"
+do = "page next"
+[[item]]
+key = "ESC"
+do = "back"
++++
+{!title}News{!}
+
+{#each}{row.num} {row.title}{/each}
+
+{!dim}page {list.page} of {list.pages}{!}

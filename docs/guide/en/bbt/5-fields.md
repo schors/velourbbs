@@ -104,7 +104,7 @@ Full rules: [session-fields](../../../specs/session-fields.md), sections 2–4.
 w = "term.cols"
 ```
 
-Then `{w}` shows the columns of the terminal. A short alias helps in art (task 8).
+Then `{w}` shows the columns of the terminal. A short alias helps in art (task 9).
 
 Full rules: [bbt-format](../../../specs/bbt-format.md), sections 3.3 and 4,
 and [screens-toml](../../../specs/screens-toml.md), section 3.3.

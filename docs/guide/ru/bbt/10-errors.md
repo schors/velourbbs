@@ -1,4 +1,4 @@
-# Задача 9. Ошибки
+# Задача 10. Ошибки
 
 `velourbbs check` находит ошибки до запуска BBS.
 Каждая строка вывода содержит файл, номер строки, номер столбца и сообщение (задача 1).
@@ -102,6 +102,15 @@ screens/texts.bbt:2:1: item "1": args: file: content file "lmap.md" does not exi
 - Пункт `1` передаёт `gosub reader` файл `lmap.md` в `args`, а этого файла нет в `content/`.
   Исправь имя в `args`.
 
+## `directory ... does not exist`
+
+```
+screens/log.bbt:2:1: data: args: dir: directory "lgo" does not exist
+```
+
+Ключ `data` экрана-списка `log` называет каталог `lgo` (задача 8),
+а каталога `content/lgo/` нет. Исправь имя или создай каталог.
+
 ## `front matter: no end line`
 
 ```
@@ -117,7 +126,7 @@ content/lamp.md:1:1: front matter: no end line "+++"
 screens/logo.ans:1:1: not in the flat form, convert it with velourbbs art import
 ```
 
-Арт — это файл редактора арта. Переведи его (задача 8).
+Арт — это файл редактора арта. Переведи его (задача 9).
 
 ## Поле в арте меняет цвет
 
@@ -141,4 +150,5 @@ screens/about.bbt:10:8: unknown style "titel"
 
 Полные правила: [screen-render](../../../specs/screen-render.md), раздел 3.1,
 [menu-nav](../../../specs/menu-nav.md), раздел 6,
-и [file-view](../../../specs/file-view.md), раздел 7.
+[file-view](../../../specs/file-view.md), раздел 7,
+и [list-view](../../../specs/list-view.md), раздел 10.

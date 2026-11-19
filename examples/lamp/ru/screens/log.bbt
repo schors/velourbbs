@@ -1,0 +1,30 @@
++++
+data = { from = "files", args = { dir = "log" } }
+rows = 5
+[[item]]
+key = "SPACE"
+do = "page next"
+when = "not list.last"
+[[item]]
+key = "B"
+do = "page prev"
+when = "list.page > 1"
+[[item]]
+key = "ESC"
+do = "back"
++++
+{>_head}
+       {!title}Журнал смотрителя{!}
+       {!dim}заметки о ночах  ∙  стр. {list.page}/{list.pages}{!}
+
+{#each}         {!dim}{row.num}{!}   {row.title                             }{!dim}{row.minutes} мин{/each}
+
+
+
+
+
+
+
+  {!line}────────────────────────────────────────────────────────────────────────────{!}
+
+    {#if item.SPACE}{!key}Space{!}  {!dim}дальше{!}   {/if}{#if item.B}{!key}B{!}  {!dim}пред.{!}   {/if}{!key}Esc{!}  {!dim}назад{!}

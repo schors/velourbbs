@@ -1,0 +1,35 @@
++++
+data = { from = "files", args = { dir = "{arg.dir}" } }
+rows = 4
+[[item]]
+key = "PGDN"
+do = "page next"
+when = "not list.last"
+[[item]]
+key = "PGUP"
+do = "page prev"
+when = "list.page > 1"
+[[item]]
+key = "HOME"
+do = "page first"
+[[item]]
+key = "END"
+do = "page last"
+[[item]]
+key = "N"
+do = "gosub news"
+[[item]]
+key = "T"
+do = "theme light"
+[[item]]
+key = "ESC"
+do = "back"
++++
+{!title}Parts of {arg.dir}{!}  {!dim}page {list.page}/{list.pages}{!}
+{#if term.cols >= 60}
+{#each}{!key}{  row.num}{!}  {row.title                        } {!dim}{row.minutes} min  {row.path}{/each}
+{#else}
+{>_narrow}
+{/if}
+{#if list.empty}{!dim}No parts yet.{/if}
+{!key}PgUp PgDn Home End{!}  N News  T Light  Esc Back

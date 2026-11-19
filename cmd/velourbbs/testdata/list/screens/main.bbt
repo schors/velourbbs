@@ -1,0 +1,18 @@
++++
+[[item]]
+key = "1"
+do = "gosub parts"
+args = { dir = "parts" }
+[[item]]
+key = "2"
+do = "gosub parts"
+args = { dir = "empty" }
+[[item]]
+key = "3"
+do = "gosub news"
+[[item]]
+key = "G"
+do = "logoff"
++++
+Lists
+1 Parts  2 Empty  3 News  G Goodbye

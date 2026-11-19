@@ -98,10 +98,27 @@ func (c *Cond) Args() []string {
 }
 
 // FileField gives the path of the first field of a file screen in c, else "" (file-view, section 3.4).
-func (c *Cond) FileField() string {
+func (c *Cond) FileField() string { return c.find(Ref.IsFile) }
+
+// ListField gives the path of the first list.* field in c, else "" (list-view, section 6).
+func (c *Cond) ListField() string { return c.find(Ref.IsList) }
+
+// Refs gives the fields of c.
+func (c *Cond) Refs() []Ref {
+	var refs []Ref
 	for _, and := range c.or {
 		for _, t := range and {
-			if t.ref.IsFile() {
+			refs = append(refs, t.ref)
+		}
+	}
+	return refs
+}
+
+// find gives the path of the first field of c for which is gives true, else "".
+func (c *Cond) find(is func(Ref) bool) string {
+	for _, and := range c.or {
+		for _, t := range and {
+			if is(t.ref) {
 				return t.ref.String()
 			}
 		}
@@ -197,8 +214,8 @@ func (p *condParser) unary() (term, error) {
 		if err != nil {
 			return term{}, err
 		}
-		if ref.Type() != TypeBool {
-			return term{}, fmt.Errorf("\"not\" needs a boolean field, %q is %s", ref.String(), ref.Type())
+		if typ := ref.Type(); typ != TypeBool && typ != 0 {
+			return term{}, fmt.Errorf("\"not\" needs a boolean field, %q is %s", ref.String(), typ)
 		}
 		return term{ref: ref, not: true}, nil
 	}
@@ -208,6 +225,13 @@ func (p *condParser) unary() (term, error) {
 	}
 	p.skipSpaces()
 	t := term{ref: ref, op: p.op()}
+	if ref.Type() == 0 { // a row.<field> that no provider gives: the load reports it
+		if t.op != opNone {
+			p.skipSpaces()
+			return t, p.literal(&t)
+		}
+		return t, nil
+	}
 	if t.op == opNone {
 		if ref.Type() != TypeBool {
 			return term{}, fmt.Errorf("%s field %q needs an operator", ref.Type(), ref.String())
@@ -253,7 +277,7 @@ func (p *condParser) literal(t *term) error {
 		switch {
 		case err != nil:
 			return err
-		case typ != TypeString:
+		case typ != TypeString && typ != 0:
 			return fmt.Errorf("%s field %q takes an integer, found a string", typ, t.ref.String())
 		case t.op != opEq && t.op != opNe:
 			return fmt.Errorf("string field %q takes only == or !=", t.ref.String())
@@ -265,7 +289,7 @@ func (p *condParser) literal(t *term) error {
 	switch {
 	case err != nil:
 		return err
-	case typ != TypeInt:
+	case typ != TypeInt && typ != 0:
 		return fmt.Errorf("%s field %q takes a string, found an integer", typ, t.ref.String())
 	}
 	t.n = n

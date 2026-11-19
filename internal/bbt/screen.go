@@ -5,6 +5,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/schors/velourbbs/internal/provider"
 	"github.com/schors/velourbbs/internal/screen"
 )
 
@@ -26,6 +27,7 @@ type unit struct {
 	over  bool
 	args  map[string]bool // the argument names of the screen (section 8.5)
 	area  bool            // the body has the file area
+	each  bool            // the body has a list line (list-view, section 3)
 }
 
 // fragment is a fragment body, resolved for one screen, and its lines after includes.
@@ -72,6 +74,7 @@ func (l *loader) screen(u *unit) {
 	u.args = map[string]bool{}
 	u.s.Layout = u.fr.layout.Over(l.st.Layout)
 	u.s.FileScreen = u.fr.file
+	u.s.List = u.fr.list
 	u.s.Body = l.resolve(u, u.f.body, true)
 	if u.over { // the body of a screen over the limit is not kept
 		u.s.Body, u.frags = nil, nil
@@ -87,6 +90,17 @@ func (l *loader) screen(u *unit) {
 		u.addArgs(f.Arg)
 		if f.Path != "" {
 			l.literalFile(u, f)
+		}
+	}
+	if ls := u.s.List; ls != nil {
+		if !u.each {
+			l.errorf(u, screen.Pos{File: u.f.name, Line: 2, Col: 1}, false, "data: the screen has no list line")
+		}
+		for _, arg := range ls.ArgRefs {
+			u.addArgs(arg)
+		}
+		if len(ls.ArgRefs) == 0 && ls.From != "" {
+			l.literalRows(u, ls)
 		}
 	}
 	u.s.Items = u.fr.items
@@ -132,9 +146,19 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 		case screen.SetStyle:
 			segs = append(segs, n)
 		case field:
-			l.checkFileField(u, n.pos, n.f.Ref.String(), n.f.Ref.IsFile())
+			l.checkField(u, n.pos, n.f.Ref)
 			u.addArgs(n.f.Ref.Arg())
 			segs = append(segs, n.f)
+		case *eachNode:
+			if top {
+				u.at = n.pos
+			}
+			l.add(u, 1)
+			if u.s.List == nil {
+				l.errorf(u, n.pos, false, "list line in a screen without data")
+			}
+			u.each = true
+			segs = append(segs, screen.ListLine{Row: l.resolve(u, n.body, top)})
 		case fileArea:
 			u.at = n.pos
 			l.add(u, 1)
@@ -154,8 +178,11 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 			if n.cond != nil {
 				u.conds = append(u.conds, condAt{n.cond, n.pos})
 				u.addArgs(n.cond.Args()...)
-				f := n.cond.FileField()
-				l.checkFileField(u, n.pos, f, f != "")
+				for _, r := range n.cond.Refs() {
+					if l.checkField(u, n.pos, r) {
+						break
+					}
+				}
 			}
 			then, els := l.resolve(u, n.then, top), l.resolve(u, n.els, top)
 			if n.cond != nil {
@@ -183,7 +210,12 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 				l.errorf(u, n.pos, true, "art %q is %d cells wide, max width is %d", n.file, a.Width, u.s.Width.Max)
 			}
 			for _, f := range a.Fields {
-				l.checkFileField(u, screen.Pos{File: name, Line: f.Row, Col: f.Col}, f.Ref.String(), f.Ref.IsFile())
+				pos := screen.Pos{File: name, Line: f.Row, Col: f.Col}
+				if f.Ref.Row() != "" { // the list row of art: list-view, section 9
+					l.errorf(u, pos, false, "field %q is valid only in a list line", f.Ref.String())
+				} else {
+					l.checkField(u, pos, f.Ref)
+				}
 				u.addArgs(f.Ref.Arg())
 			}
 			segs = append(segs, screen.ArtInsert{Art: a})
@@ -192,12 +224,29 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 	return segs
 }
 
-// checkFileField reports the field path at pos when isFile and the screen is not a file screen
-// (file-view, section 3.4).
-func (l *loader) checkFileField(u *unit, pos screen.Pos, path string, isFile bool) {
-	if isFile && u.s.FileScreen == nil {
-		l.errorf(u, pos, false, "field %q is valid only in a file screen", path)
+// checkField reports the field r at pos when the screen cannot show it: a field of a file screen
+// outside a file screen (file-view, section 3.4), a list.* field outside a list screen
+// and a row.<field> that the provider does not give (list-view, section 6).
+// The file pass reports a row.<field> outside a list line. checkField reports whether it found an error.
+func (l *loader) checkField(u *unit, pos screen.Pos, r screen.Ref) bool {
+	ls := u.s.List
+	var msg string
+	switch {
+	case r.IsFile() && u.s.FileScreen == nil:
+		msg = fmt.Sprintf("field %q is valid only in a file screen", r)
+	case r.IsList() && ls == nil:
+		msg = fmt.Sprintf("field %q is valid only in a list screen", r)
+	case r.Row() == screen.RowSelected:
+		msg = fmt.Sprintf("field %q is valid only in a screen with select", r)
+	case r.Row() != "" && ls != nil && ls.From != "":
+		if p, _ := provider.Lookup(ls.From); !p.HasField(r.Row()) {
+			msg = fmt.Sprintf("field %q: provider %q has no field %q", r, ls.From, r.Row())
+		}
 	}
+	if msg != "" {
+		l.errorf(u, pos, false, "%s", msg)
+	}
+	return msg != ""
 }
 
 // include resolves the fragment of n once for the screen. The include counts
@@ -235,7 +284,7 @@ func (l *loader) include(u *unit, n include, top bool) (body []screen.Seg, ok bo
 	return body, true
 }
 
-// checkItems checks that goodbye and shutdown have no items and are not file screens,
+// checkItems checks that goodbye and shutdown have no items and are not file screens or list screens,
 // and the item.<KEY> paths of each screen against its own items (menu-nav, section 6, and bbt-format, section 8.4).
 func (l *loader) checkItems(units []*unit) {
 	for _, u := range units {
@@ -248,6 +297,9 @@ func (l *loader) checkItems(units []*unit) {
 		}
 		if end && u.s.FileScreen != nil {
 			l.fd(u.f.name).Errorf(2, 1, "file: the %s screen cannot be a file screen", u.s.Name)
+		}
+		if end && u.s.List != nil {
+			l.fd(u.f.name).Errorf(2, 1, "data: the %s screen cannot be a list screen", u.s.Name)
 		}
 		keys := map[string]bool{}
 		for _, it := range u.s.Items {

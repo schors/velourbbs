@@ -3,7 +3,8 @@
 This specification defines the style and the screens of the example BBS "Lamp".
 The guides build this BBS: [setup-guide](setup-guide.md) and [bbt-guide](bbt-guide.md).
 Related parts: [bbt-format](bbt-format.md), [screens-toml](screens-toml.md),
-[screen-render](screen-render.md), [telnet-term](telnet-term.md) and [file-view](file-view.md).
+[screen-render](screen-render.md), [telnet-term](telnet-term.md), [file-view](file-view.md)
+and [list-view](list-view.md).
 
 ## 1. Goal
 
@@ -42,9 +43,11 @@ Each BBS directory has these files:
 | `screens/term.bbt` | The values of the terminal. |
 | `screens/texts.bbt` | The list of the texts of the reading room. |
 | `screens/reader.bbt` | The file screen: it shows a text of the list. |
+| `screens/log.bbt` | The list screen: the notes of the keeper's log. |
 | `screens/goodbye.bbt` | The screen after `logoff`. |
 | `content/lamp.md` | A Markdown text: a short history of the lamps (section 6.6). |
 | `content/rules.txt` | A plain text: the rules of the station (section 6.6). |
+| `content/log/` | The notes of the keeper's log: 7 Markdown files (section 6.7). |
 
 - The two directories have the same layout, styles and keys. Only the texts differ (section 7).
 - The screens have no art and no aliases.
@@ -118,9 +121,9 @@ md_dim    = "8"
 | Style | Use | Truecolor | 256 | 16 |
 |---|---|---|---|---|
 | `normal` | The ground, the text, the labels of the menu items | `#e9dccb` on `#2a201d` | 223 on 235 | 7 on 0 |
-| `dim` | The tagline, the notes of the menu items, the closing line of `main`, the labels of `term`, row 7 of `reader`, the words of the key row | `#9e8a7c` | 137 | 8 |
+| `dim` | The tagline, the notes of the menu items, the closing line of `main`, the labels of `term`, row 7 of `reader` and of `log`, the row numbers and the reading time of `log`, the words of the key row | `#9e8a7c` | 137 | 8 |
 | `line` | The two hairlines | `#8a6a5c` | 95 | 8 |
-| `title` | The name of the BBS, the farewell of `goodbye`, the title of `reader` | `#f7c7a3` bold | 230 bold | 15 bold |
+| `title` | The name of the BBS, the farewell of `goodbye`, the title of `reader` and of `log` | `#f7c7a3` bold | 230 bold | 15 bold |
 | `key` | The keys | `#ffb088` bold | 216 bold | 15 bold |
 | `orn` | The ornament `☼` | `#f2a27e` | 216 | 7 |
 | `more` | The More row | `#9e8a7c` | 137 | 8 |
@@ -180,7 +183,7 @@ Columns and rows are 1-based in the screen area of 80 columns.
 
 ### 6.1. `main`
 
-Items: `A` `gosub about`, `R` `gosub texts`, `T` `gosub term`, `G` `logoff`.
+Items: `A` `gosub about`, `R` `gosub texts`, `L` `gosub log`, `T` `gosub term`, `G` `logoff`.
 
 ```text
 
@@ -191,24 +194,24 @@ Items: `A` `gosub about`, `R` `gosub texts`, `T` `gosub term`, `G` `logoff`.
        Good evening. It's quiet and warm here.
        Pull up a chair by the lamp.
 
-
          A   About                                   who we are
 
          R   Reading room                            stories by the lamp
+
+         L   Keeper's log                            notes of the nights
 
          T   Your terminal                           size and colours
 
          G   Goodbye                                 the lamp will wait
 
-
        The light stays on till morning.
 
   ────────────────────────────────────────────────────────────────────────────
 
-    A R T G  choose
+    A R L T G  choose
 ```
 
-- Rows 10, 12, 14 and 16 are the menu items. Row 19 is the closing line.
+- Rows 9, 11, 13, 15 and 17 are the menu items. Row 19 is the closing line.
 
 ### 6.2. `about`
 
@@ -315,6 +318,43 @@ At 80x24:
 - 5 to 7 short rules, one line each, and an empty line before the last line. One page at 80x24.
 - `file.title` is the file name `rules.txt`.
 
+### 6.7. `log`
+
+The list screen: `data = { from = "files", args = { dir = "log" } }`, `rows = 5`
+([list-view](list-view.md), section 3).
+
+Items: `SPACE` `page next` with `when = "not list.last"`, `B` `page prev`
+with `when = "list.page > 1"`, `ESC` `back`.
+
+At 80x24, page 1:
+
+```text
+       The keeper's log
+       notes of the nights  ∙  page 1/2
+
+         1   The first night                         1 min
+         2   Rain on the roof                        1 min
+         3   A caller from the north                 1 min
+         4   A new wick                              1 min
+         5   A long winter evening                   2 min
+```
+
+- Rows 1–5 as in section 5. Row 6 is the title in `title`. Row 7 is in `dim`.
+- Row 8 is empty. The list line gives rows 9–13: `{row.num}` in `dim` at column 10,
+  `{row.title}` at column 14 in a field of 40 cells, `{row.minutes}` and the word in `dim` at column 54.
+  The row number is in `dim`, not in `key`: it is not a key.
+- Empty source lines fill rows 14–20. The hairline is row 21, the key row is row 23.
+- The key row is `Space  next   B  prev   Esc  back`, with the groups of `SPACE` and `B`
+  as in `reader` (section 6.6).
+
+`content/log/`:
+
+- 7 notes `1-<slug>.md` to `7-<slug>.md`. Each note has a level-1 heading: its title.
+  So the list has 2 pages: 5 rows and 2 rows.
+- The notes are a few short paragraphs. Note 5 is longer: its reading time is 2 minutes.
+  The other notes have 1 minute.
+- The English and the Russian notes have the same names and the same reading times.
+
 ## 7. Texts
 
 | Place | English | Russian |
@@ -332,6 +372,11 @@ At 80x24:
 | Key row of `about` and `term` | back | назад |
 | `goodbye` | See you soon. / The lamp stays on for you. | До встречи. / Лампа будет гореть для тебя. |
 | `main`, item `R` | Reading room — stories by the lamp | Читальня — истории у лампы |
+| `main`, item `L` | Keeper's log — notes of the nights | Журнал смотрителя — заметки о ночах |
+| `log`, rows 6–7 | The keeper's log / notes of the nights ∙ page | Журнал смотрителя / заметки о ночах ∙ стр. |
+| `log`, list rows | `min` | `мин` |
+| `log`, key row | next, prev, back | дальше, пред., назад |
+| `content/log/` | The first night, Rain on the roof, A caller from the north, A new wick, A long winter evening, Moths at the glass, Morning tea | Первая ночь, Дождь по крыше, Гость с севера, Новый фитиль, Долгий зимний вечер, Мотыльки у стекла, Утренний чай |
 | `texts`, rows 6–7 | The texts of the station. / Pick one and read it by the lamp. | Тексты станции. / Выбери и читай при лампе. |
 | `texts`, items | How the lamps were lit — a short history; Station rules — read them once | Как зажигали лампы — короткая история; Правила станции — прочти один раз |
 | `texts`, key row | choose, back | выбор, назад |
@@ -349,7 +394,7 @@ At 80x24:
   It runs `velourbbs preview <screen> --size <size> --set term.colors=<n>` and compares
   the cell dump with the golden file `cmd/velourbbs/testdata/lamp/<lang>/<screen>-<size>-<n>.dump`:
   - each screen at 80x24 with 16, 256 and 16777216 colours.
-    `reader` has `--set arg.file=lamp.md`;
+    `reader` has `--set arg.file=lamp.md`. The dump of `log` has its 2 pages;
   - `reader` with `--set arg.file=rules.txt` at 80x24 with 256 colours,
     in the golden file `reader-rules-80x24-256.dump`;
   - `main` at 80x25 and at 132x43 with 256 colours.

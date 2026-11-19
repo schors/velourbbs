@@ -50,7 +50,7 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 | `menu` | The menu (section 3.2). | `1` `gosub texts`, `2` `gosub about`, `ESC` `back`, `Q` `logoff`. |
 | `texts` | The catalog of the section Texts (section 3.3). | `1` `gosub setup`, `2` `gosub bbt`, `3` `gosub read` with the file `features.md` and the title `Velour`, `ESC` `back`. |
 | `setup` | The parts of the setup guide. | `0` for `README.md`, `1`–`5` for the parts: `gosub read` with the part and the title of the guide. `ESC` `back`. |
-| `bbt` | The parts of the BBT guide. | `0` for `README.md`, `1`–`9` for the parts: `gosub read` with the part and the title of the guide. `ESC` `back`. |
+| `bbt` | The parts of the BBT guide. | `0` for `README.md`, `1`–`9` and `A` for the parts 1–10: `gosub read` with the part and the title of the guide. `ESC` `back`. |
 | `read` | The file screen of the argument `file`, with the argument `title` in the header (section 3.4). | `SPACE` `page next`, `B` `page prev`, `ESC` `back`. |
 | `about` | The section About the station (section 3.5). | `ESC` `back`. |
 | `goodbye` | The goodbye screen in both languages, with the repository address (section 3.5). | — |
@@ -71,7 +71,7 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 | `read` | `B Назад    Пробел Дальше    Esc К списку` | `B Back    Space Next    Esc To list` |
 | `about` | `Esc В меню` | `Esc To menu` |
 
-- `setup` shows `0-5` in place of `0-9`.
+- `setup` shows `0-5` in place of `0-9`. `bbt` shows `0-9 A`.
 - The More row, with the indent of the screens: `[screen] more` is `Any key Next`,
   `[lang.ru] more` is `Любая клавиша Дальше`. The entry shows the row of the session language:
   English at the start, Russian after a return from the Russian menu.
@@ -112,8 +112,8 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 - The catalog `texts` has two groups: Guides (the setup guide and the BBT guide)
   and Velour (the features text). Each entry has the gem `emer`, the title, a dot leader
   and a short note in `dim`. It has no lead.
-- A list of guide parts shows the number and the title of each part.
-- Each entry of the catalog and of a list of guide parts starts with the digit of its hotkey
+- A list of guide parts shows the hotkey and the title of each part.
+- Each entry of the catalog and of a list of guide parts starts with the character of its hotkey
   in `gold`, in place of the selection.
 
 ### 3.4. Reading
