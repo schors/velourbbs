@@ -31,11 +31,11 @@ styles
 6: 1-7 #e9dccb/#2a201d, 8-23 #f7c7a3/#2a201d bold, 24-80 #e9dccb/#2a201d
 7: 1-7 #e9dccb/#2a201d, 8-39 #9e8a7c/#2a201d, 40-80 #e9dccb/#2a201d
 8: 1-80 #e9dccb/#2a201d
-9: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
-10: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
-11: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
-12: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
-13: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
+9: 1-9 #e9dccb/#2a201d, 10-10 #9e8a7c/#2a201d, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
+10: 1-9 #e9dccb/#2a201d, 10-10 #9e8a7c/#2a201d, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
+11: 1-9 #e9dccb/#2a201d, 10-10 #9e8a7c/#2a201d, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
+12: 1-9 #e9dccb/#2a201d, 10-10 #9e8a7c/#2a201d, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
+13: 1-9 #e9dccb/#2a201d, 10-10 #9e8a7c/#2a201d, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
 14: 1-80 #e9dccb/#2a201d
 15: 1-80 #e9dccb/#2a201d
 16: 1-80 #e9dccb/#2a201d
@@ -79,8 +79,8 @@ styles
 6: 1-7 #e9dccb/#2a201d, 8-23 #f7c7a3/#2a201d bold, 24-80 #e9dccb/#2a201d
 7: 1-7 #e9dccb/#2a201d, 8-39 #9e8a7c/#2a201d, 40-80 #e9dccb/#2a201d
 8: 1-80 #e9dccb/#2a201d
-9: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
-10: 1-9 #e9dccb/#2a201d, 10-10 #ffb088/#2a201d bold, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
+9: 1-9 #e9dccb/#2a201d, 10-10 #9e8a7c/#2a201d, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
+10: 1-9 #e9dccb/#2a201d, 10-10 #9e8a7c/#2a201d, 11-53 #e9dccb/#2a201d, 54-58 #9e8a7c/#2a201d, 59-80 #e9dccb/#2a201d
 11: 1-80 #e9dccb/#2a201d
 12: 1-80 #e9dccb/#2a201d
 13: 1-80 #e9dccb/#2a201d

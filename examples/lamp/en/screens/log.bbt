@@ -17,7 +17,7 @@ do = "back"
        {!title}The keeper's log{!}
        {!dim}notes of the nights  ∙  page {list.page}/{list.pages}{!}
 
-{#each}         {!key}{row.num}{!}   {row.title                             }{!dim}{row.minutes} min{/each}
+{#each}         {!dim}{row.num}{!}   {row.title                             }{!dim}{row.minutes} min{/each}
 
 
 

@@ -76,14 +76,20 @@ func TestListErrors(t *testing.T) {
 			"screens/b.bbt": list("data = { from = \"files\", args = { dir = \"{arg.dir}\" } }\nrows = 3", eachLine),
 			"screens/c.bbt": "+++\n[[item]]\nkey = \"1\"\ndo = \"goto b\"\nargs = { dir = \"guide/bbtt\" }\n" +
 				"[[item]]\nkey = \"2\"\ndo = \"goto b\"\nargs = { dir = \"x y\" }\n" +
-				"[[item]]\nkey = \"3\"\ndo = \"goto b\"\nargs = { dir = \"bad\" }\n+++\nMenu\n",
+				"[[item]]\nkey = \"3\"\ndo = \"goto b\"\nargs = { dir = \"bad\" }\n" +
+				"[[item]]\nkey = \"4\"\ndo = \"goto b\"\nargs = { dir = \"big\" }\n+++\nMenu\n",
+			"screens/d.bbt":    list("data = { from = \"files\", args = { dir = \"big\" } }\nrows = 3", eachLine),
 			"content/bad/a.md": "+++\ntitle = \"A\"\n",
+			// A whole row file with an error: an error of the key data or of the item.
+			"content/big/a.md": strings.Repeat("x", 1<<20+1),
 		},
 		want: []string{
 			`content/bad/a.md:1:1: front matter: no end line "+++"`,
 			`screens/a.bbt:2:1: data: args: dir: directory "parts" does not exist`,
 			`screens/c.bbt:2:1: item "1": args: dir: directory "guide/bbtt" does not exist`,
 			`screens/c.bbt:2:1: item "2": args: dir: invalid content path "x y"`,
+			`screens/c.bbt:2:1: item "4": args: dir: content file "big/a.md": file is over 1048576 bytes`,
+			`screens/d.bbt:2:1: data: args: dir: content file "big/a.md": file is over 1048576 bytes`,
 		},
 	}, {
 		name: "list lines",
@@ -117,12 +123,14 @@ func TestListErrors(t *testing.T) {
 		files: with(map[string]string{
 			"screens/a.bbt": list(parts, "{row.title}\n{#if row.num > 1}x{/if}\n{list.page}\n"+
 				"{#each}{row.size}{/each}\n{#each}{#if row.selected}x{/if}{/each}\n{#each}{row.selected}{/each}\n"+
-				"{#each}{#if row.size == 1}x{/if}{/each}\n{>_frag}\n{>art.ans}\n"),
+				"{#each}{#if row.size == 1}x{/if}{/each}\n{>_frag}\n{>art.ans}\n{list.last}\n{list.empty}\n"),
 			"screens/_frag.bbt": "{row.path}\n{#each}{row.size}{/each}\n",
 			"screens/art.ans":   sauceArt("{row.num} {list.pages}", 22),
 			"screens/b.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\nwhen = \"list.last\"\n" +
 				"[[item]]\nkey = \"B\"\ndo = \"logoff\"\nwhen = \"row.num > 1\"\n" +
-				"[[item]]\nkey = \"C\"\ndo = \"logoff\"\n+++\n{list.page}\n{#if list.empty}x{/if}\n",
+				"[[item]]\nkey = \"C\"\ndo = \"logoff\"\n+++\nText\n",
+			// The fields of a list screen in the text of a screen without data.
+			"screens/c.bbt": "+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n{list.page}\n{#if list.empty}x{/if}\n",
 		}),
 		want: []string{
 			`screens/_frag.bbt:1:1: field "row.path" is valid only in a list line`,
@@ -133,9 +141,13 @@ func TestListErrors(t *testing.T) {
 			`screens/a.bbt:12:8: field "row.selected" is valid only in a screen with select`,
 			`screens/a.bbt:13:8: field "row.selected" is boolean, valid only in a condition`,
 			`screens/a.bbt:14:8: field "row.size": provider "files" has no field "size"`,
+			`screens/a.bbt:17:1: field "list.last" is boolean, valid only in a condition`,
+			`screens/a.bbt:18:1: field "list.empty" is boolean, valid only in a condition`,
 			`screens/art.ans:1:1: screen "a": field "row.num" is valid only in a list line`,
 			`screens/b.bbt:2:1: item "A": when: field "list.last" is valid only in a list screen`,
 			`screens/b.bbt:2:1: item "B": when: field "row.num" is valid only in a list line`,
+			`screens/c.bbt:6:1: field "list.page" is valid only in a list screen`,
+			`screens/c.bbt:7:1: field "list.empty" is valid only in a list screen`,
 		},
 	}}
 	for _, tt := range tests {

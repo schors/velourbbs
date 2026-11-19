@@ -17,7 +17,7 @@ do = "back"
        {!title}Журнал смотрителя{!}
        {!dim}заметки о ночах  ∙  стр. {list.page}/{list.pages}{!}
 
-{#each}         {!key}{row.num}{!}   {row.title                             }{!dim}{row.minutes} мин{/each}
+{#each}         {!dim}{row.num}{!}   {row.title                             }{!dim}{row.minutes} мин{/each}
 
 
 

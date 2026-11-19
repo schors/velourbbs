@@ -121,9 +121,9 @@ md_dim    = "8"
 | Style | Use | Truecolor | 256 | 16 |
 |---|---|---|---|---|
 | `normal` | The ground, the text, the labels of the menu items | `#e9dccb` on `#2a201d` | 223 on 235 | 7 on 0 |
-| `dim` | The tagline, the notes of the menu items, the closing line of `main`, the labels of `term`, row 7 of `reader` and of `log`, the reading time of `log`, the words of the key row | `#9e8a7c` | 137 | 8 |
+| `dim` | The tagline, the notes of the menu items, the closing line of `main`, the labels of `term`, row 7 of `reader` and of `log`, the row numbers and the reading time of `log`, the words of the key row | `#9e8a7c` | 137 | 8 |
 | `line` | The two hairlines | `#8a6a5c` | 95 | 8 |
-| `title` | The name of the BBS, the farewell of `goodbye`, the title of `reader` | `#f7c7a3` bold | 230 bold | 15 bold |
+| `title` | The name of the BBS, the farewell of `goodbye`, the title of `reader` and of `log` | `#f7c7a3` bold | 230 bold | 15 bold |
 | `key` | The keys | `#ffb088` bold | 216 bold | 15 bold |
 | `orn` | The ornament `☼` | `#f2a27e` | 216 | 7 |
 | `more` | The More row | `#9e8a7c` | 137 | 8 |
@@ -339,9 +339,10 @@ At 80x24, page 1:
          5   A long winter evening                   2 min
 ```
 
-- Rows 1–5 as in section 5. Row 6 is the title in `normal`. Row 7 is in `dim`.
-- Row 8 is empty. The list line gives rows 9–13: `{row.num}` in `key` at column 10,
+- Rows 1–5 as in section 5. Row 6 is the title in `title`. Row 7 is in `dim`.
+- Row 8 is empty. The list line gives rows 9–13: `{row.num}` in `dim` at column 10,
   `{row.title}` at column 14 in a field of 40 cells, `{row.minutes}` and the word in `dim` at column 54.
+  The row number is in `dim`, not in `key`: it is not a key.
 - Empty source lines fill rows 14–20. The hairline is row 21, the key row is row 23.
 - The key row is `Space  next   B  prev   Esc  back`, with the groups of `SPACE` and `B`
   as in `reader` (section 6.6).

@@ -59,11 +59,11 @@ A "list line" is a source line that starts with `{#each}` and ends with `{/each}
 The text between them is the "row text": the BBS shows it once for each row of the page.
 
 ```
-{#each}         {!key}{row.num}{!}   {row.title                             }{!dim}{row.minutes} min{/each}
+{#each}         {!dim}{row.num}{!}   {row.title                             }{!dim}{row.minutes} min{/each}
 ```
 
-- The list line gives exactly `rows` rows: one row for each row of the page,
-  then empty rows. So the rows below the list stay in place on each page.
+- The list line gives exactly one page of rows: one row for each row of the page,
+  then empty rows. A page has `rows` rows, or fewer in a small terminal (section "Pages"). So the rows below the list stay in place on each page.
 - A row does not wrap. The BBS cuts it at the width of the screen.
 - The row text can have fields, style tokens and `{#if}` blocks.
   Its blocks must close in the same line. It cannot have an include or an art insert.
@@ -113,7 +113,7 @@ do = "back"
        {!title}The keeper's log{!}
        {!dim}notes of the nights  ∙  page {list.page}/{list.pages}{!}
 
-{#each}         {!key}{row.num}{!}   {row.title                             }{!dim}{row.minutes} min{/each}
+{#each}         {!dim}{row.num}{!}   {row.title                             }{!dim}{row.minutes} min{/each}
 
 
 
