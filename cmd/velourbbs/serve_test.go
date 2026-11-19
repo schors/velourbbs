@@ -58,7 +58,7 @@ func TestServeCheckError(t *testing.T) {
 	fsys := serveFS(freeAddr(t))
 	fsys["screens/main.bbt"] = &fstest.MapFile{Data: []byte("Hello\n")}
 	var out, errOut bytes.Buffer
-	status := run([]string{"serve"}, fsys, &out, &errOut)
+	status := run([]string{"serve"}, t.TempDir(), fsys, &out, &errOut)
 	want := "screens/main.bbt:1:1: screen has no items\n" +
 		"screens/screens.toml:1:1: menu: start: screen \"main\" has no items\n"
 	if out.String() != "" || errOut.String() != want || status != exitError {
@@ -74,7 +74,7 @@ func TestServeListenError(t *testing.T) {
 	}
 	defer func() { _ = ln.Close() }()
 	var out, errOut bytes.Buffer
-	status := run([]string{"serve"}, serveFS(ln.Addr().String()), &out, &errOut)
+	status := run([]string{"serve"}, t.TempDir(), serveFS(ln.Addr().String()), &out, &errOut)
 	if out.String() != "" || !strings.Contains(errOut.String(), "level=ERROR msg=listen ") || status != exitError {
 		t.Errorf("stdout %q, stderr %q, status %d; want a listen error and status 1", out.String(), errOut.String(), status)
 	}
@@ -85,7 +85,7 @@ func TestServeSignal(t *testing.T) {
 	for _, sig := range []os.Signal{os.Interrupt, syscall.SIGTERM} {
 		var errOut syncBuffer
 		done := make(chan int, 1)
-		go func() { done <- run([]string{"serve"}, serveFS(freeAddr(t)), &bytes.Buffer{}, &errOut) }()
+		go func() { done <- run([]string{"serve"}, t.TempDir(), serveFS(freeAddr(t)), &bytes.Buffer{}, &errOut) }()
 		// velourbbs serve handles the signals before the listen line.
 		for end := time.Now().Add(5 * time.Second); !strings.Contains(errOut.String(), "msg=listen "); {
 			if time.Now().After(end) {

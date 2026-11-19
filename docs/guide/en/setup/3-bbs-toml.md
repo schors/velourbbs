@@ -1,7 +1,8 @@
 # 3. `bbs.toml`
 
-`bbs.toml` holds three tables: `[bbs]` has the name of the BBS,
-`[telnet]` has the settings of the telnet server, and `[limits]` has the connection limits and the timeouts.
+`bbs.toml` holds four tables: `[bbs]` has the name of the BBS,
+`[telnet]` has the settings of the telnet server, `[limits]` has the connection limits and the timeouts,
+and `[store]` has the data file.
 Each key is optional. A key that is not set has its default. An empty file gives the defaults.
 
 ## The name
@@ -75,6 +76,14 @@ proxy = ["127.0.0.1"]
 | `probe_timeout` | 5 | Seconds from the connect until the server knows the terminal. | Clients have a slow link. |
 | `output_timeout` | 60 | Seconds until a write must complete. Else the server disconnects. | Clients have a slow link. |
 
+## The data file
+
+`path` of `[store]` is the data file. The BBS keeps its data in this file between sessions.
+The default is `"velourbbs.jsonl"`. A relative path is relative to the BBS directory.
+
+`velourbbs serve` creates the file. The directory of the file must exist.
+Keep the default: the file is then in the BBS directory, and your user can write to it.
+
 ## An example file
 
 This file has the defaults. It sets each key except `allow` and `proxy`:
@@ -93,12 +102,16 @@ max_conns_per_addr = 4
 max_connects_per_min = 10
 idle_timeout = 600
 output_timeout = 60
+
+[store]
+path = "velourbbs.jsonl"
 ```
 
 Write it to `/srv/velourbbs/bbs.toml`. Then change the values that you need.
-After each change, run `sudo chmod -R a+rX /srv/velourbbs` and `velourbbs check`.
+After each change, run `velourbbs check`.
 
-Full rules: [bbs-toml](../../../specs/bbs-toml.md), section 3.
+Full rules: [bbs-toml](../../../specs/bbs-toml.md), section 3,
+and [data-store](../../../specs/data-store.md).
 
 ## Result
 

@@ -25,7 +25,7 @@ func artFile(data, title string) []byte {
 func runArt(t *testing.T, args ...string) (string, int) {
 	t.Helper()
 	var out, errOut bytes.Buffer
-	status := run(args, os.DirFS(t.TempDir()), &out, &errOut)
+	status := run(args, t.TempDir(), os.DirFS(t.TempDir()), &out, &errOut)
 	if out.Len() > 0 {
 		t.Errorf("stdout %q", out.String())
 	}

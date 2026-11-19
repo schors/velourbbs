@@ -1,17 +1,16 @@
 # 2. The BBS directory
 
 A "BBS directory" holds the files of one BBS. This guide uses `/srv/velourbbs`.
-Copy the example BBS "Lamp" to it. In the source repository, run:
+Your user owns it. The BBS runs as your user too (section 5):
+it reads the files and writes its data file to this directory.
+Create the directory and copy the example BBS "Lamp" to it. In the source repository, run:
 
 ```
-sudo cp -r examples/lamp/en /srv/velourbbs
-sudo chmod -R a+rX /srv/velourbbs
+sudo install -d -o "$USER" -g "$(id -gn)" /srv/velourbbs
+cp -r examples/lamp/en/. /srv/velourbbs/
 ```
 
-`/srv/velourbbs` must not exist before the copy.
-`chmod` makes the files readable and the directories readable and searchable for each user.
-The BBS runs as a user without privileges (section 5). This user must read the files.
-The files belong to root. Edit them as root, for example with `sudoedit`.
+Edit the files as your user. Do not use `sudo` for the files of the BBS directory.
 
 The files of Lamp:
 
@@ -31,9 +30,7 @@ The files of Lamp:
 
 To change the screens, read the [BBT guide](../bbt/README.md).
 
-Run each `velourbbs` command in the BBS directory.
-Run `velourbbs check` as your user, not as root: root can read a file
-that the BBS user cannot read.
+Run each `velourbbs` command in the BBS directory, as your user.
 Full rules: [bbs-toml](../../../specs/bbs-toml.md), section 2.
 
 ## Result

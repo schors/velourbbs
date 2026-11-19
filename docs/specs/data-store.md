@@ -20,7 +20,7 @@ The sysop reads the data file without a third-party tool.
 - Line 1 is the header: `{"format":"velourbbs-store","version":<n>}`.
   `<n>` is the format version, an integer from 1.
 - Each next line is one record: a JSON object with the string `kind` and the fields of the kind.
-  An empty line has no effect.
+  An empty line has no effect. A line with only spaces, tabs and `\r` is an empty line.
 - The order of the records of a kind is their order in the file, from the oldest to the newest.
   The records of different kinds can be mixed. The write groups them by kind,
   in the order of the kinds in the code.
@@ -48,7 +48,8 @@ defines the kinds):
 The read (section 7) and each change (section 5) use these checks.
 
 - These are errors:
-  - the file is not a regular file, or it is larger than 16 MB;
+  - the file is not a regular file, or it is larger than 16 MB. A symlink is not a regular file:
+    the rename of a write replaces the link. A symlink to the directory of the file works;
   - a line is not valid UTF-8, or it is not one JSON object;
   - line 1 is not a valid header;
   - the version is newer than the version of the code: `version <n> is newer than this velourbbs (<m>)`;
@@ -64,8 +65,8 @@ The read (section 7) and each change (section 5) use these checks.
 
 - The store keeps all records in memory. Each change writes the whole file:
   1. Check the new records (section 4). An error ends the change.
-  2. Create or truncate `<file>.tmp` in the same directory with the mode 600.
-     Write the records and sync the file.
+  2. Remove an old `<file>.tmp`. Create the new `<file>.tmp` in the same directory
+     with the mode 600. Write the records and sync the file.
   3. Rename it over the file. The rename is the commit point.
   4. Sync the directory. On Windows, skip this step.
 - An error before the rename removes `<file>.tmp`. The records and the file stay as before.
@@ -120,8 +121,8 @@ it changes while the host runs.
   ([release-deploy](release-deploy.md), section 5). Else a connect starts the host again.
 - The home BBS keeps its data file outside the releases ([release-deploy](release-deploy.md),
   section 4.5).
-- The setup guide keeps the data file in the state directory of systemd
-  ([setup-guide](setup-guide.md), section 5).
+- The setup guide keeps the data file in the BBS directory
+  ([setup-guide](setup-guide.md), section 4).
 
 ## 9. Libraries
 

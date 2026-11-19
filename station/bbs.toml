@@ -1,2 +1,5 @@
 [bbs]
 name = "Velour"
+
+[store]
+path = "data/velourbbs.jsonl"

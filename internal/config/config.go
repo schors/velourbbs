@@ -44,6 +44,8 @@ type Config struct {
 	Limits Limits
 	// Name is the name of the BBS: the key name of [bbs] (bbs-toml, section 3.2).
 	Name string
+	// Store is the table [store] (bbs-toml, section 3.4).
+	Store Store
 
 	// dark and light map each term.colors to its dark theme and its light theme.
 	dark, light map[int]map[string]screen.Style
@@ -85,6 +87,7 @@ type hostDoc struct {
 	} `toml:"bbs"`
 	Telnet telnetDoc `toml:"telnet"`
 	Limits limitsDoc `toml:"limits"`
+	Store  storeDoc  `toml:"store"`
 }
 
 // Load reads bbs.toml and screens/screens.toml of the BBS directory fsys.
@@ -112,7 +115,7 @@ func Load(fsys fs.FS) (Config, screen.Diags) {
 	return cfg, ds
 }
 
-// parseHost reads bbs.toml from data into cfg: the tables [telnet] and [limits] and the BBS name.
+// parseHost reads bbs.toml from data into cfg: the tables [telnet], [limits] and [store] and the BBS name.
 // A value with an error keeps the value of cfg.
 // An unknown key is an error (bbs-toml, section 2).
 // It gives at most screen.MaxFileDiags diagnostics (screen-render, section 3.1).
@@ -133,5 +136,6 @@ func parseHost(data []byte, cfg *Config) screen.Diags {
 	errorf := func(format string, args ...any) { fd.Errorf(1, 1, format, args...) }
 	cfg.Telnet = telnet(d.Telnet, errorf)
 	cfg.Limits = limits(d.Limits, errorf)
+	cfg.Store = store(d.Store, errorf)
 	return fd.Diags
 }

@@ -66,11 +66,11 @@ func (h *host) path(rel string) string {
 }
 
 // bundle puts the bundle of section 4.4 into incoming/<tag>/.
-// The stub velourbbs exits with checkStatus when it runs in station/.
+// The stub velourbbs exits with checkStatus when it runs in station/ with the directory data/.
 func (h *host) bundle(tag, port string, checkStatus int) {
 	h.t.Helper()
 	in := h.path("incoming/" + tag)
-	stub := "#!/bin/sh\n[ \"$1\" = check ] && [ -f bbs.toml ] || exit 2\nexit " + strconv.Itoa(checkStatus) + "\n"
+	stub := "#!/bin/sh\n[ \"$1\" = check ] && [ -f bbs.toml ] && [ -d data ] || exit 2\nexit " + strconv.Itoa(checkStatus) + "\n"
 	h.write(filepath.Join(in, "velourbbs"), stub, 0o755)
 	h.write(filepath.Join(in, "station/bbs.toml"), "[bbs]\nname = \""+tag+"\"\n", 0o644)
 	h.write(filepath.Join(in, "units/velourbbs.service"), readFile(h.t, "velourbbs.service"), 0o644)
@@ -173,6 +173,23 @@ func TestFirstDeploy(t *testing.T) {
 	}
 	if !slices.Equal(calls, want) {
 		t.Errorf("calls:\n%s\nwant:\n%s", strings.Join(calls, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// station/data of each release links to ~/velourbbs/data/. The data stays after a deploy.
+func TestDataLink(t *testing.T) {
+	h := newHost(t)
+	h.deploy("v0.1.0", "2323")
+	h.write(h.path("data/velourbbs.jsonl"), "data\n", 0o600)
+	h.deploy("v0.2.0", "2323")
+
+	for _, r := range []string{"v0.1.0", "v0.2.0"} {
+		if got, err := os.Readlink(h.path("releases/" + r + "/station/data")); err != nil || got != h.path("data") {
+			t.Errorf("%s: station/data links to %q, %v; want %q", r, got, err, h.path("data"))
+		}
+	}
+	if got := readFile(t, h.path("releases/v0.2.0/station/data/velourbbs.jsonl")); got != "data\n" {
+		t.Errorf("data file %q after the deploy, want %q", got, "data\n")
 	}
 }
 

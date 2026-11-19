@@ -142,13 +142,14 @@ const systemdChild = "VELOURBBS_TEST_SYSTEMD"
 // telnet.listen (telnet-term, section 10.1). The test runs velourbbs serve in a child
 // process with the socket on file descriptor 3, as systemd does.
 func TestServeSystemd(t *testing.T) {
-	if os.Getenv(systemdChild) == "1" {
+	// The value is the BBS directory of the child: the parent removes it.
+	if dir := os.Getenv(systemdChild); dir != "" {
 		// systemd sets LISTEN_PID in the child before the exec.
 		if err := os.Setenv("LISTEN_PID", strconv.Itoa(os.Getpid())); err != nil {
 			os.Exit(2)
 		}
 		// The address is not valid: the server must not listen on it.
-		os.Exit(run([]string{"serve"}, serveFS("256.0.0.1:1"), os.Stdout, os.Stderr))
+		os.Exit(run([]string{"serve"}, dir, serveFS("256.0.0.1:1"), os.Stdout, os.Stderr))
 	}
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -159,7 +160,7 @@ func TestServeSystemd(t *testing.T) {
 		t.Fatal(err)
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=^TestServeSystemd$")
-	cmd.Env = append(os.Environ(), systemdChild+"=1", "LISTEN_FDS=1")
+	cmd.Env = append(os.Environ(), systemdChild+"="+t.TempDir(), "LISTEN_FDS=1")
 	cmd.ExtraFiles = []*os.File{f}
 	var errOut syncBuffer
 	cmd.Stderr = &errOut
@@ -205,7 +206,7 @@ func TestServeSystemdError(t *testing.T) {
 	t.Setenv("LISTEN_PID", strconv.Itoa(os.Getpid()))
 	t.Setenv("LISTEN_FDS", "2")
 	var errOut bytes.Buffer
-	if status := run([]string{"serve"}, serveFS(freeAddr(t)), &bytes.Buffer{}, &errOut); status != exitError ||
+	if status := run([]string{"serve"}, t.TempDir(), serveFS(freeAddr(t)), &bytes.Buffer{}, &errOut); status != exitError ||
 		!strings.Contains(errOut.String(), `msg=listen source=systemd err="systemd: LISTEN_FDS is \"2\", want 1"`) {
 		t.Errorf("status %d, stderr %q; want status %d and the listen error", status, errOut.String(), exitError)
 	}

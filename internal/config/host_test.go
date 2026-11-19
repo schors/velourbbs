@@ -12,7 +12,7 @@ import (
 
 // host parses bbs.toml data over the defaults.
 func host(data string) (Config, []string) {
-	cfg := Config{Telnet: defaultTelnet, Limits: defaultLimits, Name: defaultName}
+	cfg := Config{Telnet: defaultTelnet, Limits: defaultLimits, Store: defaultStore, Name: defaultName}
 	ds := parseHost([]byte(data), &cfg)
 	return cfg, messages(ds)
 }
@@ -29,6 +29,18 @@ func TestHostDefaults(t *testing.T) {
 	}
 	if !reflect.DeepEqual(cfg.Telnet, wantTelnet) || !reflect.DeepEqual(cfg.Limits, wantLimits) {
 		t.Errorf("Telnet = %+v, Limits = %+v", cfg.Telnet, cfg.Limits)
+	}
+	if cfg.Store.Path != "velourbbs.jsonl" {
+		t.Errorf("Store = %+v, want the path velourbbs.jsonl", cfg.Store)
+	}
+}
+
+func TestStorePath(t *testing.T) {
+	for _, p := range []string{"data/velourbbs.jsonl", "/var/lib/velourbbs/velourbbs.jsonl"} {
+		cfg, ds := host("[store]\npath = \"" + p + "\"\n")
+		if len(ds) != 0 || cfg.Store.Path != p {
+			t.Errorf("path %q: Store = %+v, diags %q", p, cfg.Store, ds)
+		}
 	}
 }
 
@@ -103,6 +115,9 @@ func TestHostValueErrors(t *testing.T) {
 		{"[limits]\nallow = [\"192.0.2.300\"]", `1:1: limits.allow: invalid address or prefix "192.0.2.300"`},
 		{"[telnet]\nproxy = [\"192.0.2.0/33\"]", `1:1: telnet.proxy: invalid address or prefix "192.0.2.0/33"`},
 		{"[telnet]\nproxy = [\"host\"]", `1:1: telnet.proxy: invalid address or prefix "host"`},
+		{"[store]\npath = \"\"", `1:1: store.path: must not be empty`},
+		{"[store]\npath = 1", `2:8: store.path: must be a string`},
+		{"[store]\nPath = \"x\"", `1:1: unknown key "store.Path"`},
 	}
 	keys := []string{"telnet.probe_timeout", "limits.max_conns", "limits.max_conns_per_addr",
 		"limits.max_connects_per_min", "limits.idle_timeout", "limits.output_timeout"}
@@ -125,8 +140,8 @@ func TestHostValueErrors(t *testing.T) {
 			t.Errorf("parseHost(%q) = %q, want %q", tt.data, ds, want)
 		}
 		// An invalid value keeps the default.
-		if !reflect.DeepEqual(cfg.Telnet, defaultTelnet) || !reflect.DeepEqual(cfg.Limits, defaultLimits) {
-			t.Errorf("parseHost(%q): Telnet = %+v, Limits = %+v", tt.data, cfg.Telnet, cfg.Limits)
+		if !reflect.DeepEqual(cfg.Telnet, defaultTelnet) || !reflect.DeepEqual(cfg.Limits, defaultLimits) || cfg.Store != defaultStore {
+			t.Errorf("parseHost(%q): Telnet = %+v, Limits = %+v, Store = %+v", tt.data, cfg.Telnet, cfg.Limits, cfg.Store)
 		}
 	}
 }
