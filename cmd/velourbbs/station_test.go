@@ -120,10 +120,16 @@ func TestStationGuideLinks(t *testing.T) {
 // titleArg is the title arg of an item. Its group 1 is the value.
 var titleArg = regexp.MustCompile(`title = "([^"]*)"`)
 
+// langLink is an action that sets the language, or a content path with
+// a language directory. A screen of a language stays in its language.
+var langLink = regexp.MustCompile(`do = "(lang |(goto|gosub) (ru|en)/)|file = "(ru|en)/`)
+
 // TestStationItems checks that the screens of screens/ru/ and of screens/en/
 // have the same items (home-bbs, section 8): both directories have the same files,
 // and their front matter is equal. The title args are text of the language,
 // so the test ignores their values. TestStationTitles checks the title values.
+// No screen of a language names a language: the same items in both directories
+// can still lead to the other language, as gosub en/about in both menus.
 func TestStationItems(t *testing.T) {
 	dir := filepath.Join("..", "..", "station", "screens")
 	ru, err := filepath.Glob(filepath.Join(dir, "ru", "*.bbt"))
@@ -141,6 +147,9 @@ func TestStationItems(t *testing.T) {
 		enFile := filepath.Join(dir, "en", filepath.Base(ruFile))
 		ruFront := titleArg.ReplaceAllString(frontMatter(t, ruFile), `title = ""`)
 		enFront := titleArg.ReplaceAllString(frontMatter(t, enFile), `title = ""`)
+		if m := langLink.FindString(ruFront); m != "" {
+			t.Errorf("%s: %s names a language", ruFile, m)
+		}
 		if enFront != ruFront {
 			t.Errorf("%s: front matter\n%s\nwant the front matter of %s\n%s", enFile, enFront, ruFile, ruFront)
 		}
