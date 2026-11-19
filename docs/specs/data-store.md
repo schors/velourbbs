@@ -122,7 +122,7 @@ it changes while the host runs.
 - The home BBS keeps its data file outside the releases ([release-deploy](release-deploy.md),
   section 4.5).
 - The setup guide keeps the data file in the BBS directory
-  ([setup-guide](setup-guide.md), section 4).
+  ([setup-guide](setup-guide.md), section 3).
 
 ## 9. Libraries
 

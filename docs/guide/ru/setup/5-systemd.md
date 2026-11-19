@@ -142,7 +142,7 @@ velourbbs check && systemctl --user start velourbbs
 `MemoryMax` и пик. Пик показывает systemd 255 или новее.
 Со старым systemd читай `Memory`, пока BBS под нагрузкой.
 
-Полные правила: [setup-guide](../../../specs/setup-guide.md), раздел 5,
+Полные правила: [setup-guide](../../../specs/setup-guide.md), раздел 4,
 и [telnet-term](../../../specs/telnet-term.md), раздел 10.
 
 ## Результат

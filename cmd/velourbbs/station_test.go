@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// TestStation checks the home BBS of home-bbs, section 8: velourbbs check gives
+// TestStation checks the home BBS of home-bbs, section 5: velourbbs check gives
 // no output, and each preview equals its golden dump.
 func TestStation(t *testing.T) {
 	type tcase struct {
@@ -27,13 +27,13 @@ func TestStation(t *testing.T) {
 		{screen: "en-bbt", size: "80x16", colors: "256"},
 		// The 80 form on a wide terminal with fewer than 43 rows.
 		{screen: "main", size: "132x42", colors: "256"},
-		// The hint of home-bbs, section 3.2, in both forms.
+		// The hint of home-bbs, section 3, in both forms.
 		{screen: "main", size: "80x24", colors: "256", ambiguous: "2"},
 		{screen: "main", size: "132x43", colors: "256", ambiguous: "2"},
 		// The entry, the Russian menu, the entry and the English menu.
 		{screen: "main", size: "80x24", colors: "256", keys: "R,ESC,E", tag: "-keys"},
 	}
-	// The terminal rows of home-bbs, section 3.5, with each detected value.
+	// The terminal rows of home-bbs, section 3, with each detected value.
 	for _, c := range []struct{ screen, bg string }{{"ru-about", "#1e1e1e"}, {"en-about", "#ffffff"}} {
 		for _, size := range []string{"80x24", "132x43"} {
 			cases = append(cases, tcase{screen: c.screen, size: size, colors: "16777216", ambiguous: "2",
@@ -68,7 +68,7 @@ func TestStation(t *testing.T) {
 	for _, c := range cases {
 		out.Reset()
 		errOut.Reset()
-		// A screen of a language is <lang>-<name> (home-bbs, section 8).
+		// A screen of a language is <lang>-<name> (home-bbs, section 5).
 		screen, lang := c.screen, ""
 		if l, name, ok := strings.Cut(c.screen, "-"); ok {
 			screen, lang = name, l
@@ -127,7 +127,7 @@ var titleArg = regexp.MustCompile(`title = "([^"]*)"`)
 var langLink = regexp.MustCompile(`do = "(lang |(goto|gosub) (ru|en)/)|file = "(ru|en)/`)
 
 // TestStationItems checks that the screens of screens/ru/ and of screens/en/
-// have the same items (home-bbs, section 8): both directories have the same files,
+// have the same items (home-bbs, section 5): both directories have the same files,
 // and their front matter is equal. The title args are text of the language,
 // so the test ignores their values. TestStationTitles checks the title values.
 // No screen of a language names a language: the same items in both directories
@@ -159,7 +159,7 @@ func TestStationItems(t *testing.T) {
 }
 
 // TestStationTitles checks the title of each item and select that opens a reading screen
-// (home-bbs, section 3.4): the name of the guide, or Velour for the features text.
+// (home-bbs, section 3): the name of the guide, or Velour for the features text.
 func TestStationTitles(t *testing.T) {
 	want := map[string]string{
 		"en/texts.bbt": "Velour", "en/setup.bbt": "Setup guide", "en/bbt.bbt": "BBT guide",

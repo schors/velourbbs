@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// TestLamp checks the example BBS Lamp of example-style, section 8:
+// TestLamp checks the example BBS Lamp of example-style, section 4:
 // velourbbs check gives no output, and each preview equals its golden dump.
 func TestLamp(t *testing.T) {
 	cases := []struct{ screen, size, colors, set, dump string }{

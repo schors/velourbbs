@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// TestArtExample checks the art example of bbt-guide, sections 5 and 6:
+// TestArtExample checks the art example of bbt-guide, sections 3 and 5:
 // velourbbs check gives no output, and the preview equals its golden dump.
 func TestArtExample(t *testing.T) {
 	fsys := os.DirFS(filepath.Join("..", "..", "examples", "art"))
