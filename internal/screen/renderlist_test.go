@@ -1,6 +1,7 @@
 package screen_test
 
 import (
+	"maps"
 	"slices"
 	"testing"
 	"testing/fstest"
@@ -81,5 +82,42 @@ func TestListRows(t *testing.T) {
 	}
 	if p := listPage(s, 1, 3); p.Top != 6 || len(p.Rows) != 4 {
 		t.Errorf("top %d, rows %d; want 6 and 4", p.Top, len(p.Rows))
+	}
+}
+
+// row.selected is true on the row of the cursor (list-view, section 8).
+func TestRenderListCursor(t *testing.T) {
+	s := listScreen(t, "select = { do = \"back\" }\n", "{#each}{#if row.selected}>{#else} {/if}{row.num}{/each}\n",
+		"a.txt", "b.txt", "c.txt", "d.txt")
+	env := &screen.Env{
+		Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Charset: "utf-8", Colors: 16},
+		List: &screen.ListValues{Page: 1, Pages: 2, Cursor: 1},
+	}
+	rows := s.List.List(nil)
+	want := []string{" 1", ">2", " 3"}
+	if got := texts(screen.RenderList(s, env, theme, rows, 1, 3)); !slices.Equal(got, want) {
+		t.Errorf("page 1: %q, want %q", got, want)
+	}
+	env.List.Page, env.List.Cursor = 2, 3
+	want = []string{">4", "", ""}
+	if got := texts(screen.RenderList(s, env, theme, rows, 2, 3)); !slices.Equal(got, want) {
+		t.Errorf("page 2: %q, want %q", got, want)
+	}
+}
+
+// The action of select has the literal values and the values of the row: an integer
+// in its decimal form (list-view, section 8). The action of the model does not change.
+func TestSelectAction(t *testing.T) {
+	sel := &screen.Select{
+		Do:   screen.Action{Op: screen.Gosub, Screen: "r", Args: map[string]string{"a": "lit"}},
+		Refs: map[string]string{"n": "num", "m": "minutes", "p": "path"},
+	}
+	a := sel.Action(screen.ListRow{"minutes": 3, "path": "x.md"}, 7)
+	want := map[string]string{"a": "lit", "n": "7", "m": "3", "p": "x.md"}
+	if a.Op != screen.Gosub || a.Screen != "r" || !maps.Equal(a.Args, want) {
+		t.Errorf("action %+v, want args %v", a, want)
+	}
+	if len(sel.Do.Args) != 1 {
+		t.Errorf("the action of the model changed: %v", sel.Do.Args)
 	}
 }

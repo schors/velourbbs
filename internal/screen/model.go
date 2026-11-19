@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strconv"
 	"strings"
 )
 
@@ -38,8 +39,48 @@ type ListSpec struct {
 	Args    map[string]string
 	ArgRefs map[string]string // the provider argument of each value "{arg.<name>}": its <name>
 	Rows    int               // the key rows
+	Select  *Select           // the key select, else nil (list-view, section 8)
 	// Lists holds the rows of each provider value that the screen can show, by ListKey.
 	Lists map[string][]ListRow
+}
+
+// Select is the action of a row: the key select of a list screen (list-view, section 8).
+// Do.Args holds the literal values.
+type Select struct {
+	Do   Action
+	Refs map[string]string // the row field of each value "{row.<field>}" by argument name
+}
+
+// Action gives the action of select with the values of the row r.
+func (s *Select) Action(r ListRow, num int) Action {
+	a := s.Do
+	if len(s.Refs) == 0 {
+		return a
+	}
+	a.Args = maps.Clone(a.Args)
+	if a.Args == nil {
+		a.Args = map[string]string{}
+	}
+	for name, field := range s.Refs {
+		a.Args[name] = RowValue(r, num, field)
+	}
+	return a
+}
+
+// RowValue gives the text of the field of the row r at the position num, from 1:
+// a string as it is, an integer in its decimal form (list-view, section 8).
+func RowValue(r ListRow, num int, field string) string {
+	var v any = num
+	if field != RowNum {
+		v = r[field]
+	}
+	switch v := v.(type) {
+	case int:
+		return strconv.Itoa(v)
+	case string:
+		return v
+	}
+	return ""
 }
 
 // ListRow is a row of a provider: the value of each field, an int or a string (list-view, section 4).

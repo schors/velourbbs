@@ -227,7 +227,7 @@ func (r *renderer) listLine(l ListLine, cur Style) {
 			continue
 		}
 		env := *r.env
-		env.Row = &RowValues{Num: n + 1, Row: r.list[n]}
+		env.Row = &RowValues{Num: n + 1, Selected: n == r.env.List.Cursor, Row: r.list[n]}
 		cells, _ := r.rowText(l.Row, cur, &env, nil)
 		r.addRow(cells)
 	}

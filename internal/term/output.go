@@ -6,6 +6,7 @@
 package term
 
 import (
+	"slices"
 	"strconv"
 	"unicode/utf8"
 
@@ -19,6 +20,18 @@ import (
 // then a VGA colour goes out as its RGB value.
 // The caller doubles IAC after it (section 4.3).
 func AppendPage(dst []byte, p screen.Page, colors int, vgaRGB bool) []byte {
+	return appendPage(dst, p, nil, colors, vgaRGB)
+}
+
+// AppendUpdate appends the output of the update of the shown page prev to the page p (section 7.1):
+// the rows of p whose cells differ from the row of prev, without the clear and without the fill rows.
+// p and prev have the same size, the same Top and the same count of rows. The arguments are as of AppendPage.
+func AppendUpdate(dst []byte, p, prev screen.Page, colors int, vgaRGB bool) []byte {
+	return appendPage(dst, p, &prev, colors, vgaRGB)
+}
+
+// appendPage appends the output of the page p, or of its update when prev is the shown page.
+func appendPage(dst []byte, p screen.Page, prev *screen.Page, colors int, vgaRGB bool) []byte {
 	var model, out screen.Style // the model style and the output style of the previous cell
 	dst = append(dst, "\x1b[?2026h"...)
 	if p.Fill == screen.FillErase {
@@ -27,7 +40,9 @@ func AppendPage(dst []byte, p screen.Page, colors int, vgaRGB bool) []byte {
 	} else {
 		dst = append(dst, "\x1b[0m"...)
 	}
-	dst = append(dst, "\x1b[2J"...)
+	if prev == nil {
+		dst = append(dst, "\x1b[2J"...)
+	}
 	appendCell := func(c screen.Cell) {
 		if c.Style != model {
 			model = c.Style
@@ -39,7 +54,7 @@ func AppendPage(dst []byte, p screen.Page, colors int, vgaRGB bool) []byte {
 		dst = appendUTF8(dst, c.Grapheme)
 	}
 	fillRow := func(row int) {
-		if p.Fill != screen.FillSpaces {
+		if p.Fill != screen.FillSpaces || prev != nil {
 			return
 		}
 		dst = appendPos(dst, row)
@@ -51,11 +66,16 @@ func AppendPage(dst []byte, p screen.Page, colors int, vgaRGB bool) []byte {
 	for row := range p.Top {
 		fillRow(row + 1)
 	}
-	var line screen.Row
+	var line, old screen.Row
 	for i := range p.Rows {
 		row := p.Top + i + 1
-		dst = appendPos(dst, row)
 		line = p.Line(i, line)
+		if prev != nil {
+			if old = prev.Line(i, old); slices.Equal(line, old) {
+				continue
+			}
+		}
+		dst = appendPos(dst, row)
 		for j, c := range line {
 			if c.Grapheme == "" { // the second cell of a wide grapheme gives no output
 				continue

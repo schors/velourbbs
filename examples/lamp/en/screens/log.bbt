@@ -1,6 +1,7 @@
 +++
 data = { from = "files", args = { dir = "log" } }
 rows = 5
+select = { do = "gosub reader", args = { file = "{row.path}" } }
 [[item]]
 key = "SPACE"
 do = "page next"
@@ -17,7 +18,7 @@ do = "back"
        {!title}The keeper's log{!}
        {!dim}notes of the nights  ∙  page {list.page}/{list.pages}{!}
 
-{#each}         {!dim}{row.num}{!}   {row.title                             }{!dim}{row.minutes} min{/each}
+{#each}{#if row.selected}       {!orn}☼{!} {#else}         {/if}{!dim}{row.num}{!}   {#if row.selected}{!title}{/if}{row.title                             }{!dim}{row.minutes} min{/each}
 
 
 
@@ -27,4 +28,4 @@ do = "back"
 
   {!line}────────────────────────────────────────────────────────────────────────────{!}
 
-    {#if item.SPACE}{!key}Space{!}  {!dim}next{!}   {/if}{#if item.B}{!key}B{!}  {!dim}prev{!}   {/if}{!key}Esc{!}  {!dim}back{!}
+    {!key}↑↓{!}  {!dim}choose{!}   {!key}Enter{!}  {!dim}read{!}   {#if item.SPACE}{!key}Space{!}  {!dim}next{!}   {/if}{#if item.B}{!key}B{!}  {!dim}prev{!}   {/if}{!key}Esc{!}  {!dim}back{!}

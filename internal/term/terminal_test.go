@@ -205,6 +205,40 @@ func TestTerminalPage(t *testing.T) {
 	})
 }
 
+// A cursor move sends only the changed rows: Update writes the rows that differ from the last page
+// (section 7.1, and list-view, section 12).
+func TestTerminalUpdate(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		term, f := connect(t, testTimeouts)
+		page := func(sel int) screen.Page {
+			var rs []screen.Row
+			for i := range 4 {
+				mark := " "
+				if i == sel {
+					mark = ">"
+				}
+				rs = append(rs, screen.Row{{Grapheme: mark}, {Grapheme: string(rune('a' + i))}})
+			}
+			return screen.Page{Rows: rs, Cols: 2, Height: 4}
+		}
+		if err := term.Page(page(0)); err != nil {
+			t.Fatal(err)
+		}
+		before := len(f.output())
+		if err := term.Update(page(1)); err != nil {
+			t.Fatal(err)
+		}
+		if err := term.Update(page(2)); err != nil {
+			t.Fatal(err)
+		}
+		want := "\x1b[?2026h\x1b[0m\x1b[1;1H a\x1b[2;1H>b\x1b[0m\x1b[?2026l" +
+			"\x1b[?2026h\x1b[0m\x1b[2;1H b\x1b[3;1H>c\x1b[0m\x1b[?2026l"
+		if got := f.output()[before:]; got != want {
+			t.Errorf("output of the updates\n%q\nwant\n%q", got, want)
+		}
+	})
+}
+
 func TestTerminalOutputTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		// A client that does not read ends the session after output_timeout.

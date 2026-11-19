@@ -44,6 +44,11 @@ func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
 					ls.Errorf(s.File, 2, 1, "item %q: args: %v", it.Key, err)
 				}
 			}
+			if s.List != nil && s.List.Select != nil {
+				for _, err := range checkSelect(sets, lang, s.List.Select) {
+					ls.Errorf(s.File, 2, 1, "select: %v", err)
+				}
+			}
 		}
 		start := screen.Action{Screen: cfg.Start}
 		if err := CheckTarget(sets, lang, start); err != nil {
@@ -55,6 +60,33 @@ func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
 	}
 	checkSets(cfg.Langs, sets, sd)
 	return sd.Diags()
+}
+
+// checkSelect checks the goto or the gosub of select in a screen of the set lang: its target,
+// its arguments and each {row.<field>} value for an argument that the target uses in data
+// (list-view, section 8).
+func checkSelect(sets bbt.Sets, lang string, sel *screen.Select) []error {
+	a := sel.Action(nil, 1) // each argument with a value
+	if !a.Op.HasTarget() {
+		return nil
+	}
+	if err := CheckTarget(sets, lang, a); err != nil {
+		return []error{fmt.Errorf("do: %w", err)}
+	}
+	t := Target(sets, lang, a)
+	var errs []error
+	for _, err := range CheckArgs(t, a.Target(), a.Args) {
+		errs = append(errs, fmt.Errorf("args: %w", err))
+	}
+	if t.List == nil {
+		return errs
+	}
+	for _, name := range slices.Sorted(maps.Keys(sel.Refs)) {
+		if slices.Contains(slices.Collect(maps.Values(t.List.ArgRefs)), name) {
+			errs = append(errs, fmt.Errorf("args: %s: screen %q uses the argument in data", name, a.Target()))
+		}
+	}
+	return errs
 }
 
 // checkSets reports each screen name of a set that is not in the set of each other language,

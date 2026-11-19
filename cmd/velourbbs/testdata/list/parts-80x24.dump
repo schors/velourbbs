@@ -1,28 +1,28 @@
 page 1 80x24 fill none
 |Parts of parts  page 1/2                                                        |
-|          1  Read me first                       1 min  parts/README.md         |
-|          2  Introduction                        1 min  parts/1-intro.md        |
-|          3  Fields                              1 min  parts/02-fields.md      |
-|          4  The menu                            1 min  parts/2-menu.md         |
+|>          1  Read me first                       1 min  parts/README.md        |
+|           2  Introduction                        1 min  parts/1-intro.md       |
+|           3  Fields                              1 min  parts/02-fields.md     |
+|           4  The menu                            1 min  parts/2-menu.md        |
 |PgUp PgDn Home End  N News  T Light  Esc Back                                   |
 styles
 1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-80 7/0
-2: 1-11 14/0, 12-49 7/0, 50-71 8/0, 72-80 7/0
-3: 1-11 14/0, 12-49 7/0, 50-72 8/0, 73-80 7/0
-4: 1-11 14/0, 12-49 7/0, 50-74 8/0, 75-80 7/0
-5: 1-11 14/0, 12-49 7/0, 50-71 8/0, 72-80 7/0
+2: 1-1 7/0, 2-12 14/0, 13-50 7/0, 51-72 8/0, 73-80 7/0
+3: 1-1 7/0, 2-12 14/0, 13-50 7/0, 51-73 8/0, 74-80 7/0
+4: 1-1 7/0, 2-12 14/0, 13-50 7/0, 51-75 8/0, 76-80 7/0
+5: 1-1 7/0, 2-12 14/0, 13-50 7/0, 51-72 8/0, 73-80 7/0
 6: 1-18 14/0, 19-80 7/0
 page 2 80x24 fill none
 |Parts of parts  page 2/2                                                        |
-|          5  3-notes.txt                         1 min  parts/3-notes.txt       |
-|          6  A very long title that is wider tha 1 min  parts/4-long.md         |
-|          7  Art and colour                      1 min  parts/10-art.md         |
+|>          5  3-notes.txt                         1 min  parts/3-notes.txt      |
+|           6  A very long title that is wider tha 1 min  parts/4-long.md        |
+|           7  Art and colour                      1 min  parts/10-art.md        |
 |                                                                                |
 |PgUp PgDn Home End  N News  T Light  Esc Back                                   |
 styles
 1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-80 7/0
-2: 1-11 14/0, 12-49 7/0, 50-73 8/0, 74-80 7/0
-3: 1-11 14/0, 12-49 7/0, 50-71 8/0, 72-80 7/0
-4: 1-11 14/0, 12-49 7/0, 50-71 8/0, 72-80 7/0
+2: 1-1 7/0, 2-12 14/0, 13-50 7/0, 51-74 8/0, 75-80 7/0
+3: 1-1 7/0, 2-12 14/0, 13-50 7/0, 51-72 8/0, 73-80 7/0
+4: 1-1 7/0, 2-12 14/0, 13-50 7/0, 51-72 8/0, 73-80 7/0
 5: 1-80 7/0
 6: 1-18 14/0, 19-80 7/0

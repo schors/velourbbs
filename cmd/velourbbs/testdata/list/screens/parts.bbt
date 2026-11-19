@@ -1,6 +1,7 @@
 +++
 data = { from = "files", args = { dir = "{arg.dir}" } }
 rows = 4
+select = { do = "gosub read", args = { file = "{row.path}" } }
 [[item]]
 key = "PGDN"
 do = "page next"
@@ -27,7 +28,7 @@ do = "back"
 +++
 {!title}Parts of {arg.dir}{!}  {!dim}page {list.page}/{list.pages}{!}
 {#if term.cols >= 60}
-{#each}{!key}{  row.num}{!}  {row.title                        } {!dim}{row.minutes} min  {row.path}{/each}
+{#each}{#if row.selected}>{#else} {/if}{!key}{  row.num}{!}  {row.title                        } {!dim}{row.minutes} min  {row.path}{/each}
 {#else}
 {>_narrow}
 {/if}

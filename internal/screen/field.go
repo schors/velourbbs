@@ -458,12 +458,14 @@ type Env struct {
 type ListValues struct {
 	Page, Pages int
 	Empty       bool
+	Cursor      int // the index of the selected row in the list, from 0 (list-view, section 8)
 }
 
 // RowValues holds the values of the row.* fields of one row (list-view, section 6).
 type RowValues struct {
-	Num int
-	Row ListRow
+	Num      int
+	Selected bool
+	Row      ListRow
 }
 
 // SessionValues holds the values of the session.* and bbs.* fields (session-fields, section 2).
@@ -511,8 +513,11 @@ func (e *Env) value(r Ref) any {
 	case refList:
 		return e.List.value(r.list)
 	case refRow:
-		if r.name == RowNum {
+		switch r.name {
+		case RowNum:
 			return e.Row.Num
+		case RowSelected:
+			return e.Row.Selected
 		}
 		return e.Row.Row[r.name]
 	}
