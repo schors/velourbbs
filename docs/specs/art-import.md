@@ -101,7 +101,7 @@ The import plays the data into a grid of cells. The grid width is the art width.
   A wide grapheme overwrites the last two cells.
 - A write to one half of a wide grapheme turns the other half into a space in its style.
 - `CSI A`, `B`, `H` and `f` keep the cursor inside the grid width and the row limit
-  ([art-format](art-format.md), section 5). `CSI C` and `D` change only the column, inside the grid width.
+  ([art-format](art-format.md), section 6). `CSI C` and `D` change only the column, inside the grid width.
   A restore (`CSI u`, `ESC 8`) goes back to the saved row and column.
 - In UTF-8 input, a wrap also resets the style to `7/0` without attributes.
   icy_draw at the level UTF-8 starts each row in this style and writes no SGR
@@ -188,7 +188,7 @@ The table is fixed data, so a dependency gives no gain.
 
 ## 8. Limits
 
-These limits apply to the input: the file and the art grid ([art-format](art-format.md), section 5),
+These limits apply to the input: the file and the art grid ([art-format](art-format.md), section 6),
 the grapheme ([bbt-format](bbt-format.md), section 9) and the diagnostics
 ([screen-render](screen-render.md), section 3.1). The play has one more limit:
 
@@ -219,7 +219,7 @@ After the write, the import reads its output by [art-format](art-format.md), sec
 The fields of art-format, section 4, need `screens/screens.toml`, so `velourbbs check` checks them.
 When that grid differs from the grid of the play, it is an error at the first different cell.
 Example: two regional indicators in two cells join into one flag grapheme.
-An output over the file limit ([art-format](art-format.md), section 5) is an error.
+An output over the file limit ([art-format](art-format.md), section 6) is an error.
 
 SAUCE fields of the output:
 

@@ -3,7 +3,7 @@
 This specification defines the screen model, the render and the commands
 `velourbbs check` and `velourbbs preview`.
 Related parts: [bbt-format](bbt-format.md), [art-format](art-format.md), [bbs-toml](bbs-toml.md),
-[screens-toml](screens-toml.md), [menu-nav](menu-nav.md), [file-view](file-view.md),
+[screens-toml](screens-toml.md), [menu-nav](menu-nav.md), [file-view](file-view.md), [list-view](list-view.md),
 [session-fields](session-fields.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
@@ -85,7 +85,7 @@ screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 1
 
 ### 3.2. `velourbbs preview`
 
-`velourbbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]...` renders a screen
+`velourbbs preview <name> [--size <cols>x<rows>] [--sample <set>] [--set <path>=<value>]...` renders a screen
 and writes its cell dump to the standard output.
 
 - It does the checks of `velourbbs check` first. After an error it writes no dump
@@ -115,6 +115,9 @@ and writes its cell dump to the standard output.
 - A size outside the ranges of [bbt-format](bbt-format.md), section 4.1, and an unknown screen
   are invalid arguments.
 - `--keys` runs a session: [menu-nav](menu-nav.md), section 7.
+- `--sample <set>` takes the values of a sample set (section 3.5). `--set` replaces them,
+  in each order of the options.
+- Without `--sample`, a list screen shows the rows of its provider ([list-view](list-view.md), section 4).
 
 ### 3.3. Cell dump
 
@@ -145,6 +148,73 @@ styles
   A VGA colour appears as its index. The tests of the output
   ([telnet-term](telnet-term.md), section 7.3) check the VGA colours.
 - A page with a More row includes it as its last row.
+
+### 3.4. `velourbbs fields`
+
+`velourbbs fields [--sample]` writes the fields of the BBS to the standard output.
+
+- It does the checks of `velourbbs check` first. After an error it writes nothing
+  and exits with status 1.
+- It writes one line for each field: the path, the type, the width and the sample value,
+  in columns separated with two or more spaces. A `row.*` field also has the provider.
+- The fields are each path of the registry ([bbt-format](bbt-format.md), section 4.1)
+  without `<...>`, in the order of the registry, then `arg.<name>` for each argument of a screen,
+  then `row.num` and the fields of each provider that a screen uses ([list-view](list-view.md), section 4).
+- The "width" is the most cells that a value can have:
+  - an integer with a range: the digits of the widest bound. Example: `term.cols` has 3;
+  - a string with a fixed set of values: the widest value. Example: `term.background` has 5;
+  - a field of load rows, `row.num` and `list.*`: the widest value of the rows of the BBS;
+  - else `-`.
+- The "sample value" is the value of `velourbbs preview` without `--set` (section 3.2,
+  [session-fields](session-fields.md), section 4). For `arg.<name>`, it is the first value
+  that a `goto` or a `gosub` gives. For a `row.*` field, it is the value of the first row
+  of the provider, else empty. `file.*` and `list.*` have the values of page 1.
+
+Example:
+
+```
+term.cols      integer  3   80
+term.type      string   -   xterm
+bbs.sessions   integer  -   1
+row.title      string   34  Introduction  files
+```
+
+- `--sample` writes the file `sample.toml` (section 3.5) with the set `default` and exits.
+  The set has `fields` with the sample value of each field that `--set` takes,
+  and `rows` with one row: the sample value of each field of each provider that a screen uses.
+  An existing file is an error: the command does not replace it.
+
+### 3.5. Sample sets
+
+`sample.toml` in the BBS directory holds the "sample sets" of `velourbbs preview`.
+Each top-level table is one set. The set name matches `[a-z][a-z0-9_-]*`.
+
+| Key | Type | Meaning |
+|---|---|---|
+| `fields` | table of strings | Optional. A value for each path, with the rules of `--set` (section 3.2). |
+| `rows` | array of tables | Optional. The rows of each list screen of the preview. A table maps a field name of the provider, without `row.`, to a string or an integer. A missing field is empty or 0. |
+
+Example:
+
+```toml
+[empty]
+rows = []
+
+[long]
+fields = { "bbs.sessions" = "12" }
+rows = [
+  { title = "A very long title of a guide part that does not fit", minutes = 120 },
+  { title = "Short", minutes = 1 },
+]
+```
+
+- `velourbbs check` and `velourbbs serve` do not read `sample.toml`.
+- A missing file, an unknown set, an unknown key and an invalid value are invalid arguments
+  of `velourbbs preview`. A field of `rows` that the provider of a shown list screen does not have,
+  or a value of the wrong type, is an error of the preview. After an error, the command
+  exits with status 1.
+- A value of `rows` that `select` gives to a file screen must be a content file
+  ([list-view](list-view.md), section 8). Else it is an error of the preview.
 
 ## 4. Code
 

@@ -133,7 +133,7 @@ args = { file = "gold.md" }
 | `page first` | Show the first page. |
 | `page last` | Show the last page. |
 
-- A `page` action is valid only in a file screen.
+- A `page` action is valid only in a file screen and in a list screen ([list-view](list-view.md), section 7).
 - [menu-nav](menu-nav.md), section 5.1, defines the show of a page.
 
 ### 3.4. Fields
@@ -304,7 +304,7 @@ Each of these is an error of `velourbbs check` ([screen-render](screen-render.md
 - an error of the content (section 2.1) or of the front matter (section 5.1),
   at its position in the content file;
 - an error of the file screen keys and of `{>file}` (sections 3 and 3.1);
-- a `page` action or a field of section 3.4 outside a file screen.
+- a `page` action outside a file screen and a list screen, a field of section 3.4 outside a file screen.
 
 Positions:
 
@@ -369,7 +369,7 @@ content/gold.md:1:1: front matter: no end line "+++"
 ## 12. Not in this specification
 
 - The table of contents and active links to other Markdown files: [file-view](https://github.com/schors/velourbbs/issues/7).
-  They need the selection of a row of [lists](https://github.com/schors/velourbbs/issues/9).
+  They need the selection of a row ([list-view](list-view.md), section 8).
 - Syntax colours of source files: [file-view](https://github.com/schors/velourbbs/issues/7).
 - Italic. The style model has no italic ([bbt-format](bbt-format.md), section 7.1).
 - Files of users.

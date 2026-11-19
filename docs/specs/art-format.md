@@ -1,7 +1,7 @@
 # Art format
 
 This specification defines the art files `screens/<name>.ans` in the flat form.
-Related parts: [bbt-format](bbt-format.md) and [art-import](art-import.md).
+Related parts: [bbt-format](bbt-format.md), [list-view](list-view.md) and [art-import](art-import.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -66,13 +66,30 @@ also from `38;5;n` and `48;5;n`.
 
 - After the read, the loader finds fields in each grid row. A field token in art is `{`,
   optional spaces, a path ([bbt-format](bbt-format.md), section 4), optional spaces and `}`
-  on one row. Each other `{` is a plain character.
+  on one row. The block tokens of section 5 are tokens too. Each other `{` is a plain character.
 - All cells of a token must have one background. All its non-space cells must have
   one foreground. An error gives both colours and their columns.
 - A field takes the cells of its token and the style of its first non-space cell.
   It aligns right when the path follows spaces, else left.
+- The art row with `row.*` fields is the list row of a list screen: [list-view](list-view.md), section 9.
 
-## 5. Limits
+## 5. Blocks in art
+
+- A "box" is a span of one grid row from `{#if <cond>}` to `{/if}`.
+  The condition has the grammar of [bbt-format](bbt-format.md), section 5.
+- Boxes do not nest and have no `{#else}`. A `{#if` without `{/if}` on the same row is an error.
+  A box in the list row is an error.
+- The "box content" is the cells between the two markers. It can have field tokens.
+- When the condition is true, the box shows the box content from its first cell,
+  with the styles of its cells. The cells after the content up to the end of the box are spaces
+  in the style of the first cell of the box.
+- When the condition is false, the box shows spaces in the style of its first cell.
+- The cells outside the box do not move.
+- The host evaluates the conditions at each render, as in [bbt-format](bbt-format.md), section 5.
+
+Example: `{#if item.S}[S]ysop{/if}` shows `[S]ysop` and 17 spaces when the item `S` is enabled.
+
+## 6. Limits
 
 | Content | Limit |
 |---|---|
@@ -81,6 +98,6 @@ also from `38;5;n` and `48;5;n`.
 
 A file or a part of a file over a limit is an error.
 
-## 6. Not in the MVP
+## 7. Not in the MVP
 
 - Raw art and ANSI animation: [content-trust](https://github.com/schors/velourbbs/issues/5).

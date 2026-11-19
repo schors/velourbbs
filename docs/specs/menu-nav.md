@@ -4,7 +4,7 @@ This specification defines the key match, the navigation of a session,
 the menu checks between screens of `velourbbs check` and the key sequences of `velourbbs preview`.
 [bbt-format](bbt-format.md), section 8, defines the menu items and the keys.
 Related parts: [screens-toml](screens-toml.md), [screen-render](screen-render.md), [file-view](file-view.md),
-[session-language](session-language.md) and [telnet-term](telnet-term.md).
+[list-view](list-view.md), [session-language](session-language.md) and [telnet-term](telnet-term.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -20,7 +20,8 @@ All sessions are anonymous. Login is a later idea.
 - A "menu", an "item" and an "enabled" item: [bbt-format](bbt-format.md), section 8.
 - The "current screen" is the one screen of the session that waits for a key.
 - The "navigation stack" is the list of the frames of the session (section 4.1).
-  A "frame" holds a screen, its arguments and the page of a file screen.
+  A "frame" holds a screen, its arguments, the page of a file screen or of a list screen
+  and the cursor of a list screen.
   The "first frame" is at the bottom of the stack. The "top frame" holds the current screen.
 
 ## 3. Keys
@@ -52,9 +53,11 @@ The letters `х ъ ж э ё б ю` have no Latin letter. They match only `ANY`.
 When a key arrives at the current screen, the host:
 
 1. maps the key with section 3.2;
-2. runs the enabled item with this key, if there is one;
-3. else runs the enabled `ANY` item, if there is one;
-4. else ignores the key.
+2. in a list screen with `select`, handles `UP`, `DOWN` and `ENTER` ([list-view](list-view.md), section 8)
+   and stops;
+3. runs the enabled item with this key, if there is one;
+4. else runs the enabled `ANY` item, if there is one;
+5. else ignores the key.
 
 ESC has no implicit action.
 
@@ -63,7 +66,8 @@ ESC has no implicit action.
 The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
 
 - `goto`, `gosub`, `back` and `top` change the navigation stack (section 4.1).
-- A `page` action shows a page of the current file screen (section 5.1).
+- A `page` action shows a page of the current file screen (section 5.1) or list screen (section 5.3).
+- `select` of a list screen runs its action as an item runs it ([list-view](list-view.md), section 8).
 - `theme <choice>` sets the theme choice of the session to `<choice>`
   ([screens-toml](screens-toml.md), section 3.2). The choice lasts until the end of the session.
   Then the host shows the screen of the top frame again (section 5). The stack does not change.
@@ -82,14 +86,16 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
 
 - The stack has 16 frames at most.
 - `goto <name>` replaces the top frame with a new frame: the screen `<name>`,
-  the `args` of the item and page 1.
-- `gosub <name>` adds a new frame on top: the screen `<name>`, the `args` of the item and page 1.
+  the `args` of the item, page 1 and the cursor on the first row.
+- `gosub <name>` adds a new frame on top: the screen `<name>`, the `args` of the item, page 1
+  and the cursor on the first row.
   When the stack has 16 frames, the host first removes the second frame:
   the oldest frame above the first frame.
 - `back` removes the top frame. On the first frame, it removes nothing.
 - `top` removes each frame above the first frame.
 - After each of these actions, the host shows the screen of the top frame
   with its arguments (section 5). A file screen shows the page of the frame (section 5.1).
+  A list screen shows the page and the cursor of the frame (section 5.3).
 - A frame holds the name of the screen. The host finds the file of the name
   in the session language each time it shows the frame ([session-language](session-language.md), section 4).
 - A `goto` to the current screen also gives a new frame with page 1.
@@ -145,6 +151,26 @@ the screen `shutdown` to each open session if it exists
 - Without the file, the host disconnects with no page.
   [telnet-term](telnet-term.md), section 8.4, can send `ESC[?2004l` before.
 
+### 5.3. List screen
+
+The host shows a list screen ([list-view](list-view.md), section 3) in these steps:
+
+1. Read `term.cols` and `term.rows`. They stay until the next screen.
+2. For the current list page, evaluate the `when` of each item, render the page and
+   clear the terminal screen and show it. The first page is the page of the top frame,
+   or the last list page when the list has fewer pages
+   ([list-view](list-view.md), section 7). If the cursor of the frame is not on this page,
+   the host puts it on the last row of the page. The host then sets the page and the cursor
+   of the top frame.
+3. Wait for keys and match them (section 3.3).
+   - A `page` action sets the current page and puts the cursor on its first row.
+     Continue at step 2.
+   - `UP` or `DOWN` to a row of another list page: continue at step 2 with that page.
+   - `UP` or `DOWN` on the same list page: evaluate the `when` of each item, render the page
+     and update it: the terminal sends only the rows that differ from the shown page
+     ([telnet-term](telnet-term.md), section 7.1). Continue at step 3.
+   - A `theme` action continues at step 2. Each other action leaves the screen.
+
 ## 6. `velourbbs check`
 
 `velourbbs check` ([screen-render](screen-render.md), section 3.1) finds the item errors
@@ -199,7 +225,8 @@ It is the test harness for the navigation.
   - `screen <name>` and the cell dump of the first shown page, when the host shows a screen,
     also after `back`, `top` and `lang`;
   - the cell dump of the next page, after a key on a More row;
-  - the cell dump of the page, after a `page` action or a `theme` action in a file screen;
+  - the cell dump of the page, after a `page` action or a `theme` action in a file screen
+    or a list screen, and after a cursor move in a list screen;
   - `key <key>` before each key. `key <key> ignored` for an ignored key;
   - `logoff` when an item runs `logoff`. The pages of `goodbye` follow it.
 - The output gives a key after the map of section 3.2. A letter, a digit or a key name
@@ -241,7 +268,8 @@ page 1 80x25 fill none
 
 - The model (`screen.Item`) holds the key in upper case and the parsed action.
   `internal/screen` uses `internal/key` for the case rule of `item.<KEY>`.
-- The terminal interface gives the size and the keys and shows a page.
+- The terminal interface gives the size and the keys, shows a page and updates a page
+  (section 5.3).
   The wait for a key takes the context of the session ([session](session.md), section 6).
   `velourbbs preview` and telnet-term give its implementations.
 - A terminal can also take the other events of section 7: the screen name, a key,
@@ -252,4 +280,4 @@ page 1 80x25 fill none
 
 - Typed command input.
 - A theme choice that lasts after the session. It needs users and login.
-- `page` for lists, and the actions `run` and `call`. They need lists, Lua or built-ins.
+- The actions `run` and `call`. They need Lua or built-ins.
