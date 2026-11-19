@@ -314,6 +314,35 @@ func TestFields(t *testing.T) {
 	}
 }
 
+// The list row is the art row with row.* fields (list-view, section 9).
+// The rectangle goes from the first row.* token to the last. A row.* field on another row is an error.
+func TestListRow(t *testing.T) {
+	tests := []struct {
+		name, data string
+		list       string
+		diags      string
+	}{
+		{"no list row", "{w}", "<nil>", ""},
+		{"list row", "{w}\n {row.num} {list.page} {  row.title}", "&{2 2 36}", ""},
+		{"two list rows", "{row.num}\n{row.title} {row.path}\n{row.num}", "",
+			"a.ans:2:1: field \"row.title\": art has at most one list row, the list row is row 1\n" +
+				"a.ans:3:1: field \"row.num\": art has at most one list row, the list row is row 1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a, ds := art.Parse("a.ans", flat(tt.data, 40, 0), aliases)
+			if got := diagText(ds); got != tt.diags {
+				t.Errorf("diagnostics %q, want %q", got, tt.diags)
+			}
+			if a != nil {
+				if got := fmt.Sprint(a.List); got != tt.list {
+					t.Errorf("list %s, want %s", got, tt.list)
+				}
+			}
+		})
+	}
+}
+
 func TestTooManyDiagnostics(t *testing.T) {
 	_, ds := art.Parse("a.ans", flat(strings.Repeat("\t", 200)+"\n\x1b[1m", 4, 0), aliases)
 	if len(ds) != screen.MaxFileDiags+1 || ds[len(ds)-1].Msg != "too many diagnostics" {

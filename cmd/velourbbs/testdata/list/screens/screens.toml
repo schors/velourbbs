@@ -5,3 +5,7 @@ key   = "14"
 
 [theme.light.default]
 normal = "0/15"
+
+[fields]
+n = "list.page"
+c = "list.pages"

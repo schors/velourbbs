@@ -30,6 +30,17 @@ var listGoldens = []struct {
 		"1,DOWN,UP,UP,DOWN,DOWN,DOWN,DOWN,UP,END,DOWN,DOWN,DOWN,ENTER,ESC,HOME,ESC,2,ENTER,DOWN,ESC,G"}},
 	// The rows of a --set value that no goto gives: ENTER shows the file of the row.
 	{"set-40x10.dump", []string{"parts", "--set", "arg.dir=more", "--size", "40x10", "--keys", "ENTER,ESC"}},
+	// The list row in art (list-view, section 9): the first page and the last page with an empty
+	// rectangle row; the selected row in select; the frame and the fields outside the rectangle stay.
+	{"shelf-80x24.dump", []string{"shelf", "--set", "arg.dir=parts"}},
+	// P smaller than rows: the art does not shrink, so P = 3 leaves the fourth rectangle row empty.
+	{"shelf-80x10.dump", []string{"shelf", "--set", "arg.dir=parts", "--size", "80x10"}},
+	// An empty list: each rectangle row is spaces in the styles of the list row.
+	{"shelf-empty-40x24.dump", []string{"shelf", "--set", "arg.dir=empty", "--size", "40x24"}},
+	// The cursor in art: UP at the start and DOWN at the end of the list do nothing; DOWN and UP
+	// over a page border; ENTER on row 7 to a file screen and back to the same cursor; PGUP.
+	{"shelf-keys-40x24.dump", []string{"main", "--size", "40x24", "--keys",
+		"4,UP,DOWN,DOWN,DOWN,DOWN,UP,PGDN,DOWN,DOWN,DOWN,ENTER,ESC,PGUP,ESC,G"}},
 }
 
 func TestPreviewList(t *testing.T) {

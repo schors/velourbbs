@@ -27,6 +27,10 @@ var (
 	defaultMoreStyle = screen.StyleSpec{
 		Fg: screen.IndexColour(15), Bg: screen.IndexColour(0), HasFg: true, HasBg: true,
 	}
+	// defaultSelectStyle is the style of the selected row in art (list-view, section 9).
+	defaultSelectStyle = screen.StyleSpec{
+		Fg: screen.IndexColour(0), Bg: screen.IndexColour(7), HasFg: true, HasBg: true,
+	}
 )
 
 // screensDoc is the plain decode of screens/screens.toml. A nil pointer is a key that is not set.
@@ -228,9 +232,11 @@ var mdStyles = map[string]string{
 	"md_code": "10", "md_link": "14 underline", "md_mark": "11", "md_frame": "8", "md_dim": "8",
 }
 
-// baseSpecs gives the defaults of the base theme: normal, more and the md_* styles.
+// baseSpecs gives the defaults of the base theme: normal, more, select and the md_* styles.
 func baseSpecs() map[string]screen.StyleSpec {
-	specs := map[string]screen.StyleSpec{"normal": defaultNormalStyle, "more": defaultMoreStyle}
+	specs := map[string]screen.StyleSpec{
+		"normal": defaultNormalStyle, "more": defaultMoreStyle, "select": defaultSelectStyle,
+	}
 	for name, text := range mdStyles {
 		spec, err := screen.ParseStyle(text)
 		if err != nil {

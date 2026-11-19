@@ -129,6 +129,9 @@ func newRenderer(s *Screen, env *Env, theme map[string]Style) *renderer {
 		area: min(w, cols), margin: margin, height: env.Term.Rows, fill: s.Fill,
 		values: map[Ref][]Grapheme{},
 	}
+	if s.List != nil {
+		r.rectRows, r.selectable = s.List.Rows, s.List.Select != nil
+	}
 	r.wrapper = newWrapper(w, r.addRow)
 	return r
 }
@@ -164,6 +167,10 @@ type renderer struct {
 	// The list of a list screen and the page size P (list-view, section 7).
 	list     []ListRow
 	pageSize int
+	// The rows of the list rectangle in art: the key rows. selectable is true in a screen
+	// with select (list-view, sections 8 and 9).
+	rectRows   int
+	selectable bool
 
 	wrapper // the current source line
 }
@@ -246,12 +253,7 @@ func (r *renderer) rowText(segs []Seg, cur Style, env *Env, cells []Cell) ([]Cel
 				cells = appendCell(cells, g, cur)
 			}
 		case Field:
-			var gs []Grapheme
-			if seg.Ref.Row() != "" { // the value of each row: not in the cache of the render
-				gs = env.Text(seg.Ref)
-			} else {
-				gs = r.value(seg.Ref)
-			}
+			gs := r.fieldText(seg.Ref, env)
 			if seg.Width > 0 {
 				gs = FitValue(gs, min(seg.Width, r.w), seg.Right)
 			}
@@ -292,23 +294,75 @@ func (r *renderer) field(f Field, style Style) {
 }
 
 // art adds the rows of an art insert with the values of its fields (section 6.2 and art-format, section 4).
+// In a list render, the list rectangle shows the list page (list-view, section 9).
 func (r *renderer) art(a ArtInsert) {
-	fields := a.Art.Fields
-	fi := 0
+	ls := a.Art.List
+	if r.env.List == nil {
+		ls = nil
+	}
 	for i, cells := range a.Art.Rows {
-		if fi < len(fields) && fields[fi].Row == i+1 {
-			cells = append([]Cell(nil), cells...) // the model is immutable
-			for ; fi < len(fields) && fields[fi].Row == i+1; fi++ {
-				f := fields[fi]
-				var value []Cell
-				for _, g := range FitValue(r.value(f.Ref), f.Width, f.Right) {
-					value = appendCell(value, g, f.Style)
-				}
-				copy(cells[f.Col-1:], value)
-			}
+		cells = r.artFields(a.Art, i+1, cells, r.env)
+		if ls != nil && i+1 >= ls.Row && i+1 < ls.Row+r.rectRows {
+			cells = r.listRect(a.Art, i+1-ls.Row, cells)
 		}
 		r.addRow(cells)
 	}
+}
+
+// artFields gives the cells of the art row n with the values of its fields in env.
+// Without a row in env, the row.* fields keep their cells.
+func (r *renderer) artFields(a *Art, n int, cells Row, env *Env) Row {
+	copied := false
+	for _, f := range a.Fields {
+		if f.Row != n || f.Ref.Row() != "" && env.Row == nil {
+			continue
+		}
+		if !copied {
+			cells = append(Row(nil), cells...) // the model is immutable
+			copied = true
+		}
+		var value []Cell
+		for _, g := range FitValue(r.fieldText(f.Ref, env), f.Width, f.Right) {
+			value = appendCell(value, g, f.Style)
+		}
+		copy(cells[f.Col-1:], value)
+	}
+	return cells
+}
+
+// listRect gives the cells of the art row i of the list rectangle, from 0, with the row i of the list page.
+// A rectangle row without a row of the list page is spaces in the styles of the list row cells.
+// The selected row takes the style select (list-view, section 9).
+func (r *renderer) listRect(a *Art, i int, cells Row) Row {
+	cells = append(Row(nil), cells...) // the model is immutable
+	ls := a.List
+	from, to := ls.First-1, ls.Last
+	listRow := a.Rows[ls.Row-1]
+	n := (r.env.List.Page-1)*r.pageSize + i
+	if i >= r.pageSize || n >= len(r.list) {
+		for c := from; c < to; c++ {
+			cells[c] = Cell{" ", listRow[c].Style}
+		}
+		return cells
+	}
+	env := *r.env
+	env.Row = &RowValues{Num: n + 1, Selected: n == r.env.List.Cursor, Row: r.list[n]}
+	copy(cells[from:to], r.artFields(a, ls.Row, listRow, &env)[from:to])
+	if r.selectable && env.Row.Selected {
+		for c := from; c < to; c++ {
+			cells[c].Style = r.theme["select"]
+		}
+	}
+	return cells
+}
+
+// fieldText gives the graphemes of the field ref in env. The value of a row.* field
+// is not in the cache of the render: it differs for each row.
+func (r *renderer) fieldText(ref Ref, env *Env) []Grapheme {
+	if ref.Row() != "" {
+		return env.Text(ref)
+	}
+	return r.value(ref)
 }
 
 // addRow adds a row from the cells of the screen area. The render stops at MaxRenderRows.

@@ -1,0 +1,21 @@
++++
+data = { from = "files", args = { dir = "{arg.dir}" } }
+rows = 4
+select = { do = "gosub read", args = { file = "{row.path}" } }
+[[item]]
+key = "PGDN"
+do = "page next"
+when = "not list.last"
+[[item]]
+key = "PGUP"
+do = "page prev"
+when = "list.page > 1"
+[[item]]
+key = "ESC"
+do = "back"
++++
+{>shelf.ans}
+{!dim}Up Down    choose{!}
+{!dim}Enter      read{!}
+{!dim}PgUp PgDn  page{!}
+{!dim}Esc        back{!}

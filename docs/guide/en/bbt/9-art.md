@@ -118,6 +118,80 @@ The BBS finds the field in the art and puts the value in its place.
 
 Full rules: [art-format](../../../specs/art-format.md), section 4.
 
+## A list row in art
+
+A list screen (task 8) can show its rows in art. Example: the screen `shelf`
+shows the notes of `content/log/` in a frame.
+
+The art `screens/shelf.ans`, 40 columns wide:
+
+```text
+╔══════════════════════════════════════╗
+║ The keeper's log      page { n}/{c } ║
+║ { row.num}  {row.title            }  ║
+║                                      ║
+║                                      ║
+╚═[Enter]═[Space]═[Esc]════════════════╝
+```
+
+The aliases of `[fields]` in `screens/screens.toml` (task 5):
+
+```
+[fields]
+n = "list.page"
+c = "list.pages"
+```
+
+The screen `screens/shelf.bbt`:
+
+```
++++
+width = [40, 40]
+data = { from = "files", args = { dir = "log" } }
+rows = 3
+select = { do = "gosub reader", args = { file = "{row.path}" } }
+[[item]]
+key = "SPACE"
+do = "page next"
+when = "not list.last"
+[[item]]
+key = "ESC"
+do = "back"
++++
+{>shelf.ans}
+```
+
+The screen:
+
+```text
+╔══════════════════════════════════════╗
+║ The keeper's log      page    1/3    ║
+║          1  The first night          ║
+║          2  Rain on the roof         ║
+║          3  A caller from the north  ║
+╚═[Enter]═[Space]═[Esc]════════════════╝
+```
+
+Row 3 is the selected row: it is black on grey, the style `select`.
+The other rows have the colours of the art.
+
+- The art row with the `row.*` fields is the "list row". Art has at most one list row.
+- The "list rectangle" starts at the first cell of the first `row.*` token
+  and ends at the last cell of the last `row.*` token. It has `rows` art rows from the list row down.
+  Here it has the columns 3–37 of the rows 3–5.
+- Each rectangle row shows one row of the list page: the cells of the list row
+  with the values of that row.
+- Each cell of the rectangle below the list row must be a space. Else `velourbbs check`
+  gives an error. A rectangle that ends below the art is an error too.
+- The cells outside the rectangle stay: here the frame.
+- A rectangle row without a row of the page is spaces in the colours of the list row.
+- The selected row takes the theme style `select`. The default is `0/7`: black on grey.
+  Set it in `[theme.default]`, for example `select = "235/215"`.
+- Art has no conditions, so `row.selected` does not work in art.
+- A list screen needs a list line (task 8) or a list row in art.
+
+Full rules: [list-view](../../../specs/list-view.md), section 9.
+
 ## The colours of art
 
 The colours 0–15 of art are the VGA colours: the colours of the art editors.

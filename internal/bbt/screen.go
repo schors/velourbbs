@@ -94,7 +94,7 @@ func (l *loader) screen(u *unit) {
 	}
 	if ls := u.s.List; ls != nil {
 		if !u.each {
-			l.errorf(u, screen.Pos{File: u.f.name, Line: 2, Col: 1}, false, "data: the screen has no list line")
+			l.errorf(u, screen.Pos{File: u.f.name, Line: 2, Col: 1}, false, "data: the screen has no list line and no list row in art")
 		}
 		for _, arg := range ls.ArgRefs {
 			u.addArgs(arg)
@@ -211,17 +211,41 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 			}
 			for _, f := range a.Fields {
 				pos := screen.Pos{File: name, Line: f.Row, Col: f.Col}
-				if f.Ref.Row() != "" { // the list row of art: list-view, section 9
-					l.errorf(u, pos, false, "field %q is valid only in a list line", f.Ref.String())
+				if f.Ref.Row() != "" && u.s.List == nil { // the list row of art: list-view, section 9
+					l.errorf(u, pos, false, "field %q is valid only in a list screen", f.Ref.String())
 				} else {
 					l.checkField(u, pos, f.Ref)
 				}
 				u.addArgs(f.Ref.Arg())
 			}
+			if a.List != nil && u.s.List != nil {
+				u.each = true
+				l.checkRect(u, name, a)
+			}
 			segs = append(segs, screen.ArtInsert{Art: a})
 		}
 	}
 	return segs
+}
+
+// checkRect checks the list rectangle of the art a, the file name, with rows of the screen
+// (list-view, section 9): it ends in the art grid, and each cell below the list row is a space.
+// It reports the first cell that is not a space.
+func (l *loader) checkRect(u *unit, name string, a *screen.Art) {
+	ls := a.List
+	end := ls.Row + u.s.List.Rows - 1
+	if end > a.Height {
+		l.errorf(u, screen.Pos{File: name, Line: ls.Row, Col: ls.First}, false,
+			"list rectangle: rows = %d ends at row %d, below the art of %d rows", u.s.List.Rows, end, a.Height)
+	}
+	for r := ls.Row + 1; r <= min(end, a.Height); r++ {
+		for c := ls.First; c <= ls.Last; c++ {
+			if a.Rows[r-1][c-1].Grapheme != " " {
+				l.errorf(u, screen.Pos{File: name, Line: r, Col: c}, false, "list rectangle: cell is not a space")
+				return
+			}
+		}
+	}
 }
 
 // checkField reports the field r at pos when the screen cannot show it: a field of a file screen
