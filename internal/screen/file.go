@@ -76,3 +76,14 @@ func SplitLines(d *FileDiags, data []byte) (lines []string, ok bool) {
 	}
 	return lines, true
 }
+
+// Find gives the path of the file name of the directory dir in the language lang
+// (session-language, section 4): dir/lang/name when a directory entry exists there,
+// also a broken symlink; else dir/name.
+func Find(fsys fs.FS, dir, lang, name string) string {
+	p := dir + "/" + lang + "/" + name
+	if _, err := fs.Lstat(fsys, p); !errors.Is(err, fs.ErrNotExist) {
+		return p
+	}
+	return dir + "/" + name
+}

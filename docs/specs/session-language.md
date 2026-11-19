@@ -103,6 +103,7 @@ The item `R` runs `gosub ru/menu`: the session language is `ru`, and the host sh
   of the set use the search of its language.
 - A `goto <code>/<name>` or a `gosub <code>/<name>` has the checks of a `goto` or a `gosub`
   to `<name>` in the screen set of `<code>`.
+  Its error names the target as `<code>/<name>`: `item "R": do: unknown screen "ru/menu"`.
 - These are errors too:
   - `lang <code>`, `goto <code>/<name>` or `gosub <code>/<name>` with a code that is not
     a language of the BBS: an invalid `do` ([bbt-format](bbt-format.md), section 8.4);

@@ -1,0 +1,13 @@
++++
+[[item]]
+key = "T"
+do = "gosub read"
+args = { file = "a.txt" }
+[[item]]
+key = "L"
+do = "lang ru"
+[[item]]
+key = "ESC"
+do = "back"
++++
+Menu {session.lang}: [T]ext [L]ang

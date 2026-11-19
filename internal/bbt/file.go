@@ -44,20 +44,24 @@ type ifNode struct {
 	inElse    bool // after {#else}
 }
 
+// include is an include. The screen pass finds its file in the language of the screen set.
 type include struct {
 	pos  screen.Pos
-	file string // screens/_<name>.bbt
+	file string // _<name>.bbt
 }
 
+// artInsert is an art insert. The screen pass finds its file in the language of the screen set.
 type artInsert struct {
 	pos  screen.Pos
-	file string // screens/<name>.ans
+	file string // <name>.ans
 }
 
 // parseFile does the file pass (sections 3.1–3.4, 4 and 5). d.File is the file name.
 // theme is the base theme and fields is the aliases of screens/screens.toml.
 // The file pass uses only the names of theme.
-func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, fields screen.Fields, fragment bool) *file {
+// langs is the languages of the BBS.
+func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, fields screen.Fields, langs []string,
+	fragment bool) *file {
 	f := &file{name: d.File}
 	lines, ok := screen.SplitLines(d, data)
 	if !ok {
@@ -78,7 +82,7 @@ func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, 
 		if fragment {
 			d.Errorf(1, 1, "a fragment cannot have front matter")
 		} else {
-			f.front = parseFront(d, lines[1:end], fields)
+			f.front = parseFront(d, lines[1:end], fields, langs)
 			f.skip = f.front == nil
 		}
 		first = end + 1
@@ -322,10 +326,10 @@ func (s *scanner) insert(pos screen.Pos, c string) node {
 		return s.fileArea(pos)
 	}
 	if base, ok := strings.CutSuffix(name, ".ans"); ok && screen.IsName(base) {
-		return artInsert{pos: pos, file: "screens/" + name}
+		return artInsert{pos: pos, file: name}
 	}
 	if rest, ok := strings.CutPrefix(name, "_"); ok && screen.IsName(rest) {
-		return include{pos: pos, file: "screens/" + name + ".bbt"}
+		return include{pos: pos, file: name + ".bbt"}
 	}
 	if screen.IsName(name) {
 		s.d.Errorf(pos.Line, pos.Col, "include %q: a fragment name starts with \"_\"", name)

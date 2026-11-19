@@ -55,7 +55,8 @@ func load(files map[string]string) (map[string]*screen.Screen, []string) {
 	for name, data := range files {
 		fsys["screens/"+name] = &fstest.MapFile{Data: []byte(data)}
 	}
-	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: defaultWidth}, aliases)
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: defaultWidth}, Fields: aliases})
+	screens := sets["en"]
 	var msgs []string
 	for _, d := range ds {
 		msgs = append(msgs, d.String())
@@ -601,7 +602,8 @@ func TestLayout(t *testing.T) {
 	}
 	for _, tt := range tests {
 		fsys := fstest.MapFS{"screens/s.bbt": {Data: []byte("+++\n" + tt.front + "\n+++\nx\n")}}
-		screens, ds := bbt.Load(fsys, theme, base, aliases)
+		sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: base, Fields: aliases})
+		screens := sets["en"]
 		if len(ds) != 0 {
 			t.Fatalf("%q: diags %v", tt.front, ds)
 		}
@@ -632,8 +634,8 @@ func TestWidth(t *testing.T) {
 		"screens/x.ans": {Data: []byte(sauceArt("x", 50))},
 		"screens/y.ans": {Data: []byte(sauceArt("y", 132))},
 	}
-	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 60}}, aliases)
-	if w := screens["a"].Width; w != (screen.WidthLimits{Min: 20, Max: 60}) {
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 60}}, Fields: aliases})
+	if w := sets["en"]["a"].Width; w != (screen.WidthLimits{Min: 20, Max: 60}) {
 		t.Errorf("[screen] width: %v", w)
 	}
 	if want := `screens/a.bbt:2:1: warning: art "y.ans" is 132 cells wide, max width is 60`; len(ds) != 1 || ds[0].String() != want {
@@ -740,7 +742,8 @@ when = 'arg.w == "1"'
 		"screens/t.bbt":     {Data: []byte("+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{term.cols}\n")},
 	}
 	fields := screen.Fields{"f": alias("f", "arg.alias")}
-	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: defaultWidth}, fields)
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: defaultWidth}, Fields: fields})
+	screens := sets["en"]
 	if ds.HasErrors() {
 		t.Fatalf("diags %v", ds)
 	}
@@ -764,7 +767,7 @@ func TestNotRegular(t *testing.T) {
 		"screens/dir/x.txt": {},
 		"screens/notes.txt": {Mode: fs.ModeNamedPipe},
 	}
-	_, ds := bbt.Load(fsys, theme, screen.Layout{Width: defaultWidth}, aliases)
+	_, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: defaultWidth}, Fields: aliases})
 	var got []string
 	for _, d := range ds {
 		got = append(got, d.String())
@@ -792,7 +795,8 @@ func FuzzLoad(f *testing.F) {
 			"screens/_f.bbt": {Data: frag},
 			"screens/a.ans":  {Data: []byte(sauceArt("{w}", 80))},
 		}
-		screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: defaultWidth}, aliases)
+		sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: defaultWidth}, Fields: aliases})
+		screens := sets["en"]
 		if ds.HasErrors() {
 			return
 		}

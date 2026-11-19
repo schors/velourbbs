@@ -1,0 +1,13 @@
++++
+[[item]]
+key = "T"
+do = "gosub read"
+args = { file = "a.txt" }
+[[item]]
+key = "L"
+do = "lang en"
+[[item]]
+key = "ESC"
+do = "back"
++++
+Меню {session.lang}: [T]екст [L]ang

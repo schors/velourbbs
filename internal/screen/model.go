@@ -82,9 +82,12 @@ type Item struct {
 // Action is the parsed do of an item (section 8.3) and its args.
 type Action struct {
 	Op     Op
-	Screen string            // the screen name of Goto and Gosub
-	Theme  string            // the theme choice of Theme: dark, light or auto
-	Args   map[string]string // the args of Goto and Gosub (section 8.5); nil without args
+	Screen string // the screen name of Goto and Gosub
+	Theme  string // the theme choice of Theme: dark, light or auto
+	// Lang is the language code of Lang, and of Goto and Gosub with a code; else ""
+	// (session-language, section 5).
+	Lang string
+	Args map[string]string // the args of Goto and Gosub (section 8.5); nil without args
 }
 
 // Op is an action word of do.
@@ -102,6 +105,7 @@ const (
 	PagePrev
 	PageFirst
 	PageLast
+	Lang
 )
 
 // IsPage reports whether o is a page action (file-view, section 3.3).
@@ -111,6 +115,14 @@ func (o Op) IsPage() bool {
 		return true
 	}
 	return false
+}
+
+// Target gives the target of a Goto or a Gosub as its do names it: "<name>" or "<code>/<name>".
+func (a Action) Target() string {
+	if a.Lang != "" {
+		return a.Lang + "/" + a.Screen
+	}
+	return a.Screen
 }
 
 // HasTarget reports whether o shows the screen of Action.Screen with Action.Args: Goto or Gosub.

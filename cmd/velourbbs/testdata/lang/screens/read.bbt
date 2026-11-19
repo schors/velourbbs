@@ -1,0 +1,17 @@
++++
+file = "{arg.file}"
+[[item]]
+key = "N"
+do = "page next"
+[[item]]
+key = "E"
+do = "lang en"
+[[item]]
+key = "R"
+do = "lang ru"
+[[item]]
+key = "ESC"
+do = "back"
++++
+{>file}
+{file.page}/{file.pages}

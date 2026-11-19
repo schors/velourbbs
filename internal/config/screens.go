@@ -10,10 +10,12 @@ import (
 	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
+// defaultLang is the default of [screen] lang (screens-toml, section 3.1).
+const defaultLang = "en"
+
 // The defaults of screens-toml, sections 3.1 and 3.2.
 var (
 	defaultLayout = screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}
-	defaultMore   = "-- More --"
 	defaultTime   = "2006-01-02 15:04:05"
 	defaultNormal = screen.Style{Fg: screen.IndexColour(7), Bg: screen.IndexColour(0)}
 	lightNormal   = screen.Style{Fg: screen.IndexColour(0), Bg: screen.IndexColour(15)}
@@ -38,7 +40,11 @@ type screensDoc struct {
 		Time   *string  `toml:"time"`
 		Zone   *string  `toml:"zone"`
 		Theme  *string  `toml:"theme"`
+		Lang   *string  `toml:"lang"`
 	} `toml:"screen"`
+	Lang map[string]struct {
+		More *string `toml:"more"`
+	} `toml:"lang"`
 	Theme struct {
 		Default map[string]string `toml:"default"`
 		C16     map[string]string `toml:"16"`
@@ -60,7 +66,7 @@ type screensDoc struct {
 // It gives at most screen.MaxFileDiags diagnostics (screen-render, section 3.1).
 func parseScreens(data []byte) (Config, screen.Diags) {
 	cfg := Config{
-		Layout: defaultLayout, More: defaultMore, Time: defaultTime, Zone: time.Local, Fields: screen.Fields{}, Start: "main",
+		Layout: defaultLayout, Lang: defaultLang, Time: defaultTime, Zone: time.Local, Fields: screen.Fields{}, Start: "main",
 		ThemeChoice: ThemeDark, Telnet: defaultTelnet, Limits: defaultLimits, Name: defaultName,
 	}
 	fd := screen.FileDiags{File: ScreensFile}
@@ -71,19 +77,14 @@ func parseScreens(data []byte) (Config, screen.Diags) {
 	}
 	if len(errs) > 0 {
 		theme(&cfg, screensDoc{}, nil)
+		langs(&cfg, screensDoc{}, nil)
 		return cfg, fd.Diags
 	}
 	// Each other error has the position 1:1 (screen-render, section 3.1).
 	errorf := func(format string, args ...any) { fd.Errorf(1, 1, format, args...) }
 	cfg.Layout = screen.ParseLayoutKeys(d.Screen.Width, d.Screen.Align, d.Screen.VAlign, d.Screen.Fill,
 		func(key string, err error) { errorf("screen.%s: %v", key, err) }).Over(defaultLayout)
-	if p := d.Screen.More; p != nil {
-		if err := checkText(*p); err != nil {
-			errorf("screen.more: %v", err)
-		} else {
-			cfg.More = *p
-		}
-	}
+	cfg.More = more(d.Screen.More, "screen.more", errorf)
 	if p := d.Screen.Time; p != nil {
 		cfg.Time = *p
 	}
@@ -103,6 +104,14 @@ func parseScreens(data []byte) (Config, screen.Diags) {
 			errorf("screen.theme: invalid value %q, want \"dark\", \"light\" or \"auto\"", *p)
 		}
 	}
+	if p := d.Screen.Lang; p != nil {
+		if !screen.IsLang(*p) {
+			errorf("screen.lang: invalid language code %q", *p)
+		} else {
+			cfg.Lang = *p
+		}
+	}
+	langs(&cfg, d, errorf)
 	if p := d.Menu.Start; p != nil {
 		if !screen.IsName(*p) {
 			errorf("menu.start: invalid screen name %q", *p)
@@ -120,6 +129,36 @@ func parseScreens(data []byte) (Config, screen.Diags) {
 		cfg.Fields[name] = ref
 	}
 	return cfg, fd.Diags
+}
+
+// more checks the key more at the TOML path key: its text has the rules of a text (screens-toml, section 3.1).
+// It gives the text, else nil without the key or after an error.
+func more(p *string, key string, errorf func(format string, args ...any)) *string {
+	if p == nil {
+		return nil
+	}
+	if err := checkText(*p); err != nil {
+		errorf("%s: %v", key, err)
+		return nil
+	}
+	return p
+}
+
+// langs sets the tables [lang.<code>] and the languages of the BBS: [screen] lang
+// and the codes of the tables, sorted (screens-toml, section 3.5). A doc without tables
+// gives no errors, so errorf can be nil.
+func langs(cfg *Config, d screensDoc, errorf func(format string, args ...any)) {
+	cfg.LangMore = map[string]*string{}
+	codes := map[string]bool{cfg.Lang: true}
+	for _, code := range slices.Sorted(maps.Keys(d.Lang)) {
+		if !screen.IsLang(code) {
+			errorf("lang: invalid language code %q", code)
+			continue
+		}
+		cfg.LangMore[code] = more(d.Lang[code].More, "lang."+code+".more", errorf)
+		codes[code] = true
+	}
+	cfg.Langs = slices.Sorted(maps.Keys(codes))
 }
 
 func checkText(s string) error {

@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"maps"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -102,9 +103,15 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	if svSet["session.theme"] { // the theme choice at the start
 		choice = config.ThemeChoice(sv.Theme)
 	}
-	s, ok := m.Screens[name]
+	if !svSet["session.lang"] {
+		sv.Lang = m.Config.Lang
+	} else if !slices.Contains(m.Config.Langs, sv.Lang) {
+		_, _ = fmt.Fprintf(stderr, "velourbbs preview: session.lang is %q, not a language of the BBS\n", sv.Lang)
+		return exitUsage
+	}
+	s, ok := m.Sets[sv.Lang][name]
 	if session {
-		if err := bbs.CheckTarget(m.Screens, name); err != nil {
+		if err := bbs.CheckTarget(m.Sets, sv.Lang, screen.Action{Screen: name}); err != nil {
 			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 			return exitUsage
 		}
@@ -118,18 +125,13 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		}
 		return exitUsage
 	}
-	if f := s.FileScreen; f != nil && f.Arg != "" && f.Contents[argVals[f.Arg]] == nil {
-		ns, status := argFile(fsys, s, argVals[f.Arg], stderr)
-		if ns == nil {
-			return status
-		}
-		// A new model: the loaded model does not change (session, section 4).
-		m = &bbs.Model{Config: m.Config, Screens: maps.Clone(m.Screens)}
-		s, m.Screens[name] = ns, ns
+	if m = argFiles(fsys, m, name, argVals, stderr); m == nil {
+		return exitError
 	}
+	s = m.Sets[sv.Lang][name]
 	if session {
 		t := &keysTerm{term: term, keys: keys, w: stdout}
-		ss := menu.New(m, t, name, argVals, choice, func(*menu.Session) screen.SessionValues { return sv })
+		ss := menu.New(m, t, name, argVals, choice, sv.Lang, func(*menu.Session) screen.SessionValues { return sv })
 		return runKeys(t, ss, stderr)
 	}
 	cfg := m.Config
@@ -141,31 +143,52 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	return 0
 }
 
-// argFile loads the content file p of the argument of the file screen s with the checks
-// of file-view, section 7. It gives a copy of s that can show p, or nil and the exit status
-// after an error. The model of the load stays immutable.
-func argFile(fsys fs.FS, s *screen.Screen, p string, stderr io.Writer) (*screen.Screen, int) {
-	f := s.FileScreen
-	c, ds, err := content.Load(fsys, p)
-	writeDiags(stderr, ds)
-	var errs []error
-	if err != nil {
-		errs = []error{err}
-	} else if c != nil {
-		errs = f.Check(p, c)
+// argFiles loads the content file of the argument of the screen name in the screen set
+// of each language, when the screen is a file screen with {arg.<name>}, with the checks
+// of file-view, section 7 (session-language, section 8). It gives m, or a new model
+// with the screens that can show the files. It writes the errors and gives nil after an error.
+// The model of the load stays immutable (session, section 4).
+func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, stderr io.Writer) *bbs.Model {
+	nm := &bbs.Model{Config: m.Config, Sets: maps.Clone(m.Sets)}
+	ok := true
+	for _, lang := range m.Config.Langs {
+		s := m.Sets[lang][name] // the check of the sets makes sure that each set has the screen
+		f := s.FileScreen
+		if f == nil || f.Arg == "" || f.Contents[args[f.Arg]] != nil {
+			continue
+		}
+		p := args[f.Arg]
+		c, ds, err := content.Load(fsys, lang, p)
+		writeDiags(stderr, ds)
+		var errs []error
+		if err != nil {
+			errs = []error{err}
+		} else if c != nil {
+			errs = f.Check(p, c)
+		}
+		suffix := ""
+		if len(m.Config.Langs) > 1 {
+			suffix = fmt.Sprintf(" (language %q)", lang)
+		}
+		for _, err := range errs {
+			_, _ = fmt.Fprintf(stderr, "velourbbs preview: arg.%s: %v%s\n", f.Arg, err, suffix)
+		}
+		if c == nil || len(errs) > 0 {
+			ok = false
+			continue
+		}
+		nf := *f
+		nf.Contents = maps.Clone(f.Contents)
+		nf.Contents[p] = c
+		ns := *s
+		ns.FileScreen = &nf
+		nm.Sets[lang] = maps.Clone(m.Sets[lang])
+		nm.Sets[lang][name] = &ns
 	}
-	for _, err := range errs {
-		_, _ = fmt.Fprintf(stderr, "velourbbs preview: arg.%s: %v\n", f.Arg, err)
+	if !ok {
+		return nil
 	}
-	if c == nil || len(errs) > 0 {
-		return nil, exitError
-	}
-	nf := *f
-	nf.Contents = maps.Clone(f.Contents)
-	nf.Contents[p] = c
-	ns := *s
-	ns.FileScreen = &nf
-	return &ns, 0
+	return nm
 }
 
 // parseSize sets the size of term from "<cols>x<rows>". term.Check checks the ranges.
@@ -275,6 +298,7 @@ func isRGB(s string) bool {
 
 // setSession sets the session or BBS field path of sv to value (session-fields, section 4).
 // session.theme sets the theme choice at the start: preview gives it to the config.
+// session.lang sets the session language at the start.
 // It reports whether path is such a field.
 func setSession(sv *screen.SessionValues, path, value string) (bool, error) {
 	var p *string
@@ -293,6 +317,12 @@ func setSession(sv *screen.SessionValues, path, value string) (bool, error) {
 			return true, nil
 		}
 		return true, fmt.Errorf("session.theme is %q, must be dark, light or auto", value)
+	case "session.lang": // preview checks the languages of the BBS after the load
+		if !screen.IsLang(value) {
+			return true, fmt.Errorf("session.lang is %q, must be a language code", value)
+		}
+		sv.Lang = value
+		return true, nil
 	case "session.ip":
 		p = &sv.IP
 	case "session.online":

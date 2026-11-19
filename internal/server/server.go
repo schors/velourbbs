@@ -284,7 +284,7 @@ func (s *Server) session(c net.Conn, accepted time.Time) (addr netip.Addr, reaso
 		return addr, err.Error(), errors.Is(err, term.ErrNotUTF8)
 	}
 	cfg := s.m.Config
-	ss := menu.New(s.m, t, cfg.Start, nil, cfg.ThemeChoice, s.values)
+	ss := menu.New(s.m, t, cfg.Start, nil, cfg.ThemeChoice, cfg.Lang, s.values)
 	ss.Addr, ss.Accepted = addr, accepted
 	if !s.open(ss) {
 		// The stop came after the probe: the connection closes with no output.
@@ -296,7 +296,7 @@ func (s *Server) session(c net.Conn, accepted time.Time) (addr netip.Addr, reaso
 	switch {
 	case errors.Is(err, term.ErrStop):
 		// Without the screen shutdown, there is no output (menu-nav, section 5.2).
-		_, ok := s.m.Screens["shutdown"]
+		_, ok := s.m.Sets[ss.Lang()]["shutdown"]
 		return addr, reasonShutdown, ok && ss.Shutdown() == nil
 	case err != nil && s.ctx.Err() != nil:
 		// The close of step 3 ended a page of the session.

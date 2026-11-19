@@ -47,8 +47,11 @@ func TestDefaults(t *testing.T) {
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
-	if cfg.Width != (screen.WidthLimits{Min: 40, Max: 80}) || cfg.More != "-- More --" {
+	if cfg.Width != (screen.WidthLimits{Min: 40, Max: 80}) || cfg.More != nil || cfg.MoreText("en") != "-- More --" {
 		t.Errorf("cfg = %+v", cfg)
+	}
+	if cfg.Lang != "en" || !slices.Equal(cfg.Langs, []string{"en"}) || len(cfg.LangMore) != 0 {
+		t.Errorf("lang %q, langs %q, lang more %v", cfg.Lang, cfg.Langs, cfg.LangMore)
 	}
 	if cfg.Align != screen.AlignCenter || cfg.VAlign != screen.VAlignTop || cfg.Fill != screen.FillNone {
 		t.Errorf("layout = %+v", cfg.Layout)
@@ -107,7 +110,7 @@ w = "term.cols"
 	if len(ds) != 0 {
 		t.Fatalf("diags: %q", messages(ds))
 	}
-	if cfg.Width != (screen.WidthLimits{Min: 64, Max: 132}) || cfg.More != "[ ещё ]" {
+	if cfg.Width != (screen.WidthLimits{Min: 64, Max: 132}) || cfg.MoreText("en") != "[ ещё ]" {
 		t.Errorf("cfg = %+v", cfg)
 	}
 	if cfg.Start != "welcome" {
@@ -230,7 +233,7 @@ func TestErrors(t *testing.T) {
 	if !ds.HasErrors() {
 		t.Error("HasErrors = false")
 	}
-	if cfg.Layout != defaultLayout || cfg.More != "-- More --" || cfg.Start != "main" || cfg.ThemeChoice != ThemeDark ||
+	if cfg.Layout != defaultLayout || cfg.More != nil || cfg.Start != "main" || cfg.ThemeChoice != ThemeDark ||
 		cfg.Zone != time.Local {
 		t.Errorf("an invalid value replaced a default: %+v", cfg)
 	}
@@ -670,5 +673,66 @@ func TestDiagLimit(t *testing.T) {
 	if len(got) != screen.MaxFileDiags+1 || got[0] != `screens/screens.toml:1:1: unknown key "k0"` ||
 		got[len(got)-1] != "screens/screens.toml:101:1: too many diagnostics" {
 		t.Errorf("%d diags, first %q, last %q", len(got), got[0], got[len(got)-1])
+	}
+}
+
+// The languages of the BBS and the text of the More row in each language
+// (screens-toml, sections 3.1 and 3.5; session-language, sections 2 and 7.2).
+func TestLang(t *testing.T) {
+	data := `
+[screen]
+lang = "ru"
+more = "[more]"
+
+[lang.uk]
+more = "[далі]"
+
+[lang.de]
+`
+	cfg, ds := parseScreens([]byte(data))
+	if len(ds) != 0 {
+		t.Fatalf("diags: %q", messages(ds))
+	}
+	if cfg.Lang != "ru" || !slices.Equal(cfg.Langs, []string{"de", "ru", "uk"}) {
+		t.Errorf("lang %q, langs %q", cfg.Lang, cfg.Langs)
+	}
+	for lang, want := range map[string]string{"uk": "[далі]", "de": "[more]", "ru": "[more]"} {
+		if got := cfg.MoreText(lang); got != want {
+			t.Errorf("more %s = %q, want %q", lang, got, want)
+		}
+	}
+	cfg, _ = parseScreens([]byte("[lang.ru]\nmore = \"\""))
+	if !slices.Equal(cfg.Langs, []string{"en", "ru"}) || cfg.MoreText("ru") != "" || cfg.MoreText("en") != "-- More --" {
+		t.Errorf("langs %q, more ru %q, more en %q", cfg.Langs, cfg.MoreText("ru"), cfg.MoreText("en"))
+	}
+}
+
+func TestLangErrors(t *testing.T) {
+	data := strings.Join([]string{
+		`[screen]`,
+		`lang = "RU"`,
+		`[lang.e]`,
+		`[lang.de]`,
+		`more = "a` + "\u200b" + `"`,
+	}, "\n")
+	cfg, ds := parseScreens([]byte(data))
+	want := []string{
+		`screens/screens.toml:1:1: screen.lang: invalid language code "RU"`,
+		`screens/screens.toml:1:1: lang.de.more: zero-width grapheme U+200B`,
+		`screens/screens.toml:1:1: lang: invalid language code "e"`,
+	}
+	if got := messages(ds); !slices.Equal(got, want) {
+		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	if cfg.Lang != "en" || !slices.Equal(cfg.Langs, []string{"de", "en"}) || cfg.MoreText("de") != "-- More --" {
+		t.Errorf("lang %q, langs %q, more de %q", cfg.Lang, cfg.Langs, cfg.MoreText("de"))
+	}
+	_, ds = parseScreens([]byte("[lang.ru]\nx = 1"))
+	if got := messages(ds); !slices.Equal(got, []string{`screens/screens.toml:2:1: unknown key "lang.ru.x"`}) {
+		t.Errorf("unknown key: %q", got)
+	}
+	cfg, ds = parseScreens([]byte("lang = 1"))
+	if len(ds) != 1 || !slices.Equal(cfg.Langs, []string{"en"}) {
+		t.Errorf("diags %q, langs %q", messages(ds), cfg.Langs)
 	}
 }

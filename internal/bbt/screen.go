@@ -3,7 +3,6 @@ package bbt
 import (
 	"fmt"
 	"maps"
-	"path"
 	"slices"
 
 	"github.com/schors/velourbbs/internal/screen"
@@ -71,7 +70,7 @@ func (l *loader) screen(u *unit) {
 	u.frags = map[*file]fragment{}
 	u.resolving = map[*file]bool{}
 	u.args = map[string]bool{}
-	u.s.Layout = u.fr.layout.Over(l.layout)
+	u.s.Layout = u.fr.layout.Over(l.st.Layout)
 	u.s.FileScreen = u.fr.file
 	u.s.Body = l.resolve(u, u.f.body, true)
 	if u.over { // the body of a screen over the limit is not kept
@@ -164,26 +163,27 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 			}
 		case include:
 			if body, ok := l.include(u, n, top); ok {
-				segs = append(segs, screen.Include{File: n.file, Body: body})
+				segs = append(segs, screen.Include{File: l.find(n.file), Body: body})
 			}
 		case artInsert:
 			if top {
 				u.at = n.pos
 			}
-			a, missing := l.art(n.file)
+			name := l.find(n.file)
+			a, missing := l.art(name)
 			if a == nil {
 				if missing {
-					l.errorOnce(n.pos, "art %q does not exist", n.file)
+					l.errorOnce(n.pos, "art %q does not exist", name)
 				}
 				l.add(u, 1)
 				continue
 			}
 			l.add(u, 1+a.Height)
 			if a.Width > u.s.Width.Max { // section 6.2
-				l.errorf(u, n.pos, true, "art %q is %d cells wide, max width is %d", path.Base(n.file), a.Width, u.s.Width.Max)
+				l.errorf(u, n.pos, true, "art %q is %d cells wide, max width is %d", n.file, a.Width, u.s.Width.Max)
 			}
 			for _, f := range a.Fields {
-				l.checkFileField(u, screen.Pos{File: n.file, Line: f.Row, Col: f.Col}, f.Ref.String(), f.Ref.IsFile())
+				l.checkFileField(u, screen.Pos{File: name, Line: f.Row, Col: f.Col}, f.Ref.String(), f.Ref.IsFile())
 				u.addArgs(f.Ref.Arg())
 			}
 			segs = append(segs, screen.ArtInsert{Art: a})
@@ -211,15 +211,16 @@ func (l *loader) include(u *unit, n include, top bool) (body []screen.Seg, ok bo
 	if u.over {
 		return nil, false
 	}
-	frag, missing := l.file(n.file, true)
+	name := l.find(n.file)
+	frag, missing := l.file(name, true)
 	switch {
 	case frag == nil:
 		if missing {
-			l.errorOnce(n.pos, "fragment %q does not exist", n.file)
+			l.errorOnce(n.pos, "fragment %q does not exist", name)
 		}
 		return nil, false
 	case u.resolving[frag]:
-		l.errorOnce(n.pos, "include %q makes a cycle", n.file)
+		l.errorOnce(n.pos, "include %q makes a cycle", name)
 		return nil, false
 	}
 	if fr, ok := u.frags[frag]; ok {

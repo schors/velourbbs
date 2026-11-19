@@ -91,3 +91,8 @@ func IsName(s string) bool {
 	}
 	return s != ""
 }
+
+// IsLang reports whether s is a language code: it matches [a-z]{2,3} (session-language, section 2).
+func IsLang(s string) bool {
+	return len(s) >= 2 && len(s) <= 3 && strings.Trim(s, "abcdefghijklmnopqrstuvwxyz") == ""
+}

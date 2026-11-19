@@ -22,8 +22,16 @@ type Config struct {
 	// Layout is the default layout of a screen: the keys width, align, valign
 	// and fill of [screen] (screens-toml, section 3.1).
 	screen.Layout
-	// More is the text of the More row (screens-toml, section 3.1).
-	More string
+	// More is the key more of [screen], else nil (screens-toml, section 3.1).
+	More *string
+	// Lang is the session language at the start of a session: the key lang of [screen]
+	// (screens-toml, section 3.1).
+	Lang string
+	// Langs is the languages of the BBS, sorted (session-language, section 2).
+	Langs []string
+	// LangMore maps the code of each table [lang.<code>] to its key more, else nil
+	// (screens-toml, section 3.5).
+	LangMore map[string]*string
 	// Theme is the base theme (screens-toml, section 3.2). It always has normal and more.
 	Theme map[string]screen.Style
 	// ThemeChoice is the theme choice at the start of a session: the key theme of [screen]
@@ -69,6 +77,20 @@ func (c Config) SessionTheme(choice ThemeChoice, t screen.Term) map[string]scree
 		return c.light[t.Colors]
 	}
 	return c.dark[t.Colors]
+}
+
+// engineMore is the engine text of the More row (session-language, section 7).
+const engineMore = "-- More --"
+
+// MoreText gives the text of the More row in the language lang (session-language, section 7.2).
+func (c Config) MoreText(lang string) string {
+	if p := c.LangMore[lang]; p != nil {
+		return *p
+	}
+	if c.More != nil {
+		return *c.More
+	}
+	return engineMore
 }
 
 // The names of the settings files in the BBS directory and in the diagnostics.

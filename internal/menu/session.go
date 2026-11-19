@@ -51,7 +51,8 @@ func (noEvents) KeyEvent(string, bool) error { return nil }
 func (noEvents) Logoff() error               { return nil }
 
 // Values gives the values of the session and BBS fields of the session ss
-// (session-fields, section 2), except session.theme: the session gives it from its theme choice.
+// (session-fields, section 2), except session.theme and session.lang: the session gives them
+// from its theme choice and its language.
 // The session calls it once for each screen and for each page of a file screen.
 type Values func(ss *Session) screen.SessionValues
 
@@ -67,29 +68,42 @@ type Session struct {
 	ev     Events
 	values Values
 	choice config.ThemeChoice // the theme choice of the session
+	lang   string             // the session language (session-language, section 5)
 	stack  []*frame           // the navigation stack (section 4.1)
 }
 
 // New makes a session on the terminal t with the model m. It starts at the screen start
-// with the arguments args and the theme choice choice. start passes bbs.CheckTarget
-// and args pass bbs.CheckArgs. values gives the session and BBS fields.
-func New(m *bbs.Model, t Terminal, start string, args map[string]string, choice config.ThemeChoice,
+// with the arguments args, the theme choice choice and the session language lang, a language of the BBS.
+// start passes bbs.CheckTarget in the set of lang and args pass bbs.CheckArgs.
+// values gives the session and BBS fields.
+func New(m *bbs.Model, t Terminal, start string, args map[string]string, choice config.ThemeChoice, lang string,
 	values Values) *Session {
 	ev, ok := t.(Events)
 	if !ok {
 		ev = noEvents{}
 	}
 	return &Session{
-		m: m, t: t, ev: ev, values: values, choice: choice,
-		stack: []*frame{{s: m.Screens[start], args: args, page: 1}},
+		m: m, t: t, ev: ev, values: values, choice: choice, lang: lang,
+		stack: []*frame{{name: start, args: args, page: 1}},
 	}
 }
 
-// sessionValues gives the session and BBS fields with session.theme.
+// Lang gives the session language.
+func (ss *Session) Lang() string { return ss.lang }
+
+// sessionValues gives the session and BBS fields with session.theme and session.lang.
 func (ss *Session) sessionValues() screen.SessionValues {
 	sv := ss.values(ss)
 	sv.Theme = string(ss.choice)
+	sv.Lang = ss.lang
 	return sv
+}
+
+// screen gives the screen name of the screen set of the session language
+// (session-language, section 4).
+func (ss *Session) screen(name string) (*screen.Screen, bool) {
+	s, ok := ss.m.Sets[ss.lang][name]
+	return s, ok
 }
 
 // Run runs the session until logoff (section 5). ctx is the context of the session
@@ -97,7 +111,6 @@ func (ss *Session) sessionValues() screen.SessionValues {
 // Run returns nil after logoff, else the first error of the terminal unchanged.
 // Call it once.
 func (ss *Session) Run(ctx context.Context) error {
-	screens := ss.m.Screens
 	for {
 		it, err := ss.run(ctx, ss.stack[len(ss.stack)-1])
 		if err != nil {
@@ -105,10 +118,16 @@ func (ss *Session) Run(ctx context.Context) error {
 		}
 		switch it.Do.Op {
 		case screen.Goto, screen.Gosub, screen.Back, screen.Top:
-			ss.stack = nav(ss.stack, it.Do, screens[it.Do.Screen])
+			if it.Do.Lang != "" {
+				ss.lang = it.Do.Lang
+			}
+			ss.stack = nav(ss.stack, it.Do)
 			continue
 		case screen.Theme: // show the screen of the top frame again
 			ss.choice = config.ThemeChoice(it.Do.Theme)
+			continue
+		case screen.Lang: // show the screen of the top frame again in the new language
+			ss.lang = it.Do.Lang
 			continue
 		case screen.Logoff:
 		default: // a new action needs its own case; serve recovers the panic of one session
@@ -117,7 +136,7 @@ func (ss *Session) Run(ctx context.Context) error {
 		if err := ss.ev.Logoff(); err != nil {
 			return err
 		}
-		if g, ok := screens["goodbye"]; ok {
+		if g, ok := ss.screen("goodbye"); ok {
 			_, err = ss.show(ctx, g, nil)
 		}
 		return err
@@ -127,24 +146,25 @@ func (ss *Session) Run(ctx context.Context) error {
 // maxFrames is the most frames of the navigation stack (section 4.1).
 const maxFrames = 16
 
-// frame is a frame of the navigation stack (section 4.1).
+// frame is a frame of the navigation stack (section 4.1). It holds the screen name:
+// the session finds its screen in the session language each time it shows the frame.
 type frame struct {
-	s    *screen.Screen
+	name string
 	args map[string]string
 	page int // the page of a file screen, 1-based
 }
 
 // nav changes the navigation stack st with the action a: goto, gosub, back or top (section 4.1).
-// t is the target screen of a goto or a gosub. nav gives the new stack.
-func nav(st []*frame, a screen.Action, t *screen.Screen) []*frame {
+// nav gives the new stack.
+func nav(st []*frame, a screen.Action) []*frame {
 	switch a.Op {
 	case screen.Goto:
-		st[len(st)-1] = &frame{s: t, args: a.Args, page: 1}
+		st[len(st)-1] = &frame{name: a.Screen, args: a.Args, page: 1}
 	case screen.Gosub:
 		if len(st) == maxFrames {
 			st = slices.Delete(st, 1, 2)
 		}
-		st = append(st, &frame{s: t, args: a.Args, page: 1})
+		st = append(st, &frame{name: a.Screen, args: a.Args, page: 1})
 	case screen.Back:
 		if len(st) > 1 {
 			st = st[:len(st)-1]
@@ -155,17 +175,17 @@ func nav(st []*frame, a screen.Action, t *screen.Screen) []*frame {
 	return st
 }
 
-// Shutdown shows the first page of the screen shutdown, when it exists, with the size
-// of the terminal, the theme choice of the session and without a key wait (section 5.2).
+// Shutdown shows the first page of the screen shutdown of the session language, when it exists,
+// with the size of the terminal, the theme choice of the session and without a key wait (section 5.2).
 // It gives the error of the terminal.
 func (ss *Session) Shutdown() error {
-	s, ok := ss.m.Screens["shutdown"]
+	s, ok := ss.screen("shutdown")
 	if !ok {
 		return nil
 	}
 	cfg := ss.m.Config
 	cfg.ThemeChoice = ss.choice
-	for p := range Pages(cfg, s, ss.t.Term(), nil, ss.values(ss)) {
+	for p := range Pages(cfg, s, ss.t.Term(), nil, ss.sessionValues()) {
 		return ss.t.Page(p)
 	}
 	return nil
@@ -174,8 +194,10 @@ func (ss *Session) Shutdown() error {
 // run shows the screen of the frame f and gives the item that leaves it.
 // A page action or a theme action of a file screen shows a page and waits for keys again.
 // A file screen starts at the page of f and sets the page of f to each shown page (section 5.1).
+// The check of the screen sets (session-language, section 6) makes sure that the set
+// of the session language has the screen of f.
 func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
-	s := f.s
+	s, _ := ss.screen(f.name)
 	if s.FileScreen == nil {
 		items, err := ss.show(ctx, s, f.args)
 		if err != nil {
@@ -226,7 +248,7 @@ func (ss *Session) show(ctx context.Context, s *screen.Screen, args map[string]s
 	cfg := ss.m.Config
 	env, items := Enabled(s, screen.Env{Term: ss.t.Term(), Args: args, Session: ss.sessionValues()})
 	first := true
-	for p := range screen.Render(s, env, cfg.SessionTheme(ss.choice, env.Term), cfg.More) {
+	for p := range screen.Render(s, env, cfg.SessionTheme(ss.choice, env.Term), cfg.MoreText(ss.lang)) {
 		if !first {
 			k, err := ss.t.Key(ctx)
 			if err != nil {
@@ -247,6 +269,7 @@ func (ss *Session) show(ctx context.Context, s *screen.Screen, args map[string]s
 // Pages gives each page of the screen s for the terminal term with the arguments args
 // and the session and BBS fields sv: the pages of the render, or each file page of a file screen.
 // The theme choice is the key theme of [screen]. It also gives session.theme of sv.
+// The More row is the text of the language session.lang of sv.
 // velourbbs preview uses it.
 func Pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[string]string,
 	sv screen.SessionValues) iter.Seq[screen.Page] {
@@ -254,7 +277,7 @@ func Pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[strin
 	sv.Theme = string(cfg.ThemeChoice)
 	if s.FileScreen == nil {
 		env, _ := Enabled(s, screen.Env{Term: term, Args: args, Session: sv})
-		return screen.Render(s, env, theme, cfg.More)
+		return screen.Render(s, env, theme, cfg.MoreText(sv.Lang))
 	}
 	return func(yield func(screen.Page) bool) {
 		v := newFileView(s, term, args, theme, func() screen.SessionValues { return sv })
