@@ -40,14 +40,11 @@ const (
 	termType termField = iota + 1
 	termCols
 	termRows
-	termCharset
 	termColors
 	termName
-	termImages
 	termAmbiguous
 	termBackground
 	termBgColor
-	termFgColor
 )
 
 // termFields is the term.* fields of the registry of section 4.1.
@@ -58,14 +55,11 @@ var termFields = [...]struct {
 	termType:       {"term.type", TypeString},
 	termCols:       {"term.cols", TypeInt},
 	termRows:       {"term.rows", TypeInt},
-	termCharset:    {"term.charset", TypeString},
 	termColors:     {"term.colors", TypeInt},
 	termName:       {"term.name", TypeString},
-	termImages:     {"term.images", TypeString},
 	termAmbiguous:  {"term.ambiguous", TypeInt},
 	termBackground: {"term.background", TypeString},
 	termBgColor:    {"term.bg_color", TypeString},
-	termFgColor:    {"term.fg_color", TypeString},
 }
 
 // fileField is a file.* field of a file screen (file-view, section 3.4).
@@ -397,19 +391,16 @@ func isKeyByte(c byte) bool {
 
 // Term holds the term.* values of one session.
 type Term struct {
-	Type    string
-	Cols    int
-	Rows    int
-	Charset string
-	Colors  int
-	Name    string
-	Images  string
+	Type   string
+	Cols   int
+	Rows   int
+	Colors int
+	Name   string
 	// Ambiguous is the cells of an East Asian Ambiguous character: 1 or 2.
 	Ambiguous int
-	// Background is dark, light or empty. BgColor and FgColor are #rrggbb or empty.
+	// Background is dark, light or empty. BgColor is #rrggbb or empty.
 	Background string
 	BgColor    string
-	FgColor    string
 }
 
 // The ranges of term.cols and term.rows (section 4.1).
@@ -426,9 +417,6 @@ const (
 	Colors256  = 256
 	ColorsTrue = 16777216
 )
-
-// ImagesSixel is the value of term.images for a terminal with sixel (section 4.1).
-const ImagesSixel = "sixel"
 
 // Check reports an error when term.cols, term.rows or term.colors
 // is outside the values of section 4.1.
@@ -557,20 +545,14 @@ func (e *Env) value(r Ref) any {
 		return e.Term.Cols
 	case termRows:
 		return e.Term.Rows
-	case termCharset:
-		return e.Term.Charset
 	case termName:
 		return e.Term.Name
-	case termImages:
-		return e.Term.Images
 	case termAmbiguous:
 		return e.Term.Ambiguous
 	case termBackground:
 		return e.Term.Background
 	case termBgColor:
 		return e.Term.BgColor
-	case termFgColor:
-		return e.Term.FgColor
 	}
 	return e.Term.Colors
 }

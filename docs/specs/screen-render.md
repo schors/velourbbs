@@ -93,16 +93,16 @@ and writes its cell dump to the standard output.
 - It does the checks of `velourbbs check` first. After an error it writes no dump
   and exits with status 1.
 - The default size is 80x24. `--size` is the only way to set the size.
-- `--set` sets `term.type`, `term.colors`, `term.name`, `term.images`, `term.ambiguous`,
-  `term.bg_color`, `term.fg_color`, `term.background`,
+- `--set` sets `term.type`, `term.colors`, `term.name`, `term.ambiguous`,
+  `term.bg_color`, `term.background`,
   `arg.<name>` or a field of [session-fields](session-fields.md), section 4.
   Example: `--set term.colors=256`.
-  The defaults are `xterm`, 256, empty, empty, 1, empty, empty and empty. `term.charset` is `utf-8`.
+  The defaults are `xterm`, 256, empty, 1, empty and empty.
   For `term.name`, the host removes the control characters and cuts the text to 40 graphemes
   ([telnet-term](telnet-term.md), section 6), with no case change and no default.
-  `term.images` is `sixel` or empty. `term.ambiguous` is `1` or `2`.
+  `term.ambiguous` is `1` or `2`.
   The layout does not use it.
-- `term.bg_color` and `term.fg_color` are `#rrggbb` or empty. The host makes them lower case.
+- `term.bg_color` is `#rrggbb` or empty. The host makes it lower case.
   `--set term.bg_color` gives `term.background` by the rule of [telnet-term](telnet-term.md),
   section 6. `term.background` is `dark`, `light` or empty.
   `--set term.background` overrides it, in each order of the options.

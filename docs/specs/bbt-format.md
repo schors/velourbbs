@@ -136,13 +136,11 @@ In art, only [art-format](art-format.md), sections 4 and 5, defines the tokens.
 | `term.type` | string | Terminal type. |
 | `term.cols` | integer | Terminal columns. |
 | `term.rows` | integer | Terminal rows. |
-| `term.charset` | string | Output charset, `utf-8` in the MVP. |
 | `term.colors` | integer | Colour depth: `16`, `256` or `16777216`. |
 | `term.name` | string | Terminal name and version, for display only. Can be empty. |
-| `term.images` | string | Image output of the terminal: `sixel` or empty. |
 | `term.ambiguous` | integer | Cells of an East Asian Ambiguous character in the terminal: `1` or `2`. |
 | `term.background` | string | Background of the terminal: `dark`, `light` or empty. |
-| `term.bg_color`, `term.fg_color` | string | Background and foreground colour of the terminal: `#rrggbb` or empty. |
+| `term.bg_color` | string | Background colour of the terminal: `#rrggbb` or empty. |
 | `item.<KEY>` | boolean | True when the item with the key `<KEY>` exists and is enabled (section 8.2). |
 | `arg.<name>` | string | The argument `<name>` of the screen (section 8.5). |
 | `file.*`, `meta.<key>` | — | The fields of a file screen: [file-view](file-view.md), section 3.4. |

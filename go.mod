@@ -6,7 +6,6 @@ require (
 	github.com/clipperhouse/displaywidth v0.11.0
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/yuin/goldmark/v2 v2.1.16
-	go.yaml.in/yaml/v4 v4.0.0
 )
 
 require github.com/clipperhouse/uax29/v2 v2.7.0 // indirect

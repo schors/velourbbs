@@ -52,7 +52,7 @@ The rules of this specification handle these quirks of the clients and the termi
 | Tera Term | TTYPE `xterm`. It starts in line mode. It answers DECRQSS with an index colour: `0;30`. | Section 4.1. It gets 256 colours (section 6). |
 | inetutils telnet | TTYPE is `$TERM` in upper case, then aliases. It sends CR NUL for Enter in character mode. | Sections 5.3, 6 and 8.1. |
 | Windows Terminal 1.19 and later, xterm, Ghostty | They send the RGB reply `38:2::1:2:3`. iTerm2 sends `38:2:1:1:2:3`. xterm without direct colour sends `0;38:5:16`. | The RGB reply of section 5.7. |
-| Other target terminals | For the OSC 4 indexes 256 and 258, xterm and Tera Term give special colours, Windows Terminal 1.22 and later give reserved entries, iTerm2 gives black, tmux and Ghostty send no reply. No target terminal shows these queries as text. | The host sends them to each terminal and uses them only for PuTTY (section 6). |
+| Other target terminals | For the OSC 4 indexes 256 and 258, xterm and Tera Term give special colours, Windows Terminal 1.22 and later give reserved entries, iTerm2 gives black, tmux and Ghostty send no reply. No target terminal shows these queries as text. | The host sends them to each terminal and uses the reply for 258 only for PuTTY (section 6). |
 | Windows Terminal 1.25 and later | It can send its own CPR query after an unknown sequence and take the next CPR reply. | The CPR probes go first (section 5.7). |
 | Windows Terminal | Its wide mode keeps U+2500–U+259F narrow and makes Cyrillic wide. | The ambiguous probe uses a Cyrillic letter (section 5.4). |
 | Windows Terminal 1.21 and earlier | Its ConPTY answers DA1, DA2 and DECRQSS itself, at once. It drops OSC 10 and OSC 11 and answers no OSC 4 and no XTVERSION. | No reply comes after the DA1 reply. |
@@ -194,8 +194,8 @@ Each line ends with CR LF. The text starts with `CR LF`.
 ### 5.6. Log
 
 At the end of the probe, the host logs one line: the address, the TTYPE name,
-the NAWS size, the CPR replies, the replies of section 5.7, the terminal values of section 6
-and the probe time. So the colour rules can be tuned.
+the NAWS size, the CPR replies, the charset (`utf-8` or `not utf-8`), the replies of section 5.7,
+the terminal values of section 6 and the probe time. So the colour rules can be tuned.
 
 - In the TTYPE name and in the replies to DECRQSS, DA1, DA2 and XTVERSION, the host removes
   the control characters and cuts the text to 40 graphemes, with no case change.
@@ -208,7 +208,7 @@ and the probe time. So the colour rules can be tuned.
 
 ### 5.7. Terminal queries
 
-The host asks the terminal for its colours, its name and its image support.
+The host asks the terminal for its colours and its name.
 Step 4 of section 5.1 sends this write:
 
 | Query | Bytes | Reply |
@@ -230,7 +230,8 @@ Step 4 of section 5.1 sends this write:
   comes after the other replies. OSC 4 goes directly before DA1.
 - Each OSC 4 index has its own query.
 - The host sends the OSC 4 queries for 256 and 258 to each terminal, because the one write
-  goes before the DA2 reply. It uses their replies only for PuTTY (section 6).
+  goes before the DA2 reply. It uses the reply for 258 only for PuTTY (section 6).
+- The host only logs the replies to OSC 10 and to OSC 4 for 256 (section 5.6).
 - The erase removes a query that a terminal shows as text.
 - The host sends the queries after step 3, so the client is in character mode
   and does not echo the replies.
@@ -250,8 +251,7 @@ Reply rules:
 - OSC 10 and OSC 11: `<r>`, `<g>` and `<b>` have the rules of OSC 4.
 - XTVERSION: `<text>` is the name and the version of the terminal, for example `XTerm(412)`
   or `tmux 3.6`.
-- DA1 and DA2: the parameters are numbers separated by `;`. A parameter of a DA1 reply
-  after the first parameter is a feature. The first parameter is the terminal class.
+- DA1 and DA2: the parameters are numbers separated by `;`.
 - The "palette" is the colours of the OSC 4 replies for 0–15. The palette is "not VGA" when
   a reply has a colour other than the VGA colour of its index (section 7.3).
 
@@ -261,13 +261,10 @@ Reply rules:
 |---|---|
 | `term.type` | The TTYPE name in lower case. Without a name, `ansi`. |
 | `term.cols`, `term.rows` | Section 5.2. |
-| `term.charset` | `utf-8`. |
 | `term.colors` | `16`, `256` or `16777216`. |
 | `term.name` | The `<text>` of the XTVERSION reply (section 5.7). Without a reply, empty. |
-| `term.images` | `sixel` when the DA1 reply has the feature `4` (section 5.7). Else empty. |
 | `term.ambiguous` | `1` or `2`: the ambiguous probe (section 5.4). |
 | `term.bg_color` | The background colour of the terminal as `#rrggbb` in lower case: the OSC 11 reply. Without it, the OSC 4 reply for 258 when the DA2 reply is the reply of PuTTY in the client table below. Else empty. |
-| `term.fg_color` | The foreground colour of the terminal as `#rrggbb` in lower case: the OSC 10 reply. Without it, the OSC 4 reply for 256 when the DA2 reply is the reply of PuTTY in the client table below. Else empty. |
 | `term.background` | `light` when the relative luminance of `term.bg_color` is more than 0.5. Else `dark`. Empty when `term.bg_color` is empty. |
 
 - `term.type` and `term.name` are untrusted client input. The host removes the control
@@ -279,7 +276,6 @@ Reply rules:
   else ((c + 0.055) / 1.055)^2.4. So `#bcbcbc` and lighter greys are light, `#bbbbbb` is dark.
 - `term.background` selects the session theme with `[screen] theme = "auto"`
   ([screens-toml](screens-toml.md), section 3.2).
-- `term.images` is for a future image output. Today no output uses it.
 - `term.ambiguous` 2 comes from a setting of the terminal, off by default.
   The probe sees only the width of U+0436.
 - The layout does not use `term.ambiguous` (section 3.1): with 2, the columns of a page move,

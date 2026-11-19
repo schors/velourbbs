@@ -147,15 +147,9 @@ func TestFrontMatter(t *testing.T) {
 		{"+++\nx = \"1\"\n+++\nbody\n", map[string]string{"x": "1"}, "body"},
 		{"+++  \nx = \"1\"\n+++ \nbody\n", map[string]string{"x": "1"}, "body"},
 		{" +++\nx = \"1\"\n+++\n", nil, " +++"},
-		{"---\nx: 1\n---\nbody\n", map[string]string{"x": "1"}, "body"},
-		{"---  \nx: 1\n...  \nbody\n", map[string]string{"x": "1"}, "body"},
-		{"---\nx: 1\n...\n---\n", map[string]string{"x": "1"}, "---"},
+		// A "---" line that does not start a YAML front matter is Markdown.
 		{"---\n\nx: 1\n---\n", nil, "---"},
-		{"---\n \nx: 1\n---\nbody", map[string]string{"x": "1"}, "body"},
 		{"---\nx: 1\n", nil, "---"},
-		{"---\n---\nbody", map[string]string{}, "body"},
-		{"---\n# only a comment\n---\nbody", map[string]string{}, "body"},
-		{"--- \nx: 1\n---\n", map[string]string{"x": "1"}, ""},
 		{"----\nx: 1\n---\n", nil, "----"},
 		{"\ufeff+++\r\nx = 1\r\n+++\r\nbody\r\n", map[string]string{"x": "1"}, "body"},
 	} {
@@ -180,6 +174,7 @@ func TestFrontMatter(t *testing.T) {
 }
 
 func TestFrontMatterErrors(t *testing.T) {
+	const yamlErr = `content/a.md:1:1: front matter: YAML is not supported, use TOML between "+++" lines`
 	pad := func(n int) string { return "x = \"" + strings.Repeat("a", n-6) + "\"" } // n bytes
 	if _, ds := load(t, "a.md", "+++\n"+pad(MaxFrontBytes)+"\n+++\n"); ds != nil {
 		t.Errorf("64 KB: %q", ds)
@@ -187,25 +182,16 @@ func TestFrontMatterErrors(t *testing.T) {
 	for data, want := range map[string][]string{
 		"+++\nx = 1\n": {`content/a.md:1:1: front matter: no end line "+++"`},
 		"+++\n":        {`content/a.md:1:1: front matter: no end line "+++"`},
-		"+++\n" + pad(MaxFrontBytes+1) + "\n+++\n":                 {`content/a.md:1:1: front matter: over 65536 bytes`},
-		"---\n" + strings.Repeat("a", MaxFrontBytes+1) + "\n---\n": {`content/a.md:1:1: front matter: over 65536 bytes`},
+		"+++\n" + pad(MaxFrontBytes+1) + "\n+++\n": {`content/a.md:1:1: front matter: over 65536 bytes`},
 		// TOML: the row in the file and the column in code points.
 		"+++\ny = 1\nx = \"я\" z\n+++\n": {`content/a.md:3:9: front matter: expected newline but got U+007A 'z'`},
 		"+++\nx = 1\nx = 2\n+++\n":       {`content/a.md:3:1: front matter: key x is already defined`},
 		// YAML.
-		"---\nя: [1,\n  bad: x: y\n---\n": {`content/a.md:3:9: front matter: did not find expected ',' or ']'`},
-		"---\nяя: é\tx: 1\n---\n":         {`content/a.md:2:8: front matter: mapping values are not allowed in this context`},
-		"---\n- a\n---\n":                 {`content/a.md:2:1: front matter: not a mapping`},
-		"---\n  ~\n---\n":                 {`content/a.md:2:3: front matter: not a mapping`},
-		"---\nx: 1\n--- y\n---\n":         {`content/a.md:3:1: front matter: more than one YAML document`},
-		"---\nx: 1\ny: 2\nx: 3\n---\n":    {`content/a.md:4:1: front matter: duplicate key "x"`},
-		"---\nx: 1\n\"x\": 2\n---\n":      {`content/a.md:3:1: front matter: duplicate key "x"`},
-		"---\n1: a\n\"1\": b\n---\n":      {`content/a.md:3:1: front matter: duplicate key "1"`},
-		"---\nя: !!int abc\n---\n":        {`content/a.md:2:4: front matter: cannot construct !!str ` + "`abc`" + ` as a !!int`},
-		"---\nb: !!bool yes\n---\n":       {`content/a.md:2:4: front matter: cannot construct !!str ` + "`yes`" + ` as a !!bool`},
-		"---\nf: !!float x\n---\n":        {`content/a.md:2:4: front matter: cannot construct !!str ` + "`x`" + ` as a !!float`},
-		"---\nt: !!timestamp foo\n---\n":  {`content/a.md:2:4: front matter: cannot construct !!str ` + "`foo`" + ` as a !!timestamp`},
-		"---\n{я: 1, b: 2, b: 3}\n---\n":  {`content/a.md:2:14: front matter: duplicate key "b"`},
+		"---\nx: 1\n---\nbody\n":       {yamlErr},
+		"---  \nx: 1\n...  \nbody\n":   {yamlErr},
+		"---\n \nx: 1\n---\n":          {yamlErr},
+		"---\n---\nbody":               {yamlErr},
+		"---\n# only a comment\n---\n": {yamlErr},
 	} {
 		if _, ds := load(t, "a.md", data); !slices.Equal(ds, want) {
 			t.Errorf("%q:\n got %q\nwant %q", data, ds, want)
@@ -240,44 +226,12 @@ a.b = 1
 x = 1
 +++
 `
-	yml := `---
-s: &a str
-q: "x\ty"
-i: 0x1F
-o: 0o17
-f: 1.5e3
-inf: .inf
-b: True
-y: yes
-d: 2024-01-02
-short: 2001-1-4
-dto: 2001-12-14t21:59:43.10-05:00
-dtz: 2001-12-14T21:59:43Z
-dt: 2001-12-14 21:59:43.10
-t: 12:30:00
-al: *a
-n: ~
-l: [1]
-m: {a: 1}
-bin: !!binary aGk=
-c: !custom 3
-z: !!int "7"
-Upper: x
-1: x
----
-`
 	for data, want := range map[string]map[string]string{
 		toml: {
 			"s": "str", "lit": `x\y`, "i": "0x1F", "u": "1_000", "neg": "-7", "f": "+1.5e3", "inf": "-inf",
 			"b": "true", "d": "2024-01-02", "dt": "1979-05-27T07:32:00.120",
 			"dto": "1979-05-27T07:32:00.5Z", "dto2": "1979-05-27T07:32:00-07:00",
 			"t": "07:32:00.999", "t2": "07:32:00", "t3": "07:32:01", "title": "quoted",
-		},
-		yml: {
-			"s": "str", "q": "x\ty", "i": "0x1F", "o": "0o17", "f": "1.5e3", "inf": ".inf",
-			"b": "true", "y": "yes", "d": "2024-01-02", "short": "2001-01-04",
-			"dto": "2001-12-14T21:59:43.1-05:00", "dtz": "2001-12-14T21:59:43Z", "dt": "2001-12-14T21:59:43.1",
-			"t": "12:30:00", "al": "str", "z": "7",
 		},
 	} {
 		c, ds := load(t, "a.md", data)
@@ -294,8 +248,8 @@ Upper: x
 func TestTitle(t *testing.T) {
 	for data, want := range map[string]string{
 		"+++\ntitle = \"Meta\"\n+++\n# Head\n": "Meta",
-		"---\ntitle: 2024\n---\n# Head\n":      "2024",
-		"---\ntitle: [a]\n---\n# Head\n":       "Head",
+		"+++\ntitle = 2024\n+++\n# Head\n":     "2024",
+		"+++\ntitle = [\"a\"]\n+++\n# Head\n":  "Head",
 		"+++\ntitle = \"\"\n+++\n# Head\n":     "",
 		"# The *gold* `bug` &amp; [x](y)\n":    "The gold bug & x",
 		"Gold\n====\n\n# Second\n":             "Gold",
@@ -318,7 +272,7 @@ func TestTitle(t *testing.T) {
 }
 
 func TestWords(t *testing.T) {
-	md := "---\nauthor: Some One Else\n---\n" +
+	md := "+++\nauthor = \"Some One Else\"\n+++\n" +
 		"# Title words\n\n" +
 		"One [two](https://x.org \"a long title\") <https://y.org> **thr**ee ![img alt](i.png)\n\n" +
 		"<!-- hidden words -->after\n\n" +

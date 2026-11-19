@@ -13,7 +13,7 @@ import (
 // paletteSize is the number of palette queries: the OSC 4 indexes 0–15 (section 5.7).
 const paletteSize = 16
 
-// The OSC 4 indexes of the default foreground and background of PuTTY (section 5.7).
+// The OSC 4 indexes of the default foreground and background (section 5.7).
 const (
 	indexFg = 256
 	indexBg = 258
@@ -150,16 +150,12 @@ func (r *replies) utf8() bool {
 // values gives the terminal values of section 6. utf8 is false when the charset probe
 // gives "not UTF-8" (section 5.4).
 func (r *replies) values() (t screen.Term, utf8 bool) {
-	t = screen.Term{Charset: "utf-8"}
 	t.Type, t.Colors = TypeColors(r.ttype)
 	if isRGBReply(r.decrqss) || isPuTTY(r.da2) || isTmux(r.da2) {
 		t.Colors = screen.ColorsTrue
 	}
 	if xt, ok := strings.CutPrefix(r.xtversion, ">|"); ok {
 		t.Name = CleanName(xt)
-	}
-	if hasSixel(r.da1) {
-		t.Images = screen.ImagesSixel
 	}
 	t.Ambiguous = 1
 	if r.ambGot && r.amb.Col == 3 {
@@ -170,16 +166,11 @@ func (r *replies) values() (t screen.Term, utf8 bool) {
 		t.Cols, t.Rows = defaultCols, defaultRows
 	}
 	t.Cols, t.Rows = clamp(t.Cols, t.Rows)
-	fg, bg := r.fg, r.bg
-	if isPuTTY(r.da2) {
-		if !fg.got {
-			fg = r.fg4
-		}
-		if !bg.got {
-			bg = r.bg4
-		}
+	bg := r.bg
+	if isPuTTY(r.da2) && !bg.got {
+		bg = r.bg4
 	}
-	t.FgColor, t.BgColor = fg.hex(), bg.hex()
+	t.BgColor = bg.hex()
 	t.Background = Background(t.BgColor)
 	return t, r.utf8()
 }
@@ -312,12 +303,6 @@ func isPuTTY(b string) bool {
 func isTmux(b string) bool {
 	ns := daParams(b, ">")
 	return len(ns) > 0 && ns[0] == 84
-}
-
-// hasSixel reports whether the DA1 reply b has the feature 4 (section 6).
-func hasSixel(b string) bool {
-	ns := daParams(b, "?")
-	return len(ns) > 1 && slices.Contains(ns[1:], 4)
 }
 
 // oscColour parses the body b of an OSC 4, OSC 10 or OSC 11 reply (section 5.7).

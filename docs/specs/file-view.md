@@ -197,10 +197,10 @@ The base theme has these styles ([screens-toml](screens-toml.md), section 3.2):
 - If the first line is `+++`, the lines up to the next `+++` line are TOML front matter.
   A first line `+++` without its end line is an error.
 - If the first line is `---`, the second line is not empty, and a `---` or `...` line follows,
-  the lines up to it are YAML front matter. Else the file has no front matter.
+  the lines up to it are YAML front matter. YAML front matter is an error: Velour reads only TOML.
+- Else the file has no front matter.
 - A delimiter line can have spaces at its end.
 - A syntax error is an error. A top-level key two times is an error.
-  YAML front matter that is not a mapping is an error. YAML front matter with only comments has no keys.
 - The front matter has no limit on its keys. A key that matches `[a-z][a-z0-9_]*` and has
   a scalar value gives the field `meta.<key>`. The value of the field:
 
@@ -215,8 +215,8 @@ The base theme has these styles ([screens-toml](screens-toml.md), section 3.2):
 | Time | `HH:MM:SS`, with the fraction when the file has it. |
 
 - The other keys and values have no effect.
-- Target implementations: Hugo (TOML and YAML), Jekyll, Pandoc and Obsidian (YAML).
-  The rule for `---` follows CommonMark, Jekyll and Pandoc. Hugo gives an error there.
+- Target implementation: Hugo (TOML). The rule for `---` follows Jekyll and Pandoc,
+  so their YAML front matter gives an error, not a page with the front matter as text.
 
 ### 5.2. Blocks
 
@@ -352,13 +352,12 @@ content/gold.md:1:1: front matter: no end line "+++"
 | Task | Choice | Compared with | Reason |
 |---|---|---|---|
 | Markdown | `github.com/yuin/goldmark/v2` | `github.com/yuin/goldmark` v1, `github.com/gomarkdown/markdown`, own parser | CommonMark 0.31.2 and the GFM tables. An AST without HTML. No dependencies. v2 is the current line: v1 needs a migration later. v2 is young, and a patch release can break the API (v2.0.2 changed `parser.Nil`). `go.mod` pins the version; update it with the tests. An own CommonMark parser is too large. |
-| YAML front matter | `go.yaml.in/yaml/v4` | `gopkg.in/yaml.v3`, `go.yaml.in/yaml/v3` | The YAML organization maintains it. `gopkg.in/yaml.v3` is unmaintained. The v3 line of `go.yaml.in` gets only security fixes. No dependencies. |
 | TOML front matter | `github.com/pelletier/go-toml/v2` | — | The TOML library of the screens ([screen-render](screen-render.md), section 5). Its parser gives the number as the file writes it. |
 
 ## 11. Acceptance
 
 - A test BBS in `cmd/velourbbs/testdata/` has a file screen and content files:
-  a Markdown file with each element of section 5 and both front matter forms,
+  a Markdown file with each element of section 5 and a TOML front matter,
   a plain text file and a source file.
 - Golden cell dumps of `velourbbs preview` cover each kind at 80x24 and at 40x10,
   `lines`, `numbers` and `margin`, and `--keys` with each `page` action.

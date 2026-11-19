@@ -1,14 +1,12 @@
 package content
 
 import (
-	"errors"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/pelletier/go-toml/v2/unstable"
-	yaml "go.yaml.in/yaml/v4"
 
 	"github.com/schors/velourbbs/internal/screen"
 	"github.com/schors/velourbbs/internal/tomlcheck"
@@ -20,32 +18,24 @@ const MaxFrontBytes = 64 << 10
 // parseFront finds and parses the front matter of a Markdown file (section 5.1).
 // It gives the meta fields and the lines of the body. ok is false after an error.
 func parseFront(d *screen.FileDiags, lines []string) (meta map[string]string, body []string, ok bool) {
-	if len(lines) == 0 {
-		return nil, lines, true
-	}
-	var parse func(*screen.FileDiags, []byte) (map[string]string, bool)
-	end := -1
 	switch {
-	case isDelim(lines[0], "+++"):
-		end = findDelim(lines, "+++")
-		if end < 0 {
-			d.Errorf(1, 1, `front matter: no end line "+++"`)
-			return nil, nil, false
-		}
-		parse = parseTOML
-	case isDelim(lines[0], "---") && len(lines) > 1 && lines[1] != "":
-		end = findDelim(lines, "---", "...")
-		parse = parseYAML
-	}
-	if end < 0 {
+	case len(lines) > 1 && isDelim(lines[0], "---") && lines[1] != "" && findDelim(lines, "---", "...") > 0:
+		d.Errorf(1, 1, `front matter: YAML is not supported, use TOML between "+++" lines`)
+		return nil, nil, false
+	case len(lines) == 0 || !isDelim(lines[0], "+++"):
 		return nil, lines, true
+	}
+	end := findDelim(lines, "+++")
+	if end < 0 {
+		d.Errorf(1, 1, `front matter: no end line "+++"`)
+		return nil, nil, false
 	}
 	data := []byte(strings.Join(lines[1:end], "\n"))
 	if len(data) > MaxFrontBytes {
 		d.Errorf(1, 1, "front matter: over %d bytes", MaxFrontBytes)
 		return nil, nil, false
 	}
-	meta, ok = parse(d, data)
+	meta, ok = parseTOML(d, data)
 	return meta, lines[end+1:], ok
 }
 
@@ -133,112 +123,4 @@ func tomlNumbers(data []byte) map[string]string {
 		}
 	}
 	return numbers
-}
-
-// parseYAML parses a YAML front matter. Each top-level key with a scalar value gives a meta field.
-func parseYAML(d *screen.FileDiags, data []byte) (map[string]string, bool) {
-	var docs []yaml.Node
-	if err := yaml.Load(data, &docs, yaml.WithAllDocuments()); err != nil {
-		line, col, msg := 1, 1, err.Error()
-		var le *yaml.LoadError
-		if errors.As(err, &le) {
-			msg = le.Message
-			if le.Mark.Line > 0 {
-				line, col = le.Mark.Line, max(le.Mark.Column, 1)
-			}
-		}
-		frontErrorf(d, line, col, "%s", msg)
-		return nil, false
-	}
-	meta := map[string]string{}
-	switch {
-	case len(docs) == 0:
-		return meta, true // only comments
-	case len(docs) > 1:
-		frontErrorf(d, docs[1].Line, 1, "more than one YAML document")
-		return nil, false
-	}
-	top := docs[0].Content[0]
-	if top.Kind != yaml.MappingNode {
-		frontErrorf(d, top.Line, top.Column, "not a mapping")
-		return nil, false
-	}
-	ok := true
-	seen := map[string]bool{}
-	for i := 0; i+1 < len(top.Content); i += 2 {
-		k, v := top.Content[i], top.Content[i+1]
-		if k.Kind != yaml.ScalarNode {
-			continue
-		}
-		if seen[k.Value] {
-			frontErrorf(d, k.Line, k.Column, "duplicate key %q", k.Value)
-			ok = false
-			continue
-		}
-		seen[k.Value] = true
-		if v.Kind == yaml.AliasNode {
-			v = v.Alias
-		}
-		s, isField, err := yamlValue(v)
-		switch {
-		case err != nil:
-			frontErrorf(d, v.Line, v.Column, "%s", err)
-			ok = false
-		case isField && screen.IsIdent(k.Value):
-			meta[k.Value] = s
-		}
-	}
-	if !ok {
-		return nil, false
-	}
-	return meta, true
-}
-
-// yamlValue gives the meta field of the YAML node v by its tag (section 5.1).
-// isField is false for a value that gives no field. The node load does not check
-// a value with an explicit tag, for example "!!int abc"; the decode does.
-func yamlValue(v *yaml.Node) (s string, isField bool, err error) {
-	if v.Kind != yaml.ScalarNode {
-		return "", false, nil
-	}
-	tag := v.ShortTag()
-	switch tag {
-	case "!!int", "!!float", "!!bool", "!!timestamp":
-		var x any
-		if err := v.Decode(&x); err != nil {
-			var le *yaml.LoadError
-			if errors.As(err, &le) {
-				return "", false, errors.New(le.Message)
-			}
-			return "", false, err
-		}
-		if b, ok := x.(bool); ok {
-			return strconv.FormatBool(b), true, nil
-		}
-	}
-	switch tag {
-	case "!!str", "!!int", "!!float":
-		return v.Value, true, nil
-	case "!!timestamp":
-		s, ok := yamlTime(v.Value)
-		return s, ok, nil
-	}
-	return "", false, nil
-}
-
-// The timestamp forms of the yaml resolver, and the form of the meta field for each.
-var yamlTimes = []struct{ in, out string }{
-	{"2006-1-2T15:4:5.999999999Z07:00", time.RFC3339Nano},
-	{"2006-1-2t15:4:5.999999999Z07:00", time.RFC3339Nano},
-	{"2006-1-2 15:4:5.999999999", "2006-01-02T15:04:05.999999999"},
-	{"2006-1-2", time.DateOnly},
-}
-
-func yamlTime(s string) (string, bool) {
-	for _, f := range yamlTimes {
-		if t, err := time.Parse(f.in, s); err == nil {
-			return t.Format(f.out), true
-		}
-	}
-	return "", false
 }

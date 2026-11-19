@@ -52,7 +52,7 @@ func fileRows(n int) []screen.Row {
 
 // The rows above and below the file area and the cut at term.rows (file-view, section 3.2).
 func TestRenderFile(t *testing.T) {
-	env := &screen.Env{Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Charset: "utf-8", Colors: 16}}
+	env := &screen.Env{Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Colors: 16}}
 	s := fileScreen(t, "Top\n{>file}\nEnd 1\nEnd 2\n")
 	if n := screen.FrameRows(s, env, theme); n != 3 {
 		t.Errorf("FrameRows %d, want 3", n)
@@ -123,7 +123,7 @@ func TestRenderFileMargin(t *testing.T) {
 		t.Fatalf("diags: %v", ds)
 	}
 	s := screens["f"]
-	env := &screen.Env{Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Charset: "utf-8", Colors: 16}}
+	env := &screen.Env{Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Colors: 16}}
 
 	// W = 20, A = 20 - 3 - 2 = 15: the line of 19 cells wraps.
 	l := screen.ContentLayout(s.FileScreen, s.FileScreen.Contents["a.txt"], 20, theme)

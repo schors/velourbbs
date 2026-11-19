@@ -272,8 +272,8 @@ var (
 )
 
 func TestProbeClients(t *testing.T) {
-	term := func(typ string, cols, rows, colors int, name, images string) screen.Term {
-		return screen.Term{Type: typ, Cols: cols, Rows: rows, Charset: "utf-8", Colors: colors, Name: name, Images: images, Ambiguous: 1}
+	term := func(typ string, cols, rows, colors int, name string) screen.Term {
+		return screen.Term{Type: typ, Cols: cols, Rows: rows, Colors: colors, Name: name, Ambiguous: 1}
 	}
 	inet := func(typ, replies string) client {
 		return client{will: allOpts, do: hostOpts, naws: naws(80, 24), ttype: []string{typ}, cpr: "1;2", term: replies}
@@ -284,27 +284,27 @@ func TestProbeClients(t *testing.T) {
 		want screen.Term
 	}{
 		// The terminals of section 5.7. inetutils telnet sends $TERM in upper case.
-		{"Windows Terminal", inet("XTERM-256COLOR", termWT), colours(term("xterm-256color", 80, 24, screen.ColorsTrue, "", "sixel"), "#cccccc", "#0c0c0c", "dark")},
-		{"xterm", inet("XTERM-256COLOR", termXterm), colours(term("xterm-256color", 80, 24, screen.ColorsTrue, "XTerm(412)", ""), "#000000", "#ffffff", "light")},
-		{"xterm without direct colour", inet("XTERM", termXterm16), colours(term("xterm", 80, 24, 256, "XTerm(412)", ""), "#000000", "#ffffff", "light")},
-		{"tmux", inet("TMUX-256COLOR", termTmux), colours(term("tmux-256color", 80, 24, screen.ColorsTrue, "tmux 3.6", "sixel"), "#d0d0d0", "#1c1c1c", "dark")},
-		{"iTerm2", inet("XTERM-256COLOR", termITerm2), colours(term("xterm-256color", 80, 24, screen.ColorsTrue, "iTerm2 3.7.7", "sixel"), "#c7c7c7", "#000000", "dark")},
-		{"Ghostty", inet("XTERM-GHOSTTY", termGhostty), colours(term("xterm-ghostty", 80, 24, screen.ColorsTrue, "ghostty 1.4.0", ""), "#ffffff", "#282c34", "dark")},
+		{"Windows Terminal", inet("XTERM-256COLOR", termWT), colours(term("xterm-256color", 80, 24, screen.ColorsTrue, ""), "#0c0c0c", "dark")},
+		{"xterm", inet("XTERM-256COLOR", termXterm), colours(term("xterm-256color", 80, 24, screen.ColorsTrue, "XTerm(412)"), "#ffffff", "light")},
+		{"xterm without direct colour", inet("XTERM", termXterm16), colours(term("xterm", 80, 24, 256, "XTerm(412)"), "#ffffff", "light")},
+		{"tmux", inet("TMUX-256COLOR", termTmux), colours(term("tmux-256color", 80, 24, screen.ColorsTrue, "tmux 3.6"), "#1c1c1c", "dark")},
+		{"iTerm2", inet("XTERM-256COLOR", termITerm2), colours(term("xterm-256color", 80, 24, screen.ColorsTrue, "iTerm2 3.7.7"), "#000000", "dark")},
+		{"Ghostty", inet("XTERM-GHOSTTY", termGhostty), colours(term("xterm-ghostty", 80, 24, screen.ColorsTrue, "ghostty 1.4.0"), "#282c34", "dark")},
 		{"PuTTY",
 			client{will: allOpts, do: hostOpts, naws: naws(120, 40), ttype: []string{"XTERM"}, cpr: "1;2", term: termPuTTY},
-			colours(term("xterm", 120, 40, screen.ColorsTrue, "", ""), "#bbbbbb", "#000000", "dark")},
+			colours(term("xterm", 120, 40, screen.ColorsTrue, ""), "#000000", "dark")},
 		// PuTTY with "Treat CJK ambiguous characters as wide": the ambiguous probe
 		// moves the cursor by two cells (section 5.4).
 		{"PuTTY with wide ambiguous characters",
 			client{will: allOpts, do: hostOpts, naws: naws(120, 40), ttype: []string{"XTERM"}, cprs: []string{"1;2", "1;3"}, term: termPuTTY},
-			ambiguous(colours(term("xterm", 120, 40, screen.ColorsTrue, "", ""), "#bbbbbb", "#000000", "dark"), 2)},
+			ambiguous(colours(term("xterm", 120, 40, screen.ColorsTrue, ""), "#000000", "dark"), 2)},
 		{"Tera Term in line mode",
 			client{
 				will: []byte{telnet.OptNAWS, telnet.OptTTYPE, telnet.OptBinary},
 				do:   []byte{telnet.OptEcho, telnet.OptBinary},
 				naws: naws(80, 24), ttype: []string{"xterm"}, cpr: "1;2", term: termTeraTerm,
 			},
-			colours(term("xterm", 80, 24, 256, "", ""), "#ffffff", "#000000", "dark")},
+			colours(term("xterm", 80, 24, 256, ""), "#000000", "dark")},
 		// With only a DA1 reply, the TTYPE name gives the values.
 		// The host takes the first name and ignores the later names.
 		{"inetutils telnet",
@@ -312,17 +312,17 @@ func TestProbeClients(t *testing.T) {
 				will: allOpts, do: hostOpts, naws: naws(200, 60),
 				ttype: []string{"XTERM-256COLOR", "XTERM-DIRECT"}, cpr: "3;2", term: "\x1b[?1;2c",
 			},
-			term("xterm-256color", 200, 60, 256, "", "")},
+			term("xterm-256color", 200, 60, 256, "")},
 		{"direct colour", client{will: allOpts, naws: naws(80, 25), ttype: []string{"xterm-direct"}, cpr: "1;2", term: "\x1b[?1;2c"},
-			term("xterm-direct", 80, 25, screen.ColorsTrue, "", "")},
+			term("xterm-direct", 80, 25, screen.ColorsTrue, "")},
 		// MTTS is a plain name.
 		{"MTTS", client{will: allOpts, naws: naws(100, 30), ttype: []string{"MTTS 13"}, cpr: "1;2", term: "\x1b[?1;2c"},
-			term("mtts 13", 100, 30, 256, "", "")},
+			term("mtts 13", 100, 30, 256, "")},
 		// A NAWS with 0 gives no size.
 		{"NAWS with 0", client{will: allOpts, naws: naws(0, 30), ttype: []string{"VT100"}, cpr: "1;2", term: "\x1b[?1;2c"},
-			term("vt100", 80, 24, 16, "", "")},
+			term("vt100", 80, 24, 16, "")},
 		{"no TTYPE", client{will: []byte{telnet.OptNAWS}, naws: naws(90, 30), cpr: "1;2", term: "\x1b[?1;2c"},
-			term("ansi", 90, 30, 16, "", "")},
+			term("ansi", 90, 30, 16, "")},
 		// A key and replies arrive before step 4: the key goes to the queue
 		// and the replies are dropped.
 		{"early input",
@@ -330,7 +330,7 @@ func TestProbeClients(t *testing.T) {
 				will: allOpts, naws: naws(90, 30), ttype: []string{"A"}, cpr: "1;2", term: "\x1b[?1;2c",
 				early: "x\x1b[1;3R\x1b[>0;136;0c\x1b[?1;4c",
 			},
-			term("a", 90, 30, 256, "", "")},
+			term("a", 90, 30, 256, "")},
 	}
 	for _, tt := range tests {
 		synctest.Test(t, func(t *testing.T) {
@@ -432,9 +432,9 @@ func TestProbeLateDA1(t *testing.T) {
 	})
 }
 
-// colours sets term.fg_color, term.bg_color and term.background of t.
-func colours(t screen.Term, fg, bg, background string) screen.Term {
-	t.FgColor, t.BgColor, t.Background = fg, bg, background
+// colours sets term.bg_color and term.background of t.
+func colours(t screen.Term, bg, background string) screen.Term {
+	t.BgColor, t.Background = bg, background
 	return t
 }
 
@@ -468,8 +468,8 @@ func TestProbeAmbiguous(t *testing.T) {
 			if err != nil {
 				t.Fatalf("%s: %v", tt.name, err)
 			}
-			if got := term.Term(); got.Ambiguous != tt.want || got.Charset != "utf-8" {
-				t.Errorf("%s: Term() = %+v, want term.ambiguous %d and utf-8", tt.name, got, tt.want)
+			if got := term.Term(); got.Ambiguous != tt.want {
+				t.Errorf("%s: Term() = %+v, want term.ambiguous %d", tt.name, got, tt.want)
 			}
 		})
 	}
@@ -521,7 +521,7 @@ func TestProbeLog(t *testing.T) {
 			"decrqss=1$r0;38:2::1:2:3m xtversion=>|XTerm(412)" + strings.Repeat("ы", 28) + " da2=- da1=?64;1;4c " +
 			"palette=-,cd0080,-,-,-,-,-,-,-,-,-,-,-,-,-,ffffff osc10=- osc11=fefefe osc4_256=- osc4_258=000000 " +
 			"type=xterm-256color cols=100 rows=30 charset=utf-8 colors=16777216 " +
-			"name=XTerm(412)" + strings.Repeat("ы", 30) + " images=sixel ambiguous=2 fg_color=\"\" bg_color=#fefefe background=light time=0s\n"
+			"name=XTerm(412)" + strings.Repeat("ы", 30) + " ambiguous=2 bg_color=#fefefe background=light time=0s\n"
 		if _, line, _ := strings.Cut(log, " "); line != want {
 			t.Errorf("log %q, want %q after the time", log, want)
 		}
@@ -558,7 +558,7 @@ func TestProbeNoReplies(t *testing.T) {
 		if d != to.Probe {
 			t.Errorf("the probe took %v; want %v", d, to.Probe)
 		}
-		want := screen.Term{Type: "ansi", Cols: 80, Rows: 24, Charset: "utf-8", Colors: 16, Ambiguous: 1}
+		want := screen.Term{Type: "ansi", Cols: 80, Rows: 24, Colors: 16, Ambiguous: 1}
 		if got := term.Term(); got != want {
 			t.Errorf("Term() = %+v, want %+v", got, want)
 		}

@@ -28,7 +28,7 @@ do = "back"
 
               {!dim}Терминал{!}            {term.cols}x{term.rows}, {term.type                             }
               {!dim}Программа{!}           {#if term.name == ""}нет ответа{#else}{term.name                             }{/if}
-              {!dim}Цвета{!}               {#if term.colors == 16777216}truecolor{#else}{term.colors}{/if}{#if term.images == "sixel"}, sixel{/if}
+              {!dim}Цвета{!}               {#if term.colors == 16777216}truecolor{#else}{term.colors}{/if}
               {!dim}Фон{!}                 {#if term.background == ""}не определён{/if}{#if term.background == "dark"}тёмный, {term.bg_color}{/if}{#if term.background == "light"}светлый, {term.bg_color}{/if}
               {!dim}Ширина кириллицы{!}    {#if term.ambiguous == 2}2 клетки{#else}1 клетка{/if}
 
@@ -65,7 +65,7 @@ do = "back"
 
     {!dim}Терминал{!}            {term.cols}x{term.rows}, {term.type                             }
     {!dim}Программа{!}           {#if term.name == ""}нет ответа{#else}{term.name                             }{/if}
-    {!dim}Цвета{!}               {#if term.colors == 16777216}truecolor{#else}{term.colors}{/if}{#if term.images == "sixel"}, sixel{/if}
+    {!dim}Цвета{!}               {#if term.colors == 16777216}truecolor{#else}{term.colors}{/if}
     {!dim}Фон{!}                 {#if term.background == ""}не определён{/if}{#if term.background == "dark"}тёмный, {term.bg_color}{/if}{#if term.background == "light"}светлый, {term.bg_color}{/if}
     {!dim}Ширина кириллицы{!}    {#if term.ambiguous == 2}2 клетки{#else}1 клетка{/if}
     {!frame}────────────────────────────────────────────────────────────────{!}

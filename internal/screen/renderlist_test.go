@@ -36,7 +36,7 @@ func listPage(s *screen.Screen, n, p int) screen.Page {
 	rows := s.List.List(nil)
 	pages := max(1, (len(rows)+p-1)/p)
 	env := &screen.Env{
-		Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Charset: "utf-8", Colors: 16},
+		Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Colors: 16},
 		List: &screen.ListValues{Page: n, Pages: pages, Empty: len(rows) == 0},
 	}
 	return screen.RenderList(s, env, theme, rows, n, p)
@@ -75,7 +75,7 @@ func TestRenderList(t *testing.T) {
 func TestListRows(t *testing.T) {
 	s := listScreen(t, "valign = \"bottom\"\n", "Top\n{#each}{row.num}{/each}\n", "a.txt")
 	env := &screen.Env{
-		Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Charset: "utf-8", Colors: 16},
+		Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Colors: 16},
 		List: &screen.ListValues{Page: 1, Pages: 1},
 	}
 	if r := screen.ListRows(s, env, theme, s.List.List(nil), 3); r != 4 {
@@ -91,7 +91,7 @@ func TestRenderListCursor(t *testing.T) {
 	s := listScreen(t, "select = { do = \"back\" }\n", "{#each}{#if row.selected}>{#else} {/if}{row.num}{/each}\n",
 		"a.txt", "b.txt", "c.txt", "d.txt")
 	env := &screen.Env{
-		Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Charset: "utf-8", Colors: 16},
+		Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Colors: 16},
 		List: &screen.ListValues{Page: 1, Pages: 2, Cursor: 1},
 	}
 	rows := s.List.List(nil)
@@ -146,7 +146,7 @@ func TestRenderListArt(t *testing.T) {
 	render := func(s *screen.Screen, n, p, cursor int) screen.Page {
 		rows := s.List.List(nil)
 		env := &screen.Env{
-			Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Charset: "utf-8", Colors: 16},
+			Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Colors: 16},
 			List: &screen.ListValues{Page: n, Pages: (len(rows) + p - 1) / p, Cursor: cursor},
 		}
 		return screen.RenderList(s, env, theme, rows, n, p)

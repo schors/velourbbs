@@ -3,4 +3,4 @@
 key = "G"
 do = "goto main"
 +++
-C|{term.fg_color}|{term.bg_color}|{term.background}|{session.theme}|E
+C|{term.bg_color}|{term.background}|{session.theme}|E
