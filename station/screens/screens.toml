@@ -5,9 +5,12 @@
 width = [80, 80]
 align = "left"
 fill = "spaces"
-more = "    Любая клавиша Дальше    Any key Next"
+more = "    Any key Next"
 time = "15:04 MST"
 zone = "UTC"
+
+[lang.ru]
+more = "    Любая клавиша Дальше"
 
 [theme.default]
 normal = "#aeaba4/#060a20"

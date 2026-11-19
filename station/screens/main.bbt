@@ -2,10 +2,10 @@
 width = [80, 132]
 [[item]]
 key = "R"
-do = "gosub ru-menu"
+do = "gosub ru/menu"
 [[item]]
 key = "E"
-do = "gosub en-menu"
+do = "gosub en/menu"
 [[item]]
 key = "Q"
 do = "logoff"

@@ -2,44 +2,44 @@
 width = [80, 132]
 [[item]]
 key = "0"
-do = "gosub ru-read"
-args = { file = "ru/guide/bbt/README.md", title = "Руководство по BBT" }
+do = "gosub read"
+args = { file = "guide/bbt/README.md", title = "Руководство по BBT" }
 [[item]]
 key = "1"
-do = "gosub ru-read"
-args = { file = "ru/guide/bbt/1-bbs-directory.md", title = "Руководство по BBT" }
+do = "gosub read"
+args = { file = "guide/bbt/1-bbs-directory.md", title = "Руководство по BBT" }
 [[item]]
 key = "2"
-do = "gosub ru-read"
-args = { file = "ru/guide/bbt/2-first-screen.md", title = "Руководство по BBT" }
+do = "gosub read"
+args = { file = "guide/bbt/2-first-screen.md", title = "Руководство по BBT" }
 [[item]]
 key = "3"
-do = "gosub ru-read"
-args = { file = "ru/guide/bbt/3-header.md", title = "Руководство по BBT" }
+do = "gosub read"
+args = { file = "guide/bbt/3-header.md", title = "Руководство по BBT" }
 [[item]]
 key = "4"
-do = "gosub ru-read"
-args = { file = "ru/guide/bbt/4-menu.md", title = "Руководство по BBT" }
+do = "gosub read"
+args = { file = "guide/bbt/4-menu.md", title = "Руководство по BBT" }
 [[item]]
 key = "5"
-do = "gosub ru-read"
-args = { file = "ru/guide/bbt/5-fields.md", title = "Руководство по BBT" }
+do = "gosub read"
+args = { file = "guide/bbt/5-fields.md", title = "Руководство по BBT" }
 [[item]]
 key = "6"
-do = "gosub ru-read"
-args = { file = "ru/guide/bbt/6-colour-depth.md", title = "Руководство по BBT" }
+do = "gosub read"
+args = { file = "guide/bbt/6-colour-depth.md", title = "Руководство по BBT" }
 [[item]]
 key = "7"
-do = "gosub ru-read"
-args = { file = "ru/guide/bbt/7-texts.md", title = "Руководство по BBT" }
+do = "gosub read"
+args = { file = "guide/bbt/7-texts.md", title = "Руководство по BBT" }
 [[item]]
 key = "8"
-do = "gosub ru-read"
-args = { file = "ru/guide/bbt/8-art.md", title = "Руководство по BBT" }
+do = "gosub read"
+args = { file = "guide/bbt/8-art.md", title = "Руководство по BBT" }
 [[item]]
 key = "9"
-do = "gosub ru-read"
-args = { file = "ru/guide/bbt/9-errors.md", title = "Руководство по BBT" }
+do = "gosub read"
+args = { file = "guide/bbt/9-errors.md", title = "Руководство по BBT" }
 [[item]]
 key = "ESC"
 do = "back"
