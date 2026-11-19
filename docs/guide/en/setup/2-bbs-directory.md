@@ -1,17 +1,16 @@
 # 2. The BBS directory
 
 A "BBS directory" holds the files of one BBS. This guide uses `/srv/velourbbs`.
-Copy the example BBS "Lamp" to it. In the source repository, run:
+Your user owns it. The BBS runs as your user too (section 5):
+it reads the files and writes its data file to this directory.
+Create the directory and copy the example BBS "Lamp" to it. In the source repository, run:
 
 ```
-sudo cp -r examples/lamp/en /srv/velourbbs
-sudo chmod -R a+rX /srv/velourbbs
+sudo install -d -o "$USER" -g "$(id -gn)" /srv/velourbbs
+cp -r examples/lamp/en/. /srv/velourbbs/
 ```
 
-`/srv/velourbbs` must not exist before the copy.
-`chmod` makes the files readable and the directories readable and searchable for each user.
-The BBS runs as the user `velourbbs` (below). This user must read the files.
-The files belong to root. Edit them as root, for example with `sudoedit`.
+Edit the files as your user. Do not use `sudo` for the files of the BBS directory.
 
 The files of Lamp:
 
@@ -31,30 +30,14 @@ The files of Lamp:
 
 To change the screens, read the [BBT guide](../bbt/README.md).
 
-## The BBS user
-
-The BBS runs as the system user `velourbbs`, without privileges.
-The user has no login and no home directory.
-The BBS writes its data file to the directory `/var/lib/velourbbs` (section 3).
-Create the user and the directory:
-
-```
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin velourbbs
-sudo install -d -o velourbbs -g velourbbs /var/lib/velourbbs
-```
-
-Run each `velourbbs` command in the BBS directory.
-Run `velourbbs check` and `velourbbs serve` as the user `velourbbs`:
-`sudo -u velourbbs /usr/local/bin/velourbbs check`. Root can read a file
-that the user `velourbbs` cannot read.
-Give the full path: `sudo` on some hosts, for example RHEL 9, does not search `/usr/local/bin`.
+Run each `velourbbs` command in the BBS directory, as your user.
 Full rules: [bbs-toml](../../../specs/bbs-toml.md), section 2.
 
 ## Result
 
 ```
 cd /srv/velourbbs
-sudo -u velourbbs /usr/local/bin/velourbbs check
+velourbbs check
 ```
 
 The command gives no output.

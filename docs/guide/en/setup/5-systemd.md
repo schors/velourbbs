@@ -3,64 +3,68 @@
 You need systemd 240 or later with cgroup v2.
 Debian 12, Ubuntu 24.04 and RHEL 9 have them by default.
 
+The BBS runs as your user, in your user manager of systemd: a user unit.
+Root is necessary only once, for the linger.
+
 ## The unit
 
 `examples/deploy/velourbbs.service`:
 ```
 [Unit]
 Description=Velour BBS
-Wants=network-online.target
-After=network-online.target
 
 [Service]
 Type=exec
 ExecStart=/usr/local/bin/velourbbs serve
 WorkingDirectory=/srv/velourbbs
 Restart=on-failure
-User=velourbbs
-ProtectSystem=strict
-ProtectHome=read-only
-StateDirectory=velourbbs
+RestartSec=5
 MemoryMax=128M
 TasksMax=64
 LimitNOFILE=1024
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 ```
 
 | Line | Meaning |
 |---|---|
 | `Description=Velour BBS` | The name in `systemctl` and in the log. |
-| `Wants=network-online.target`, `After=network-online.target` | The address of `listen` exists before the start. Else `velourbbs serve` cannot listen and stops. |
 | `Type=exec` | `systemctl start` fails when systemd cannot start the program. |
 | `ExecStart=/usr/local/bin/velourbbs serve` | The command. |
 | `WorkingDirectory=/srv/velourbbs` | The BBS directory. |
 | `Restart=on-failure` | systemd starts the BBS again after a failure. |
-| `User=velourbbs` | The BBS runs as the user of section 2, without privileges. The data file belongs to this user. |
-| `ProtectSystem=strict`, `ProtectHome=read-only` | The system and `/home` are read-only for the BBS. The BBS only reads the BBS directory, so this does not stop it. |
-| `StateDirectory=velourbbs` | `/var/lib/velourbbs/` stays writable for the BBS. The data file is there. |
+| `RestartSec=5` | systemd waits 5 s before it starts the BBS again. A user unit cannot wait for the network at boot. If the address of `listen` does not exist yet, `velourbbs serve` stops. systemd then tries again until the address exists. |
 | `MemoryMax=128M` | The memory limit. It is for the defaults of `bbs.toml`. Lamp used 6.8 MB at start, 11.9 MB with 64 sessions and 15.8 MB with 300 sessions. |
 | `TasksMax=64` | The thread limit. |
 | `LimitNOFILE=1024` | The open file limit. |
-| `WantedBy=multi-user.target` | `systemctl enable` starts the BBS at boot. |
+| `WantedBy=default.target` | `systemctl --user enable` starts the BBS when your user manager starts. |
 
 ## Install and start
+
+Turn on the linger of your user. Then your user manager starts at boot,
+also when you are not logged in:
+
+```
+sudo loginctl enable-linger "$USER"
+```
 
 In the source repository, run:
 
 ```
-sudo cp examples/deploy/velourbbs.service /etc/systemd/system/
-sudo systemctl enable --now velourbbs
+mkdir -p ~/.config/systemd/user
+cp examples/deploy/velourbbs.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now velourbbs
 ```
 
-`enable --now` loads the unit, starts the BBS and starts it at each boot.
+`enable --now` starts the BBS and starts it when your user manager starts.
 
 The BBS writes the log to the standard error. systemd writes it to the journal.
 Read the log:
 
 ```
-sudo journalctl -u velourbbs
+journalctl --user -u velourbbs
 ```
 
 ## Changes
@@ -69,44 +73,45 @@ After a change of a file in the BBS directory:
 
 ```
 cd /srv/velourbbs
-sudo chmod -R a+rX /srv/velourbbs
-sudo -u velourbbs /usr/local/bin/velourbbs check && sudo systemctl restart velourbbs
+velourbbs check && systemctl --user restart velourbbs
 ```
 
-After a change of `/etc/systemd/system/velourbbs.service`:
+After a change of `~/.config/systemd/user/velourbbs.service`:
 
 ```
-sudo systemctl daemon-reload
-sudo systemctl restart velourbbs
+systemctl --user daemon-reload
+systemctl --user restart velourbbs
 ```
 
 ## The data file
 
-The BBS writes the data file `/var/lib/velourbbs/velourbbs.jsonl` while it runs.
+The BBS writes the data file `/srv/velourbbs/velourbbs.jsonl` while it runs.
 The file is text: one JSON object on each line. Stop the BBS before you copy or edit the file.
-Use `sudo -u velourbbs cp` and `sudoedit`: the file then keeps the owner `velourbbs`.
 
 Make a backup:
 
 ```
-sudo systemctl stop velourbbs
-cd /var/lib/velourbbs
-sudo -u velourbbs cp velourbbs.jsonl velourbbs.jsonl.bak
-sudo systemctl start velourbbs
+systemctl --user stop velourbbs
+cp /srv/velourbbs/velourbbs.jsonl ~/velourbbs.jsonl.bak
+systemctl --user start velourbbs
 ```
 
-To restore it, stop the BBS and copy `velourbbs.jsonl.bak` back to `velourbbs.jsonl` the same way.
+To restore it, stop the BBS and copy the backup back to `/srv/velourbbs/velourbbs.jsonl`.
 
 A new release of `velourbbs` can change the format of the file. Then an older release
 cannot read the file. Make a backup before you install a new release.
 
-Edit the file:
+To edit the file, stop the BBS:
 
 ```
-sudo systemctl stop velourbbs
-sudoedit /var/lib/velourbbs/velourbbs.jsonl
+systemctl --user stop velourbbs
+```
+
+Edit `/srv/velourbbs/velourbbs.jsonl` in a text editor. Then run:
+
+```
 cd /srv/velourbbs
-sudo -u velourbbs /usr/local/bin/velourbbs check && sudo systemctl start velourbbs
+velourbbs check && systemctl --user start velourbbs
 ```
 
 Full rules: [data-store](../../../specs/data-store.md), section 8.
@@ -125,7 +130,7 @@ Full rules: [data-store](../../../specs/data-store.md), section 8.
 These limits do not replace the connection limits of `bbs.toml`.
 The limits of `bbs.toml` count the connections. The limits of systemd limit the process.
 
-`systemctl status velourbbs` shows the threads and the memory. Example:
+`systemctl --user status velourbbs` shows the threads and the memory. Example:
 
 ```
       Tasks: 6 (limit: 64)
@@ -141,8 +146,8 @@ and [telnet-term](../../../specs/telnet-term.md), section 10.
 
 ## Result
 
-- `systemctl is-active velourbbs` gives `active`.
-- `sudo journalctl -u velourbbs` shows the `listen` line.
+- `systemctl --user is-active velourbbs` gives `active`.
+- `journalctl --user -u velourbbs` shows the `listen` line.
 - A telnet client on port 2323 shows the screen `main`.
 
 `systemctl start` and `systemctl restart` succeed also when `velourbbs serve`

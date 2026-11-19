@@ -44,7 +44,7 @@ Details: task 4 of the [BBT guide](../bbt/4-menu.md).
 It converts a file of an art editor to the form that the BBS reads:
 
 ```
-sudo /usr/local/bin/velourbbs art import art/logo.ans screens/logo.ans
+velourbbs art import art/logo.ans screens/logo.ans
 ```
 
 Details: task 8 of the [BBT guide](../bbt/8-art.md).
@@ -76,7 +76,7 @@ Full rules: [telnet-term](../../../specs/telnet-term.md), section 10.
 
 ## Result
 
-1. In `/srv/velourbbs`, run `sudo -u velourbbs /usr/local/bin/velourbbs serve`. It writes the `listen` line.
+1. In `/srv/velourbbs`, run `velourbbs serve`. It writes the `listen` line.
 2. Connect a telnet client to the host, port 2323, for example `telnet localhost 2323`.
    The client shows the screen `main`: the header "Lamp" and the menu `A R T G`.
    Press `G` to end the session.

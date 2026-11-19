@@ -1,18 +1,16 @@
 # 2. Каталог BBS
 
 «Каталог BBS» содержит файлы одной BBS. В этом руководстве это `/srv/velourbbs`.
-Скопируй в него пример BBS «Лампа». В репозитории исходного кода выполни:
+Он принадлежит твоему пользователю. BBS тоже работает от твоего пользователя (раздел 5):
+она читает файлы и пишет свой файл данных в этот каталог.
+Создай каталог и скопируй в него пример BBS «Лампа». В репозитории исходного кода выполни:
 
 ```
-sudo cp -r examples/lamp/ru /srv/velourbbs
-sudo chmod -R a+rX /srv/velourbbs
+sudo install -d -o "$USER" -g "$(id -gn)" /srv/velourbbs
+cp -r examples/lamp/ru/. /srv/velourbbs/
 ```
 
-До копирования `/srv/velourbbs` не должен существовать.
-`chmod` делает для каждого пользователя файлы доступными для чтения,
-а каталоги — для чтения и поиска. BBS работает от пользователя `velourbbs` (ниже).
-Этот пользователь должен читать файлы.
-Файлы принадлежат root. Редактируй их от root, например с помощью `sudoedit`.
+Редактируй файлы от своего пользователя. Не используй `sudo` для файлов каталога BBS.
 
 Файлы «Лампы»:
 
@@ -32,30 +30,14 @@ sudo chmod -R a+rX /srv/velourbbs
 
 Как менять экраны, читай в [руководстве по BBT](../bbt/README.md).
 
-## Пользователь BBS
-
-BBS работает от системного пользователя `velourbbs`, без привилегий.
-У пользователя нет входа в систему и нет домашнего каталога.
-BBS пишет свой файл данных в каталог `/var/lib/velourbbs` (раздел 3).
-Создай пользователя и каталог:
-
-```
-sudo useradd --system --no-create-home --shell /usr/sbin/nologin velourbbs
-sudo install -d -o velourbbs -g velourbbs /var/lib/velourbbs
-```
-
-Запускай каждую команду `velourbbs` в каталоге BBS.
-Запускай `velourbbs check` и `velourbbs serve` от пользователя `velourbbs`:
-`sudo -u velourbbs /usr/local/bin/velourbbs check`. Root может прочитать файл,
-который пользователь `velourbbs` прочитать не может.
-Указывай полный путь: `sudo` на некоторых хостах, например в RHEL 9, не ищет в `/usr/local/bin`.
+Запускай каждую команду `velourbbs` в каталоге BBS, от своего пользователя.
 Полные правила: [bbs-toml](../../../specs/bbs-toml.md), раздел 2.
 
 ## Результат
 
 ```
 cd /srv/velourbbs
-sudo -u velourbbs /usr/local/bin/velourbbs check
+velourbbs check
 ```
 
 Команда ничего не выводит.

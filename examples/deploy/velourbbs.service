@@ -1,20 +1,15 @@
 [Unit]
 Description=Velour BBS
-Wants=network-online.target
-After=network-online.target
 
 [Service]
 Type=exec
 ExecStart=/usr/local/bin/velourbbs serve
 WorkingDirectory=/srv/velourbbs
 Restart=on-failure
-User=velourbbs
-ProtectSystem=strict
-ProtectHome=read-only
-StateDirectory=velourbbs
+RestartSec=5
 MemoryMax=128M
 TasksMax=64
 LimitNOFILE=1024
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target

@@ -44,10 +44,10 @@ The guide has these sections in this order. Each section ends with a check of th
 | Section | Content | Check |
 |---|---|---|
 | 1. The program | Build `velourbbs` with Go, at least the version of `go.mod`, in a git checkout of a release tag without changes: then `bbs.version` shows the tag ([session-fields](session-fields.md), section 3.4). Install it to `/usr/local/bin/velourbbs`. | `velourbbs` without arguments prints the usage. |
-| 2. The BBS directory | Copy the example BBS Lamp to `/srv/velourbbs`. Its files: [example-style](example-style.md), section 3. Make the files readable and the directories readable and searchable for each user: `chmod -R a+rX /srv/velourbbs`. Run each `velourbbs` command in this directory ([bbs-toml](bbs-toml.md), section 2). Create the system user `velourbbs` with no login and no home directory, and its data directory: `install -d -o velourbbs -g velourbbs /var/lib/velourbbs`. The host runs as this user and writes the data file there ([data-store](data-store.md)). The guide runs `velourbbs check` and `velourbbs serve` as this user: `sudo -u velourbbs /usr/local/bin/velourbbs check`. The full path is necessary: `sudo` of RHEL 9 does not search `/usr/local/bin`. For the screens, the guide refers to the BBT guide. | `sudo -u velourbbs /usr/local/bin/velourbbs check` gives no output. |
-| 3. `bbs.toml` | The key `[bbs] name`. The keys of `[telnet]` and `[limits]` in groups: the address (`listen`), the connection limits (`max_conns`, `max_conns_per_addr`, `max_connects_per_min`, `allow`), the PROXY protocol (`proxy`) and the timeouts. For each group: what the keys do and when the sysop changes them. The key `[store] path`: the data file, `/var/lib/velourbbs/velourbbs.jsonl` in the example file. For `listen`, the guide shows only the host part: empty for all addresses, or one address. An example file without `proxy` and without `allow`. Full rules: [bbs-toml](bbs-toml.md), section 3. | `sudo -u velourbbs /usr/local/bin/velourbbs check` gives no output. |
+| 2. The BBS directory | Create the BBS directory `/srv/velourbbs` that belongs to the user of the sysop: `sudo install -d -o "$USER" -g "$(id -gn)" /srv/velourbbs`. Copy the example BBS Lamp to it as this user. Its files: [example-style](example-style.md), section 3. The sysop edits the files and runs each `velourbbs` command in this directory as this user ([bbs-toml](bbs-toml.md), section 2). The host runs as the same user (section 5) and writes the data file to this directory ([data-store](data-store.md)). For the screens, the guide refers to the BBT guide. | `velourbbs check` gives no output. |
+| 3. `bbs.toml` | The key `[bbs] name`. The keys of `[telnet]` and `[limits]` in groups: the address (`listen`), the connection limits (`max_conns`, `max_conns_per_addr`, `max_connects_per_min`, `allow`), the PROXY protocol (`proxy`) and the timeouts. For each group: what the keys do and when the sysop changes them. The key `[store] path`: the data file; the guide keeps the default `velourbbs.jsonl` in the BBS directory. For `listen`, the guide shows only the host part: empty for all addresses, or one address. An example file without `proxy` and without `allow`. Full rules: [bbs-toml](bbs-toml.md), section 3. | `velourbbs check` gives no output. |
 | 4. The commands | One short part for each command, with the task of the sysop. `velourbbs check`: after each change, before a restart ([screen-render](screen-render.md), section 3.1). `velourbbs preview` and `velourbbs preview --keys`: look at a screen and test its keys without a telnet client ([screen-render](screen-render.md), section 3.2). `velourbbs art import`: convert art from an art editor. `velourbbs serve`: the log, the exit statuses, the stop, and the read of the files only at start ([telnet-term](telnet-term.md), section 10). It creates the data file. For the details of `preview`, `preview --keys` and `art import`, the guide refers to tasks 1, 4 and 8 of the BBT guide. | `velourbbs serve` writes the `listen` line. A telnet client on port 2323 shows the screen `main`. |
-| 5. systemd | Install the unit to `/etc/systemd/system/velourbbs.service`. Start and enable it. Read the log with `journalctl -u velourbbs`. After a change of a file of the BBS directory: `chmod -R a+rX /srv/velourbbs`, `sudo -u velourbbs /usr/local/bin/velourbbs check`, then `systemctl restart velourbbs`. After a change of the unit: `systemctl daemon-reload`, then `systemctl restart velourbbs`. The meaning of each line of the unit. The rules of section 5 for the limits. The backup and the edit of the data file, with `systemctl stop velourbbs` ([data-store](data-store.md), section 8): copy it with `sudo -u velourbbs cp`, edit it with `sudoedit`. Both keep the owner `velourbbs`. How to read the memory and its peak in `systemctl status velourbbs`. systemd 255 or later shows the peak. With an older systemd, the sysop reads the memory under load. | `systemctl is-active velourbbs` gives `active`. The log has the `listen` line. A telnet client on port 2323 shows the screen `main`. |
+| 5. systemd | The host runs as the user of the sysop, in the user manager of systemd. Turn on the linger once: `sudo loginctl enable-linger "$USER"`. Then the user manager starts at boot, also without a login. Install the unit to `~/.config/systemd/user/velourbbs.service`. Run `systemctl --user daemon-reload` and `systemctl --user enable --now velourbbs`. Read the log with `journalctl --user -u velourbbs`. After a change of a file of the BBS directory: `velourbbs check`, then `systemctl --user restart velourbbs`. After a change of the unit: `systemctl --user daemon-reload`, then `systemctl --user restart velourbbs`. The meaning of each line of the unit. The rules of section 5 for the limits. The backup and the edit of the data file, with `systemctl --user stop velourbbs` ([data-store](data-store.md), section 8). How to read the memory and its peak in `systemctl --user status velourbbs`. systemd 255 or later shows the peak. With an older systemd, the sysop reads the memory under load. | `systemctl --user is-active velourbbs` gives `active`. The log has the `listen` line. A telnet client on port 2323 shows the screen `main`. |
 
 - The server listens on the default port 2323. The guide does not show other ports.
 - With `Type=exec`, `systemctl start` and `systemctl restart` succeed also when
@@ -55,23 +55,21 @@ The guide has these sections in this order. Each section ends with a check of th
 
 ## 5. The systemd unit
 
-The unit has these lines:
+The unit is a user unit: the host runs as the user of the sysop (section 4, part 2).
+It has these lines:
 
 | Section | Line | Reason |
 |---|---|---|
 | `[Unit]` | `Description=Velour BBS` | The name in `systemctl` and in the log. |
-| `[Unit]` | `Wants=network-online.target`, `After=network-online.target` | The address of `listen` exists before the start. Else `listen` fails and the host exits ([telnet-term](telnet-term.md), section 10). |
 | `[Service]` | `Type=exec` | `systemctl start` fails when systemd cannot start the program. |
 | `[Service]` | `ExecStart=/usr/local/bin/velourbbs serve` | The command. |
 | `[Service]` | `WorkingDirectory=/srv/velourbbs` | The BBS directory ([bbs-toml](bbs-toml.md), section 2). |
 | `[Service]` | `Restart=on-failure` | systemd starts the host again after a failure. |
-| `[Service]` | `User=velourbbs` | The host runs as the user of section 4, part 2, without privileges. The data file belongs to this user. |
-| `[Service]` | `ProtectSystem=strict`, `ProtectHome=read-only` | The system and `/home` are read-only for the host. The host only reads the BBS directory, so this does not stop it. |
-| `[Service]` | `StateDirectory=velourbbs` | `/var/lib/velourbbs/` stays writable for the host with `ProtectSystem=strict`. The data file is there ([data-store](data-store.md)). |
+| `[Service]` | `RestartSec=5` | A user unit cannot wait for `network-online.target` of the system manager. When the address of `listen` does not exist yet, the host exits ([telnet-term](telnet-term.md), section 10), and systemd starts it again after 5 s. With the default of 100 ms, the start limit of systemd (5 starts in 10 s) stops the restarts. |
 | `[Service]` | `MemoryMax=128M` | The memory limit for the defaults of [bbs-toml](bbs-toml.md). The host with Lamp used 6.8 MB at start, 11.9 MB with 64 sessions and 15.8 MB with 300 sessions. |
 | `[Service]` | `TasksMax=64` | The thread limit. |
 | `[Service]` | `LimitNOFILE=1024` | The open file limit. |
-| `[Install]` | `WantedBy=multi-user.target` | `systemctl enable` starts the host at boot. |
+| `[Install]` | `WantedBy=default.target` | `systemctl --user enable` starts the host when the user manager starts. |
 
 - The log goes to the journal: the host writes it to the standard error
   ([telnet-term](telnet-term.md), section 10).
@@ -88,6 +86,8 @@ The unit has these lines:
 
 - systemd 240 or later with cgroup v2. `Type=exec` needs systemd 240.
   `MemoryMax` needs cgroup v2.
+- The user manager has the controllers `memory` and `pids` (`Delegate=` of `user@.service`).
+  `MemoryMax` and `TasksMax` of a user unit need them.
 - Debian 12, Ubuntu 24.04 and RHEL 9 have them by default.
 
 ## 6. Acceptance
@@ -95,7 +95,7 @@ The unit has these lines:
 - The test `TestGuideFileBlocks` in `cmd/velourbbs` also reads the parts
   of `docs/guide/en/setup/` and `docs/guide/ru/setup/`.
 - `examples/deploy/velourbbs.service` has the lines of section 5 and no other lines.
-- `systemd-analyze verify` gives no error for a copy of `examples/deploy/velourbbs.service`
+- `systemd-analyze --user verify` gives no error for a copy of `examples/deploy/velourbbs.service`
   whose `ExecStart` has the path of a built `velourbbs`.
 - Each section of section 4 is in both languages, in the same order.
 

@@ -81,13 +81,12 @@ proxy = ["127.0.0.1"]
 `path` of `[store]` is the data file. The BBS keeps its data in this file between sessions.
 The default is `"velourbbs.jsonl"`. A relative path is relative to the BBS directory.
 
-Set it to `"/var/lib/velourbbs/velourbbs.jsonl"`. The user `velourbbs` can write
-only to this directory (section 5). `velourbbs serve` creates the file.
-The directory must exist (section 2).
+`velourbbs serve` creates the file. The directory of the file must exist.
+Keep the default: the file is then in the BBS directory, and your user can write to it.
 
 ## An example file
 
-This file has the defaults, except `path`. It sets each key except `allow` and `proxy`:
+This file has the defaults. It sets each key except `allow` and `proxy`:
 
 ```toml
 [bbs]
@@ -105,15 +104,15 @@ idle_timeout = 600
 output_timeout = 60
 
 [store]
-path = "/var/lib/velourbbs/velourbbs.jsonl"
+path = "velourbbs.jsonl"
 ```
 
 Write it to `/srv/velourbbs/bbs.toml`. Then change the values that you need.
-After each change, run `sudo chmod -R a+rX /srv/velourbbs` and `sudo -u velourbbs /usr/local/bin/velourbbs check`.
+After each change, run `velourbbs check`.
 
 Full rules: [bbs-toml](../../../specs/bbs-toml.md), section 3,
 and [data-store](../../../specs/data-store.md).
 
 ## Result
 
-`sudo -u velourbbs /usr/local/bin/velourbbs check` gives no output.
+`velourbbs check` gives no output.

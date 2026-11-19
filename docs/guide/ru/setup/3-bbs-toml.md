@@ -81,13 +81,12 @@ proxy = ["127.0.0.1"]
 `path` таблицы `[store]` — файл данных. BBS хранит в этом файле данные между сеансами.
 По умолчанию `"velourbbs.jsonl"`. Относительный путь отсчитывается от каталога BBS.
 
-Задай `"/var/lib/velourbbs/velourbbs.jsonl"`. Пользователь `velourbbs` может писать
-только в этот каталог (раздел 5). `velourbbs serve` создаёт файл.
-Каталог должен существовать (раздел 2).
+`velourbbs serve` создаёт файл. Каталог файла должен существовать.
+Оставь значение по умолчанию: тогда файл лежит в каталоге BBS, и твой пользователь может в него писать.
 
 ## Пример файла
 
-Этот файл содержит значения по умолчанию, кроме `path`. Он задаёт каждый ключ, кроме `allow` и `proxy`:
+Этот файл содержит значения по умолчанию. Он задаёт каждый ключ, кроме `allow` и `proxy`:
 
 ```toml
 [bbs]
@@ -105,15 +104,15 @@ idle_timeout = 600
 output_timeout = 60
 
 [store]
-path = "/var/lib/velourbbs/velourbbs.jsonl"
+path = "velourbbs.jsonl"
 ```
 
 Запиши его в `/srv/velourbbs/bbs.toml`. Затем измени нужные значения.
-После каждого изменения выполни `sudo chmod -R a+rX /srv/velourbbs` и `sudo -u velourbbs /usr/local/bin/velourbbs check`.
+После каждого изменения выполни `velourbbs check`.
 
 Полные правила: [bbs-toml](../../../specs/bbs-toml.md), раздел 3,
 и [data-store](../../../specs/data-store.md).
 
 ## Результат
 
-`sudo -u velourbbs /usr/local/bin/velourbbs check` ничего не выводит.
+`velourbbs check` ничего не выводит.

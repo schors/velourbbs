@@ -121,8 +121,8 @@ it changes while the host runs.
   ([release-deploy](release-deploy.md), section 5). Else a connect starts the host again.
 - The home BBS keeps its data file outside the releases ([release-deploy](release-deploy.md),
   section 4.5).
-- The setup guide keeps the data file in the state directory of systemd
-  ([setup-guide](setup-guide.md), section 5).
+- The setup guide keeps the data file in the BBS directory
+  ([setup-guide](setup-guide.md), section 4).
 
 ## 9. Libraries
 

@@ -45,7 +45,7 @@ velourbbs preview main --keys A,ESC,G
 Она переводит файл редактора арта в форму, которую читает BBS:
 
 ```
-sudo /usr/local/bin/velourbbs art import art/logo.ans screens/logo.ans
+velourbbs art import art/logo.ans screens/logo.ans
 ```
 
 Подробно: задача 8 [руководства по BBT](../bbt/8-art.md).
@@ -77,7 +77,7 @@ time=2026-11-16T09:42:51.231Z level=INFO msg=close addr=127.0.0.1 reason=logoff 
 
 ## Результат
 
-1. В `/srv/velourbbs` выполни `sudo -u velourbbs /usr/local/bin/velourbbs serve`. Она пишет строку `listen`.
+1. В `/srv/velourbbs` выполни `velourbbs serve`. Она пишет строку `listen`.
 2. Подключи telnet-клиент к хосту, порт 2323, например `telnet localhost 2323`.
    Клиент показывает экран `main`: шапку «Лампа» и меню `A R T G`.
    Нажми `G`, чтобы завершить сеанс.
