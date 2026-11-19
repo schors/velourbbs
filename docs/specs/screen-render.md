@@ -37,9 +37,10 @@ The host renders a screen page by page. A session holds one page in memory.
 
 ### 3.1. `velourbbs check`
 
-- `velourbbs check` reads `bbs.toml`, `screens/screens.toml` and each screen file in `screens/`.
+- `velourbbs check` reads `bbs.toml`, `screens/screens.toml` and each screen file in `screens/`
+  and in the directory of each language ([session-language](session-language.md), section 3).
   It checks each screen with the fragments, the art and the content files that the screen uses
-  ([file-view](file-view.md), section 7).
+  ([file-view](file-view.md), section 7), in each screen set ([session-language](session-language.md), section 6).
 - It warns about a fragment or an art file that no screen uses.
   After the limit error of a body ([bbt-format](bbt-format.md), section 9),
   the warning can be false: the load does not read the rest of the screen.

@@ -7,6 +7,9 @@ Related parts: [screens-toml](screens-toml.md), [bbt-format](bbt-format.md), [me
 [file-view](file-view.md), [session-fields](session-fields.md), [session](session.md),
 [screen-render](screen-render.md) and [home-bbs](home-bbs.md).
 
+The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
+[bbt-guide](bbt-guide.md), section 4.
+
 ## 1. Goal
 
 A guest chooses a language. Each screen and each engine text then shows that language.
@@ -20,9 +23,9 @@ for example a logo, is one file for all languages.
 - The "languages of the BBS" are the tables `[lang.<code>]` of `screens/screens.toml`
   ([screens-toml](screens-toml.md), section 3.5). A BBS without these tables has no languages.
 - The "session language" is a language of the BBS, or "no language".
-- A "common file" is a file in `screens/` or `content/`.
-  A "language file" is a file in `screens/<code>/` or `content/<code>/`,
+- A "language file" is a file in `screens/<code>/` or `content/<code>/`,
   where `<code>` is a language of the BBS.
+  A "common file" is another file in `screens/` or `content/`.
 
 ## 3. Files
 
@@ -37,8 +40,8 @@ for example a logo, is one file for all languages.
   [bbt-format](bbt-format.md), section 2, and [file-view](file-view.md), section 2.
 - The load ignores a subdirectory and a `screens.toml` in `screens/<code>/`,
   as it ignores each other file that section 2 of [bbt-format](bbt-format.md) does not name.
-- A directory in `screens/` whose name is not a language of the BBS gives a warning
-  of `velourbbs check`: `screens/rus:1:1: warning: "rus" is not a language of [lang]`.
+- In a BBS with languages, a directory in `screens/` whose name is not a language of the BBS
+  gives a warning of `velourbbs check`: `screens/rus:1:1: warning: "rus" is not a language of [lang]`.
 
 Example:
 
@@ -99,19 +102,26 @@ The item `R` runs `lang ru`. The host shows `main` again: now `screens/ru/main.b
   - `lang <code>` with a code that is not a language of the BBS: an invalid `do`
     ([bbt-format](bbt-format.md), section 8.4);
   - `[screen] lang` that is not a language of the BBS ([screens-toml](screens-toml.md), section 3.1);
-  - a screen name with a language file and with no file in the screen set of another language
-    of the BBS. The error has the position 1:1 of the language file:
-    `screens/ru/news.bbt:1:1: no screen "news" for language "en"`;
-  - two files of one screen name with different arguments ([bbt-format](bbt-format.md), section 8.5).
-    The first file is the common file, else the file of the first language in the order of the codes.
-    Each other file with other arguments gives an error at its position 1:1:
-    `screens/ru/read.bbt:1:1: arguments differ from screens/en/read.bbt`.
+  - a screen name of a screen set that is not in the screen set of each language of the BBS,
+    or that has other arguments there ([bbt-format](bbt-format.md), section 8.5).
+    The action `lang` shows the frames of the stack in the new screen set, so they must fit.
+    The order of the sets is no language, then the codes in order. The error has the position 1:1
+    of the screen file in the first set, with the suffix of the other set:
+    `screens/ru/news.bbt:1:1: no screen "news" (language "en")`,
+    `screens/en/read.bbt:1:1: arguments differ (language "ru")`.
+- The values of an argument of a file screen ([file-view](file-view.md), section 3.1) are the values
+  of its `goto` and `gosub` in all screen sets. Each screen set loads and checks each value
+  with its own search. An error is an error of the item, with the suffix of the set:
+  `screens/ru/texts.bbt:2:1: item "3": args: file: content file "x.md" does not exist (language "en")`.
 - The check reports an equal diagnostic once.
 - An error of a common file that the check finds only in some screen sets ends with
   ` (language "<code>")` or ` (no language)`, one diagnostic for each screen set.
   Example: `screens/about.bbt:2:1: item "M": do: unknown screen "menu" (no language)`.
 - The warning "no screen uses this file" ([screen-render](screen-render.md), section 3.1)
   applies to a fragment or an art file that no screen set uses.
+  A common screen that no screen set holds gives the warning `no screen set uses this file`.
+  Example: `screens/main.bbt` next to `screens/en/main.bbt` and `screens/ru/main.bbt`
+  with `[screen] lang`.
 
 ## 7. Engine texts
 
@@ -129,17 +139,22 @@ An "engine text" is a text that the host shows and the sysop does not write.
 
 ### 7.1. Dictionary format
 
-A dictionary is a subset of the PO format of GNU gettext:
+A dictionary is a subset of the PO format of GNU gettext.
+The target implementations are GNU gettext `msgfmt` and `msgmerge`, and Poedit:
+the subset accepts the files that they write for the engine texts.
 
 - The file is UTF-8.
-- A line that starts with `#` is a comment. An empty line ends an entry.
-- An entry has `msgid "<text>"` and `msgstr "<text>"`. A line with only a string `"<text>"`
-  continues the string of the line before it.
+- A line that starts with `#` is a comment. This includes the comments `#,`, `#:`, `#|` and `#~`.
+- An entry is `msgid "<text>"`, then `msgstr "<text>"`. The next `msgid` starts the next entry.
+  Empty lines and comments can be between entries.
+- A line with only a string `"<text>"` continues the string of the line before it.
 - A string has the escapes `\\`, `\"`, `\n` and `\t`.
 - The entry with an empty `msgid` is the header. The host ignores it.
-- The host ignores an entry with the flag `fuzzy` (the comment `#, fuzzy`), as `msgfmt` does.
-  An empty `msgstr` is no translation.
-- These are errors: another keyword (`msgctxt`, `msgid_plural`, `msgstr[<n>]`), another escape,
+- The host ignores an entry with the flag `fuzzy` in its `#,` comment, as `msgfmt` does.
+  Example: `#, fuzzy, c-format`. An empty `msgstr` is no translation.
+- These are errors: another keyword (`msgctxt`, `msgid_plural`, `msgstr[<n>]`), each other line,
+  a string without its end quote or with text after it, a continued string with no string before it,
+  a `msgid` without `msgstr`, a `msgstr` without `msgid`, another escape,
   invalid UTF-8, a duplicate `msgid`, a `msgid` that is not an engine text,
   and a translation that breaks a rule of the engine text.
   The rules of a More row are the rules of `more` ([screens-toml](screens-toml.md), section 3.1).
@@ -179,7 +194,8 @@ The text of the More row is the first of:
 | Package | Content |
 |---|---|
 | `internal/config` | `[screen] lang` and `[lang.<code>]` with their checks. |
-| `internal/bbt` | The search of section 4, the screen sets and the checks of section 6. |
+| `internal/bbt` | The search of section 4 and the load of the screens of one screen set. |
+| `internal/bbs` | The screen sets in the model and the checks of section 6. |
 | `internal/i18n` | The dictionaries in the binary, their parser and the engine texts. |
 | `internal/menu` | The session language, the action `lang` and the More text of section 7.2. |
 | `internal/screen` | The field `session.lang`. |

@@ -4,8 +4,8 @@ This specification defines the BBT guide: the guide to the screen files for the 
 and the screen author.
 Related parts: [bbt-format](bbt-format.md), [art-format](art-format.md), [file-view](file-view.md),
 [art-import](art-import.md), [screens-toml](screens-toml.md), [menu-nav](menu-nav.md)
-[screen-render](screen-render.md), [telnet-term](telnet-term.md), [session-fields](session-fields.md)
-and [example-style](example-style.md).
+[screen-render](screen-render.md), [telnet-term](telnet-term.md), [session-fields](session-fields.md),
+[session-language](session-language.md) and [example-style](example-style.md).
 
 ## 1. Goal
 

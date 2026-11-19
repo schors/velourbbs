@@ -73,7 +73,8 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 
 - `setup` shows `0-5` in place of `0-9`.
 - The More row of each language is in `[lang.<lang>] more`: `Любая клавиша Дальше`
-  and `Any key Next`, with the indent of the screens.
+  and `Any key Next`, with the indent of the screens. The common screens keep the bilingual
+  `[screen] more`: `Любая клавиша Дальше    Any key Next`.
 - A file screen shows `B` and `Пробел` (`Space`) only where they work
   (`when` and `{#if item.<KEY>}`). Paging keys are on the left, the other keys flush right.
 

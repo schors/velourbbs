@@ -72,7 +72,8 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
   ([session-language](session-language.md), section 5). Then the host shows the screen of the top frame
   again from the screen set of the new language (section 5). The stack does not change.
   A file screen shows the page of the frame (section 5.1).
-- `logoff` shows `screens/goodbye.bbt` if it exists. Then the host disconnects.
+- `logoff` shows the screen `goodbye` if it exists ([session-language](session-language.md), section 4).
+  Then the host disconnects.
   The host does not wait for a key after the last page of `goodbye`.
 
 ### 4.1. Navigation stack
@@ -134,7 +135,8 @@ The host shows a file screen ([file-view](file-view.md), section 3) in these ste
 ### 5.2. Stop
 
 When the host stops ([telnet-term](telnet-term.md), section 10.2), it shows
-`screens/shutdown.bbt` to each open session if the file exists. Then it disconnects.
+the screen `shutdown` to each open session if it exists
+([session-language](session-language.md), section 4). Then it disconnects.
 
 - The host renders `shutdown` with the size of the current screen and shows its first page.
   It does not wait for a key.
