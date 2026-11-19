@@ -1,10 +1,16 @@
+// Package menu runs the session of the menus.
+// Specification: docs/specs/menu-nav.md, sections 4 and 5, and docs/specs/session.md, section 4.
 package menu
 
 import (
+	"context"
 	"fmt"
 	"iter"
+	"net/netip"
 	"slices"
+	"time"
 
+	"github.com/schors/velourbbs/internal/bbs"
 	"github.com/schors/velourbbs/internal/config"
 	"github.com/schors/velourbbs/internal/key"
 	"github.com/schors/velourbbs/internal/screen"
@@ -19,8 +25,8 @@ type Terminal interface {
 	Term() screen.Term
 	// Key waits for the next key of the input queue: a key name of bbt-format,
 	// section 8.1, except ANY, or one other character: a character without a key name.
-	// An error ends the session.
-	Key() (string, error)
+	// ctx is the context of the session (session, section 6). An error ends the session.
+	Key(ctx context.Context) (string, error)
 	// Page shows the page p.
 	Page(p screen.Page) error
 }
@@ -44,52 +50,62 @@ func (noEvents) Screen(string) error         { return nil }
 func (noEvents) KeyEvent(string, bool) error { return nil }
 func (noEvents) Logoff() error               { return nil }
 
-// Values gives the values of the session and BBS fields (session-fields, section 2).
+// Values gives the values of the session and BBS fields of the session ss
+// (session-fields, section 2), except session.theme: the session gives it from its theme choice.
 // The session calls it once for each screen and for each page of a file screen.
-type Values func() screen.SessionValues
+type Values func(ss *Session) screen.SessionValues
 
-// session is the state of Run.
-type session struct {
+// Session is the session object (session, section 4): the state of one session.
+// The goroutine of the session changes the state. A field that another goroutine reads
+// needs a lock.
+type Session struct {
+	Addr     netip.Addr // the client address; not valid without a server
+	Accepted time.Time  // the accept time; zero without a server
+
+	m      *bbs.Model
 	t      Terminal
 	ev     Events
-	cfg    config.Config
 	values Values
 	choice config.ThemeChoice // the theme choice of the session
+	stack  []*frame           // the navigation stack (section 4.1)
 }
 
-// Run runs a session from the screen start with the arguments args until logoff (section 5).
-// screens is the result of a load without errors and of Check, start passes
-// CheckTarget and args pass CheckArgs. values gives the session and BBS fields
-// except session.theme: Run gives it from the theme choice.
-// Run returns nil after logoff, else the first error of t unchanged.
-// It also returns the theme choice of the session at its end, for Shutdown.
-func Run(t Terminal, cfg config.Config, screens map[string]*screen.Screen, start string, args map[string]string,
-	values Values) (config.ThemeChoice, error) {
+// New makes a session on the terminal t with the model m. It starts at the screen start
+// with the arguments args and the theme choice choice. start passes bbs.CheckTarget
+// and args pass bbs.CheckArgs. values gives the session and BBS fields.
+func New(m *bbs.Model, t Terminal, start string, args map[string]string, choice config.ThemeChoice,
+	values Values) *Session {
 	ev, ok := t.(Events)
 	if !ok {
 		ev = noEvents{}
 	}
-	ss := &session{t: t, ev: ev, cfg: cfg, choice: cfg.ThemeChoice}
-	ss.values = func() screen.SessionValues {
-		sv := values()
-		sv.Theme = string(ss.choice)
-		return sv
+	return &Session{
+		m: m, t: t, ev: ev, values: values, choice: choice,
+		stack: []*frame{{s: m.Screens[start], args: args, page: 1}},
 	}
-	err := ss.loop(screens, start, args)
-	return ss.choice, err
 }
 
-// loop runs the actions of the session from the screen start until logoff (section 4).
-func (ss *session) loop(screens map[string]*screen.Screen, start string, args map[string]string) error {
-	st := []*frame{{s: screens[start], args: args, page: 1}}
+// sessionValues gives the session and BBS fields with session.theme.
+func (ss *Session) sessionValues() screen.SessionValues {
+	sv := ss.values(ss)
+	sv.Theme = string(ss.choice)
+	return sv
+}
+
+// Run runs the session until logoff (section 5). ctx is the context of the session
+// (session, section 6): Run gives it to each wait for a key.
+// Run returns nil after logoff, else the first error of the terminal unchanged.
+// Call it once.
+func (ss *Session) Run(ctx context.Context) error {
+	screens := ss.m.Screens
 	for {
-		it, err := ss.run(st[len(st)-1])
+		it, err := ss.run(ctx, ss.stack[len(ss.stack)-1])
 		if err != nil {
 			return err
 		}
 		switch it.Do.Op {
 		case screen.Goto, screen.Gosub, screen.Back, screen.Top:
-			st = nav(st, it.Do, screens[it.Do.Screen])
+			ss.stack = nav(ss.stack, it.Do, screens[it.Do.Screen])
 			continue
 		case screen.Theme: // show the screen of the top frame again
 			ss.choice = config.ThemeChoice(it.Do.Theme)
@@ -102,7 +118,7 @@ func (ss *session) loop(screens map[string]*screen.Screen, start string, args ma
 			return err
 		}
 		if g, ok := screens["goodbye"]; ok {
-			_, err = ss.show(g, nil)
+			_, err = ss.show(ctx, g, nil)
 		}
 		return err
 	}
@@ -139,18 +155,18 @@ func nav(st []*frame, a screen.Action, t *screen.Screen) []*frame {
 	return st
 }
 
-// Shutdown shows the first page of the screen shutdown on t, when it exists,
-// with the size of t, the theme choice choice of the session and without a key wait (section 5.2).
-// It gives the error of t. screens is the result of a load without errors and of Check.
-func Shutdown(t Terminal, cfg config.Config, screens map[string]*screen.Screen, choice config.ThemeChoice,
-	values Values) error {
-	s, ok := screens["shutdown"]
+// Shutdown shows the first page of the screen shutdown, when it exists, with the size
+// of the terminal, the theme choice of the session and without a key wait (section 5.2).
+// It gives the error of the terminal.
+func (ss *Session) Shutdown() error {
+	s, ok := ss.m.Screens["shutdown"]
 	if !ok {
 		return nil
 	}
-	cfg.ThemeChoice = choice
-	for p := range Pages(cfg, s, t.Term(), nil, values()) {
-		return t.Page(p)
+	cfg := ss.m.Config
+	cfg.ThemeChoice = ss.choice
+	for p := range Pages(cfg, s, ss.t.Term(), nil, ss.values(ss)) {
+		return ss.t.Page(p)
 	}
 	return nil
 }
@@ -158,20 +174,21 @@ func Shutdown(t Terminal, cfg config.Config, screens map[string]*screen.Screen, 
 // run shows the screen of the frame f and gives the item that leaves it.
 // A page action or a theme action of a file screen shows a page and waits for keys again.
 // A file screen starts at the page of f and sets the page of f to each shown page (section 5.1).
-func (ss *session) run(f *frame) (screen.Item, error) {
+func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 	s := f.s
 	if s.FileScreen == nil {
-		items, err := ss.show(s, f.args)
+		items, err := ss.show(ctx, s, f.args)
 		if err != nil {
 			return screen.Item{}, err
 		}
-		return ss.next(items)
+		return ss.next(ctx, items)
 	}
 	if err := ss.ev.Screen(s.Name); err != nil {
 		return screen.Item{}, err
 	}
 	term := ss.t.Term()
-	v := newFileView(s, term, f.args, ss.cfg.SessionTheme(ss.choice, term), ss.values)
+	cfg := ss.m.Config
+	v := newFileView(s, term, f.args, cfg.SessionTheme(ss.choice, term), ss.sessionValues)
 	n := min(f.page, len(v.pages))
 	for {
 		f.page = n
@@ -179,14 +196,14 @@ func (ss *session) run(f *frame) (screen.Item, error) {
 		if err := ss.t.Page(p); err != nil {
 			return screen.Item{}, err
 		}
-		it, err := ss.next(items)
+		it, err := ss.next(ctx, items)
 		if err != nil || !it.Do.Op.IsPage() && it.Do.Op != screen.Theme {
 			return it, err
 		}
 		switch it.Do.Op {
 		case screen.Theme:
 			ss.choice = config.ThemeChoice(it.Do.Theme)
-			v.setTheme(ss.cfg.SessionTheme(ss.choice, term))
+			v.setTheme(cfg.SessionTheme(ss.choice, term))
 		case screen.PageNext:
 			n = min(n+1, len(v.pages))
 		case screen.PagePrev:
@@ -202,15 +219,16 @@ func (ss *session) run(f *frame) (screen.Item, error) {
 // show shows the screen s, not a file screen, with the arguments args: it renders s
 // and shows its pages (section 5). After each page with a More row, it waits for any key.
 // It gives the enabled items.
-func (ss *session) show(s *screen.Screen, args map[string]string) (map[string]screen.Item, error) {
+func (ss *Session) show(ctx context.Context, s *screen.Screen, args map[string]string) (map[string]screen.Item, error) {
 	if err := ss.ev.Screen(s.Name); err != nil {
 		return nil, err
 	}
-	env, items := Enabled(s, screen.Env{Term: ss.t.Term(), Args: args, Session: ss.values()})
+	cfg := ss.m.Config
+	env, items := Enabled(s, screen.Env{Term: ss.t.Term(), Args: args, Session: ss.sessionValues()})
 	first := true
-	for p := range screen.Render(s, env, ss.cfg.SessionTheme(ss.choice, env.Term), ss.cfg.More) {
+	for p := range screen.Render(s, env, cfg.SessionTheme(ss.choice, env.Term), cfg.More) {
 		if !first {
-			k, err := ss.t.Key()
+			k, err := ss.t.Key(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -256,7 +274,7 @@ type fileView struct {
 	args   map[string]string
 	theme  map[string]screen.Style
 	values screen.FileValues // the values of page 1 with file.pages 1
-	sv     Values
+	sv     func() screen.SessionValues
 	layout screen.FileLayout
 	pages  []screen.FilePage
 	h      int // the area height H
@@ -264,7 +282,7 @@ type fileView struct {
 
 // newFileView lays out the file of the file screen s into file pages.
 func newFileView(s *screen.Screen, term screen.Term, args map[string]string, theme map[string]screen.Style,
-	sv Values) *fileView {
+	sv func() screen.SessionValues) *fileView {
 	f := s.FileScreen
 	c := f.Content(args)
 	v := &fileView{s: s, term: term, args: args, theme: theme, sv: sv}
@@ -313,9 +331,9 @@ func Enabled(s *screen.Screen, env screen.Env) (*screen.Env, map[string]screen.I
 
 // next waits for keys until one matches an enabled item (section 3.3)
 // and gives this item.
-func (ss *session) next(items map[string]screen.Item) (screen.Item, error) {
+func (ss *Session) next(ctx context.Context, items map[string]screen.Item) (screen.Item, error) {
 	for {
-		k, err := ss.t.Key()
+		k, err := ss.t.Key(ctx)
 		if err != nil {
 			return screen.Item{}, err
 		}

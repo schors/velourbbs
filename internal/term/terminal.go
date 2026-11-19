@@ -1,10 +1,10 @@
 package term
 
 import (
+	"context"
 	"errors"
 	"io"
 	"os"
-	"sync/atomic"
 	"time"
 
 	"github.com/schors/velourbbs/internal/line"
@@ -42,11 +42,12 @@ const readSize = 4096
 // ErrIdle tells that no key arrived within the idle timeout.
 var ErrIdle = errors.New("term: idle timeout")
 
-// ErrStop tells that the host stops (telnet-term, section 10.2).
+// ErrStop tells that the host stops (telnet-term, section 10.2): the context of a wait ended
+// (session, section 6).
 var ErrStop = errors.New("term: stop")
 
 // Terminal is the terminal of menu-nav, section 8, on a telnet connection.
-// Probe gives it. One goroutine uses it. Another goroutine can call Stop.
+// Probe gives it. One goroutine uses it.
 type Terminal struct {
 	c       Conn
 	to      Timeouts
@@ -61,22 +62,12 @@ type Terminal struct {
 	mode    bool      // the bracketed paste mode is on
 	out     []byte    // the replies that wait for the next read
 	buf     []byte    // the read buffer
-	stopped atomic.Bool
 }
 
 // queued is a key of the queue with its paste mark.
 type queued struct {
 	k     string
 	paste bool
-}
-
-// Stop makes Key give ErrStop: a Key that waits for the input ends,
-// and each later Key ends at once (section 10.2). A Page that writes completes.
-func (t *Terminal) Stop() {
-	t.stopped.Store(true)
-	// The read checks stopped after it sets its deadline, so a read
-	// that starts before this deadline also ends.
-	_ = t.c.SetReadDeadline(time.Now())
 }
 
 // Term gives the terminal fields.
@@ -86,9 +77,9 @@ func (t *Terminal) Term() screen.Term {
 
 // Key gives the next key of the queue that is not a key of a paste: outside the line
 // input, the host drops each key of a paste (section 8.4). It gives the errors of next.
-func (t *Terminal) Key() (string, error) {
+func (t *Terminal) Key(ctx context.Context) (string, error) {
 	for {
-		q, err := t.next()
+		q, err := t.next(ctx)
 		if err != nil {
 			return "", err
 		}
@@ -102,7 +93,7 @@ func (t *Terminal) Key() (string, error) {
 // It gives the line and true after ENTER, or false after ESC. It panics when the field
 // does not fit the screen. It gives the errors of next and of the writes.
 // Before an error of next, it turns the bracketed paste mode off (section 8.4).
-func (t *Terminal) ReadLine(f line.Field) (string, bool, error) {
+func (t *Terminal) ReadLine(ctx context.Context, f line.Field) (string, bool, error) {
 	l := line.New(f, t.term.Cols, t.term.Rows)
 	t.mode = true
 	var out []byte // the draw that waits for the end of the queued keys
@@ -118,7 +109,7 @@ func (t *Terminal) ReadLine(f line.Field) (string, bool, error) {
 			}
 			out = out[:0]
 		}
-		q, err := t.next()
+		q, err := t.next(ctx)
 		if err != nil {
 			t.endMode()
 			return "", false, err
@@ -171,11 +162,12 @@ func (t *Terminal) ready() bool {
 // next gives the next key of the queue. With an empty queue, it reads the input
 // until a key arrives. While the key decoder waits for the next byte of a sequence,
 // it also reads: a busy host must not end the wait of bytes that arrived in time.
-// It gives ErrIdle at the idle timeout, ErrStop after Stop and the errors of the connection
-// and of the telnet parser.
-func (t *Terminal) next() (queued, error) {
+// It gives ErrIdle at the idle timeout, ErrStop at once after the end of ctx,
+// also with keys in the queue, and the errors of the connection and of the telnet parser.
+func (t *Terminal) next(ctx context.Context) (queued, error) {
+	defer t.cancelRead(ctx)()
 	for {
-		if t.stopped.Load() {
+		if ctx.Err() != nil {
 			return queued{}, ErrStop
 		}
 		if t.ready() {
@@ -185,7 +177,7 @@ func (t *Terminal) next() (queued, error) {
 		if !time.Now().Before(idle) {
 			return queued{}, ErrIdle
 		}
-		events, _, err := t.read(idle)
+		events, _, err := t.read(ctx, idle)
 		if err != nil {
 			return queued{}, err
 		}
@@ -207,11 +199,21 @@ func (t *Terminal) Page(p screen.Page) error {
 	return t.write(telnet.Escape(nil, AppendPage(nil, p, t.term.Colors, t.vgaRGB)))
 }
 
+// cancelRead makes the end of ctx end a read: it sets the read deadline to the time
+// of the end. It gives the function that stops this. A page that writes completes.
+func (t *Terminal) cancelRead(ctx context.Context) (stop func() bool) {
+	return context.AfterFunc(ctx, func() { _ = t.c.SetReadDeadline(time.Now()) })
+}
+
 // read writes the waiting replies, then reads the input once, until the deadline dl
 // at the latest. It gives the telnet events and the replies. The keys go to the queue.
 // The wait of the key decoder and the 10 s of a subnegotiation also end a read,
-// so a read can give nothing.
-func (t *Terminal) read(dl time.Time) ([]telnet.Event, []Reply, error) {
+// so a read can give nothing. After the end of ctx, it gives ErrStop without a write.
+// The caller makes the end of ctx end the read with cancelRead.
+func (t *Terminal) read(ctx context.Context, dl time.Time) ([]telnet.Event, []Reply, error) {
+	if ctx.Err() != nil {
+		return nil, nil, ErrStop
+	}
 	if len(t.out) > 0 {
 		err := t.write(t.out)
 		t.out = t.out[:0]
@@ -228,7 +230,9 @@ func (t *Terminal) read(dl time.Time) ([]telnet.Event, []Reply, error) {
 	if err := t.c.SetReadDeadline(dl); err != nil {
 		return nil, nil, err
 	}
-	if t.stopped.Load() {
+	// The read checks ctx after it sets its deadline, so a read that starts
+	// before the deadline of cancelRead also ends.
+	if ctx.Err() != nil {
 		return nil, nil, ErrStop
 	}
 	n, err := t.c.Read(t.buf)

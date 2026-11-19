@@ -1,4 +1,4 @@
-package menu
+package bbs
 
 import (
 	"fmt"
@@ -138,7 +138,7 @@ func TestCheckLimit(t *testing.T) {
 }
 
 // The args of a goto or a gosub must equal the arguments of the target. The start screen
-// and goodbye and shutdown cannot have arguments (section 6).
+// and goodbye and shutdown cannot have arguments (menu-nav, section 6).
 func TestCheckArgs(t *testing.T) {
 	goto_ := func(key, target string, args map[string]string) screen.Item {
 		return screen.Item{Key: key, Do: screen.Action{Op: screen.Goto, Screen: target, Args: args}}

@@ -1,6 +1,7 @@
 package term
 
 import (
+	"context"
 	"errors"
 	"slices"
 	"strings"
@@ -25,11 +26,11 @@ type lineResult struct {
 	err  error
 }
 
-// readLine starts ReadLine in the field f and waits until it blocks.
-func readLine(term *Terminal, f line.Field) <-chan lineResult {
+// readLine starts ReadLine with ctx in the field f and waits until it blocks.
+func readLine(ctx context.Context, term *Terminal, f line.Field) <-chan lineResult {
 	done := make(chan lineResult, 1)
 	go func() {
-		text, ok, err := term.ReadLine(f)
+		text, ok, err := term.ReadLine(ctx, f)
 		done <- lineResult{text, ok, err}
 	}()
 	synctest.Wait()
@@ -57,7 +58,7 @@ func TestReadLineBytes(t *testing.T) {
 		term, f := connect(t, testTimeouts)
 		before := len(f.output())
 		red := screen.Style{Fg: screen.RGBColour(255, 0, 0), Attr: screen.Bold}
-		done := readLine(term, line.Field{Row: 2, Col: 3, Max: 4, Style: red})
+		done := readLine(t.Context(), term, line.Field{Row: 2, Col: 3, Max: 4, Style: red})
 		// The keys of one read give one draw. XTERM gives 256 colours, so the RGB colour
 		// becomes the index 196.
 		f.write("a")
@@ -81,7 +82,7 @@ func TestReadLineBytes(t *testing.T) {
 func TestReadLineCancel(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		term, f := connect(t, testTimeouts)
-		done := readLine(term, field)
+		done := readLine(t.Context(), term, field)
 		before := len(f.output())
 		f.write("\x1b[D\x1b")
 		if r := <-done; r.text != "" || r.ok || r.err != nil {
@@ -98,7 +99,7 @@ func TestReadLineCancel(t *testing.T) {
 func TestReadLinePasteTwoReads(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		term, f := connect(t, testTimeouts)
-		done := readLine(term, field)
+		done := readLine(t.Context(), term, field)
 		f.write(markStart + "one\rtw")
 		if r := <-done; r.text != "one" || !r.ok || r.err != nil {
 			t.Fatalf("ReadLine() = %q, %v, %v; want one", r.text, r.ok, r.err)
@@ -117,7 +118,7 @@ func TestReadLinePasteTwoReads(t *testing.T) {
 func TestReadLinePasteLate(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		term, f := connect(t, testTimeouts)
-		done := readLine(term, field)
+		done := readLine(t.Context(), term, field)
 		f.write(markStart + "ab")
 		time.Sleep(2 * SeqWait)
 		f.write("\x7fc\r" + markEnd)
@@ -136,12 +137,12 @@ func TestReadLineClear(t *testing.T) {
 			{"one\rtyped", "two\r"},
 			{markStart + "one\rtw", "o\r" + markEnd + "two\r"},
 		} {
-			done := readLine(term, field)
+			done := readLine(t.Context(), term, field)
 			f.write(in[0])
 			if r := <-done; r.text != "one" || r.err != nil {
 				t.Fatalf("%q: first ReadLine() = %q, %v; want one", in, r.text, r.err)
 			}
-			done = readLine(term, field)
+			done = readLine(t.Context(), term, field)
 			f.write(in[1])
 			if r := <-done; r.text != "two" || r.err != nil {
 				t.Errorf("%q: second ReadLine() = %q, %v; want two", in, r.text, r.err)
@@ -159,7 +160,7 @@ func TestReadLinePasteFull(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		done := readLine(term, line.Field{Row: 1, Col: 1, Max: 254})
+		done := readLine(t.Context(), term, line.Field{Row: 1, Col: 1, Max: 254})
 		text := strings.Repeat("ы", 254)
 		f.write(markStart + text + "\r" + markEnd)
 		if r := <-done; r.text != text || !r.ok || r.err != nil {
@@ -173,7 +174,7 @@ func TestReadLinePasteFull(t *testing.T) {
 func TestReadLineQueueFull(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		term, f := connect(t, testTimeouts)
-		done := readLine(term, line.Field{Row: 1, Col: 1, Max: 5})
+		done := readLine(t.Context(), term, line.Field{Row: 1, Col: 1, Max: 5})
 		// The queue takes 256 keys: abc and 253 x. The ENTER is lost.
 		f.write(markStart + "abc" + strings.Repeat("x", 300) + "\rdef")
 		// Without the drop, the ENTER of this part ends the input with abcxx.
@@ -188,7 +189,7 @@ func TestReadLineQueueFull(t *testing.T) {
 func TestReadLineNextPaste(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		term, f := connect(t, testTimeouts)
-		done := readLine(term, field)
+		done := readLine(t.Context(), term, field)
 		// The queue takes 256 TAB, the line input ignores them, and the next read
 		// gives a new paste.
 		f.write(markStart + strings.Repeat("\t", 300))
@@ -226,7 +227,7 @@ func TestPasteIdle(t *testing.T) {
 			time.Sleep(100 * time.Millisecond)
 			f.write(markEnd + markStart + markEnd)
 		}()
-		if k, err := term.Key(); !errors.Is(err, ErrIdle) {
+		if k, err := term.Key(t.Context()); !errors.Is(err, ErrIdle) {
 			t.Fatalf("Key() = %q, %v; want ErrIdle", k, err)
 		}
 		if d := time.Since(begin); d != 100*time.Millisecond+to.Idle {
@@ -240,24 +241,27 @@ func TestPasteIdle(t *testing.T) {
 func TestReadLineModeOff(t *testing.T) {
 	tests := []struct {
 		name string
-		end  func(*Terminal, *fake)
+		end  func(cancel func(), f *fake)
 		err  error
 	}{
-		{"idle", func(*Terminal, *fake) {}, ErrIdle},
-		{"IP", func(_ *Terminal, f *fake) { f.write("a\xff\xf4") }, telnet.ErrHangup},
-		{"BRK", func(_ *Terminal, f *fake) { f.write("\xff\xf3") }, telnet.ErrHangup},
-		{"protocol error", func(_ *Terminal, f *fake) {
+		{"idle", func(func(), *fake) {}, ErrIdle},
+		{"IP", func(_ func(), f *fake) { f.write("a\xff\xf4") }, telnet.ErrHangup},
+		{"BRK", func(_ func(), f *fake) { f.write("\xff\xf3") }, telnet.ErrHangup},
+		{"protocol error", func(_ func(), f *fake) {
 			f.write("\xff\xfa\x1f" + strings.Repeat("0", telnet.MaxSub+2))
 		}, telnet.ErrSubTooLong},
-		{"stop", func(term *Terminal, _ *fake) { term.Stop() }, ErrStop},
+		// The end of the context gives the stop error (session, section 6).
+		{"stop", func(cancel func(), _ *fake) { cancel() }, ErrStop},
 	}
 	for _, tt := range tests {
 		synctest.Test(t, func(t *testing.T) {
 			to := testTimeouts
 			to.Idle = time.Second
 			term, f := connect(t, to)
-			done := readLine(term, field)
-			tt.end(term, f)
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			done := readLine(ctx, term, field)
+			tt.end(cancel, f)
 			if r := <-done; !errors.Is(r.err, tt.err) {
 				t.Errorf("%s: ReadLine() error %v, want %v", tt.name, r.err, tt.err)
 			}
@@ -279,7 +283,7 @@ func TestReadLineFit(t *testing.T) {
 					t.Error("ReadLine with a field of 100 cells on 100 columns: no panic")
 				}
 			}()
-			_, _, _ = term.ReadLine(line.Field{Row: 1, Col: 1, Max: 100})
+			_, _, _ = term.ReadLine(t.Context(), line.Field{Row: 1, Col: 1, Max: 100})
 		}()
 		if got := f.output()[before:]; got != "" {
 			t.Errorf("output %q, want none", got)

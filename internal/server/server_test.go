@@ -20,9 +20,8 @@ import (
 	"testing/fstest"
 	"time"
 
-	"github.com/schors/velourbbs/internal/bbt"
+	"github.com/schors/velourbbs/internal/bbs"
 	"github.com/schors/velourbbs/internal/config"
-	"github.com/schors/velourbbs/internal/menu"
 	"github.com/schors/velourbbs/internal/server"
 )
 
@@ -98,14 +97,12 @@ func startWith(t *testing.T, set func(*config.Config), wrap func(net.Listener) n
 func startFS(t *testing.T, fsys fstest.MapFS, set func(*config.Config), wrap func(net.Listener) net.Listener,
 	stopTime time.Duration) *testServer {
 	t.Helper()
-	cfg, ds := config.Load(fsys)
-	screens, sds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
-	ds = menu.Check(cfg, screens, append(ds, sds...))
+	m, ds := bbs.Load(fsys)
 	if ds.HasErrors() {
 		t.Fatalf("load: %v", ds)
 	}
 	if set != nil {
-		set(&cfg)
+		set(&m.Config)
 	}
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -118,7 +115,7 @@ func startFS(t *testing.T, fsys fstest.MapFS, set func(*config.Config), wrap fun
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	log := slog.New(slog.NewJSONHandler(ts.log, &slog.HandlerOptions{ReplaceAttr: noRecordTime}))
-	srv := server.New(cfg, screens, log, testVersion)
+	srv := server.New(m, log, testVersion)
 	if stopTime != 0 {
 		server.SetStopTime(srv, stopTime)
 	}

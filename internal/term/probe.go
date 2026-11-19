@@ -1,6 +1,7 @@
 package term
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -24,6 +25,7 @@ var ErrNotUTF8 = errors.New("term: the terminal is not UTF-8")
 
 // probe is the state of the probe of one connection.
 type probe struct {
+	ctx context.Context
 	t   *Terminal
 	end time.Time // accept + probe_timeout
 	r   replies
@@ -37,10 +39,12 @@ type probe struct {
 // Probe does steps 2–5 of section 5.1 on the connection c, without the first screen.
 // accepted is the time of accept. log has the address of the client.
 // After "not UTF-8", Probe writes the text of section 5.5 and gives ErrNotUTF8.
+// After the end of ctx, Probe ends at once and gives ErrStop (session, section 6).
 // After each error, the caller closes c.
-func Probe(c Conn, accepted time.Time, to Timeouts, log *slog.Logger) (*Terminal, error) {
+func Probe(ctx context.Context, c Conn, accepted time.Time, to Timeouts, log *slog.Logger) (*Terminal, error) {
 	t := &Terminal{c: c, to: to, p: telnet.New(), buf: make([]byte, readSize)}
-	pr := &probe{t: t, end: accepted.Add(to.Probe)}
+	pr := &probe{ctx: ctx, t: t, end: accepted.Add(to.Probe)}
+	defer t.cancelRead(ctx)()
 
 	// Steps 2 and 3.
 	t.out = t.p.Start()
@@ -57,7 +61,10 @@ func Probe(c Conn, accepted time.Time, to Timeouts, log *slog.Logger) (*Terminal
 		}
 	}
 
-	// Step 5.
+	// Step 5. After the end of ctx, the probe has no output.
+	if ctx.Err() != nil {
+		return nil, ErrStop
+	}
 	term, utf8 := pr.r.values()
 	pr.log(log, accepted, term, utf8)
 	if !utf8 {
@@ -99,7 +106,7 @@ func (pr *probe) wait(step4 bool, done func() bool) error {
 		if !time.Now().Before(dl) {
 			return nil
 		}
-		events, replies, err := pr.t.read(dl)
+		events, replies, err := pr.t.read(pr.ctx, dl)
 		if err != nil {
 			return err
 		}

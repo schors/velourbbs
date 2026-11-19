@@ -1,6 +1,7 @@
 package menu
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/schors/velourbbs/internal/bbs"
 	"github.com/schors/velourbbs/internal/bbt"
 	"github.com/schors/velourbbs/internal/config"
 	"github.com/schors/velourbbs/internal/screen"
@@ -39,7 +41,7 @@ func (f *fakeTerm) Term() screen.Term {
 	return screen.Term{Type: "ansi", Cols: c, Rows: r, Charset: "utf-8", Colors: 16}
 }
 
-func (f *fakeTerm) Key() (string, error) {
+func (f *fakeTerm) Key(context.Context) (string, error) {
 	if len(f.keys) == 0 {
 		return "", io.EOF
 	}
@@ -112,7 +114,22 @@ func lines(n int) string {
 }
 
 // noValues gives empty values of the session and BBS fields.
-func noValues() screen.SessionValues { return screen.SessionValues{} }
+func noValues(*Session) screen.SessionValues { return screen.SessionValues{} }
+
+// runSession runs a session on t with the model of cfg and ss from the screen start
+// with no arguments and the theme choice of cfg. It gives the theme choice at the end and the error of Run.
+func runSession(t Terminal, cfg config.Config, ss map[string]*screen.Screen, start string,
+	values Values) (config.ThemeChoice, error) {
+	s := New(&bbs.Model{Config: cfg, Screens: ss}, t, start, nil, cfg.ThemeChoice, values)
+	err := s.Run(context.Background())
+	return s.choice, err
+}
+
+// shutdown runs Shutdown of a session on t with the model of cfg and ss and the theme choice choice.
+func shutdown(t Terminal, cfg config.Config, ss map[string]*screen.Screen, choice config.ThemeChoice,
+	values Values) error {
+	return New(&bbs.Model{Config: cfg, Screens: ss}, t, "", nil, choice, values).Shutdown()
+}
 
 // load loads the screens of files with the changes of change. A new name adds a file.
 // An empty value removes a file.
@@ -128,7 +145,7 @@ func load(t *testing.T, change map[string]string) map[string]*screen.Screen {
 	}
 	theme := map[string]screen.Style{"normal": {}, "more": {}}
 	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
-	ds = Check(config.Config{Start: "main"}, ss, ds)
+	ds = bbs.Check(config.Config{Start: "main"}, ss, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -256,7 +273,7 @@ File {arg.f}
 		t.Run(tt.name, func(t *testing.T) {
 			ss := load(t, tt.change)
 			ft := &fakeTerm{cols: tt.cols, keys: slices.Clone(tt.keys)}
-			_, err := Run(eventsTerm{ft}, config.Config{More: "-- More --"}, ss, "main", nil, noValues)
+			_, err := runSession(eventsTerm{ft}, config.Config{More: "-- More --"}, ss, "main", noValues)
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("error %v, want %v", err, tt.wantErr)
 			}
@@ -304,7 +321,7 @@ func TestRunStack(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ft := &fakeTerm{cols: []int{80}, keys: slices.Clone(tt.keys)}
-			_, err := Run(eventsTerm{ft}, config.Config{}, ss, "main", nil, noValues)
+			_, err := runSession(eventsTerm{ft}, config.Config{}, ss, "main", noValues)
 			// Join each key with the screen that follows it.
 			var got []string
 			for _, l := range ft.log {
@@ -356,7 +373,7 @@ func TestNav(t *testing.T) {
 func TestRunTermError(t *testing.T) {
 	errClosed := errors.New("closed")
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"G"}, pageErr: errClosed}
-	_, err := Run(ft, config.Config{}, load(t, nil), "main", nil, noValues)
+	_, err := runSession(ft, config.Config{}, load(t, nil), "main", noValues)
 	if !errors.Is(err, errClosed) || len(ft.log) != 1 {
 		t.Errorf("error %v, log %q; want %v after one page", err, ft.log, errClosed)
 	}
@@ -365,7 +382,7 @@ func TestRunTermError(t *testing.T) {
 // A terminal without Events gets the pages only.
 func TestRunNoEvents(t *testing.T) {
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"L", "S", "B", "G", "X"}}
-	if _, err := Run(ft, config.Config{More: "-- More --"}, load(t, nil), "main", nil, noValues); err != nil {
+	if _, err := runSession(ft, config.Config{More: "-- More --"}, load(t, nil), "main", noValues); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"page: [S]ystem [G]oodbye", "page: 1", "page: 10", "page: [S]ystem [G]oodbye", "page: Bye"}
@@ -387,7 +404,7 @@ func (f *styleTerm) Term() screen.Term {
 	return screen.Term{Type: "ansi", Cols: 80, Rows: 10, Charset: "utf-8", Colors: f.colors, Background: f.background}
 }
 
-func (f *styleTerm) Key() (string, error) {
+func (f *styleTerm) Key(context.Context) (string, error) {
 	if f.sent {
 		return "", io.EOF
 	}
@@ -415,7 +432,7 @@ func TestRunSessionTheme(t *testing.T) {
 	}
 	for colors, want := range map[int]string{16: "15/1 bold", 256: "15/4 bold"} {
 		st := &styleTerm{colors: colors}
-		if _, err := Run(st, cfg, ss, "main", nil, noValues); err != nil {
+		if _, err := runSession(st, cfg, ss, "main", noValues); err != nil {
 			t.Fatal(err)
 		}
 		if st.style != want {
@@ -447,7 +464,7 @@ func TestRunThemeChoice(t *testing.T) {
 			t.Fatalf("load: %v", ds)
 		}
 		st := &styleTerm{colors: 256, background: tt.background}
-		if _, err := Run(st, cfg, ss, "main", nil, noValues); err != nil {
+		if _, err := runSession(st, cfg, ss, "main", noValues); err != nil {
 			t.Fatal(err)
 		}
 		if st.style != tt.want {
@@ -488,13 +505,13 @@ do = "goto main"
 	}
 	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
 	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
-	ds = Check(config.Config{Start: "main"}, ss, ds)
+	ds = bbs.Check(config.Config{Start: "main"}, ss, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
 	// 10 rows: H is 9, so 20 lines give 3 pages.
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"R", "N", "N", "N", "P", "P", "P", "L", "F", "Q"}}
-	_, err := Run(eventsTerm{ft}, config.Config{Start: "main"}, ss, "main", nil, noValues)
+	_, err := runSession(eventsTerm{ft}, config.Config{Start: "main"}, ss, "main", noValues)
 	want := []string{
 		"screen main", "page: Main", "key R", "screen read", "page: 1/3 N",
 		"key N", "page: 2/3 N", "key N", "page: 3/3", "key N ignored",
@@ -544,7 +561,7 @@ do = "back"
 	}
 	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
 	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
-	ds = Check(config.Config{Start: "main"}, ss, ds)
+	ds = bbs.Check(config.Config{Start: "main"}, ss, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -555,7 +572,7 @@ do = "back"
 		rows: []int{10, 10, 10, 10, 10, 20, 20, 20},
 		keys: []string{"R", "N", "S", "B", "N", "S", "B", "P", "B", "R"},
 	}
-	_, err := Run(eventsTerm{ft}, config.Config{Start: "main"}, ss, "main", nil, noValues)
+	_, err := runSession(eventsTerm{ft}, config.Config{Start: "main"}, ss, "main", noValues)
 	want := []string{
 		"screen main", "page: Main", "key R", "screen read", "page: 1/3",
 		"key N", "page: 2/3", "key S", "screen info", "page: Info",
@@ -601,18 +618,18 @@ read {bbs.sessions} {file.page}
 	}
 	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
 	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
-	ds = Check(config.Config{Start: "main"}, ss, ds)
+	ds = bbs.Check(config.Config{Start: "main"}, ss, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
 	// Each call gives the next count. The file screen takes one count for its layout.
 	n := 0
-	values := func() screen.SessionValues {
+	values := func(*Session) screen.SessionValues {
 		n++
 		return screen.SessionValues{Sessions: n}
 	}
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"R", "N", "Q", "R"}}
-	_, err := Run(ft, config.Config{Start: "main"}, ss, "main", nil, values)
+	_, err := runSession(ft, config.Config{Start: "main"}, ss, "main", values)
 	want := []string{"page: main 1 R", "page: read 3 1", "page: read 4 2", "page: main 5"}
 	if !errors.Is(err, io.EOF) || !slices.Equal(ft.log, want) {
 		t.Errorf("err %v, log %q, want %q", err, ft.log, want)
@@ -623,8 +640,8 @@ read {bbs.sessions} {file.page}
 func TestShutdown(t *testing.T) {
 	ss := load(t, map[string]string{"shutdown": "Restart {term.cols} {bbs.name}\n" + lines(12)})
 	ft := &fakeTerm{cols: []int{40}}
-	values := func() screen.SessionValues { return screen.SessionValues{Name: "Lamp"} }
-	if err := Shutdown(ft, config.Config{More: "-- More --"}, ss, "", values); err != nil {
+	values := func(*Session) screen.SessionValues { return screen.SessionValues{Name: "Lamp"} }
+	if err := shutdown(ft, config.Config{More: "-- More --"}, ss, "", values); err != nil {
 		t.Fatal(err)
 	}
 	if want := []string{"page: Restart 40 Lamp"}; !slices.Equal(ft.log, want) {
@@ -633,14 +650,14 @@ func TestShutdown(t *testing.T) {
 
 	// Without the file, Shutdown shows nothing.
 	ft = &fakeTerm{cols: []int{40}}
-	if err := Shutdown(ft, config.Config{}, load(t, nil), "", noValues); err != nil || len(ft.log) > 0 {
+	if err := shutdown(ft, config.Config{}, load(t, nil), "", noValues); err != nil || len(ft.log) > 0 {
 		t.Errorf("no shutdown: error %v, log %q; want no error and no page", err, ft.log)
 	}
 
 	// Shutdown gives the error of the terminal.
 	errClosed := errors.New("closed")
 	ft = &fakeTerm{cols: []int{40}, pageErr: errClosed}
-	if err := Shutdown(ft, config.Config{}, ss, "", values); !errors.Is(err, errClosed) {
+	if err := shutdown(ft, config.Config{}, ss, "", values); !errors.Is(err, errClosed) {
 		t.Errorf("error %v, want %v", err, errClosed)
 	}
 }
@@ -723,12 +740,12 @@ Light
 	}
 	cfg, ds := config.Load(fsys)
 	ss, lds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
-	ds = Check(cfg, ss, append(ds, lds...))
+	ds = bbs.Check(cfg, ss, append(ds, lds...))
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"L", "R", "N", "A", "L", "Q", "D"}}
-	choice, err := Run(themeTerm{eventsTerm{ft}}, cfg, ss, "main", nil, noValues)
+	choice, err := runSession(themeTerm{eventsTerm{ft}}, cfg, ss, "main", noValues)
 	want := []string{
 		"screen main", "page: auto main 15/4",
 		"key L", "screen main", "page: light main 4/15",
@@ -747,7 +764,7 @@ Light
 	// (section 5.1). Auto without a reply is dark: H is 9 and 18 lines give 2 pages.
 	// Light: H would be 8 and 3 pages.
 	ft = &fakeTerm{cols: []int{80}, keys: []string{"E", "T"}}
-	_, err = Run(themeTerm{eventsTerm{ft}}, cfg, ss, "tall", nil, noValues)
+	_, err = runSession(themeTerm{eventsTerm{ft}}, cfg, ss, "tall", noValues)
 	want = []string{
 		"screen tall", "page: auto 1/2 15/4",
 		"key E", "page: auto 2/2 15/4",
@@ -757,8 +774,14 @@ Light
 		t.Errorf("tall: err %v, log:\n%s\nwant:\n%s", err, strings.Join(ft.log, "\n"), strings.Join(want, "\n"))
 	}
 
-	ft = &fakeTerm{cols: []int{80}}
-	if err := Shutdown(themeTerm{eventsTerm{ft}}, cfg, ss, config.ThemeLight, noValues); err != nil {
+	// Shutdown uses the theme choice of the session at the end of Run (section 5.2).
+	ft = &fakeTerm{cols: []int{80}, keys: []string{"L"}}
+	s := New(&bbs.Model{Config: cfg, Screens: ss}, themeTerm{eventsTerm{ft}}, "main", nil, cfg.ThemeChoice, noValues)
+	if err := s.Run(t.Context()); !errors.Is(err, io.EOF) {
+		t.Fatalf("Run: %v, want io.EOF", err)
+	}
+	ft.log = nil
+	if err := s.Shutdown(); err != nil {
 		t.Fatal(err)
 	}
 	if want := []string{"page: light 4/15"}; !slices.Equal(ft.log, want) {
@@ -783,5 +806,5 @@ func TestRunUnknownOp(t *testing.T) {
 			t.Errorf("log %q: the session logged off", ft.log)
 		}
 	}()
-	_, _ = Run(ft, config.Config{}, screens, "main", nil, noValues)
+	_, _ = runSession(ft, config.Config{}, screens, "main", noValues)
 }

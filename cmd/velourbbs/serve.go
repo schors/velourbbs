@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/schors/velourbbs/internal/bbs"
 	"github.com/schors/velourbbs/internal/server"
 )
 
@@ -19,7 +20,7 @@ func serve(args []string, fsys fs.FS, stderr io.Writer) int {
 		_, _ = io.WriteString(stderr, "velourbbs serve: no arguments expected\n"+usage)
 		return exitUsage
 	}
-	cfg, screens, ds := load(fsys)
+	m, ds := bbs.Load(fsys)
 	writeDiags(stderr, ds)
 	if ds.HasErrors() {
 		return exitError
@@ -27,12 +28,12 @@ func serve(args []string, fsys fs.FS, stderr io.Writer) int {
 	log := slog.New(slog.NewTextHandler(stderr, nil))
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
-	ln, source, err := listen(cfg.Telnet.Listen)
+	ln, source, err := listen(m.Config.Telnet.Listen)
 	if err != nil {
 		log.Error("listen", "source", source, "err", err)
 		return exitError
 	}
-	if err := server.New(cfg, screens, log, version()).Serve(ctx, ln, source); err != nil {
+	if err := server.New(m, log, version()).Serve(ctx, ln, source); err != nil {
 		log.Error("serve", "err", err)
 		return exitError
 	}

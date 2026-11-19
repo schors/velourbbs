@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/schors/velourbbs/internal/bbs"
 	"github.com/schors/velourbbs/internal/config"
 	"github.com/schors/velourbbs/internal/content"
 	"github.com/schors/velourbbs/internal/key"
@@ -85,23 +87,24 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 
-	cfg, screens, ds := load(fsys)
+	m, ds := bbs.Load(fsys)
 	writeDiags(stderr, ds)
 	if ds.HasErrors() {
 		return exitError
 	}
 	if !svSet["bbs.name"] {
-		sv.Name = cfg.Name
+		sv.Name = m.Config.Name
 	}
 	if !svSet["bbs.time"] {
-		sv.Time = previewTime(cfg.Zone).Format(cfg.Time)
+		sv.Time = previewTime(m.Config.Zone).Format(m.Config.Time)
 	}
+	choice := m.Config.ThemeChoice
 	if svSet["session.theme"] { // the theme choice at the start
-		cfg.ThemeChoice = config.ThemeChoice(sv.Theme)
+		choice = config.ThemeChoice(sv.Theme)
 	}
-	s, ok := screens[name]
+	s, ok := m.Screens[name]
 	if session {
-		if err := menu.CheckTarget(screens, name); err != nil {
+		if err := bbs.CheckTarget(m.Screens, name); err != nil {
 			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 			return exitUsage
 		}
@@ -109,7 +112,7 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprintf(stderr, "velourbbs preview: unknown screen %q\n", name)
 		return exitUsage
 	}
-	if errs := menu.CheckArgs(s, argVals); len(errs) > 0 {
+	if errs := bbs.CheckArgs(s, argVals); len(errs) > 0 {
 		for _, err := range errs {
 			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		}
@@ -120,12 +123,17 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		if ns == nil {
 			return status
 		}
-		screens = maps.Clone(screens)
-		s, screens[name] = ns, ns
+		// A new model: the loaded model does not change (session, section 4).
+		m = &bbs.Model{Config: m.Config, Screens: maps.Clone(m.Screens)}
+		s, m.Screens[name] = ns, ns
 	}
 	if session {
-		return runKeys(&keysTerm{term: term, keys: keys, w: stdout}, cfg, screens, name, argVals, sv, stderr)
+		t := &keysTerm{term: term, keys: keys, w: stdout}
+		ss := menu.New(m, t, name, argVals, choice, func(*menu.Session) screen.SessionValues { return sv })
+		return runKeys(t, ss, stderr)
 	}
+	cfg := m.Config
+	cfg.ThemeChoice = choice
 	if err := screen.WriteDump(stdout, menu.Pages(cfg, s, term, argVals, sv)); err != nil {
 		_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		return exitError
@@ -341,7 +349,8 @@ type keysTerm struct {
 
 func (t *keysTerm) Term() screen.Term { return t.term }
 
-func (t *keysTerm) Key() (string, error) {
+// Key ignores the context of the session (session, section 6).
+func (t *keysTerm) Key(context.Context) (string, error) {
 	if len(t.keys) == 0 {
 		return "", errNoKeys
 	}
@@ -372,12 +381,10 @@ func (t *keysTerm) Logoff() error {
 	return err
 }
 
-// runKeys runs the session of velourbbs preview --keys from the screen start
-// with the arguments args and the session and BBS fields sv, and gives the exit status.
+// runKeys runs the session ss of velourbbs preview --keys on t and gives the exit status.
 // The end of the key list ends the session. A key after the end of the session at logoff is an error.
-func runKeys(t *keysTerm, cfg config.Config, screens map[string]*screen.Screen, start string, args map[string]string,
-	sv screen.SessionValues, stderr io.Writer) int {
-	_, err := menu.Run(t, cfg, screens, start, args, func() screen.SessionValues { return sv })
+func runKeys(t *keysTerm, ss *menu.Session, stderr io.Writer) int {
+	err := ss.Run(context.Background())
 	switch {
 	case errors.Is(err, errNoKeys):
 		return 0
