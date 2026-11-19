@@ -572,7 +572,8 @@ The keys of `[telnet]` and `[limits]` are in [bbs-toml](bbs-toml.md), sections 3
   the output. The connection does not count for the limits of section 9.2 during this time.
   At most `max_conns` connections do this at the same time. The host closes each other
   connection at once.
-- It exits with status 1 after an error of the checks or of `listen`.
+- It exits with status 1 after an error of the checks, of the data file
+  ([data-store](data-store.md), section 7) or of `listen`.
 - It runs until SIGINT or SIGTERM. Then it closes the listener, stops the sessions
   (section 10.2) and exits with status 0.
 

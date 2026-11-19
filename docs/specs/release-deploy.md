@@ -3,7 +3,8 @@
 This specification defines the release of `velourbbs` on a version tag and the deploy
 of the home BBS to its host.
 Related parts: [home-bbs](home-bbs.md), [telnet-term](telnet-term.md), section 10,
-[session-fields](session-fields.md), section 3.4, and [setup-guide](setup-guide.md).
+[session-fields](session-fields.md), section 3.4, [setup-guide](setup-guide.md)
+and [data-store](data-store.md).
 
 ## 1. Goal
 
@@ -141,12 +142,17 @@ Layout under the home directory of the user:
 | `~/velourbbs/releases/<tag>/` | The binary `velourbbs` and `station/` of one release. |
 | `~/velourbbs/current` | A symlink to `releases/<tag>` of the running release. |
 | `~/velourbbs/incoming/<tag>/` | The bundle during a deploy. |
+| `~/velourbbs/data/` | The data file of the home BBS ([data-store](data-store.md)). It stays between releases. |
 | `~/velourbbs/socket-changed` | A flag: the socket unit changed and the socket waits for a restart. |
 | `~/.config/systemd/user/velourbbs.service`, `velourbbs.socket` | The units of section 5. |
 
 `install.sh <tag>` does these steps. It stops at the first error (`set -eu`).
 
-1. Run `../velourbbs check` in `incoming/<tag>/station/`. An error stops the deploy.
+1. Create `~/velourbbs/data/` when it does not exist. Make the symlink
+   `incoming/<tag>/station/data` to the absolute path of `~/velourbbs/data`.
+   `station/bbs.toml` sets `[store] path = "data/velourbbs.jsonl"` ([home-bbs](home-bbs.md), section 2).
+   Run `../velourbbs check` in `incoming/<tag>/station/`. It also reads the data file
+   ([data-store](data-store.md), section 7). An error stops the deploy.
    The running release does not change.
 2. Replace `releases/<tag>/` with the binary and `station/` of the bundle.
    When `current` points to `releases/<tag>`, keep it: a re-run of the current tag
@@ -181,6 +187,9 @@ Layout under the home directory of the user:
   ("Re-run all jobs"). The re-run uses the commit and the tag of that run.
   GitHub allows a re-run for 30 days after the run.
 - After 30 days, revert the change in `main` and push a new tag.
+- After a migration of the data file, the check of an earlier release fails at step 1
+  ([data-store](data-store.md), section 6). Stop `velourbbs.socket` and `velourbbs.service`,
+  restore the backup of the data file of that release, and re-run.
 
 ## 5. Units
 
@@ -235,6 +244,7 @@ Layout under the home directory of the user:
 - `shellcheck` gives no warning for `deploy/install.sh`.
 - A test of `install.sh` runs it with a stub `systemctl` in a temporary home directory.
   It checks the layout of section 4.5 and that a failed `velourbbs check` keeps `current`.
+  It checks the symlink `station/data` and that `~/velourbbs/data/` stays after a deploy.
 - A push of a pre-release tag creates a GitHub pre-release with 4 binaries and `SHA256SUMS`.
   The home BBS then shows the tag in `bbs.version`.
 - A tag on a commit outside `main` fails the job with no release.

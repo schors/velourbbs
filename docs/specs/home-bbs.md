@@ -17,7 +17,8 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 | Path | Content |
 |---|---|
 | `station/` | The BBS directory of the home BBS ([bbs-toml](bbs-toml.md), section 2). |
-| `station/bbs.toml` | `[bbs] name = "Velour"`. No `[telnet]` and no `[limits]` table. |
+| `station/bbs.toml` | `[bbs] name = "Velour"` and `[store] path = "data/velourbbs.jsonl"`. No `[telnet]` and no `[limits]` table. |
+| `station/data/` | The directory of the data file ([data-store](data-store.md)). Not in git (`.gitignore`). The deploy makes it a symlink ([release-deploy](release-deploy.md), section 4.5). |
 | `station/screens/screens.toml` | The theme of section 4 and the screen settings. |
 | `station/screens/` | The screens of section 3 and their fragments. |
 | `station/content/<lang>/features.md` | The features text (section 6). |
@@ -27,9 +28,9 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - `<lang>` is `ru` or `en`.
 - The symlink keeps one copy of the guides.
 - A version tag deploys the directory with the symlinks resolved ([release-deploy](release-deploy.md)).
-  To deploy by hand, copy it: `cp -rL station/. /srv/velourbbs/`.
-  Then follow [part 2 of the setup guide](../guide/en/setup/2-bbs-directory.md)
-  without its copy of Lamp, and the parts after it.
+  To deploy by hand, copy it: `cp -rL station/. /srv/velourbbs/`, and remove
+  `/srv/velourbbs/data/`. Then follow [part 2 of the setup guide](../guide/en/setup/2-bbs-directory.md)
+  without its copy of Lamp, and the parts after it. Part 3 sets `[store] path`.
 
 ## 3. Screens
 
