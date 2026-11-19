@@ -253,6 +253,31 @@ func (r Ref) Row() string {
 
 func (r Ref) isItem() bool { return r.kind == refItem }
 
+// Registry gives each path of the registry of section 4.1 without <...>, in its order:
+// the term.*, file.*, list.*, session.* and bbs.* fields.
+func Registry() []Ref {
+	var rs []Ref
+	for i := range termFields[1:] {
+		rs = append(rs, Ref{kind: refTerm, term: termField(i + 1)})
+	}
+	for i := range fileFields[1:] {
+		rs = append(rs, Ref{kind: refFile, file: fileField(i + 1)})
+	}
+	for i := range listFields[1:] {
+		rs = append(rs, Ref{kind: refList, list: listField(i + 1)})
+	}
+	for i := range sessionFields[1:] {
+		rs = append(rs, Ref{kind: refSession, session: sessionField(i + 1)})
+	}
+	return rs
+}
+
+// ArgRef gives the field arg.<name>.
+func ArgRef(name string) Ref { return Ref{kind: refArg, name: name} }
+
+// RowRef gives the field row.<field>.
+func RowRef(field string) Ref { return Ref{kind: refRow, name: field} }
+
 // Fields maps an alias to its field (section 4.2).
 type Fields map[string]Ref
 
@@ -496,6 +521,10 @@ type FileValues struct {
 	Page, Pages, Minutes int
 	Section              string
 }
+
+// Value gives the value of r: a bool, an int or a string. The values of r must be in e:
+// File for a file.* field, List for a list.* field and Row for a row.* field.
+func (e *Env) Value(r Ref) any { return e.value(r) }
 
 // value gives the value of r: a bool, an int or a string.
 func (e *Env) value(r Ref) any {

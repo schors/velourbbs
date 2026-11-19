@@ -1,0 +1,30 @@
+term.type        string   -  -  xterm
+term.cols        integer  3  -  80
+term.rows        integer  3  -  24
+term.charset     string   5  -  utf-8
+term.colors      integer  8  -  256
+term.name        string   -  -
+term.images      string   5  -
+term.ambiguous   integer  1  -  1
+term.background  string   5  -
+term.bg_color    string   -  -
+term.fg_color    string   -  -
+file.title       string   -  -
+file.page        integer  -  -  1
+file.pages       integer  -  -  1
+file.last        boolean  -  -  true
+file.section     string   -  -
+file.minutes     integer  -  -  0
+list.page        integer  1  -  1
+list.pages       integer  1  -  1
+list.last        boolean  -  -  true
+list.empty       boolean  -  -  true
+session.ip       string   -  -  127.0.0.1
+session.theme    string   5  -  dark
+session.lang     string   2  -  en
+session.online   string   -  -  00:00:00
+bbs.name         string   -  -  Kind Brothers BBS
+bbs.version      string   -  -  dev
+bbs.sessions     integer  -  -  1
+bbs.time         string   -  -  2006-01-02 15:04:05
+bbs.uptime       string   -  -  00:00:00

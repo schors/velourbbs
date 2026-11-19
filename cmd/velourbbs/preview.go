@@ -35,29 +35,49 @@ func previewTime(zone *time.Location) time.Time {
 	return time.Date(2006, 1, 2, 15, 4, 5, 0, zone)
 }
 
+// previewTerm gives the term.* values of velourbbs preview without --size and --set
+// (screen-render, section 3.2).
+func previewTerm() screen.Term {
+	return screen.Term{Type: "xterm", Cols: 80, Rows: 24, Charset: "utf-8", Colors: screen.Colors256, Ambiguous: 1}
+}
+
+// previewSession gives the values of session-fields, section 4, without the values of the config:
+// bbs.name, bbs.time, session.theme and session.lang.
+func previewSession() screen.SessionValues {
+	return screen.SessionValues{IP: "127.0.0.1", Online: "00:00:00", Version: version(), Sessions: 1, Uptime: "00:00:00"}
+}
+
 // preview runs velourbbs preview (screen-render, section 3.2): it renders a screen and writes its cell dump
 // to stdout. With --keys, it runs a session (menu-nav, section 7).
 // The flags can come before and after the name.
 func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
-	term := screen.Term{Type: "xterm", Cols: 80, Rows: 24, Charset: "utf-8", Colors: screen.Colors256, Ambiguous: 1}
-	// The values of session-fields, section 4. bbs.name and bbs.time come from the config.
-	sv := screen.SessionValues{IP: "127.0.0.1", Online: "00:00:00", Version: version(), Sessions: 1, Uptime: "00:00:00"}
-	svSet := map[string]bool{} // the session and BBS fields of --set
+	term := previewTerm()
+	// bbs.name and bbs.time come from the config.
+	sv := previewSession()
+	svSet := map[string]bool{} // the session and BBS fields of --set and of the sample set
 	fl := flag.NewFlagSet("velourbbs preview", flag.ContinueOnError)
 	fl.SetOutput(stderr)
 	fl.Usage = func() { _, _ = io.WriteString(stderr, usage) }
 	fl.Func("size", "", func(v string) error { return parseSize(v, &term) })
 	var set termSet
 	argVals := map[string]string{} // the arguments of --set arg.<name>
-	fl.Func("set", "", func(v string) error {
+	given := map[string]bool{}     // the paths of --set
+	setValue := func(v string) error {
 		path, value, ok := strings.Cut(v, "=")
 		if ok {
+			given[path] = true
 			if set, err := setSession(&sv, path, value); set {
 				svSet[path] = true
 				return err
 			}
 		}
 		return setField(v, &term, &set, argVals)
+	}
+	fl.Func("set", "", setValue)
+	sampleName, sampleGiven := "", false
+	fl.Func("sample", "", func(v string) error {
+		sampleName, sampleGiven = v, true
+		return nil
 	})
 	var keys []string
 	session := false
@@ -85,6 +105,28 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 	name := names[0]
+	// The values of the sample set come before the values of --set (screen-render, section 3.2).
+	var sample *sampleSet
+	if sampleGiven {
+		var msgs []string
+		sample, msgs = loadSample(fsys, sampleName)
+		for _, path := range sample.paths() {
+			v := path + "=" + sample.fields[path]
+			err := checkSetValue(v)
+			if err == nil && !given[path] {
+				err = setValue(v)
+			}
+			if err != nil {
+				msgs = append(msgs, fmt.Sprintf("%s: fields: %v", sampleFile, err))
+			}
+		}
+		for _, msg := range msgs {
+			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %s\n", msg)
+		}
+		if msgs != nil {
+			return exitUsage
+		}
+	}
 	if err := term.Check(); err != nil {
 		_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		return exitUsage
@@ -127,7 +169,7 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		}
 		return exitUsage
 	}
-	if m = argFiles(fsys, m, name, argVals, stderr); m == nil {
+	if m = argFiles(fsys, m, name, argVals, sample, session, stderr); m == nil {
 		return exitError
 	}
 	s = m.Sets[sv.Lang][name]
@@ -148,51 +190,96 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 // argFiles loads the content file of the argument of the screen name in the screen set
 // of each language, when the screen is a file screen with {arg.<name>}, with the checks
 // of file-view, section 7 (session-language, section 8). For a list screen with {arg.<name>} in data,
-// it reads the rows of the value (screen-render, section 3.2). It merges the diagnostics and the errors
-// of the sets as bbt.SetDiags does. It gives m, or a new model with the screens that can show
-// the files and the rows. It writes the errors and gives nil after an error.
+// it reads the rows of the value (screen-render, section 3.2). The rows of the sample set,
+// when it has rows, replace the rows of the screen name, or of each list screen when all is true
+// (screen-render, section 3.5). It loads the content files of select of the new rows.
+// It merges the diagnostics and the errors of the sets as bbt.SetDiags does. It gives m, or a new model
+// with the screens that can show the files and the rows. It writes the errors and gives nil after an error.
 // The model of the load stays immutable (session, section 4).
-func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, stderr io.Writer) *bbs.Model {
+func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, sample *sampleSet, all bool,
+	stderr io.Writer) *bbs.Model {
 	langs := m.Config.Langs
 	nm := &bbs.Model{Config: m.Config, Sets: maps.Clone(m.Sets)}
 	sd := bbt.NewSetDiags(langs)
-	var msgs []string              // the errors in the order of the first set that finds them
-	found := map[string][]string{} // the sets that find each error
-	for _, lang := range langs {
-		s := m.Sets[lang][name]       // the check of the sets makes sure that each set has the screen
-		var ns, target *screen.Screen // target: the file screen of select with new files, else nil
-		var errs []string
-		if s.List != nil {
-			ns, errs = argRows(fsys, lang, s, args, sd)
-			if ns != nil && ns != s {
-				target, errs = selectFiles(fsys, lang, m, ns, args, sd)
-			}
-		} else {
-			ns, errs = argFile(fsys, lang, s, args, "arg.", sd)
-		}
-		if target != nil && nm != nil {
-			tl := lang
-			if a := ns.List.Select.Do; a.Lang != "" {
-				tl = a.Lang
-			}
-			nm.Sets[tl] = maps.Clone(nm.Sets[tl])
-			nm.Sets[tl][target.Name] = target
-		}
+	var msgs []string                            // the errors in the order of the first set that finds them
+	found := map[string][]string{}               // the sets that find each error
+	report := func(lang string, errs []string) { // a set reports each error once
 		for _, msg := range errs {
 			if found[msg] == nil {
 				msgs = append(msgs, msg)
 			}
-			found[msg] = append(found[msg], lang)
-		}
-		switch {
-		case ns == nil:
-			nm = nil
-		case ns != s && nm != nil:
-			nm.Sets[lang] = maps.Clone(nm.Sets[lang])
-			nm.Sets[lang][name] = ns
+			if !slices.Contains(found[msg], lang) {
+				found[msg] = append(found[msg], lang)
+			}
 		}
 	}
-	writeDiags(stderr, sd.Diags())
+	put := func(lang string, s *screen.Screen) {
+		nm.Sets[lang] = maps.Clone(nm.Sets[lang])
+		nm.Sets[lang][s.Name] = s
+	}
+	newRows := map[string]bool{} // the sets with the rows of a --set value
+	failed := false              // each set runs its checks after an error of another set
+	for _, lang := range langs {
+		s := m.Sets[lang][name] // the check of the sets makes sure that each set has the screen
+		var ns *screen.Screen
+		var errs []string
+		if s.List != nil {
+			ns, errs = argRows(fsys, lang, s, args, sd)
+			newRows[lang] = ns != nil && ns != s
+		} else {
+			ns, errs = argFile(fsys, lang, s, args, "arg.", sd)
+		}
+		report(lang, errs)
+		switch {
+		case ns == nil:
+			failed = true
+		case ns != s:
+			put(lang, ns)
+		}
+	}
+	for _, lang := range langs {
+		names := []string{name}
+		if all {
+			names = slices.Sorted(maps.Keys(nm.Sets[lang]))
+		}
+		for _, n := range names {
+			s := nm.Sets[lang][n]
+			if s.List == nil {
+				continue
+			}
+			var rows []screen.ListRow
+			switch {
+			case sample != nil && sample.rows != nil:
+				var errs []string
+				if rows, errs = sample.listRows(s.List.From); errs != nil {
+					report(lang, errs)
+					failed = true
+					continue
+				}
+				s = withRows(s, rows)
+				put(lang, s)
+			case n == name && newRows[lang]:
+				rows = s.List.List(args)
+			default:
+				continue
+			}
+			target, errs := selectFiles(fsys, lang, nm, s, rows, sd)
+			report(lang, errs)
+			switch {
+			case errs != nil:
+				failed = true
+			case target != nil:
+				tl := lang
+				if a := s.List.Select.Do; a.Lang != "" {
+					tl = a.Lang
+				}
+				put(tl, target)
+			}
+		}
+	}
+	ds := sd.Diags()
+	writeDiags(stderr, ds)
+	failed = failed || ds.HasErrors() // a file with errors in it gives no content and no message
 	for _, msg := range msgs {
 		if len(found[msg]) == len(langs) {
 			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %s\n", msg)
@@ -201,6 +288,9 @@ func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, std
 		for _, lang := range found[msg] {
 			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %s (language %q)\n", msg, lang)
 		}
+	}
+	if failed {
+		return nil
 	}
 	return nm
 }
@@ -271,20 +361,36 @@ func argRows(fsys fs.FS, lang string, s *screen.Screen, args map[string]string, 
 	return &ns, nil
 }
 
-// selectFiles loads the content file of the value of select of each row of the list screen s
-// for the arguments args, when the target of select is a file screen (list-view, section 8,
-// and screen-render, section 3.2). s holds rows that the load did not read. It gives the target
-// with the new files, else nil, and the errors. It adds the diagnostics of the files to sd.
-func selectFiles(fsys fs.FS, lang string, m *bbs.Model, s *screen.Screen, args map[string]string,
+// withRows gives the list screen s with the rows of each provider value replaced with rows.
+func withRows(s *screen.Screen, rows []screen.ListRow) *screen.Screen {
+	nl := *s.List
+	nl.Lists = map[string][]screen.ListRow{}
+	for key := range s.List.Lists {
+		nl.Lists[key] = rows
+	}
+	ns := *s
+	ns.List = &nl
+	return &ns
+}
+
+// selectFiles loads the content file of the value of select of each row of rows of the list screen s,
+// when the target of select is a file screen (list-view, section 8, and screen-render, sections 3.2
+// and 3.5). rows are rows that the load did not read. It gives the target in m with the new files,
+// else nil, and the errors. It adds the diagnostics of the files to sd.
+func selectFiles(fsys fs.FS, lang string, m *bbs.Model, s *screen.Screen, rows []screen.ListRow,
 	sd *bbt.SetDiags) (*screen.Screen, []string) {
 	sel := s.List.Select
 	if sel == nil || !sel.Do.Op.HasTarget() {
 		return nil, nil
 	}
 	t := bbs.Target(m.Sets, lang, sel.Do) // the check of the sets makes sure that it exists
+	// The target is in the set of its language: its files too.
+	if sel.Do.Lang != "" {
+		lang = sel.Do.Lang
+	}
 	nt := t
 	var msgs []string
-	for i, r := range s.List.List(args) {
+	for i, r := range rows {
 		next, errs := argFile(fsys, lang, nt, sel.Action(r, i+1).Args, "select: args: ", sd)
 		msgs = append(msgs, errs...)
 		if next != nil {
@@ -298,6 +404,23 @@ func selectFiles(fsys fs.FS, lang string, m *bbs.Model, s *screen.Screen, args m
 		return nil, nil
 	}
 	return nt, nil
+}
+
+// checkSetValue checks the value of --set "<path>=<value>" with the default values of the preview,
+// without a change of the values of the preview. The checks of the arguments of the screen
+// come after the load.
+func checkSetValue(v string) error {
+	term, sv := previewTerm(), previewSession()
+	path, value, ok := strings.Cut(v, "=")
+	if ok {
+		if set, err := setSession(&sv, path, value); set {
+			return err
+		}
+	}
+	if err := setField(v, &term, &termSet{}, map[string]string{}); err != nil {
+		return err
+	}
+	return term.Check()
 }
 
 // parseSize sets the size of term from "<cols>x<rows>". term.Check checks the ranges.

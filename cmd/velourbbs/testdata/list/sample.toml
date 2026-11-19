@@ -1,0 +1,16 @@
+# The sample sets of the preview tests (screen-render, section 3.5).
+
+[empty]
+rows = []
+
+# One full page of the screen parts: a long title, wide graphemes and a row without minutes.
+[full]
+rows = [
+  { path = "more/a.md", title = "A very long title of a guide part that does not fit in the row", minutes = 120 },
+  { path = "parts/1-intro.md", title = "Короткий", minutes = 1 },
+  { path = "parts/2-menu.md", title = "全角の題名" },
+  { path = "parts/3-notes.txt", title = "Notes", minutes = 7 },
+]
+
+[more]
+fields = { "arg.dir" = "more" }

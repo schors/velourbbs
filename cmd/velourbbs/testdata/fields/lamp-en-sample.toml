@@ -1,0 +1,23 @@
+[default]
+rows = [
+  { path = "log/1-first-night.md", title = "The first night", minutes = 1 },
+]
+
+[default.fields]
+"term.type" = "xterm"
+"term.colors" = "256"
+"term.name" = ""
+"term.images" = ""
+"term.ambiguous" = "1"
+"term.background" = ""
+"term.bg_color" = ""
+"term.fg_color" = ""
+"session.ip" = "127.0.0.1"
+"session.theme" = "dark"
+"session.lang" = "en"
+"session.online" = "00:00:00"
+"bbs.name" = "Kind Brothers BBS"
+"bbs.version" = "dev"
+"bbs.sessions" = "1"
+"bbs.time" = "2006-01-02 15:04:05"
+"bbs.uptime" = "00:00:00"

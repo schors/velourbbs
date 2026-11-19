@@ -293,6 +293,57 @@ args = { dir = "log" }
 - The BBS reads the rows of each value of `dir` that a `goto` or a `gosub` gives.
 - `velourbbs preview notes --set arg.dir=log` shows the rows of this value.
 
+## Sample data
+
+`velourbbs fields` (task 5) also lists the fields of the rows:
+
+```text
+row.num          integer  1   -      1
+row.path         string   20  files  log/1-first-night.md
+row.title        string   23  files  The first night
+row.minutes      integer  1   files  1
+```
+
+The provider column names the provider of a `row.*` field.
+The width of `row.title` is the widest title of the notes.
+
+A "sample set" gives `velourbbs preview` other rows and other field values.
+So you can test an empty list and a long title without new notes.
+The sets are in the file `sample.toml` in the BBS directory.
+`velourbbs fields --sample` writes this file with the set `default`:
+the value of each field that `--set` takes, and one row. It does not replace an existing file.
+
+Add your sets to the file:
+
+```toml
+[empty]
+rows = []
+
+[long]
+fields = { "term.colors" = "16" }
+rows = [
+  { path = "log/2-rain.md", title = "A very long title of a note that does not fit in the row", minutes = 120 },
+  { path = "log/3-north.md", title = "Short" },
+]
+```
+
+- Each table is one set. A set name has lower case letters, digits, `_` and `-`.
+- `fields` gives values to fields, as `--set`.
+- `rows` replaces the rows of each list screen of the preview.
+  A row gives the fields of the provider without `row.`. A missing field is empty or 0.
+- `select` of `log` opens `path` in `reader`. So each `path` must be a content file.
+- `velourbbs check` and `velourbbs serve` do not read `sample.toml`.
+
+```
+velourbbs preview log --sample empty
+velourbbs preview log --sample long
+```
+
+The first command shows one page with empty rows. The second command shows the cut long title
+in the 16 colours. `--set` replaces a value of the set, in each order of the options.
+
+Full rules: [screen-render](../../../specs/screen-render.md), sections 3.2 and 3.5.
+
 ## Test the pages
 
 ```

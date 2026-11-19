@@ -165,17 +165,25 @@ styles
   in columns separated with two or more spaces. The sample value is the rest of the line.
   The provider is the provider of a `row.*` field, else `-`.
 - The fields are each path of the registry ([bbt-format](bbt-format.md), section 4.1)
-  without `<...>`, in the order of the registry, then `arg.<name>` for each argument of a screen,
-  then `row.num` and the fields of each provider that a screen uses ([list-view](list-view.md), section 4).
+  without `<...>`, in the order of the registry: `term.*`, `file.*`, `list.*`, `session.*` and `bbs.*`.
+  Then `arg.<name>` for each argument of a screen, in name order.
+  Then `row.num` and the fields of each provider that a screen uses ([list-view](list-view.md), section 4),
+  the providers in name order.
 - The "width" is the most cells that a value can have:
-  - an integer with a range: the digits of the widest bound. Example: `term.cols` has 3;
-  - a string with a fixed set of values: the widest value. Example: `term.background` has 5;
-  - a `row.*` field, `list.page` and `list.pages`: the widest value of the rows of the BBS;
+  - an integer with a range or a fixed set of values: the digits of the widest value.
+    Example: `term.cols` has 3, `term.colors` has 8;
+  - a string with a fixed set of values: the widest value. Example: `term.background` has 5.
+    The set of `session.lang` is the languages of the BBS;
+  - a `row.*` field: the widest value of the rows of the BBS. `row.num`, `list.page`
+    and `list.pages`: the digits of the largest row count;
   - else `-`.
 - The "sample value" is the value of `velourbbs preview` without `--set` (section 3.2,
-  [session-fields](session-fields.md), section 4). For `arg.<name>`, it is the first value
-  that a `goto` or a `gosub` gives. For a `row.*` field, it is the value of the first row
-  of the provider, else empty. `file.*` and `list.*` have the values of page 1.
+  [session-fields](session-fields.md), section 4). The screen set of `[screen] lang` gives the first
+  values, with the screens in name order. For `arg.<name>`, it is the first value
+  that a `goto` or a `gosub` gives: the items in source order, then `select` with the first row
+  of the screen. For a `row.*` field, it is the value of the first row of the provider, else empty.
+- `file.*` and `list.*` have the values of page 1 of 1: `file.title` and `file.section` are empty,
+  `file.minutes` is 0, and `list.empty` is false when a list of the BBS has a row.
 
 Example:
 
@@ -199,7 +207,7 @@ Each top-level table is one set. The set name matches `[a-z][a-z0-9_-]*`.
 | Key | Type | Meaning |
 |---|---|---|
 | `fields` | table of strings | Optional. A value for each path, with the rules of `--set` (section 3.2). |
-| `rows` | array of tables | Optional. The rows of each list screen of the preview. A table maps a field name of the provider, without `row.`, to a string or an integer. A missing field is empty or 0. Without `rows`, a list screen shows the rows of its provider. |
+| `rows` | array of tables | Optional. The rows of each list screen of the preview: the screen of the command, and each list screen of `--keys`. A table maps a field name of the provider, without `row.`, to a string or an integer. A missing field is empty or 0. Without `rows`, a list screen shows the rows of its provider. |
 
 Example:
 
@@ -216,10 +224,12 @@ rows = [
 ```
 
 - `velourbbs check` and `velourbbs serve` do not read `sample.toml`.
-- A missing file, an unknown set, an unknown key and an invalid value are invalid arguments
-  of `velourbbs preview`. A field of `rows` that the provider of a shown list screen does not have,
-  or a value of the wrong type, is an error of the preview. After an error, the command
-  exits with status 1.
+- A missing file, an invalid set name, an unknown set, an unknown key and an invalid value
+  are invalid arguments of `velourbbs preview`. The command checks the names, the keys and the types
+  of each set, and the `fields` values of the set of `--sample`.
+- A field of `rows` that the provider of a list screen of the preview does not have,
+  or a value of the wrong type, is an error of the preview. After an error of the preview,
+  the command exits with status 1.
 - A value of `rows` that `select` gives to a file screen must be a content file
   ([list-view](list-view.md), section 8). Else it is an error of the preview.
 

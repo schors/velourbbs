@@ -74,7 +74,7 @@ func TestPreviewFileArg(t *testing.T) {
 		t.Fatal(ds)
 	}
 	s := m.Sets["en"]["reader"]
-	nm := argFiles(os.DirFS(filepath.Join("testdata", "file")), m, "reader", map[string]string{"file": "extra.txt"}, io.Discard)
+	nm := argFiles(os.DirFS(filepath.Join("testdata", "file")), m, "reader", map[string]string{"file": "extra.txt"}, nil, false, io.Discard)
 	if nm == nil || nm.Sets["en"]["reader"].FileScreen.Contents["extra.txt"] == nil {
 		t.Fatalf("argFiles: %v", nm)
 	}

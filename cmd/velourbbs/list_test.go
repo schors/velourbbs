@@ -43,6 +43,13 @@ var listGoldens = []struct {
 	// over a page border; ENTER on row 7 to a file screen and back to the same cursor; PGUP.
 	{"shelf-keys-40x24.dump", []string{"main", "--size", "40x24", "--keys",
 		"4,UP,DOWN,DOWN,DOWN,DOWN,UP,PGDN,DOWN,DOWN,DOWN,ENTER,ESC,PGUP,ESC,G"}},
+	// The sample sets of sample.toml (screen-render, section 3.5): an empty set, and a full page
+	// with a long title, wide graphemes and a row without minutes.
+	{"sample-empty-80x24.dump", []string{"parts", "--set", "arg.dir=parts", "--sample", "empty"}},
+	{"sample-full-80x24.dump", []string{"parts", "--sample", "full", "--set", "arg.dir=parts"}},
+	// With --keys, the rows of the set replace the rows of each list screen. ENTER shows the file
+	// of the row of the set.
+	{"sample-keys-40x10.dump", []string{"main", "--size", "40x10", "--sample", "full", "--keys", "3,ESC,1,DOWN,ENTER,ESC,G"}},
 }
 
 func TestPreviewList(t *testing.T) {

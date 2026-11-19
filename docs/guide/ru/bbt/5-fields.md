@@ -154,6 +154,31 @@ G  до свидания
 
 Полные правила: [bbt-format](../../../specs/bbt-format.md), раздел 8.2.
 
+## Список полей
+
+`velourbbs fields` выводит поля твоей BBS. Часть вывода:
+
+```
+velourbbs fields
+```
+
+```text
+term.type        string   -   -      xterm
+term.cols        integer  3   -      80
+term.colors      integer  8   -      256
+term.background  string   5   -
+session.lang     string   2   -      en
+bbs.name         string   -   -      Kind Brothers BBS
+```
+
+- Каждая строка даёт путь, тип, ширину, поставщика (задача 8) и пример значения.
+- Ширина — самое большое число клеток значения. `-` значит, что команда не даёт ширину.
+  Используй ширину для поля фиксированной ширины: `{term.cols}` нужно 3 клетки, `{term.background}` — 5.
+- Пример значения — значение `velourbbs preview`.
+- Сначала команда делает проверки `velourbbs check`. После ошибки она выводит только ошибки.
+
+Полные правила: [screen-render](../../../specs/screen-render.md), раздел 3.4.
+
 ## Экран `term`
 
 Создай `screens/term.bbt` с таким текстом:

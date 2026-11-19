@@ -1,5 +1,5 @@
 // Command velourbbs checks and previews the screens of a BBS directory, the current directory,
-// and serves them over telnet. It also converts ANSI art to the flat form.
+// lists their fields and serves them over telnet. It also converts ANSI art to the flat form.
 // Specification: docs/specs/screen-render.md, section 3, docs/specs/art-import.md, section 2,
 // docs/specs/telnet-term.md, section 10, and docs/specs/data-store.md, section 7.
 package main
@@ -27,7 +27,8 @@ const (
 const usage = `usage:
   velourbbs art import <input> <output>
   velourbbs check
-  velourbbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]... [--keys <keys>]
+  velourbbs fields [--sample]
+  velourbbs preview <name> [--size <cols>x<rows>] [--sample <set>] [--set <path>=<value>]... [--keys <keys>]
   velourbbs serve
 `
 
@@ -47,6 +48,8 @@ func run(args []string, dir string, fsys fs.FS, stdout, stderr io.Writer) int {
 		return art(args[1:], stderr)
 	case "check":
 		return check(args[1:], dir, fsys, stderr)
+	case "fields":
+		return fields(args[1:], dir, fsys, stdout, stderr)
 	case "preview":
 		return preview(args[1:], fsys, stdout, stderr)
 	case "serve":
