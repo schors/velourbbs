@@ -18,12 +18,8 @@ func TestArtExample(t *testing.T) {
 	out.Reset()
 	errOut.Reset()
 	status := run([]string{"preview", "main", "--size", "80x24", "--set", "term.colors=256"}, t.TempDir(), fsys, &out, &errOut)
-	file := filepath.Join("testdata", "art", "main-80x24-256.dump")
-	want, err := os.ReadFile(file)
-	if err != nil {
-		t.Fatal(err)
+	if errOut.Len() != 0 || status != 0 {
+		t.Errorf("preview: stderr %q, status %d", errOut.String(), status)
 	}
-	if errOut.Len() != 0 || status != 0 || out.String() != string(want) {
-		t.Errorf("%s: stderr %q, status %d, got\n%s\nwant\n%s", file, errOut.String(), status, out.String(), want)
-	}
+	golden(t, filepath.Join("testdata", "art", "main-80x24-256.dump"), out.String())
 }

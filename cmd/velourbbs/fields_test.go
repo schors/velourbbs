@@ -16,29 +16,26 @@ var lampEn = filepath.Join("..", "..", "examples", "lamp", "en")
 // TestFields checks the golden output of velourbbs fields (screen-render, section 3.4).
 func TestFields(t *testing.T) {
 	tests := []struct {
-		dir, golden string
+		fsys   fs.FS
+		golden string
 	}{
 		// A file screen with {arg.file}, a list screen with select.
-		{lampEn, "lamp-en.txt"},
+		{os.DirFS(lampEn), "lamp-en.txt"},
 		// Two arguments, the widest title of the rows of each value of {arg.dir}.
-		{filepath.Join("testdata", "list"), "list.txt"},
+		{os.DirFS(filepath.Join("testdata", "list")), "list.txt"},
 		// No list screen: no row.* field.
-		{filepath.Join("testdata", "preview"), "preview.txt"},
+		{os.DirFS(filepath.Join("testdata", "preview")), "preview.txt"},
 		// Two languages: the values of [screen] lang, the widths of each set, 10 rows and more.
-		{filepath.Join("..", "..", "station"), "station.txt"},
+		{newStationFS(), "station.txt"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.golden, func(t *testing.T) {
 			var out, errOut bytes.Buffer
-			status := run([]string{"fields"}, t.TempDir(), os.DirFS(tt.dir), &out, &errOut)
-			file := filepath.Join("testdata", "fields", tt.golden)
-			want, err := os.ReadFile(file)
-			if err != nil {
-				t.Fatal(err)
+			status := run([]string{"fields"}, t.TempDir(), tt.fsys, &out, &errOut)
+			if errOut.Len() != 0 || status != 0 {
+				t.Errorf("stderr %q, status %d", errOut.String(), status)
 			}
-			if errOut.Len() != 0 || status != 0 || out.String() != string(want) {
-				t.Errorf("%s: stderr %q, status %d, got\n%s\nwant\n%s", file, errOut.String(), status, out.String(), want)
-			}
+			golden(t, filepath.Join("testdata", "fields", tt.golden), out.String())
 		})
 	}
 }
@@ -76,14 +73,7 @@ func TestFieldsSample(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	file := filepath.Join("testdata", "fields", "lamp-en-sample.toml")
-	want, err := os.ReadFile(file)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if string(got) != string(want) {
-		t.Errorf("%s: got\n%s\nwant\n%s", file, got, want)
-	}
+	golden(t, filepath.Join("testdata", "fields", "lamp-en-sample.toml"), string(got))
 
 	errOut.Reset()
 	status = run([]string{"fields", "--sample"}, dir, os.DirFS(lampEn), &out, &errOut)
@@ -255,7 +245,7 @@ func TestIsSetName(t *testing.T) {
 // An error of the rows of a set in each screen set and each list screen is one error
 // without a language (session-language, section 8).
 func TestPreviewSampleLangs(t *testing.T) {
-	fsys := overlay{os.DirFS(filepath.Join("..", "..", "station")),
+	fsys := overlay{newStationFS(),
 		fstest.MapFS{sampleFile: {Data: []byte("[a]\nrows = [{ path = \"nope.md\" }]\n")}}}
 	var out, errOut bytes.Buffer
 	status := run([]string{"preview", "main", "--sample", "a", "--keys", "G"}, t.TempDir(), fsys, &out, &errOut)

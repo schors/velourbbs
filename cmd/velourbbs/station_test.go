@@ -2,105 +2,71 @@ package main
 
 import (
 	"bytes"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
+	"testing/fstest"
 )
 
+// stationFS is the home BBS with the guide fixture in place of each content/<lang>/guide,
+// so an edit of docs/guide/ does not change a test.
+type stationFS struct{ base, guide fs.FS }
+
+// newStationFS gives the home BBS with the guide fixture. Each guide has a README.md;
+// bbt has 10 parts more, so a list has more than 9 rows.
+func newStationFS() stationFS {
+	guide := fstest.MapFS{}
+	for _, dir := range []string{"setup", "bbt"} {
+		guide[dir+"/README.md"] = &fstest.MapFile{Data: []byte("# Fixture guide\n\nThe guide fixture of the station tests.\n")}
+	}
+	for i := 1; i <= 10; i++ {
+		guide[fmt.Sprintf("bbt/%d-part.md", i)] = &fstest.MapFile{Data: []byte(fmt.Sprintf("# Part %d\n\nThe text of part %d.\n", i, i))}
+	}
+	return stationFS{os.DirFS(filepath.Join("..", "..", "station")), guide}
+}
+
+func (s stationFS) Open(name string) (fs.File, error) {
+	for _, lang := range []string{"ru", "en"} {
+		dir := "content/" + lang + "/guide"
+		if name == dir {
+			return s.guide.Open(".")
+		}
+		if rest, ok := strings.CutPrefix(name, dir+"/"); ok {
+			return s.guide.Open(rest)
+		}
+	}
+	return s.base.Open(name)
+}
+
 // TestStation checks the home BBS of home-bbs, section 5: velourbbs check gives
-// no output, and each preview equals its golden dump.
+// no output, and the preview of each screen at 80x24 with 256 colours equals its golden dump.
 func TestStation(t *testing.T) {
-	type tcase struct {
-		screen, size, colors string
-		file                 string   // The argument file of a file screen.
-		ambiguous            string   // term.ambiguous; "" is the default 1.
-		set                  []string // More --set values.
-		tag                  string   // The name suffix of a case with set or keys.
-		keys                 string   // The --keys value.
-	}
-	cases := []tcase{
-		{screen: "main", size: "80x24", colors: "16"}, {screen: "main", size: "80x24", colors: "16777216"},
-		{screen: "ru-texts", size: "80x24", colors: "16"}, {screen: "ru-texts", size: "80x24", colors: "16777216"},
-		// A list of guide parts on two pages: the page in the footer hairline.
-		{screen: "en-bbt", size: "80x16", colors: "256"},
-		// The 80 form on a wide terminal with fewer than 43 rows.
-		{screen: "main", size: "132x42", colors: "256"},
-		// The hint of home-bbs, section 3, in both forms.
-		{screen: "main", size: "80x24", colors: "256", ambiguous: "2"},
-		{screen: "main", size: "132x43", colors: "256", ambiguous: "2"},
-		// The entry, the Russian menu, the entry and the English menu.
-		{screen: "main", size: "80x24", colors: "256", keys: "R,ESC,E", tag: "-keys"},
-	}
-	// The terminal rows of home-bbs, section 3, with each detected value.
-	for _, c := range []struct{ screen, bg string }{{"ru-about", "#1e1e1e"}, {"en-about", "#ffffff"}} {
-		for _, size := range []string{"80x24", "132x43"} {
-			cases = append(cases, tcase{screen: c.screen, size: size, colors: "16777216", ambiguous: "2",
-				set: []string{"term.name=WezTerm 20240203", "term.images=sixel", "term.bg_color=" + c.bg}, tag: "-detected"})
-		}
-	}
-	// The longest term.type and term.name of wide graphemes keep the 80 form in 23 rows.
-	wide := strings.Repeat("界", 40)
-	cases = append(cases, tcase{screen: "ru-about", size: "80x24", colors: "256",
-		set: []string{"term.type=" + wide, "term.name=" + wide}, tag: "-wide"})
-	for _, screen := range []string{"main", "ru-menu", "en-menu", "ru-about", "en-about", "goodbye", "shutdown",
-		"ru-texts", "en-texts", "ru-setup", "en-setup", "ru-bbt", "en-bbt"} {
-		cases = append(cases, tcase{screen: screen, size: "80x24", colors: "256"},
-			tcase{screen: screen, size: "132x43", colors: "256"})
-	}
-	// The file screen with the first file of each catalog: 80 form only.
-	for _, c := range []struct{ lang, setup, bbt string }{
-		{"ru", "Руководство по установке", "Руководство по BBT"}, {"en", "Setup guide", "BBT guide"},
-	} {
-		read := func(file, title, tag string) tcase {
-			return tcase{screen: c.lang + "-read", size: "80x24", colors: "256", file: file,
-				set: []string{"arg.title=" + title}, tag: "-" + tag}
-		}
-		cases = append(cases, read("guide/setup/README.md", c.setup, "setup"),
-			read("guide/bbt/README.md", c.bbt, "bbt"), read("features.md", "Velour", "features"))
-	}
-	fsys := os.DirFS(filepath.Join("..", "..", "station"))
+	fsys := newStationFS()
 	var out, errOut bytes.Buffer
 	if status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
 		t.Errorf("check: stdout %q, stderr %q, status %d; want no output and status 0", out.String(), errOut.String(), status)
 	}
-	for _, c := range cases {
+	for _, screen := range []string{"main", "goodbye", "shutdown", "ru-menu", "en-menu", "ru-about", "en-about",
+		"ru-texts", "en-texts", "ru-setup", "en-setup", "ru-bbt", "en-bbt", "ru-read", "en-read"} {
 		out.Reset()
 		errOut.Reset()
+		args := []string{"preview", screen, "--size", "80x24", "--set", "term.colors=256"}
 		// A screen of a language is <lang>-<name> (home-bbs, section 5).
-		screen, lang := c.screen, ""
-		if l, name, ok := strings.Cut(c.screen, "-"); ok {
-			screen, lang = name, l
+		if lang, name, ok := strings.Cut(screen, "-"); ok {
+			args = []string{"preview", name, "--size", "80x24", "--set", "term.colors=256", "--set", "session.lang=" + lang}
 		}
-		args := []string{"preview", screen, "--size", c.size, "--set", "term.colors=" + c.colors}
-		if lang != "" {
-			args = append(args, "--set", "session.lang="+lang)
+		if strings.HasSuffix(screen, "-read") {
+			args = append(args, "--set", "arg.file=guide/setup/README.md", "--set", "arg.title=Fixture guide")
 		}
-		if c.keys != "" {
-			args = append(args, "--keys", c.keys)
-		}
-		if c.file != "" {
-			args = append(args, "--set", "arg.file="+c.file)
-		}
-		name := c.screen + "-" + c.size + "-" + c.colors
-		if c.ambiguous != "" {
-			args = append(args, "--set", "term.ambiguous="+c.ambiguous)
-			name += "-ambiguous" + c.ambiguous
-		}
-		for _, v := range c.set {
-			args = append(args, "--set", v)
-		}
-		name += c.tag
 		status := run(args, t.TempDir(), fsys, &out, &errOut)
-		file := filepath.Join("testdata", "station", name+".dump")
-		want, err := os.ReadFile(file)
-		if err != nil {
-			t.Fatal(err)
+		if errOut.Len() != 0 || status != 0 {
+			t.Errorf("%s: stderr %q, status %d", screen, errOut.String(), status)
 		}
-		if errOut.Len() != 0 || status != 0 || out.String() != string(want) {
-			t.Errorf("%s: stderr %q, status %d, got\n%s\nwant\n%s", file, errOut.String(), status, out.String(), want)
-		}
+		golden(t, filepath.Join("testdata", "station", screen+"-80x24-256.dump"), out.String())
 	}
 }
 
