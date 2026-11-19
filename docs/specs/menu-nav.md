@@ -231,6 +231,7 @@ page 1 80x25 fill none
 - The model (`screen.Item`) holds the key in upper case and the parsed action.
   `internal/screen` uses `internal/key` for the case rule of `item.<KEY>`.
 - The terminal interface gives the size and the keys and shows a page.
+  The wait for a key takes the context of the session ([session](session.md), section 6).
   `velourbbs preview` and telnet-term give its implementations.
 - A terminal can also take the other events of section 7: the screen name, a key,
   an ignored key and `logoff`. The session sends them only to a terminal that implements
