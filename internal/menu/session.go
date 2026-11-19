@@ -151,7 +151,7 @@ const maxFrames = 16
 type frame struct {
 	name string
 	args map[string]string
-	page int // the page of a file screen, 1-based
+	page int // the page of a file screen or of a list screen, 1-based
 }
 
 // nav changes the navigation stack st with the action a: goto, gosub, back or top (section 4.1).
@@ -192,13 +192,13 @@ func (ss *Session) Shutdown() error {
 }
 
 // run shows the screen of the frame f and gives the item that leaves it.
-// A page action or a theme action of a file screen shows a page and waits for keys again.
-// A file screen starts at the page of f and sets the page of f to each shown page (section 5.1).
+// A page action or a theme action of a file screen or a list screen shows a page and waits for keys again.
+// Such a screen starts at the page of f and sets the page of f to each shown page (sections 5.1 and 5.3).
 // The check of the screen sets (session-language, section 6) makes sure that the set
 // of the session language has the screen of f.
 func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 	s, _ := ss.screen(f.name)
-	if s.FileScreen == nil {
+	if s.FileScreen == nil && s.List == nil {
 		items, err := ss.show(ctx, s, f.args)
 		if err != nil {
 			return screen.Item{}, err
@@ -210,8 +210,8 @@ func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 	}
 	term := ss.t.Term()
 	cfg := ss.m.Config
-	v := newFileView(s, term, f.args, cfg.SessionTheme(ss.choice, term), ss.sessionValues)
-	n := min(f.page, len(v.pages))
+	v := newPager(s, term, f.args, cfg.SessionTheme(ss.choice, term), ss.sessionValues)
+	n := min(f.page, v.count())
 	for {
 		f.page = n
 		p, items := v.page(n)
@@ -227,15 +227,34 @@ func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 			ss.choice = config.ThemeChoice(it.Do.Theme)
 			v.setTheme(cfg.SessionTheme(ss.choice, term))
 		case screen.PageNext:
-			n = min(n+1, len(v.pages))
+			n = min(n+1, v.count())
 		case screen.PagePrev:
 			n = max(n-1, 1)
 		case screen.PageFirst:
 			n = 1
 		case screen.PageLast:
-			n = len(v.pages)
+			n = v.count()
 		}
 	}
+}
+
+// pager is a file screen or a list screen laid out for one terminal size: its pages.
+type pager interface {
+	// count gives the count of the pages.
+	count() int
+	// page renders the page n, 1-based, with the fields of this page, and gives its enabled items.
+	page(n int) (screen.Page, map[string]screen.Item)
+	// setTheme sets the session theme. The pages stay.
+	setTheme(theme map[string]screen.Style)
+}
+
+// newPager lays out the file screen or the list screen s.
+func newPager(s *screen.Screen, term screen.Term, args map[string]string, theme map[string]screen.Style,
+	sv func() screen.SessionValues) pager {
+	if s.List != nil {
+		return newListView(s, term, args, theme, sv)
+	}
+	return newFileView(s, term, args, theme, sv)
 }
 
 // show shows the screen s, not a file screen, with the arguments args: it renders s
@@ -267,7 +286,8 @@ func (ss *Session) show(ctx context.Context, s *screen.Screen, args map[string]s
 }
 
 // Pages gives each page of the screen s for the terminal term with the arguments args
-// and the session and BBS fields sv: the pages of the render, or each file page of a file screen.
+// and the session and BBS fields sv: the pages of the render, each file page of a file screen
+// or each list page of a list screen.
 // The theme choice is the key theme of [screen]. It also gives session.theme of sv.
 // The More row is the text of the language session.lang of sv.
 // velourbbs preview uses it.
@@ -275,13 +295,13 @@ func Pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[strin
 	sv screen.SessionValues) iter.Seq[screen.Page] {
 	theme := cfg.SessionTheme(cfg.ThemeChoice, term)
 	sv.Theme = string(cfg.ThemeChoice)
-	if s.FileScreen == nil {
+	if s.FileScreen == nil && s.List == nil {
 		env, _ := Enabled(s, screen.Env{Term: term, Args: args, Session: sv})
 		return screen.Render(s, env, theme, cfg.MoreText(sv.Lang))
 	}
 	return func(yield func(screen.Page) bool) {
-		v := newFileView(s, term, args, theme, func() screen.SessionValues { return sv })
-		for n := 1; n <= len(v.pages); n++ {
+		v := newPager(s, term, args, theme, func() screen.SessionValues { return sv })
+		for n := 1; n <= v.count(); n++ {
 			if p, _ := v.page(n); !yield(p) {
 				return
 			}
@@ -319,6 +339,8 @@ func newFileView(s *screen.Screen, term screen.Term, args map[string]string, the
 	return v
 }
 
+func (v *fileView) count() int { return len(v.pages) }
+
 // setTheme sets the session theme of v. The layout holds the styles of the theme,
 // so it lays out the file again. The size, the area height and the file pages stay (section 5.1):
 // the width of the layout does not depend on the theme.
@@ -335,6 +357,47 @@ func (v *fileView) page(n int) (screen.Page, map[string]screen.Item) {
 	values.Page, values.Pages, values.Section = n, len(v.pages), p.Section
 	env, items := Enabled(v.s, screen.Env{Term: v.term, Args: v.args, File: &values, Session: v.sv()})
 	return screen.RenderFile(v.s, env, v.theme, screen.PageRows(v.layout, p, v.h), n), items
+}
+
+// listView is a list screen laid out for one terminal size (section 5.3, step 1,
+// and list-view, section 7).
+type listView struct {
+	s     *screen.Screen
+	term  screen.Term
+	args  map[string]string
+	theme map[string]screen.Style
+	sv    func() screen.SessionValues
+	list  []screen.ListRow
+	size  int // the page size P
+}
+
+// newListView finds the page size of the list screen s: it renders page 1 with P = rows.
+func newListView(s *screen.Screen, term screen.Term, args map[string]string, theme map[string]screen.Style,
+	sv func() screen.SessionValues) *listView {
+	v := &listView{s: s, term: term, args: args, theme: theme, sv: sv, list: s.List.List(args), size: s.List.Rows}
+	values := v.values(1)
+	env, _ := Enabled(s, screen.Env{Term: term, Args: args, List: &values, Session: sv()})
+	if r := screen.ListRows(s, env, theme, v.list, v.size); r > term.Rows {
+		v.size = max(1, v.size-(r-term.Rows))
+	}
+	return v
+}
+
+// values gives the list values of the page n.
+func (v *listView) values(n int) screen.ListValues {
+	return screen.ListValues{Page: n, Pages: v.count(), Empty: len(v.list) == 0}
+}
+
+// count gives the count of the list pages. An empty list has one page.
+func (v *listView) count() int { return max(1, (len(v.list)+v.size-1)/v.size) }
+
+func (v *listView) setTheme(theme map[string]screen.Style) { v.theme = theme }
+
+// page renders the list page n (section 5.3, step 3).
+func (v *listView) page(n int) (screen.Page, map[string]screen.Item) {
+	values := v.values(n)
+	env, items := Enabled(v.s, screen.Env{Term: v.term, Args: v.args, List: &values, Session: v.sv()})
+	return screen.RenderList(v.s, env, v.theme, v.list, n, v.size), items
 }
 
 // Enabled evaluates the when of each item of s with the field values env without Items

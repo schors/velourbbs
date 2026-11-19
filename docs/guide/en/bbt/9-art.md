@@ -1,4 +1,4 @@
-# Task 8. Art
+# Task 9. Art
 
 "ANSI art" is a picture of characters and colours.
 In this task, you show art on a screen. Use a new BBS directory, for example `myart`.
@@ -111,7 +111,7 @@ The BBS finds the field in the art and puts the value in its place.
 - Spaces before the name align the value right. Else the value aligns left.
 - All cells of the token must have one background colour.
   All its characters except spaces must have one foreground colour.
-  Else `velourbbs check` gives an error (task 9).
+  Else `velourbbs check` gives an error (task 10).
 - The value takes the colours of the first character of the token.
 - Art can hold only fields: no style tokens, no conditions and no includes.
   A short alias (task 5) gives a short field, for example `{w}`.

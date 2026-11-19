@@ -48,7 +48,7 @@ velourbbs preview main --keys A,ESC,G
 velourbbs art import art/logo.ans screens/logo.ans
 ```
 
-Подробно: задача 8 [руководства по BBT](../bbt/8-art.md).
+Подробно: задача 9 [руководства по BBT](../bbt/9-art.md).
 
 ## `velourbbs serve`
 

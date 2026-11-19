@@ -8,6 +8,7 @@ import (
 
 	"github.com/schors/velourbbs/internal/content"
 	"github.com/schors/velourbbs/internal/key"
+	"github.com/schors/velourbbs/internal/provider"
 	"github.com/schors/velourbbs/internal/screen"
 	"github.com/schors/velourbbs/internal/tomlcheck"
 )
@@ -17,6 +18,7 @@ type front struct {
 	layout screen.LayoutKeys
 	items  []screen.Item
 	file   *screen.FileSpec // the keys of a file screen, else nil (file-view, section 3)
+	list   *screen.ListSpec // the keys of a list screen, else nil (list-view, section 3)
 }
 
 // frontDoc is the plain decode of a front matter. A nil pointer is a key that is not set.
@@ -29,7 +31,12 @@ type frontDoc struct {
 	Lines   *[]int64 `toml:"lines"`
 	Numbers *bool    `toml:"numbers"`
 	Margin  *[]int64 `toml:"margin"`
-	Item    []struct {
+	Data    *struct {
+		From *string            `toml:"from"`
+		Args *map[string]string `toml:"args"`
+	} `toml:"data"`
+	Rows *int64 `toml:"rows"`
+	Item []struct {
 		Key  *string            `toml:"key"`
 		Do   *string            `toml:"do"`
 		When *string            `toml:"when"`
@@ -60,6 +67,8 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 	fr := &front{layout: screen.ParseLayoutKeys(doc.Width, doc.Align, doc.VAlign, doc.Fill,
 		func(key string, err error) { errorf("%s: %v", key, err) })}
 	fr.file = parseFileKeys(&doc, errorf)
+	fr.list = parseListKeys(&doc, errorf)
+	pages := doc.File != nil || doc.Data != nil // a page action is valid (file-view, section 3.3)
 	seen := map[string]bool{}
 	for i, it := range doc.Item {
 		// The label of menu-nav, section 6: the valid key, else the number.
@@ -81,8 +90,8 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 			errorf("%s: do is missing", label)
 		} else if a, err := parseAction(*it.Do, langs); err != nil {
 			errorf("%s: do: %v", label, err)
-		} else if a.Op.IsPage() && doc.File == nil {
-			errorf("%s: do: %q is valid only in a file screen", label, *it.Do)
+		} else if a.Op.IsPage() && !pages {
+			errorf("%s: do: %q is valid only in a file screen or a list screen", label, *it.Do)
 		} else {
 			item.Do = a
 		}
@@ -103,6 +112,10 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 				errorf("%s: when: %v", label, err)
 			} else if f := c.FileField(); f != "" && doc.File == nil {
 				errorf("%s: when: field %q is valid only in a file screen", label, f)
+			} else if f := c.ListField(); f != "" && doc.Data == nil {
+				errorf("%s: when: field %q is valid only in a list screen", label, f)
+			} else if r := rowField(c); r != "" {
+				errorf("%s: when: field %q is valid only in a list line", label, r)
 			}
 			item.When = c
 		}
@@ -131,9 +144,8 @@ func parseFileKeys(doc *frontDoc, errorf func(format string, args ...any)) *scre
 	}
 	f := &screen.FileSpec{Contents: map[string]*screen.Content{}}
 	v := *doc.File
-	if token, ok := strings.CutPrefix(v, "{"); ok {
-		name, ok := strings.CutPrefix(strings.TrimSuffix(token, "}"), "arg.")
-		if !ok || !strings.HasSuffix(token, "}") || !screen.IsIdent(name) {
+	if name, token := argToken(v); token {
+		if name == "" {
 			errorf("file: invalid token %q, want a content path or {arg.<name>}", v)
 		}
 		f.Arg = name
@@ -166,6 +178,91 @@ func parseFileKeys(doc *frontDoc, errorf func(format string, args ...any)) *scre
 		}
 	}
 	return f
+}
+
+// rowField gives the path of the first row.<field> of c, else "" (list-view, section 6).
+func rowField(c *screen.Cond) string {
+	for _, r := range c.Refs() {
+		if r.Row() != "" {
+			return r.String()
+		}
+	}
+	return ""
+}
+
+// argToken reports whether the value v starts with "{": a token. name is the <name> of a value
+// that is exactly one token {arg.<name>}, else "" (bbt-format, section 8.5).
+func argToken(v string) (name string, token bool) {
+	t, ok := strings.CutPrefix(v, "{")
+	if !ok {
+		return "", false
+	}
+	name, ok = strings.CutPrefix(strings.TrimSuffix(t, "}"), "arg.")
+	if !ok || !strings.HasSuffix(t, "}") || !screen.IsIdent(name) {
+		return "", true
+	}
+	return name, true
+}
+
+// The range of the key rows (list-view, section 3).
+const (
+	minListRows = 1
+	maxListRows = 100
+)
+
+// parseListKeys parses the keys data and rows (list-view, sections 3 and 4).
+// It gives nil without data. The loader reads the rows of the provider.
+func parseListKeys(doc *frontDoc, errorf func(format string, args ...any)) *screen.ListSpec {
+	if doc.Data == nil {
+		if doc.Rows != nil {
+			errorf("rows: the screen has no data")
+		}
+		return nil
+	}
+	if doc.File != nil {
+		errorf("data: a list screen cannot have file")
+	}
+	l := &screen.ListSpec{Args: map[string]string{}, ArgRefs: map[string]string{}, Lists: map[string][]screen.ListRow{}}
+	var args map[string]string
+	if doc.Data.Args != nil {
+		args = *doc.Data.Args
+	}
+	var p *provider.Provider
+	if doc.Data.From == nil {
+		errorf("data: from is missing")
+	} else if found, ok := provider.Lookup(*doc.Data.From); !ok {
+		errorf("data: from: unknown provider %q", *doc.Data.From)
+	} else {
+		p, l.From = found, found.Name
+		for _, err := range p.CheckArgs(slices.Sorted(maps.Keys(args))) {
+			errorf("data: args: %v", err)
+		}
+	}
+	for _, name := range slices.Sorted(maps.Keys(args)) {
+		v := args[name]
+		if arg, token := argToken(v); token {
+			if arg == "" {
+				errorf("data: args: %s: invalid token %q, want a value or {arg.<name>}", name, v)
+			}
+			l.ArgRefs[name] = arg
+			continue
+		}
+		if p != nil && slices.ContainsFunc(p.Args, func(a provider.Arg) bool { return a.Name == name }) {
+			if err := p.Check(name, v); err != nil {
+				errorf("data: args: %s: %v", name, err)
+			}
+		}
+		l.Args[name] = v
+	}
+	switch {
+	case doc.Rows == nil:
+		errorf("rows is missing")
+	case *doc.Rows < minListRows || *doc.Rows > maxListRows:
+		errorf("rows: %d, must be from %d to %d", *doc.Rows, minListRows, maxListRows)
+	default:
+		l.Rows = int(*doc.Rows)
+	}
+	return l
 }
 
 // parseAction parses the do of an item (section 8.3). langs is the languages of the BBS

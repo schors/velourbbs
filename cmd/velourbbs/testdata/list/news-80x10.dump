@@ -1,0 +1,44 @@
+page 1 80x10 fill none
+|News                                                                            |
+|                                                                                |
+|1 Read me first                                                                 |
+|2 Introduction                                                                  |
+|3 Fields                                                                        |
+|4 The menu                                                                      |
+|5 3-notes.txt                                                                   |
+|6 A very long title that is wider than the screen of forty columns              |
+|                                                                                |
+|page 1 of 2                                                                     |
+styles
+1: 1-4 15/0 bold, 5-80 7/0
+2: 1-80 7/0
+3: 1-80 7/0
+4: 1-80 7/0
+5: 1-80 7/0
+6: 1-80 7/0
+7: 1-80 7/0
+8: 1-80 7/0
+9: 1-80 7/0
+10: 1-11 8/0, 12-80 7/0
+page 2 80x10 fill none
+|News                                                                            |
+|                                                                                |
+|7 Art and colour                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|                                                                                |
+|page 2 of 2                                                                     |
+styles
+1: 1-4 15/0 bold, 5-80 7/0
+2: 1-80 7/0
+3: 1-80 7/0
+4: 1-80 7/0
+5: 1-80 7/0
+6: 1-80 7/0
+7: 1-80 7/0
+8: 1-80 7/0
+9: 1-80 7/0
+10: 1-11 8/0, 12-80 7/0

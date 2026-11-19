@@ -1,4 +1,4 @@
-# Task 9. Errors
+# Task 10. Errors
 
 `velourbbs check` finds the errors before the BBS starts.
 Each line gives the file, the line number, the column and the message (task 1).
@@ -102,6 +102,15 @@ screens/texts.bbt:2:1: item "1": args: file: content file "lmap.md" does not exi
 - The item `1` gives `gosub reader` the file `lmap.md` in `args`, and the file is not in `content/`.
   Correct the name in `args`.
 
+## `directory ... does not exist`
+
+```
+screens/log.bbt:2:1: data: args: dir: directory "lgo" does not exist
+```
+
+The key `data` of the list screen `log` names the directory `lgo` (task 8),
+and `content/lgo/` does not exist. Correct the name, or create the directory.
+
 ## `front matter: no end line`
 
 ```
@@ -117,7 +126,7 @@ Add the line `+++` after the last key of the front matter (task 7).
 screens/logo.ans:1:1: not in the flat form, convert it with velourbbs art import
 ```
 
-The art is the file of an art editor. Convert it (task 8).
+The art is the file of an art editor. Convert it (task 9).
 
 ## A field in art changes the colour
 
@@ -141,4 +150,5 @@ screens/about.bbt:10:8: unknown style "titel"
 
 Full rules: [screen-render](../../../specs/screen-render.md), section 3.1,
 [menu-nav](../../../specs/menu-nav.md), section 6,
-and [file-view](../../../specs/file-view.md), section 7.
+[file-view](../../../specs/file-view.md), section 7,
+and [list-view](../../../specs/list-view.md), section 10.

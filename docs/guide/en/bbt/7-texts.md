@@ -30,8 +30,8 @@ Full rules: [file-view](../../../specs/file-view.md), section 2.
 
 The item `R` goes to the screen `texts`.
 Its row is between the rows of `A` and `T`. Remove two empty lines below the row of `G`.
+The file `screens/main.bbt` after this task (task 8 shows its last form):
 
-`examples/lamp/en/screens/main.bbt`:
 ```
 +++
 [[item]]
@@ -96,7 +96,7 @@ The screen:
     A R T G  choose
 ```
 
-## The list screen `texts`
+## The screen `texts`
 
 `args` gives an argument to the screen of a `gosub` or a `goto`:
 
@@ -217,7 +217,7 @@ Full rules: [file-view](../../../specs/file-view.md), sections 3, 3.1 and 3.2.
 | `page first` | Show the first page. |
 | `page last` | Show the last page. |
 
-- A `page` action works only in a file screen.
+- A `page` action works only in a file screen and in a list screen (task 8).
 - `when = "not file.last"`: `Space` works on each page except the last.
 - `when = "file.page > 1"`: `B` works from page 2.
 - The key row shows a key only when its item works: `{#if item.SPACE}...{/if}`.
@@ -361,7 +361,7 @@ author: Anna Lind
 
 - The front matter starts on the first line of the file.
 - Each key with one value gives the field `meta.<key>`. The key `title` also gives `file.title`.
-- A first line `+++` without its end line is an error (task 9).
+- A first line `+++` without its end line is an error (task 10).
 
 Full rules: [file-view](../../../specs/file-view.md), section 5.
 

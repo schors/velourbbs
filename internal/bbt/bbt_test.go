@@ -104,6 +104,8 @@ func show(segs []screen.Seg) string {
 			out = append(out, "if("+show(s.Then)+")else("+show(s.Else)+")")
 		case screen.Include:
 			out = append(out, s.File+"("+show(s.Body)+")")
+		case screen.ListLine:
+			out = append(out, "list("+show(s.Row)+")")
 		case screen.ArtInsert:
 			var refs []string
 			for _, f := range s.Art.Fields {

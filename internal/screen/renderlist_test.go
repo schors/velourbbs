@@ -1,0 +1,85 @@
+package screen_test
+
+import (
+	"slices"
+	"testing"
+	"testing/fstest"
+
+	"github.com/schors/velourbbs/internal/bbt"
+	"github.com/schors/velourbbs/internal/screen"
+)
+
+// listScreen loads the list screen l with rows = 3, the body body and the directory d
+// with the content files names (list-view, section 3).
+func listScreen(t *testing.T, valign, body string, names ...string) *screen.Screen {
+	t.Helper()
+	fsys := fstest.MapFS{
+		"screens/l.bbt": {Data: []byte("+++\ndata = { from = \"files\", args = { dir = \"d\" } }\nrows = 3\n" + valign + "+++\n" + body)},
+	}
+	for _, n := range names {
+		fsys["content/d/"+n] = &fstest.MapFile{Data: []byte("x\n")}
+	}
+	if len(names) == 0 {
+		fsys["content/d/.keep"] = &fstest.MapFile{}
+	}
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 20}}})
+	if ds.HasErrors() {
+		t.Fatalf("diags: %v", ds)
+	}
+	return sets["en"]["l"]
+}
+
+// listPage renders the list page n of s with the page size p at 30x10.
+func listPage(s *screen.Screen, n, p int) screen.Page {
+	rows := s.List.List(nil)
+	pages := max(1, (len(rows)+p-1)/p)
+	env := &screen.Env{
+		Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Charset: "utf-8", Colors: 16},
+		List: &screen.ListValues{Page: n, Pages: pages, Empty: len(rows) == 0},
+	}
+	return screen.RenderList(s, env, theme, rows, n, p)
+}
+
+// A list line gives P rows: the rows of the page, then empty rows in normal. A row does not wrap:
+// the host cuts it at W, a wide grapheme at W becomes a space. Each row starts with the style
+// before the list line, and the style after it is the same (list-view, section 5).
+func TestRenderList(t *testing.T) {
+	s := listScreen(t, "", "{!title}{list.page}/{list.pages}\n{#each}{row.num} {!prompt}{row.path}  界界界界界界界界{/each}\nEnd\n",
+		"a.txt", "b.txt", "c.txt", "d.txt")
+	p := listPage(s, 1, 3)
+	want := []string{"1/2", "1 d/a.txt  界界界界", "2 d/b.txt  界界界界", "3 d/c.txt  界界界界", "End"}
+	if got := texts(p); !slices.Equal(got, want) || p.Num != 1 || p.Top != 0 {
+		t.Errorf("page 1: %q, num %d, top %d; want %q", got, p.Num, p.Top, want)
+	}
+	row := p.Rows[1]
+	if row[0].Style != theme["title"] || row[2].Style != theme["prompt"] || row[19].Grapheme != " " {
+		t.Errorf("row 1: %+v", row)
+	}
+	if p.Rows[4][0].Style != theme["title"] {
+		t.Errorf("the style after the list line: %v, want title", p.Rows[4][0].Style)
+	}
+	p = listPage(s, 2, 3)
+	want = []string{"2/2", "4 d/d.txt  界界界界", "", "", "End"}
+	if got := texts(p); !slices.Equal(got, want) {
+		t.Errorf("page 2: %q, want %q", got, want)
+	}
+	if p.Rows[2][0].Style != theme["normal"] {
+		t.Errorf("empty row style %v, want normal", p.Rows[2][0].Style)
+	}
+}
+
+// The page size of list-view, section 7: page 1 with P = rows gives R rows.
+// A page with fewer rows than term.rows has the vertical position of valign.
+func TestListRows(t *testing.T) {
+	s := listScreen(t, "valign = \"bottom\"\n", "Top\n{#each}{row.num}{/each}\n", "a.txt")
+	env := &screen.Env{
+		Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Charset: "utf-8", Colors: 16},
+		List: &screen.ListValues{Page: 1, Pages: 1},
+	}
+	if r := screen.ListRows(s, env, theme, s.List.List(nil), 3); r != 4 {
+		t.Errorf("ListRows %d, want 4", r)
+	}
+	if p := listPage(s, 1, 3); p.Top != 6 || len(p.Rows) != 4 {
+		t.Errorf("top %d, rows %d; want 6 and 4", p.Top, len(p.Rows))
+	}
+}

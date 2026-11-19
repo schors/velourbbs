@@ -230,7 +230,7 @@ func TestFileErrors(t *testing.T) {
 		},
 		want: []string{
 			`screens/_frag.bbt:1:1: screen "b": field "meta.author" is valid only in a file screen`,
-			`screens/a.bbt:2:1: item "B": do: "page next" is valid only in a file screen`,
+			`screens/a.bbt:2:1: item "B": do: "page next" is valid only in a file screen or a list screen`,
 			`screens/a.bbt:2:1: item "C": when: field "file.page" is valid only in a file screen`,
 			`screens/a.bbt:2:1: item "D": do: invalid page action "page up"`,
 			`screens/art.ans:1:1: screen "b": field "file.page" is valid only in a file screen`,

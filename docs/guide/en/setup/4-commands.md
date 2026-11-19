@@ -47,7 +47,7 @@ It converts a file of an art editor to the form that the BBS reads:
 velourbbs art import art/logo.ans screens/logo.ans
 ```
 
-Details: task 8 of the [BBT guide](../bbt/8-art.md).
+Details: task 9 of the [BBT guide](../bbt/9-art.md).
 
 ## `velourbbs serve`
 

@@ -1,0 +1,30 @@
++++
+data = { from = "files", args = { dir = "log" } }
+rows = 5
+[[item]]
+key = "SPACE"
+do = "page next"
+when = "not list.last"
+[[item]]
+key = "B"
+do = "page prev"
+when = "list.page > 1"
+[[item]]
+key = "ESC"
+do = "back"
++++
+{>_head}
+       {!title}The keeper's log{!}
+       {!dim}notes of the nights  ∙  page {list.page}/{list.pages}{!}
+
+{#each}         {!key}{row.num}{!}   {row.title                             }{!dim}{row.minutes} min{/each}
+
+
+
+
+
+
+
+  {!line}────────────────────────────────────────────────────────────────────────────{!}
+
+    {#if item.SPACE}{!key}Space{!}  {!dim}next{!}   {/if}{#if item.B}{!key}B{!}  {!dim}prev{!}   {/if}{!key}Esc{!}  {!dim}back{!}

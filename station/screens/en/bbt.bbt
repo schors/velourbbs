@@ -35,11 +35,15 @@ args = { file = "guide/bbt/7-texts.md", title = "BBT guide" }
 [[item]]
 key = "8"
 do = "gosub read"
-args = { file = "guide/bbt/8-art.md", title = "BBT guide" }
+args = { file = "guide/bbt/8-lists.md", title = "BBT guide" }
 [[item]]
 key = "9"
 do = "gosub read"
-args = { file = "guide/bbt/9-errors.md", title = "BBT guide" }
+args = { file = "guide/bbt/9-art.md", title = "BBT guide" }
+[[item]]
+key = "A"
+do = "gosub read"
+args = { file = "guide/bbt/10-errors.md", title = "BBT guide" }
 [[item]]
 key = "ESC"
 do = "back"
@@ -70,11 +74,11 @@ do = "back"
 
               {!gold}7{!}  {!emer}■{!}  {!ctl}Texts{!}
 
-              {!gold}8{!}  {!emer}■{!}  {!ctl}Art{!}
+              {!gold}8{!}  {!emer}■{!}  {!ctl}Lists{!}
 
-              {!gold}9{!}  {!emer}■{!}  {!ctl}Errors{!}
+              {!gold}9{!}  {!emer}■{!}  {!ctl}Art{!}
 
-
+              {!gold}A{!}  {!emer}■{!}  {!ctl}Errors{!}
 
 
 
@@ -85,7 +89,7 @@ do = "back"
 
 
               {!frame}────────────────────────────────────────────────────────────────────────────────────────────────────────{!}
-              {!hi}0-9{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
+              {!hi}0-9 A{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
 {#else}
 
     {!hi}V E L O U R{!}      {!white}Texts{!}
@@ -100,14 +104,14 @@ do = "back"
     {!gold}5{!}  {!emer}■{!}  {!ctl}Fields and conditions{!}
     {!gold}6{!}  {!emer}■{!}  {!ctl}The colour depth{!}
     {!gold}7{!}  {!emer}■{!}  {!ctl}Texts{!}
-    {!gold}8{!}  {!emer}■{!}  {!ctl}Art{!}
-    {!gold}9{!}  {!emer}■{!}  {!ctl}Errors{!}
-
+    {!gold}8{!}  {!emer}■{!}  {!ctl}Lists{!}
+    {!gold}9{!}  {!emer}■{!}  {!ctl}Art{!}
+    {!gold}A{!}  {!emer}■{!}  {!ctl}Errors{!}
 
 
 
 
 
     {!frame}────────────────────────────────────────────────────────────────{!}
-    {!hi}0-9{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
+    {!hi}0-9 A{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
 {/if}

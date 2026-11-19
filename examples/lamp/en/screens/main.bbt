@@ -6,6 +6,9 @@ do = "gosub about"
 key = "R"
 do = "gosub texts"
 [[item]]
+key = "L"
+do = "gosub log"
+[[item]]
 key = "T"
 do = "gosub term"
 [[item]]
@@ -16,18 +19,18 @@ do = "logoff"
        Good evening. It's quiet and warm here.
        Pull up a chair by the lamp.
 
-
          {!key}A{!}   About                                   {!dim}who we are{!}
 
          {!key}R{!}   Reading room                            {!dim}stories by the lamp{!}
+
+         {!key}L{!}   Keeper's log                            {!dim}notes of the nights{!}
 
          {!key}T{!}   Your terminal                           {!dim}size and colours{!}
 
          {!key}G{!}   Goodbye                                 {!dim}the lamp will wait{!}
 
-
        {!dim}The light stays on till morning.{!}
 
   {!line}────────────────────────────────────────────────────────────────────────────{!}
 
-    {!key}A R T G{!}  {!dim}choose{!}
+    {!key}A R L T G{!}  {!dim}choose{!}

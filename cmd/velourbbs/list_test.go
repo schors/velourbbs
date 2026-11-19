@@ -1,0 +1,55 @@
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+// listGoldens is the golden dumps of the test BBS testdata/list (list-view, section 12):
+// the file name in testdata/list and the arguments of velourbbs preview.
+var listGoldens = []struct {
+	name string
+	args []string
+}{
+	// The first page and the last page with empty rows, a list line in a block.
+	{"parts-80x24.dump", []string{"parts", "--set", "arg.dir=parts"}},
+	// A list line in a fragment, wider than W: each row is cut at W.
+	{"parts-40x10.dump", []string{"parts", "--set", "arg.dir=parts", "--size", "40x10"}},
+	// An empty list: one page with P empty rows and list.empty.
+	{"empty-80x24.dump", []string{"parts", "--set", "arg.dir=empty"}},
+	// P smaller than rows: rows = 12 and 16 rows give P = 6 at 80x10.
+	{"news-80x10.dump", []string{"news", "--size", "80x10"}},
+	// Each page action; the disabled page next on the last page and page prev on the first page;
+	// back to the page of the frame; theme on page 2 keeps the page; an empty list.
+	{"keys-40x10.dump", []string{"main", "--size", "40x10", "--keys", "1,PGDN,PGDN,PGUP,PGUP,END,HOME,END,N,ESC,T,ESC,2,PGDN,ESC,G"}},
+}
+
+func TestPreviewList(t *testing.T) {
+	out, errOut, status := runIn(t, "list", "check")
+	if out != "" || errOut != "" || status != 0 {
+		t.Errorf("check: stdout %q, stderr %q, status %d; want no output and status 0", out, errOut, status)
+	}
+	for _, g := range listGoldens {
+		t.Run(g.name, func(t *testing.T) {
+			file := filepath.Join("testdata", "list", g.name)
+			want, err := os.ReadFile(file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			out, errOut, status := runIn(t, "list", append([]string{"preview"}, g.args...)...)
+			if errOut != "" || status != 0 || out != string(want) {
+				t.Errorf("%s: stderr %q, status %d, got\n%s\nwant\n%s", file, errOut, status, out, want)
+			}
+		})
+	}
+}
+
+// An error of the provider for a --set value is an invalid argument (screen-render, section 3.2).
+func TestPreviewListArg(t *testing.T) {
+	out, errOut, status := runIn(t, "list", "preview", "parts", "--set", "arg.dir=nope")
+	want := "velourbbs preview: data: args: dir: directory \"nope\" does not exist\n"
+	if out != "" || errOut != want || status != exitError {
+		t.Errorf("stdout %q, stderr %q, status %d; want stderr %q, status %d", out, errOut, status, want, exitError)
+	}
+}

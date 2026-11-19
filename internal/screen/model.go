@@ -1,6 +1,11 @@
 package screen
 
-import "fmt"
+import (
+	"fmt"
+	"maps"
+	"slices"
+	"strings"
+)
 
 // Pos is the position of a token in a file. Line and Col are 1-based.
 // Col counts code points (screen-render, section 3.1).
@@ -22,6 +27,48 @@ type Screen struct {
 	Args []string
 	// FileScreen is the file of a file screen (file-view, section 3), else nil.
 	FileScreen *FileSpec
+	// List is the list of a list screen (list-view, section 3), else nil.
+	List *ListSpec
+}
+
+// ListSpec is the list of a list screen: the keys data and rows (list-view, sections 3 and 4).
+type ListSpec struct {
+	From string // the provider
+	// Args holds the args of data: a literal, or the name of a screen argument in ArgRefs.
+	Args    map[string]string
+	ArgRefs map[string]string // the provider argument of each value "{arg.<name>}": its <name>
+	Rows    int               // the key rows
+	// Lists holds the rows of each provider value that the screen can show, by ListKey.
+	Lists map[string][]ListRow
+}
+
+// ListRow is a row of a provider: the value of each field, an int or a string (list-view, section 4).
+type ListRow map[string]any
+
+// Values gives the provider arguments for the screen arguments args.
+func (l *ListSpec) Values(args map[string]string) map[string]string {
+	v := maps.Clone(l.Args)
+	if v == nil {
+		v = map[string]string{}
+	}
+	for name, arg := range l.ArgRefs {
+		v[name] = args[arg]
+	}
+	return v
+}
+
+// List gives the rows of the list for the screen arguments args.
+func (l *ListSpec) List(args map[string]string) []ListRow {
+	return l.Lists[ListKey(l.Values(args))]
+}
+
+// ListKey gives the key of the provider arguments values in ListSpec.Lists.
+func ListKey(values map[string]string) string {
+	var b strings.Builder
+	for _, name := range slices.Sorted(maps.Keys(values)) {
+		b.WriteString(name + "=" + values[name] + "\x00")
+	}
+	return b.String()
 }
 
 // FileSpec is the file of a file screen: the keys file, lines, numbers and margin (file-view, section 3).
@@ -108,7 +155,7 @@ const (
 	Lang
 )
 
-// IsPage reports whether o is a page action (file-view, section 3.3).
+// IsPage reports whether o is a page action (file-view, section 3.3, and list-view, section 7).
 func (o Op) IsPage() bool {
 	switch o {
 	case PageNext, PagePrev, PageFirst, PageLast:
@@ -128,7 +175,7 @@ func (a Action) Target() string {
 // HasTarget reports whether o shows the screen of Action.Screen with Action.Args: Goto or Gosub.
 func (o Op) HasTarget() bool { return o == Goto || o == Gosub }
 
-// Seg is one segment of a body: Text, Field, SetStyle, If, Include, ArtInsert, FileArea or LineEnd.
+// Seg is one segment of a body: Text, Field, SetStyle, If, Include, ArtInsert, FileArea, ListLine or LineEnd.
 // Blocks can start and end inside a line, so If holds segments, not lines.
 type Seg interface{ seg() }
 
@@ -181,6 +228,12 @@ type ArtInsert struct {
 // It is a segment of the body of the screen file, outside the blocks.
 type FileArea struct{}
 
+// ListLine is a list line {#each}...{/each} (list-view, section 5). Row is the row text.
+// It ends its source line: no LineEnd follows it.
+type ListLine struct {
+	Row []Seg
+}
+
 // LineEnd ends a source line. Block is true when the line has a block token:
 // such a line gives no row when it has only spaces after the evaluation (section 6.2).
 type LineEnd struct {
@@ -194,4 +247,5 @@ func (If) seg()        {}
 func (Include) seg()   {}
 func (ArtInsert) seg() {}
 func (FileArea) seg()  {}
+func (ListLine) seg()  {}
 func (LineEnd) seg()   {}

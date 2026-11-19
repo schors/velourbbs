@@ -296,6 +296,10 @@ func TestTOMLErrors(t *testing.T) {
 			`1:1: fields: alias "v": "w" is not a registry path`,
 			`1:1: fields: invalid alias "яя"`,
 		}},
+		{"fields = { row = \"term.cols\", list = \"term.rows\", p = \"list.page\", n = \"row.num\" }", []string{
+			`1:1: fields: alias "list" is a reserved word`,
+			`1:1: fields: alias "row" is a reserved word`,
+		}},
 	}
 	for _, tt := range tests {
 		_, ds := parseScreens([]byte(tt.data))

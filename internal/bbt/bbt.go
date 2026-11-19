@@ -15,6 +15,7 @@ import (
 
 	"github.com/schors/velourbbs/internal/art"
 	"github.com/schors/velourbbs/internal/content"
+	"github.com/schors/velourbbs/internal/provider"
 	"github.com/schors/velourbbs/internal/screen"
 )
 
@@ -297,10 +298,31 @@ func (l *loader) literalFile(u *unit, f *screen.FileSpec) {
 	}
 }
 
-// targetFiles loads the content file of each value of an argument of a file screen with {arg.<name>}.
+// literalRows reads the rows of the list screen u whose data has no {arg.<name>} value
+// (list-view, section 4). An error is an error of the key data.
+func (l *loader) literalRows(u *unit, ls *screen.ListSpec) {
+	for _, err := range l.rows(ls, ls.Args) {
+		l.errorf(u, screen.Pos{File: u.f.name, Line: 2, Col: 1}, false, "data: args: %v", err)
+	}
+}
+
+// rows reads the rows of the provider of ls for the provider arguments values into ls.Lists
+// and gives the errors.
+func (l *loader) rows(ls *screen.ListSpec, values map[string]string) []error {
+	p, _ := provider.Lookup(ls.From)
+	rows, errs := p.Rows(l.fsys, l.lang, values, l.content)
+	if len(errs) == 0 {
+		ls.Lists[screen.ListKey(values)] = rows
+	}
+	return errs
+}
+
+// targetFiles loads the content file of each value of an argument of a file screen with {arg.<name>},
+// and the rows of each value of an argument of data of a list screen.
 // The values are the values of the goto and gosub actions to the screen in all screen sets.
 // Each set loads and checks each value with its own search. An error is an error of the item
-// with the goto or the gosub in the set that finds it (file-view, section 7, and session-language, section 6).
+// with the goto or the gosub in the set that finds it (file-view, section 7, list-view, section 10,
+// and session-language, section 6).
 // The menu checks report a target screen that does not exist and a missing argument.
 func targetFiles(loaders []*loader) {
 	type value struct {
@@ -331,7 +353,14 @@ func targetFiles(loaders []*loader) {
 		}
 		for _, v := range values {
 			t := byName[v.it.Do.Screen]
-			if t == nil || !t.done || t.s.FileScreen == nil || t.s.FileScreen.Arg == "" {
+			if t == nil || !t.done {
+				continue
+			}
+			if ls := t.s.List; ls != nil && len(ls.ArgRefs) > 0 && ls.From != "" {
+				l.targetRows(v.u, v.it, ls)
+				continue
+			}
+			if t.s.FileScreen == nil || t.s.FileScreen.Arg == "" {
 				continue
 			}
 			f := t.s.FileScreen
@@ -353,5 +382,19 @@ func targetFiles(loaders []*loader) {
 				f.Contents[p] = c
 			}
 		}
+	}
+}
+
+// targetRows reads the rows of the list screen ls for the args of the item it of the screen u
+// (list-view, section 4). An error is an error of the item. A missing argument gives no rows:
+// the menu checks report it.
+func (l *loader) targetRows(u *unit, it screen.Item, ls *screen.ListSpec) {
+	for _, arg := range ls.ArgRefs {
+		if _, ok := it.Do.Args[arg]; !ok {
+			return
+		}
+	}
+	for _, err := range l.rows(ls, ls.Values(it.Do.Args)) {
+		l.fd(u.f.name).Errorf(2, 1, "item %q: args: %v", it.Key, err)
 	}
 }

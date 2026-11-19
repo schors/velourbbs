@@ -35,7 +35,7 @@ and [menu-nav](../../../specs/menu-nav.md), sections 3–6.
 ## The screen `main`
 
 The menu has two items: `A` goes to the screen `about`, `G` ends the session.
-Task 5 adds the item `T`, task 7 adds the item `R`.
+Task 5 adds the item `T`, task 7 adds the item `R`, task 8 adds the item `L`.
 
 Write `screens/main.bbt` with this text:
 

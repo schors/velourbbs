@@ -51,15 +51,16 @@ Each task refers to the specifications for the full rules.
 - [Task 5. Fields and conditions](5-fields.md)
 - [Task 6. The colour depth](6-colour-depth.md)
 - [Task 7. Texts](7-texts.md)
-- [Task 8. Art](8-art.md)
-- [Task 9. Errors](9-errors.md)
+- [Task 8. Lists](8-lists.md)
+- [Task 9. Art](9-art.md)
+- [Task 10. Errors](10-errors.md)
 
 ## Not in the MVP
 
 The BBS does not have these features yet:
 
-- lists and loops (`#each`), list rows in art, data providers and conditions in art.
-  In the MVP, only the `.bbt` files have conditions;
+- list rows in art and conditions in art.
+  In the MVP, only the `.bbt` files have lists and conditions;
 - marks (`{@<id>}`) and the choice of an item with the arrow keys.
   The user chooses an item only with its key;
 - access checks (`require`). They need users;

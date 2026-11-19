@@ -17,7 +17,7 @@ type file struct {
 }
 
 // node is a body part after the file pass: screen.Text, screen.SetStyle, field,
-// lineEnd, *ifNode, include, artInsert or fileArea. The file pass resolves the fields and
+// lineEnd, *ifNode, include, artInsert, fileArea or *eachNode. The file pass resolves the fields and
 // the conditions with the aliases of screens/screens.toml. The screen pass gives screen.Seg.
 type node any
 
@@ -30,6 +30,13 @@ type field struct {
 // fileArea is the file area {>file} of a file screen (file-view, section 3.1).
 type fileArea struct {
 	pos screen.Pos
+}
+
+// eachNode is a list line {#each}...{/each} and its row text (list-view, section 5).
+// No lineEnd follows it.
+type eachNode struct {
+	pos  screen.Pos
+	body []node
 }
 
 type lineEnd struct {
@@ -105,9 +112,17 @@ type scanner struct {
 	root     []node
 	open     []*ifNode
 	area     bool // the file has a {>file}
+	// each is the list line in progress, else nil. eachOpen is the open blocks at its start:
+	// the blocks of the row text must balance (list-view, section 5).
+	each     *eachNode
+	eachOpen int
 }
 
 func (s *scanner) add(n node) {
+	if s.each != nil && len(s.open) == s.eachOpen {
+		s.each.body = append(s.each.body, n)
+		return
+	}
 	if len(s.open) == 0 {
 		s.root = append(s.root, n)
 		return
@@ -188,6 +203,35 @@ func (s *scanner) line(row int, line string) {
 		}
 		return
 	}
+	if len(ps) > 0 && ps[0].token && ps[0].text == "#each" {
+		s.listLine(row, ps)
+		return
+	}
+	s.add(lineEnd{row: row, block: s.tokens(row, ps)})
+}
+
+// listLine reads a list line: ps starts with {#each} (list-view, section 5).
+func (s *scanner) listLine(row int, ps []piece) {
+	last := ps[len(ps)-1]
+	if len(ps) == 1 || !last.token || last.text != "/each" {
+		s.d.Errorf(row, ps[0].col, "{#each} has no {/each} at the end of its line")
+		return
+	}
+	n := &eachNode{pos: screen.Pos{File: s.d.File, Line: row, Col: ps[0].col}}
+	s.each, s.eachOpen = n, len(s.open)
+	s.tokens(row, ps[1:len(ps)-1])
+	for len(s.open) > s.eachOpen {
+		top := s.open[len(s.open)-1]
+		s.d.Errorf(top.pos.Line, top.pos.Col, "{#if} has no {/if} in its list line")
+		s.open = s.open[:len(s.open)-1]
+	}
+	s.each = nil
+	s.add(n)
+}
+
+// tokens adds the nodes of the text runs and the tokens ps of the line row.
+// It reports whether the line has a valid block token.
+func (s *scanner) tokens(row int, ps []piece) bool {
 	block := false
 	var text []screen.Grapheme
 	for _, p := range ps {
@@ -221,7 +265,7 @@ func (s *scanner) line(row int, line string) {
 	if len(text) > 0 {
 		s.add(screen.Text{Graphemes: text})
 	}
-	s.add(lineEnd{row: row, block: block})
+	return block
 }
 
 // graphemes checks the graphemes of text at the column col and appends them to gs.
@@ -240,11 +284,16 @@ func (s *scanner) graphemes(row, col int, text string, gs []screen.Grapheme) []s
 // block handles a token that starts with "#" or "/". It reports whether it is a valid block token.
 func (s *scanner) block(pos screen.Pos, c string) bool {
 	top := len(s.open) - 1
+	if s.each != nil && top < s.eachOpen {
+		top = -1 // the blocks before the list line are closed to its row text
+	}
 	switch {
 	case c == "#if" || strings.HasPrefix(c, "#if "):
 		cond, err := screen.ParseCond(c[len("#if"):], s.fields, true)
 		if err != nil {
 			s.d.Errorf(pos.Line, pos.Col, "%v", err)
+		} else if r := rowField(cond); r != "" && s.each == nil {
+			s.d.Errorf(pos.Line, pos.Col, "field %q is valid only in a list line", r)
 		}
 		n := &ifNode{pos: pos, cond: cond}
 		s.add(n)
@@ -269,6 +318,10 @@ func (s *scanner) block(pos screen.Pos, c string) bool {
 		return true
 	case c == "/@":
 		s.d.Errorf(pos.Line, pos.Col, "marks are not supported")
+	case c == "#each":
+		s.d.Errorf(pos.Line, pos.Col, "{#each} is valid only at the start of a list line")
+	case c == "/each":
+		s.d.Errorf(pos.Line, pos.Col, "{/each} is valid only at the end of a list line")
 	default:
 		s.d.Errorf(pos.Line, pos.Col, "unknown token %q", "{"+c+"}")
 	}
@@ -310,6 +363,10 @@ func (s *scanner) field(pos screen.Pos, c string) {
 	ref, err := screen.LookupField(strings.Trim(c, " "), s.fields)
 	if err != nil {
 		s.d.Errorf(pos.Line, pos.Col, "%v", err)
+		return
+	}
+	if ref.Row() != "" && s.each == nil {
+		s.d.Errorf(pos.Line, pos.Col, "field %q is valid only in a list line", ref.String())
 		return
 	}
 	f := screen.Field{Ref: ref, Right: lead > 0}

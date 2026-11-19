@@ -1,0 +1,7 @@
+[theme.default]
+title = "15 bold"
+dim   = "8"
+key   = "14"
+
+[theme.light.default]
+normal = "0/15"

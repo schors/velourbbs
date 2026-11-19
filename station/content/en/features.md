@@ -39,6 +39,9 @@ Velour counts the reading time.
 One screen shows many files: a menu item gives it the file.
 A file screen can show a part of a source file and line numbers.
 
+A list screen shows the files of a directory in pages: the title and the reading time of each file.
+Velour reads the directory at the start.
+
 ## Art
 
 `velourbbs art import` converts ANSI art from Moebius, icy_draw and PabloDraw to the Velour format.
