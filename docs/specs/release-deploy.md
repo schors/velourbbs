@@ -188,8 +188,8 @@ Layout under the home directory of the user:
   GitHub allows a re-run for 30 days after the run.
 - After 30 days, revert the change in `main` and push a new tag.
 - After a migration of the data file, the check of an earlier release fails at step 1
-  ([data-store](data-store.md), section 6). Stop the service, restore a copy of the data file
-  of that release and re-run.
+  ([data-store](data-store.md), section 6). Stop `velourbbs.socket` and `velourbbs.service`,
+  restore the backup of the data file of that release, and re-run.
 
 ## 5. Units
 

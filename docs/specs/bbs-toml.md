@@ -67,7 +67,7 @@ The connection limits and the timeouts of the host.
 |---|---|---|---|
 | `path` | string | `"velourbbs.jsonl"` | The data file. A relative path is relative to the BBS directory. [data-store](data-store.md), section 2. |
 
-- `path` is not empty and has no NUL character.
+- `path` is not empty.
 
 ## 4. Example
 

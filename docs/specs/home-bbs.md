@@ -28,9 +28,9 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - `<lang>` is `ru` or `en`.
 - The symlink keeps one copy of the guides.
 - A version tag deploys the directory with the symlinks resolved ([release-deploy](release-deploy.md)).
-  To deploy by hand, copy it: `cp -rL station/. /srv/velourbbs/`.
-  Then follow [part 2 of the setup guide](../guide/en/setup/2-bbs-directory.md)
-  without its copy of Lamp, and the parts after it.
+  To deploy by hand, copy it: `cp -rL station/. /srv/velourbbs/`, and remove
+  `/srv/velourbbs/data/`. Then follow [part 2 of the setup guide](../guide/en/setup/2-bbs-directory.md)
+  without its copy of Lamp, and the parts after it. Part 5 sets `[store] path`.
 
 ## 3. Screens
 
