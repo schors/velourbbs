@@ -35,12 +35,13 @@ The other specifications define the effect of a key and refer to this specificat
 | `align` | string | `"center"` | The horizontal position of a screen: [bbt-format](bbt-format.md), section 6.1. |
 | `valign` | string | `"top"` | The vertical position of a screen: [bbt-format](bbt-format.md), section 6.5. |
 | `fill` | string | `"none"` | The fill rows: [bbt-format](bbt-format.md), section 6.5. |
+| `gutter` | integer | `0` | The cells that the render width leaves on each side of the screen area: [bbt-format](bbt-format.md), section 6.1. |
 | `time` | string | `"2006-01-02 15:04:05"` | The layout of the Go package `time` for the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 | `zone` | string | `"Local"` | The time zone of the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 | `theme` | string | `"dark"` | The theme choice at the start of a session: `dark`, `light` or `auto` (section 3.2). |
 | `lang` | string | `"en"` | The session language at the start of a session: [session-language](session-language.md), sections 2 and 5. |
 
-- `width`, `align`, `valign` and `fill` have the rules of the front matter keys
+- `width`, `align`, `valign`, `fill` and `gutter` have the rules of the front matter keys
   ([bbt-format](bbt-format.md), section 3.2).
 - `zone` is `"Local"`, `"UTC"` or a zone name that the Go function `time.LoadLocation` loads.
   Example: `"Europe/Berlin"`. The function reads the zone files of the host, else the IANA
