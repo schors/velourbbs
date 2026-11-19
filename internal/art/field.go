@@ -60,8 +60,12 @@ func findTokens(d *screen.FileDiags, rows []screen.Row, fields screen.Fields) ([
 func blockToken(d *screen.FileDiags, row screen.Row, n, c, end int, open *screen.ArtBox,
 	boxes []screen.ArtBox, fields screen.Fields) (*screen.ArtBox, []screen.ArtBox) {
 	text := cellText(row[c+1 : end])
+	isIf := text == "#if" || strings.HasPrefix(text, "#if ")
+	if isIf || text == "/if" { // a block token has the colours of a token (section 4)
+		checkToken(d, n, row[c:end+1], c+1)
+	}
 	switch {
-	case text == "#if" || strings.HasPrefix(text, "#if "):
+	case isIf:
 		if open != nil {
 			d.Errorf(n, c+1, "{#if} in a box: boxes do not nest")
 			return open, boxes

@@ -373,6 +373,9 @@ func TestBoxes(t *testing.T) {
 			"a.ans:1:1: unknown field \"term.colss\"\n" +
 				"a.ans:1:27: expected a field, found end of condition\n" +
 				"a.ans:1:38: integer field \"term.cols\" needs an operator"},
+		{"marker colours", "{\x1b[31m#if term.cols > 1}a{\x1b[41m/if}", "",
+			"a.ans:1:1: token \"{#if term.cols > 1}\" changes the foreground: 7 at col 1, 1 at col 2\n" +
+				"a.ans:1:21: token \"{/if}\" changes the background: 0 at col 21, 1 at col 22"},
 		{"row field", "{#if row.num > 1}a{/if}", "", `a.ans:1:1: field "row.num" is not valid in a box condition`},
 		{"list row", "{row.num} {#if term.cols > 1}a{/if}", "", "a.ans:1:11: box in the list row"},
 	}

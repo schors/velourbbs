@@ -59,8 +59,6 @@ Each task refers to the specifications for the full rules.
 
 The BBS does not have these features yet:
 
-- conditions in art.
-  In the MVP, only the `.bbt` files have conditions;
 - marks (`{@<id>}`) and the choice of an item with the arrow keys.
   The user chooses an item only with its key;
 - access checks (`require`). They need users;

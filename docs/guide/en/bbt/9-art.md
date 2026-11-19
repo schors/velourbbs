@@ -195,7 +195,8 @@ Full rules: [list-view](../../../specs/list-view.md), section 9.
 ## A box in art
 
 A "box" shows a part of an art row only when its condition is true.
-Example: the bottom row of `shelf.ans` shows `[Space]` only when the item `SPACE` works:
+Example: change the bottom row of `shelf.ans` to this row. It shows `[Space]`
+only when the item `SPACE` works:
 
 ```text
 ╚═[Esc]═{#if item.SPACE}[Space]{/if}═══╝
