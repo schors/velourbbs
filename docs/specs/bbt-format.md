@@ -65,6 +65,7 @@ The front matter is TOML 1.1. An unknown key is an error.
 | `align` | string | The horizontal position: `"left"`, `"center"` or `"right"`. Section 6.1. |
 | `valign` | string | The vertical position: `"top"`, `"middle"` or `"bottom"`. Section 6.5. |
 | `fill` | string | The fill rows: `"none"`, `"spaces"` or `"erase"`. Section 6.5. |
+| `gutter` | integer | The least empty cells on each side of the screen area, from 0 to 100. Section 6.1. |
 | `file`, `lines`, `numbers`, `margin` | — | The file of a file screen: [file-view](file-view.md), section 3. |
 | `data`, `rows`, `select` | — | The list of a list screen: [list-view](list-view.md), section 3. |
 | `[[item]]` | array of tables | Menu items with `key`, `do`, an optional `when` and optional `args`. Section 8. An array of inline tables is the same: `item = [{ key = "G", do = "logoff" }]`. |
@@ -105,6 +106,7 @@ In art, only [art-format](art-format.md), sections 4 and 5, defines the tokens.
 | `{#if <cond>}` `{#else}` `{/if}` | Conditional block. Section 5. |
 | `{!<style>}` | Style change. Section 7.3. |
 | `{>_<name>}` | Include of the fragment `_<name>.bbt`. Section 3.4. |
+| `{~}` `{~<c>}` | Stretch token: free cells of the row. Section 6.6. A source line `{~}` is a spacer line. |
 | `{><name>.ans}` | Art insert of the art `<name>.ans`. Sections 3.4 and 6.2. |
 | `{>file}` | The file area of a file screen: [file-view](file-view.md), section 3.1. |
 | `{#each}` `{/each}` | A list line of a list screen: [list-view](list-view.md), section 5. |
@@ -196,13 +198,15 @@ string  = '"' { any character except '"' and '}' } '"' ;
 
 ### 6.1. Width
 
-- The "render width" W is `term.cols`, clamped to the "width limits" `[min, max]`.
+- The "render width" W is `term.cols - 2 * gutter`, clamped to the "width limits" `[min, max]`.
 - The width limits are `width` in the front matter, else `[screen] width`
   ([screens-toml](screens-toml.md), section 3.1).
-  The same rule gives `align`, `valign` and `fill`.
-- When `term.cols` > W, the "screen area" has a left margin of `term.cols - W` cells
-  with `align = "right"`, `(term.cols - W) / 2` cells, rounded down, with `"center"`,
-  and 0 cells with `"left"`.
+  The same rule gives `align`, `valign`, `fill` and `gutter`.
+- When `term.cols` > W, the "screen area" has a left margin. F is `term.cols - W`.
+  The margin is `F - min(gutter, F)` cells with `align = "right"`, `F / 2` cells, rounded down,
+  with `"center"`, and `min(gutter, F)` cells with `"left"`.
+- Example: `width = [64, 104]`, `align = "center"` and `gutter = 8` give W = 64 and a margin
+  of 8 at 80 columns, and W = 104 and a margin of 14 at 132 columns.
 - When `term.cols` < `min`, the host renders at W = `min` and cuts each row at `term.cols`.
 - A screen with art of width `a` for smaller terminals has `width = [40, a]` and this body:
 
@@ -224,13 +228,17 @@ The body gives rows in source order:
 - An art insert gives the rows of the art. Each row starts at the left edge of the screen area.
   The host cuts the art at W. `velourbbs check` warns when the art is wider than `max`.
 - A cut of a row at W or at `term.cols` through a wide grapheme leaves a space in its style.
+- A spacer line gives the rows of section 6.6.
+- A source line with a stretch token that the render reaches gives one row (section 6.6),
+  also with a block token.
 - Each other source line gives one or more rows (section 6.3). An empty line gives an empty row.
 - Each cell of a row of a page that the screen does not draw is a space in the theme style `normal`.
   Section 6.5 gives the cells of the other terminal rows.
 
 ### 6.3. Text wrap
 
-- A row has W cells. A text line breaks at a space. The spaces at a break are removed.
+- A row has W cells. A source line with a stretch token does not wrap (section 6.6).
+- A text line breaks at a space. The spaces at a break are removed.
 - The spaces at the start of the source line stay up to W. They join the first word.
 - The spaces at the end of the source line stay up to W.
 - A word that is wider than W starts on a new row and breaks at a grapheme boundary.
@@ -264,6 +272,50 @@ The body gives rows in source order:
   - `"erase"`: the background of `normal`. The host clears the terminal screen in it
     ([telnet-term](telnet-term.md), section 7.1). A terminal without "background colour erase"
     (bce) shows its default colours.
+
+### 6.6. Stretch
+
+- A "stretch token" is `{~}` or `{~<c>}`. `<c>` is one grapheme of width 1, except `}`.
+  `{~}` is the same as `{~ }`. Each other token that starts with `{~` is an error.
+  Example: `{~.}` gives a dot leader, `{~─}` a rule.
+- A stretch token in a false block has no effect.
+- The "free cells" of a row are W minus the cells of the row without its stretch tokens.
+  The spaces at the start and at the end of the source line count.
+- The stretch tokens of a row share the free cells. With n tokens and F free cells,
+  each token gets `F / n` cells, rounded down. The last `F mod n` tokens get one more cell.
+  So `{~}{file.page}{~}` puts the field in the centre, rounded down to the left.
+- A token fills its cells with `<c>` in the style at the token.
+- When the cells of a row without its stretch tokens are W or more, each stretch token has 0 cells.
+  The host cuts the row at W.
+- A row of a list line has these rules too ([list-view](list-view.md), section 5).
+- Art has no stretch token. In art, `{~` is a plain character ([art-format](art-format.md), section 4).
+
+Example: one source line gives one row at each W.
+
+```
+{!ctl}Texts {!frame}{~.} {!dim}Guides and features
+{!hi}Q {!ctl}Quit{~}{!dim}{bbs.time}
+```
+
+A "spacer line" is a source line that is exactly `{~}`.
+
+- The "free rows" are `term.rows` minus the rows of the screen without the spacer lines.
+  When the free rows are 0 or less, each spacer line gives 0 rows.
+- The spacer lines that the render reaches share the free rows, by the rule of the free cells.
+  Each row of a spacer line is an empty row.
+- So a screen with a spacer line and fewer rows than `term.rows` fills its page.
+  `valign` has no effect on it (section 6.5).
+- A list screen counts the free rows after the page size P ([list-view](list-view.md), section 7).
+- In a file screen, a spacer line gives 0 rows: the file area takes the free rows
+  ([file-view](file-view.md), section 3.2).
+
+Example: the key row stays at the bottom of the terminal at 24 and at 43 rows.
+
+```
+{!hi}V E L O U R
+{~}
+{!hi}Q {!ctl}Quit
+```
 
 ## 7. Colours and styles
 
