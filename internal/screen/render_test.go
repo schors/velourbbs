@@ -57,7 +57,8 @@ func dump(t *testing.T, files map[string]string, name string, cols, rows int, it
 	for n, data := range files {
 		fsys["screens/"+n] = &fstest.MapFile{Data: []byte(data)}
 	}
-	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}, aliases)
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}, Fields: aliases})
+	screens := sets["en"]
 	if ds.HasErrors() {
 		t.Fatalf("diags: %v", ds)
 	}
@@ -223,7 +224,8 @@ styles
 func load(t *testing.T, main string) *screen.Screen {
 	t.Helper()
 	fsys := fstest.MapFS{"screens/main.bbt": {Data: []byte(main)}}
-	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}, aliases)
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}, Fields: aliases})
+	screens := sets["en"]
 	if ds.HasErrors() {
 		t.Fatalf("diags: %v", ds)
 	}

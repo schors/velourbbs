@@ -39,7 +39,8 @@ type frontDoc struct {
 
 // parseFront parses the front matter lines. The first line of lines is line 2 of the file.
 // fields is the aliases of screens/screens.toml. The result is nil when the front matter has an error.
-func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *front {
+// langs is the languages of the BBS.
+func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs []string) *front {
 	var doc frontDoc
 	data := []byte(strings.Join(lines, "\n"))
 	errs := tomlcheck.Decode(data, &doc)
@@ -78,7 +79,7 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields) *fron
 		}
 		if it.Do == nil {
 			errorf("%s: do is missing", label)
-		} else if a, err := parseAction(*it.Do); err != nil {
+		} else if a, err := parseAction(*it.Do, langs); err != nil {
 			errorf("%s: do: %v", label, err)
 		} else if a.Op.IsPage() && doc.File == nil {
 			errorf("%s: do: %q is valid only in a file screen", label, *it.Do)
@@ -167,18 +168,26 @@ func parseFileKeys(doc *frontDoc, errorf func(format string, args ...any)) *scre
 	return f
 }
 
-// parseAction parses the do of an item (section 8.3).
-func parseAction(do string) (screen.Action, error) {
+// parseAction parses the do of an item (section 8.3). langs is the languages of the BBS
+// (session-language, section 2).
+func parseAction(do string, langs []string) (screen.Action, error) {
 	word, arg, hasArg := strings.Cut(do, " ")
 	switch word {
 	case "goto", "gosub":
 		if !hasArg {
 			return screen.Action{}, fmt.Errorf("%s needs a screen name", word)
 		}
-		if !screen.IsName(arg) {
+		code, name, hasCode := strings.Cut(arg, "/")
+		if !hasCode {
+			code, name = "", arg
+		}
+		if !screen.IsName(name) || hasCode && !screen.IsLang(code) {
 			return screen.Action{}, fmt.Errorf("invalid screen name %q", arg)
 		}
-		return screen.Action{Op: targetOps[word], Screen: arg}, nil
+		if hasCode && !slices.Contains(langs, code) {
+			return screen.Action{}, fmt.Errorf("%q is not a language of the BBS", code)
+		}
+		return screen.Action{Op: targetOps[word], Screen: name, Lang: code}, nil
 	case "logoff", "back", "top":
 		if hasArg {
 			return screen.Action{}, fmt.Errorf("%s takes no argument", word)
@@ -194,6 +203,14 @@ func parseAction(do string) (screen.Action, error) {
 			return screen.Action{Op: screen.Theme, Theme: arg}, nil
 		}
 		return screen.Action{}, fmt.Errorf("invalid theme action %q", do)
+	case "lang":
+		switch {
+		case !hasArg || !screen.IsLang(arg):
+			return screen.Action{}, fmt.Errorf("invalid lang action %q", do)
+		case !slices.Contains(langs, arg):
+			return screen.Action{}, fmt.Errorf("%q is not a language of the BBS", arg)
+		}
+		return screen.Action{Op: screen.Lang, Lang: arg}, nil
 	}
 	return screen.Action{}, fmt.Errorf("unknown action %q", word)
 }

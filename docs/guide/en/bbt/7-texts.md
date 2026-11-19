@@ -538,6 +538,90 @@ The file area:
 
 Full rules: [file-view](../../../specs/file-view.md), section 6.
 
+## A BBS in two languages
+
+A BBS can show its screens and texts in more than one language.
+The user chooses a language. The BBS keeps the choice until the end of the session.
+
+Each table `[lang.<code>]` of `screens/screens.toml` adds a language.
+The code is two or three lower-case letters, for example `en` or `ru`.
+`[screen] lang` is the language at the start of a session. Its default is `en`.
+
+```toml
+[screen]
+lang = "en"
+
+[lang.en]
+
+[lang.ru]
+more = "    дальше ∙ любая клавиша"
+```
+
+`more` of a language table gives the More row of this language.
+Without it, the More row is `[screen] more`, then `-- More --`.
+
+Put the files of a language into a directory with the name of its code:
+
+```
+screens/
+  screens.toml
+  main.bbt        the choice of the language
+  _logo.bbt       one logo for all languages
+  en/menu.bbt     the menu in English
+  ru/menu.bbt     the menu in Russian
+content/
+  en/lamp.md
+  ru/lamp.md
+```
+
+The BBS finds a file in the language of the session first, then in the common directory.
+Example: in the language `ru`, the screen `menu` is `screens/ru/menu.bbt`, else `screens/menu.bbt`.
+The same rule applies to a fragment, to art and to a content file, also in a common screen.
+A file without text, for example a logo, stays in `screens/` once for all languages.
+
+The common screen `main` asks for the language:
+
+```
++++
+[[item]]
+key = "E"
+do = "gosub en/menu"
+[[item]]
+key = "R"
+do = "gosub ru/menu"
++++
+{>_logo}
+E  English   R  Русский
+```
+
+`gosub ru/menu` sets the language `ru` and shows the screen `menu` in this language.
+The stack holds only the name `menu`. So `Esc` with `back` in the menu shows `main` again.
+
+The action `lang <code>` changes the language on any screen.
+The BBS then shows the same screen in the new language. A file screen keeps its page.
+
+```
+[[item]]
+key = "L"
+do = "lang en"
+```
+
+The field `session.lang` gives the language of the session:
+
+```
+{#if session.lang == "ru"}Язык: русский{#else}Language: English{/if}
+```
+
+- Each language must have the same screens with the same arguments.
+  `velourbbs check` checks the screens of each language.
+  Example: `screens/ru/news.bbt:1:1: no screen "news" (language "en")`.
+- An error of a common file that only some languages find ends with the language.
+  Example: `screens/about.bbt:2:1: item "M": do: unknown screen "menu" (language "de")`.
+- `velourbbs preview menu --set session.lang=ru` shows the screen `menu` in Russian.
+
+Full rules: [session-language](../../../specs/session-language.md), sections 2 to 6,
+and [menu-nav](../../../specs/menu-nav.md), section 4.
+
 ## Test the pages
 
 `reader` needs the argument `file`. Give it with `--set`:

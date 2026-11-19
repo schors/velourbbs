@@ -103,6 +103,7 @@ The item `R` runs `gosub ru/menu`: the session language is `ru`, and the host sh
   of the set use the search of its language.
 - A `goto <code>/<name>` or a `gosub <code>/<name>` has the checks of a `goto` or a `gosub`
   to `<name>` in the screen set of `<code>`.
+  Its error names the target as `<code>/<name>`: `item "R": do: unknown screen "ru/menu"`.
 - These are errors too:
   - `lang <code>`, `goto <code>/<name>` or `gosub <code>/<name>` with a code that is not
     a language of the BBS: an invalid `do` ([bbt-format](bbt-format.md), section 8.4);
@@ -193,7 +194,8 @@ The text of the More row is the first of:
 - `velourbbs preview <name>` shows the screen `<name>` of the screen set of the session language.
 - The model of an argument file ([screen-render](screen-render.md), section 3.2) loads and checks
   the value in the screen set of each language, as section 6 does for the values of an item.
-  An error is an invalid argument.
+  The errors merge as in section 6. After an error, the command exits as after an error
+  of a content file of a value ([screen-render](screen-render.md), section 3.2).
 
 ## 9. Code
 

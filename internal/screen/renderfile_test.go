@@ -18,7 +18,8 @@ func fileScreen(t *testing.T, body string) *screen.Screen {
 		"screens/f.bbt": {Data: []byte("+++\nfile = \"a.txt\"\n+++\n" + body)},
 		"content/a.txt": {Data: []byte("a\n")},
 	}
-	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 20}}, nil)
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 20}}})
+	screens := sets["en"]
 	if ds.HasErrors() {
 		t.Fatalf("diags: %v", ds)
 	}
@@ -116,7 +117,8 @@ func TestRenderFileMargin(t *testing.T) {
 		"screens/f.bbt": {Data: []byte("+++\nfile = \"a.txt\"\nmargin = [3, 2]\n+++\nTop\n{>file}\n")},
 		"content/a.txt": {Data: []byte("aaaa bbbb cccc dddd\n")},
 	}
-	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 20}}, nil)
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 20}}})
+	screens := sets["en"]
 	if ds.HasErrors() {
 		t.Fatalf("diags: %v", ds)
 	}

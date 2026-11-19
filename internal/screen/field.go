@@ -99,6 +99,7 @@ type sessionField uint8
 const (
 	sessionIP sessionField = iota + 1
 	sessionTheme
+	sessionLang
 	sessionOnline
 	bbsName
 	bbsVersion
@@ -114,6 +115,7 @@ var sessionFields = [...]struct {
 }{
 	sessionIP:     {"session.ip", TypeString},
 	sessionTheme:  {"session.theme", TypeString},
+	sessionLang:   {"session.lang", TypeString},
 	sessionOnline: {"session.online", TypeString},
 	bbsName:       {"bbs.name", TypeString},
 	bbsVersion:    {"bbs.version", TypeString},
@@ -384,8 +386,10 @@ type Env struct {
 
 // SessionValues holds the values of the session.* and bbs.* fields (session-fields, section 2).
 // Online, Time and Uptime are the formatted values. Theme is the theme choice.
+// Lang is the session language.
 type SessionValues struct {
 	IP, Theme     string
+	Lang          string
 	Online        string
 	Name, Version string
 	Sessions      int
@@ -472,6 +476,8 @@ func (v *SessionValues) value(f sessionField) any {
 		return v.IP
 	case sessionTheme:
 		return v.Theme
+	case sessionLang:
+		return v.Lang
 	case sessionOnline:
 		return v.Online
 	case bbsName:

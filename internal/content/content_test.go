@@ -15,7 +15,7 @@ import (
 // load loads the file content/<p> with data.
 func load(t *testing.T, p, data string) (*screen.Content, []string) {
 	t.Helper()
-	c, ds, err := Load(fstest.MapFS{"content/" + p: {Data: []byte(data)}}, p)
+	c, ds, err := Load(fstest.MapFS{"content/" + p: {Data: []byte(data)}}, "en", p)
 	if err != nil {
 		t.Fatalf("%q: %v", data, err)
 	}
@@ -68,11 +68,11 @@ func TestLoadFileErrors(t *testing.T) {
 		"over.txt": `content file "over.txt": file is over 1048576 bytes`,
 		"../a.txt": `invalid content path "../a.txt"`,
 	} {
-		if _, _, err := Load(fsys, p); err == nil || err.Error() != want {
+		if _, _, err := Load(fsys, "en", p); err == nil || err.Error() != want {
 			t.Errorf("%s: %v, want %q", p, err, want)
 		}
 	}
-	if c, ds, err := Load(fsys, "max.txt"); err != nil || len(ds) > 0 || len(c.Lines) != 1 {
+	if c, ds, err := Load(fsys, "en", "max.txt"); err != nil || len(ds) > 0 || len(c.Lines) != 1 {
 		t.Errorf("max: %v %v", ds, err)
 	}
 }
@@ -347,5 +347,29 @@ func TestWords(t *testing.T) {
 				t.Errorf("%s %v: %d min, want %d", p, lines, got, want)
 			}
 		}
+	}
+}
+
+// Load finds content/<lang>/<p>, else content/<p> (session-language, section 4).
+func TestLoadLang(t *testing.T) {
+	fsys := fstest.MapFS{
+		"content/a.txt":       {Data: []byte("common\n")},
+		"content/ru/a.txt":    {Data: []byte("русский\n")},
+		"content/ru/bad.txt":  {Data: []byte("\xff\n")},
+		"content/bad.txt":     {Data: []byte("ok\n")},
+		"content/ru/link.txt": {Mode: fs.ModeSymlink, Data: []byte("missing")},
+		"content/link.txt":    {Data: []byte("common\n")},
+	}
+	for lang, want := range map[string]string{"en": "common", "ru": "русский"} {
+		if c, ds, err := Load(fsys, lang, "a.txt"); err != nil || len(ds) > 0 || c.Lines[0] != want {
+			t.Errorf("%s: %v %v %v, want %q", lang, c, ds, err, want)
+		}
+	}
+	if _, ds, _ := Load(fsys, "ru", "bad.txt"); len(ds) != 1 || ds[0].File != "content/ru/bad.txt" {
+		t.Errorf("bad.txt: %v", ds)
+	}
+	// A broken symlink of the language is not a step to the common file.
+	if _, _, err := Load(fsys, "ru", "link.txt"); err == nil || err.Error() != `content file "link.txt" does not exist` {
+		t.Errorf("link.txt: %v", err)
 	}
 }

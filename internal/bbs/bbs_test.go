@@ -28,7 +28,7 @@ func TestLoad(t *testing.T) {
 			t.Errorf("%s: model %v, diagnostics %v; want a model %v", tt.name, m, ds, tt.model)
 			continue
 		}
-		if m != nil && (m.Screens["main"] == nil || m.Config.Start != "main") {
+		if m != nil && (m.Sets["en"]["main"] == nil || m.Config.Start != "main") {
 			t.Errorf("%s: model %+v, want the screen main and the start main", tt.name, m)
 		}
 	}

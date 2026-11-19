@@ -120,7 +120,7 @@ func noValues(*Session) screen.SessionValues { return screen.SessionValues{} }
 // with no arguments and the theme choice of cfg. It gives the theme choice at the end and the error of Run.
 func runSession(t Terminal, cfg config.Config, ss map[string]*screen.Screen, start string,
 	values Values) (config.ThemeChoice, error) {
-	s := New(&bbs.Model{Config: cfg, Screens: ss}, t, start, nil, cfg.ThemeChoice, values)
+	s := New(&bbs.Model{Config: cfg, Sets: bbt.Sets{"en": ss}}, t, start, nil, cfg.ThemeChoice, "en", values)
 	err := s.Run(context.Background())
 	return s.choice, err
 }
@@ -128,7 +128,7 @@ func runSession(t Terminal, cfg config.Config, ss map[string]*screen.Screen, sta
 // shutdown runs Shutdown of a session on t with the model of cfg and ss and the theme choice choice.
 func shutdown(t Terminal, cfg config.Config, ss map[string]*screen.Screen, choice config.ThemeChoice,
 	values Values) error {
-	return New(&bbs.Model{Config: cfg, Screens: ss}, t, "", nil, choice, values).Shutdown()
+	return New(&bbs.Model{Config: cfg, Sets: bbt.Sets{"en": ss}}, t, "", nil, choice, "en", values).Shutdown()
 }
 
 // load loads the screens of files with the changes of change. A new name adds a file.
@@ -144,8 +144,9 @@ func load(t *testing.T, change map[string]string) map[string]*screen.Screen {
 		}
 	}
 	theme := map[string]screen.Style{"normal": {}, "more": {}}
-	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
-	ds = bbs.Check(config.Config{Start: "main"}, ss, ds)
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}})
+	ss := sets["en"]
+	ds = bbs.Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -273,7 +274,7 @@ File {arg.f}
 		t.Run(tt.name, func(t *testing.T) {
 			ss := load(t, tt.change)
 			ft := &fakeTerm{cols: tt.cols, keys: slices.Clone(tt.keys)}
-			_, err := runSession(eventsTerm{ft}, config.Config{More: "-- More --"}, ss, "main", noValues)
+			_, err := runSession(eventsTerm{ft}, config.Config{}, ss, "main", noValues)
 			if !errors.Is(err, tt.wantErr) {
 				t.Errorf("error %v, want %v", err, tt.wantErr)
 			}
@@ -346,14 +347,13 @@ func TestRunStack(t *testing.T) {
 func TestNav(t *testing.T) {
 	var st []*frame
 	for i := range maxFrames {
-		st = append(st, &frame{s: &screen.Screen{Name: fmt.Sprint(i)}, page: 2})
+		st = append(st, &frame{name: fmt.Sprint(i), page: 2})
 	}
-	x := &screen.Screen{Name: "x"}
 	args := map[string]string{"f": "a"}
-	st = nav(st, screen.Action{Op: screen.Gosub, Screen: "x", Args: args}, x)
+	st = nav(st, screen.Action{Op: screen.Gosub, Screen: "x", Args: args})
 	var got []string
 	for _, f := range st {
-		got = append(got, f.s.Name)
+		got = append(got, f.name)
 	}
 	want := []string{"0", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "x"}
 	if !slices.Equal(got, want) {
@@ -363,7 +363,7 @@ func TestNav(t *testing.T) {
 		t.Errorf("top frame page %d, args %v; want page 1, args %v", top.page, top.args, args)
 	}
 	// A goto gives a new frame with page 1, also to the current screen.
-	st = nav(st, screen.Action{Op: screen.Goto, Screen: "x"}, x)
+	st = nav(st, screen.Action{Op: screen.Goto, Screen: "x"})
 	if top := st[len(st)-1]; len(st) != maxFrames || top.page != 1 || top.args != nil {
 		t.Errorf("goto: %d frames, page %d, args %v; want %d, 1, nil", len(st), top.page, top.args, maxFrames)
 	}
@@ -382,7 +382,7 @@ func TestRunTermError(t *testing.T) {
 // A terminal without Events gets the pages only.
 func TestRunNoEvents(t *testing.T) {
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"L", "S", "B", "G", "X"}}
-	if _, err := runSession(ft, config.Config{More: "-- More --"}, load(t, nil), "main", noValues); err != nil {
+	if _, err := runSession(ft, config.Config{}, load(t, nil), "main", noValues); err != nil {
 		t.Fatal(err)
 	}
 	want := []string{"page: [S]ystem [G]oodbye", "page: 1", "page: 10", "page: [S]ystem [G]oodbye", "page: Bye"}
@@ -426,7 +426,8 @@ func TestRunSessionTheme(t *testing.T) {
 		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{!title}T\n")},
 	}
 	cfg, ds := config.Load(fsys)
-	ss, lds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
+	sets, lds := bbt.Load(fsys, bbt.Settings{Theme: cfg.Theme, Layout: cfg.Layout, Fields: cfg.Fields})
+	ss := sets["en"]
 	if ds = append(ds, lds...); len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -459,7 +460,8 @@ func TestRunThemeChoice(t *testing.T) {
 			"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{!title}T\n")},
 		}
 		cfg, ds := config.Load(fsys)
-		ss, lds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
+		sets, lds := bbt.Load(fsys, bbt.Settings{Theme: cfg.Theme, Layout: cfg.Layout, Fields: cfg.Fields})
+		ss := sets["en"]
 		if ds = append(ds, lds...); len(ds) > 0 {
 			t.Fatalf("load: %v", ds)
 		}
@@ -504,8 +506,9 @@ do = "goto main"
 		"content/a.txt": {Data: []byte(lines(20))},
 	}
 	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
-	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
-	ds = bbs.Check(config.Config{Start: "main"}, ss, ds)
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}})
+	ss := sets["en"]
+	ds = bbs.Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -560,8 +563,9 @@ do = "back"
 		"content/a.txt":    {Data: []byte(lines(20))},
 	}
 	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
-	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
-	ds = bbs.Check(config.Config{Start: "main"}, ss, ds)
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}})
+	ss := sets["en"]
+	ds = bbs.Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -617,8 +621,9 @@ read {bbs.sessions} {file.page}
 		"content/a.txt": {Data: []byte(lines(20))},
 	}
 	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
-	ss, ds := bbt.Load(fsys, theme, screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}, nil)
-	ds = bbs.Check(config.Config{Start: "main"}, ss, ds)
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}})
+	ss := sets["en"]
+	ds = bbs.Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -641,7 +646,7 @@ func TestShutdown(t *testing.T) {
 	ss := load(t, map[string]string{"shutdown": "Restart {term.cols} {bbs.name}\n" + lines(12)})
 	ft := &fakeTerm{cols: []int{40}}
 	values := func(*Session) screen.SessionValues { return screen.SessionValues{Name: "Lamp"} }
-	if err := shutdown(ft, config.Config{More: "-- More --"}, ss, "", values); err != nil {
+	if err := shutdown(ft, config.Config{}, ss, "", values); err != nil {
 		t.Fatal(err)
 	}
 	if want := []string{"page: Restart 40 Lamp"}; !slices.Equal(ft.log, want) {
@@ -739,8 +744,9 @@ Light
 		"content/b.txt":        {Data: []byte(lines(18))},
 	}
 	cfg, ds := config.Load(fsys)
-	ss, lds := bbt.Load(fsys, cfg.Theme, cfg.Layout, cfg.Fields)
-	ds = bbs.Check(cfg, ss, append(ds, lds...))
+	sets, lds := bbt.Load(fsys, bbt.Settings{Theme: cfg.Theme, Layout: cfg.Layout, Fields: cfg.Fields})
+	ss := sets["en"]
+	ds = bbs.Check(cfg, bbt.Sets{"en": ss}, append(ds, lds...))
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -776,7 +782,7 @@ Light
 
 	// Shutdown uses the theme choice of the session at the end of Run (section 5.2).
 	ft = &fakeTerm{cols: []int{80}, keys: []string{"L"}}
-	s := New(&bbs.Model{Config: cfg, Screens: ss}, themeTerm{eventsTerm{ft}}, "main", nil, cfg.ThemeChoice, noValues)
+	s := New(&bbs.Model{Config: cfg, Sets: bbt.Sets{"en": ss}}, themeTerm{eventsTerm{ft}}, "main", nil, cfg.ThemeChoice, "en", noValues)
 	if err := s.Run(t.Context()); !errors.Is(err, io.EOF) {
 		t.Fatalf("Run: %v, want io.EOF", err)
 	}
@@ -794,17 +800,59 @@ func TestRunUnknownOp(t *testing.T) {
 	screens := load(t, nil)
 	for i, it := range screens["main"].Items {
 		if it.Key == "G" {
-			screens["main"].Items[i].Do.Op = screen.PageLast + 1
+			screens["main"].Items[i].Do.Op = screen.Lang + 1
 		}
 	}
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"G"}}
 	defer func() {
-		if recover() == nil {
-			t.Error("no panic")
+		if r := recover(); r != fmt.Sprintf("menu: no case for action %d", screen.Lang+1) {
+			t.Errorf("panic %v, want the panic of an action without a case", r)
 		}
 		if slices.Contains(ft.log, "page: Bye") {
 			t.Errorf("log %q: the session logged off", ft.log)
 		}
 	}()
 	_, _ = runSession(ft, config.Config{}, screens, "main", noValues)
+}
+
+// Shutdown shows shutdown of the set of the session language with session.lang
+// (session-language, section 4).
+func TestShutdownLang(t *testing.T) {
+	en := load(t, map[string]string{"shutdown": "Restart\n"})
+	ru := load(t, map[string]string{"shutdown": "Перезапуск {session.lang}\n"})
+	m := &bbs.Model{Sets: bbt.Sets{"en": en, "ru": ru}}
+	ft := &fakeTerm{cols: []int{40}}
+	ss := New(m, ft, "main", nil, config.ThemeDark, "ru", noValues)
+	if err := ss.Shutdown(); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"page: Перезапуск ru"}; !slices.Equal(ft.log, want) || ss.Lang() != "ru" {
+		t.Errorf("log %q, lang %q; want %q, ru", ft.log, ss.Lang(), want)
+	}
+}
+
+// gosub <code>/<name> sets the session language. top and goodbye then use the set of the language
+// (menu-nav, section 4, and session-language, section 4).
+func TestRunLang(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml":               {},
+		"screens/screens.toml":   {Data: []byte("[lang.en]\n[lang.ru]\n")},
+		"screens/main.bbt":       {Data: []byte("+++\n[[item]]\nkey = \"X\"\ndo = \"gosub ru/info\"\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\nMain {session.lang}\n")},
+		"screens/info.bbt":       {Data: []byte("+++\n[[item]]\nkey = \"T\"\ndo = \"top\"\n+++\nInfo {session.lang}\n")},
+		"screens/en/goodbye.bbt": {Data: []byte("Bye\n")},
+		"screens/ru/goodbye.bbt": {Data: []byte("Пока\n")},
+	}
+	m, ds := bbs.Load(fsys)
+	if m == nil {
+		t.Fatalf("load: %v", ds)
+	}
+	ft := &fakeTerm{cols: []int{80}, keys: []string{"X", "T", "G"}}
+	ss := New(m, ft, "main", nil, config.ThemeDark, "en", noValues)
+	if err := ss.Run(context.Background()); err != nil {
+		t.Fatalf("%v, log %q", err, ft.log)
+	}
+	want := []string{"page: Main en", "page: Info ru", "page: Main ru", "page: Пока"}
+	if !slices.Equal(ft.log, want) || ss.Lang() != "ru" {
+		t.Errorf("log %q, lang %q; want %q, ru", ft.log, ss.Lang(), want)
+	}
 }

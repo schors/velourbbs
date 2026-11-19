@@ -47,6 +47,7 @@ func TestLookupField(t *testing.T) {
 		{path: "meta", err: `unknown field "meta"`},
 		{path: "session.ip", want: "session.ip"},
 		{path: "session.theme", want: "session.theme"},
+		{path: "session.lang", want: "session.lang"},
 		{path: "session.online", want: "session.online"},
 		{path: "bbs.name", want: "bbs.name"},
 		{path: "bbs.version", want: "bbs.version"},
@@ -122,7 +123,7 @@ func TestEnvText(t *testing.T) {
 			Page:    2, Pages: 3, Minutes: 4, Section: "Intro",
 		},
 		Session: SessionValues{
-			IP: "192.0.2.1", Theme: "light", Online: "01:25:07", Name: "Kind\x1b BBS", Version: "v1.2.0",
+			IP: "192.0.2.1", Theme: "light", Lang: "ru", Online: "01:25:07", Name: "Kind\x1b BBS", Version: "v1.2.0",
 			Sessions: 3, Time: "2026-11-16 15:04:05", Uptime: "3d 04:17:09",
 		},
 	}
@@ -145,6 +146,7 @@ func TestEnvText(t *testing.T) {
 		{"meta.date", ""},
 		{"session.ip", "192.0.2.1"},
 		{"session.theme", "light"},
+		{"session.lang", "ru"},
 		{"session.online", "01:25:07"},
 		{"bbs.name", "Kind BBS"},
 		{"bbs.version", "v1.2.0"},
@@ -183,7 +185,7 @@ func TestRefArg(t *testing.T) {
 		}
 	}
 	for path, want := range map[string]Type{
-		"arg.file": TypeString, "session.ip": TypeString, "session.theme": TypeString, "session.online": TypeString,
+		"arg.file": TypeString, "session.ip": TypeString, "session.theme": TypeString, "session.lang": TypeString, "session.online": TypeString,
 		"bbs.name": TypeString, "bbs.version": TypeString, "bbs.sessions": TypeInt,
 		"bbs.time": TypeString, "bbs.uptime": TypeString,
 	} {

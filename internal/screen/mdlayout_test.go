@@ -31,7 +31,7 @@ var mdTheme = func() map[string]screen.Style {
 func loadMD(t *testing.T, src string) *screen.Content {
 	t.Helper()
 	fsys := fstest.MapFS{"content/a.md": {Data: []byte(src)}}
-	c, diags, err := content.Load(fsys, "a.md")
+	c, diags, err := content.Load(fsys, "en", "a.md")
 	if err != nil || len(diags) > 0 {
 		t.Fatalf("load: %v %v", err, diags)
 	}

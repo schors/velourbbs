@@ -73,10 +73,10 @@ func TestPreviewFileArg(t *testing.T) {
 	if ds.HasErrors() {
 		t.Fatal(ds)
 	}
-	s := m.Screens["reader"]
-	ns, status := argFile(os.DirFS(filepath.Join("testdata", "file")), s, "extra.txt", io.Discard)
-	if ns == nil || status != 0 || ns.FileScreen.Contents["extra.txt"] == nil {
-		t.Fatalf("argFile: %v, status %d", ns, status)
+	s := m.Sets["en"]["reader"]
+	nm := argFiles(os.DirFS(filepath.Join("testdata", "file")), m, "reader", map[string]string{"file": "extra.txt"}, io.Discard)
+	if nm == nil || nm.Sets["en"]["reader"].FileScreen.Contents["extra.txt"] == nil {
+		t.Fatalf("argFiles: %v", nm)
 	}
 	if s.FileScreen.Contents["extra.txt"] != nil || len(s.FileScreen.Contents) != 4 {
 		t.Errorf("the model changed: %v", s.FileScreen.Contents)

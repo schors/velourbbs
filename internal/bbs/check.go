@@ -5,88 +5,123 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/schors/velourbbs/internal/bbt"
 	"github.com/schors/velourbbs/internal/config"
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// Check does the checks of menu-nav, section 6, between files: the goto and gosub actions and their args,
-// the screens without items, the start screen and the arguments of goodbye and shutdown. screens is the result of a load without errors.
-// Check adds the errors to ds with the limit of screen.MaxFileDiags for each file
-// and gives the sorted diagnostics.
-func Check(cfg config.Config, screens map[string]*screen.Screen, ds screen.Diags) screen.Diags {
-	files := map[string]*screen.FileDiags{}
-	fd := func(file string) *screen.FileDiags {
-		d, ok := files[file]
-		if !ok {
-			d = &screen.FileDiags{File: file}
-			files[file] = d
+// Check does the checks of menu-nav, section 6, between files in the screen set of each language:
+// the goto and gosub actions and their args, the screens without items, the start screen
+// and the arguments of goodbye and shutdown. It also checks that each set has the screen names
+// and the arguments of each other set (session-language, section 6).
+// sets is the result of a load without errors. Check merges the diagnostics of the sets with ds
+// (bbt.SetDiags) and gives the sorted diagnostics.
+func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
+	sd := bbt.NewSetDiags(cfg.Langs)
+	sd.Add("", ds)
+	for _, lang := range cfg.Langs {
+		var ls screen.Diags
+		screens := sets[lang]
+		for _, name := range slices.Sorted(maps.Keys(screens)) {
+			s := screens[name]
+			end := name == "goodbye" || name == "shutdown"
+			if len(s.Items) == 0 && !end {
+				ls.Errorf(s.File, 1, 1, "screen has no items")
+			}
+			if end && len(s.Args) > 0 {
+				ls.Errorf(s.File, 1, 1, "the %s screen cannot have arguments", name)
+			}
+			for _, it := range s.Items {
+				if !it.Do.Op.HasTarget() {
+					continue
+				}
+				// An error between an item and another screen has the position 2:1.
+				if err := CheckTarget(sets, lang, it.Do); err != nil {
+					ls.Errorf(s.File, 2, 1, "item %q: do: %v", it.Key, err)
+					continue
+				}
+				for _, err := range CheckArgs(Target(sets, lang, it.Do), it.Do.Target(), it.Do.Args) {
+					ls.Errorf(s.File, 2, 1, "item %q: args: %v", it.Key, err)
+				}
+			}
 		}
-		return d
+		start := screen.Action{Screen: cfg.Start}
+		if err := CheckTarget(sets, lang, start); err != nil {
+			ls.Errorf(config.ScreensFile, 1, 1, "menu: start: %v", err)
+		} else if len(Target(sets, lang, start).Args) > 0 {
+			ls.Errorf(config.ScreensFile, 1, 1, "menu: start: screen %q has arguments", cfg.Start)
+		}
+		sd.Add(lang, ls)
 	}
-	for _, d := range ds {
-		fd(d.File).Diags = append(fd(d.File).Diags, d)
+	checkSets(cfg.Langs, sets, sd)
+	return sd.Diags()
+}
+
+// checkSets reports each screen name of a set that is not in the set of each other language,
+// or that has other arguments there. The reference set of a name is the first set that holds it.
+// Each other set finds the error at 1:1 of the screen file in the reference set (session-language, section 6).
+func checkSets(langs []string, sets bbt.Sets, sd *bbt.SetDiags) {
+	names := map[string]bool{}
+	for _, lang := range langs {
+		for name := range sets[lang] {
+			names[name] = true
+		}
 	}
-	for _, name := range slices.Sorted(maps.Keys(screens)) {
-		s := screens[name]
-		end := name == "goodbye" || name == "shutdown"
-		if len(s.Items) == 0 && !end {
-			fd(s.File).Errorf(1, 1, "screen has no items")
-		}
-		if end && len(s.Args) > 0 {
-			fd(s.File).Errorf(1, 1, "the %s screen cannot have arguments", name)
-		}
-		for _, it := range s.Items {
-			if !it.Do.Op.HasTarget() {
+	for _, name := range slices.Sorted(maps.Keys(names)) {
+		i := slices.IndexFunc(langs, func(lang string) bool { return sets[lang][name] != nil })
+		ref := sets[langs[i]][name]
+		for _, lang := range langs {
+			s, ok := sets[lang][name]
+			var ds screen.Diags
+			switch {
+			case lang == langs[i]:
 				continue
+			case !ok:
+				ds.Errorf(ref.File, 1, 1, "no screen %q", name)
+			case !slices.Equal(ref.Args, s.Args):
+				ds.Errorf(ref.File, 1, 1, "arguments differ")
 			}
-			// An error between an item and another screen has the position 2:1.
-			if err := CheckTarget(screens, it.Do.Screen); err != nil {
-				fd(s.File).Errorf(2, 1, "item %q: do: %v", it.Key, err)
-				continue
-			}
-			for _, err := range CheckArgs(screens[it.Do.Screen], it.Do.Args) {
-				fd(s.File).Errorf(2, 1, "item %q: args: %v", it.Key, err)
-			}
+			sd.Add(lang, ds)
 		}
 	}
-	if err := CheckTarget(screens, cfg.Start); err != nil {
-		fd(config.ScreensFile).Errorf(1, 1, "menu: start: %v", err)
-	} else if len(screens[cfg.Start].Args) > 0 {
-		fd(config.ScreensFile).Errorf(1, 1, "menu: start: screen %q has arguments", cfg.Start)
-	}
-	var out screen.Diags
-	for _, d := range files {
-		out = append(out, d.Diags...)
-	}
-	out.Sort()
-	return out
 }
 
 // CheckArgs reports each argument of s that args does not give
 // and each name of args that is not an argument of s (bbt-format, section 8.5).
-func CheckArgs(s *screen.Screen, args map[string]string) []error {
+// The errors name s as target: "<name>" or "<code>/<name>" (session-language, section 6).
+func CheckArgs(s *screen.Screen, target string, args map[string]string) []error {
 	var errs []error
 	for _, name := range s.Args {
 		if _, ok := args[name]; !ok {
-			errs = append(errs, fmt.Errorf("missing argument %q of screen %q", name, s.Name))
+			errs = append(errs, fmt.Errorf("missing argument %q of screen %q", name, target))
 		}
 	}
 	for _, name := range slices.Sorted(maps.Keys(args)) {
 		if !slices.Contains(s.Args, name) {
-			errs = append(errs, fmt.Errorf("screen %q has no argument %q", s.Name, name))
+			errs = append(errs, fmt.Errorf("screen %q has no argument %q", target, name))
 		}
 	}
 	return errs
 }
 
-// CheckTarget checks the screen of a goto, of a gosub or of the start: it must exist and have items.
-func CheckTarget(screens map[string]*screen.Screen, name string) error {
-	s, ok := screens[name]
+// Target gives the screen of the goto or the gosub a in a screen of the set lang, else nil:
+// a screen of the set of the code of a, else of the set lang (session-language, section 6).
+func Target(sets bbt.Sets, lang string, a screen.Action) *screen.Screen {
+	if a.Lang != "" {
+		lang = a.Lang
+	}
+	return sets[lang][a.Screen]
+}
+
+// CheckTarget checks the target of a goto, of a gosub or of the start a in a screen of the set lang:
+// it must exist and have items. The error names the target as the do names it.
+func CheckTarget(sets bbt.Sets, lang string, a screen.Action) error {
+	s := Target(sets, lang, a)
 	switch {
-	case !ok:
-		return fmt.Errorf("unknown screen %q", name)
+	case s == nil:
+		return fmt.Errorf("unknown screen %q", a.Target())
 	case len(s.Items) == 0:
-		return fmt.Errorf("screen %q has no items", name)
+		return fmt.Errorf("screen %q has no items", a.Target())
 	}
 	return nil
 }

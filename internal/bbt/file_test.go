@@ -21,7 +21,8 @@ func loadFS(files map[string]string) (map[string]*screen.Screen, []string) {
 		}
 		fsys[name] = &fstest.MapFile{Data: []byte(data)}
 	}
-	screens, ds := bbt.Load(fsys, theme, screen.Layout{Width: defaultWidth}, aliases)
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: defaultWidth}, Fields: aliases})
+	screens := sets["en"]
 	var msgs []string
 	for _, d := range ds {
 		msgs = append(msgs, d.String())
