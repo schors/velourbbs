@@ -31,6 +31,6 @@ bbs.uptime       string   -   -      00:00:00
 arg.file         string   -   -      guide/bbt/README.md
 arg.title        string   -   -      BBT guide
 row.num          integer  2   -      1
-row.path         string   30  files  guide/bbt/README.md
-row.title        string   35  files  BBT guide
-row.minutes      integer  2   files  2
+row.path         string   21  files  guide/bbt/README.md
+row.title        string   13  files  Fixture guide
+row.minutes      integer  1   files  1

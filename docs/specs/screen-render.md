@@ -125,7 +125,8 @@ and writes its cell dump to the standard output.
 
 ### 3.3. Cell dump
 
-The cell dump is the golden file for the tests. It has one part for each page.
+The cell dump is the golden file for the tests. `go test <package> -update` rewrites
+the golden files of `cmd/velourbbs` and `internal/screen`. The dump has one part for each page.
 A file screen has one part for each file page ([file-view](file-view.md), section 3.2).
 A list screen has one part for each list page ([list-view](list-view.md), section 7),
 with the cursor on the first row of each page.

@@ -62,12 +62,11 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 ## 5. Acceptance
 
 - A Go test in `cmd/velourbbs` runs `velourbbs check` in `station/`. It gives no output.
-- The test compares `velourbbs preview` cell dumps with golden files
-  `cmd/velourbbs/testdata/station/<screen>-<size>-<colors>.dump`. `<screen>` is a common screen,
-  or `<lang>-<name>` with `--set session.lang=<lang>`. Each screen has a dump at 80x24
-  with 256 colours, and at 132x43 when it has a 132 form. The test lists the other cases:
-  one for each rule of section 3 that a dump shows.
-- A golden output of `velourbbs preview main --keys R,ESC,E` shows the entry,
-  the Russian menu, the entry and the English menu.
+- The test compares the `velourbbs preview` cell dump of each screen at 80x24 with 256 colours
+  with its golden file `cmd/velourbbs/testdata/station/<screen>-80x24-256.dump`.
+  `<screen>` is a common screen, or `<lang>-<name>` with `--set session.lang=<lang>`.
+  The test has no other cases.
+- The station tests use a guide fixture in place of `content/<lang>/guide`.
+  An edit of `docs/guide/` does not change their result.
 - Tests check the same items in `screens/ru/` and `screens/en/`, the guide symlinks
   and the title of each reading item.

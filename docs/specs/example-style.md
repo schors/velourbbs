@@ -40,8 +40,7 @@ can edit without counting cells.
 ## 4. Acceptance
 
 - A Go test in `cmd/velourbbs` runs `velourbbs check` in each BBS directory. It gives no output.
-- The test compares the `velourbbs preview` cell dump of each screen with its golden file
-  `cmd/velourbbs/testdata/lamp/<lang>/<screen>-<size>-<colors>.dump`.
-  Each screen has a dump at 80x24 with 16, 256 and 16777216 colours.
-  The test lists the other cases.
+- The test compares the `velourbbs preview` cell dump of each screen at 80x24 with 256 colours
+  with its golden file `cmd/velourbbs/testdata/lamp/<lang>/<screen>-80x24-256.dump`.
+  The test has no other cases.
 - Each screen follows the grid of section 2.

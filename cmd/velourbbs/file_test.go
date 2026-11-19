@@ -46,15 +46,11 @@ func TestPreviewFile(t *testing.T) {
 	}
 	for _, g := range fileGoldens {
 		t.Run(g.name, func(t *testing.T) {
-			file := filepath.Join("testdata", "file", g.name)
-			want, err := os.ReadFile(file)
-			if err != nil {
-				t.Fatal(err)
-			}
 			out, errOut, status := runIn(t, "file", append([]string{"preview"}, g.args...)...)
-			if errOut != "" || status != 0 || out != string(want) {
-				t.Errorf("%s: stderr %q, status %d, got\n%s\nwant\n%s", file, errOut, status, out, want)
+			if errOut != "" || status != 0 {
+				t.Errorf("stderr %q, status %d", errOut, status)
 			}
+			golden(t, filepath.Join("testdata", "file", g.name), out)
 		})
 	}
 }

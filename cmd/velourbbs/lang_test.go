@@ -9,16 +9,6 @@ import (
 	"testing/fstest"
 )
 
-// golden gives the golden dump name of testdata.
-func golden(t *testing.T, name string) string {
-	t.Helper()
-	data, err := os.ReadFile(filepath.Join("testdata", name))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(data)
-}
-
 // The BBS testdata/lang has the languages en and ru (session-language, section 10):
 // gosub <code>/<name>, the action lang in a screen and in a file screen, back to a common screen
 // and session.lang. The file screen keeps its page after lang.
@@ -28,9 +18,10 @@ func TestLangKeys(t *testing.T) {
 		t.Errorf("check: stdout %q, stderr %q, status %d", out, errOut, status)
 	}
 	out, errOut, status = runIn(t, "lang", "preview", "main", "--size", "40x10", "--keys", "E,T,N,R,ESC,L,ESC,G")
-	if want := golden(t, "lang-keys.dump"); out != want || errOut != "" || status != 0 {
-		t.Errorf("stderr %q, status %d, got\n%s\nwant\n%s", errOut, status, out, want)
+	if errOut != "" || status != 0 {
+		t.Errorf("stderr %q, status %d", errOut, status)
 	}
+	golden(t, filepath.Join("testdata", "lang-keys.dump"), out)
 }
 
 // The More row is [lang.<code>] more, else [screen] more, else the engine text in the session language
@@ -38,9 +29,10 @@ func TestLangKeys(t *testing.T) {
 func TestLangMore(t *testing.T) {
 	for _, tt := range []struct{ lang, dump string }{{"en", "lang-more-en.dump"}, {"ru", "lang-more-ru.dump"}} {
 		out, errOut, status := runIn(t, "lang", "preview", "long", "--size", "40x10", "--set", "session.lang="+tt.lang)
-		if want := golden(t, tt.dump); out != want || errOut != "" || status != 0 {
-			t.Errorf("%s: stderr %q, status %d, got\n%s\nwant\n%s", tt.lang, errOut, status, out, want)
+		if errOut != "" || status != 0 {
+			t.Errorf("%s: stderr %q, status %d", tt.lang, errOut, status)
 		}
+		golden(t, filepath.Join("testdata", tt.dump), out)
 	}
 	long, err := os.ReadFile(filepath.Join("testdata", "lang", "screens", "long.bbt"))
 	if err != nil {
@@ -54,17 +46,19 @@ func TestLangMore(t *testing.T) {
 	}
 	var out, errOut bytes.Buffer
 	status := run([]string{"preview", "long", "--size", "40x10"}, t.TempDir(), fsys, &out, &errOut)
-	if want := golden(t, "lang-more-screen.dump"); out.String() != want || errOut.Len() != 0 || status != 0 {
-		t.Errorf("[screen] more: stderr %q, status %d, got\n%s\nwant\n%s", errOut.String(), status, out.String(), want)
+	if errOut.Len() != 0 || status != 0 {
+		t.Errorf("[screen] more: stderr %q, status %d", errOut.String(), status)
 	}
+	golden(t, filepath.Join("testdata", "lang-more-screen.dump"), out.String())
 	// The engine text in Russian: [lang.ru] and [screen] without more.
 	fsys["screens/screens.toml"] = &fstest.MapFile{Data: []byte("[lang.ru]\n\n[menu]\nstart = \"long\"\n")}
 	out.Reset()
 	errOut.Reset()
 	status = run([]string{"preview", "long", "--size", "40x10", "--set", "session.lang=ru"}, t.TempDir(), fsys, &out, &errOut)
-	if want := golden(t, "lang-more-engine-ru.dump"); out.String() != want || errOut.Len() != 0 || status != 0 {
-		t.Errorf("engine text ru: stderr %q, status %d, got\n%s\nwant\n%s", errOut.String(), status, out.String(), want)
+	if errOut.Len() != 0 || status != 0 {
+		t.Errorf("engine text ru: stderr %q, status %d", errOut.String(), status)
 	}
+	golden(t, filepath.Join("testdata", "lang-more-engine-ru.dump"), out.String())
 }
 
 // --set session.lang takes a language of the BBS. The argument file has the checks

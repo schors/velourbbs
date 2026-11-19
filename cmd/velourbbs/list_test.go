@@ -1,7 +1,6 @@
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 )
@@ -59,15 +58,11 @@ func TestPreviewList(t *testing.T) {
 	}
 	for _, g := range listGoldens {
 		t.Run(g.name, func(t *testing.T) {
-			file := filepath.Join("testdata", "list", g.name)
-			want, err := os.ReadFile(file)
-			if err != nil {
-				t.Fatal(err)
-			}
 			out, errOut, status := runIn(t, "list", append([]string{"preview"}, g.args...)...)
-			if errOut != "" || status != 0 || out != string(want) {
-				t.Errorf("%s: stderr %q, status %d, got\n%s\nwant\n%s", file, errOut, status, out, want)
+			if errOut != "" || status != 0 {
+				t.Errorf("stderr %q, status %d", errOut, status)
 			}
+			golden(t, filepath.Join("testdata", "list", g.name), out)
 		})
 	}
 }
