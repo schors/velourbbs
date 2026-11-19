@@ -156,7 +156,7 @@ func TestStationItems(t *testing.T) {
 	}
 }
 
-// TestStationTitles checks the title of each item that opens a reading screen
+// TestStationTitles checks the title of each item and select that opens a reading screen
 // (home-bbs, section 3.4): the name of the guide, or Velour for the features text.
 func TestStationTitles(t *testing.T) {
 	want := map[string]string{

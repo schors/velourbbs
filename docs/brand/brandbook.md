@@ -990,7 +990,6 @@ The engine cannot show each element of this book yet. A screen of the home stati
 | Files (Файлы) | none yet |
 | Code (Код) and its tree | none yet |
 | Blog (Блог) | none yet |
-| Arrow-key selection and the selection mark | [marks](https://github.com/schors/velourbbs/issues/67), [lists](https://github.com/schors/velourbbs/issues/118) (row selection) |
 | The lead of the selection | none yet |
 | The card at 132 | none yet |
 | The reading screen at 132 | none yet. A file screen has one `margin` for each width ([file-view](../specs/file-view.md), section 3). |

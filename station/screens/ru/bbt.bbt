@@ -1,49 +1,8 @@
 +++
 width = [80, 132]
-[[item]]
-key = "0"
-do = "gosub read"
-args = { file = "guide/bbt/README.md", title = "Руководство по BBT" }
-[[item]]
-key = "1"
-do = "gosub read"
-args = { file = "guide/bbt/1-bbs-directory.md", title = "Руководство по BBT" }
-[[item]]
-key = "2"
-do = "gosub read"
-args = { file = "guide/bbt/2-first-screen.md", title = "Руководство по BBT" }
-[[item]]
-key = "3"
-do = "gosub read"
-args = { file = "guide/bbt/3-header.md", title = "Руководство по BBT" }
-[[item]]
-key = "4"
-do = "gosub read"
-args = { file = "guide/bbt/4-menu.md", title = "Руководство по BBT" }
-[[item]]
-key = "5"
-do = "gosub read"
-args = { file = "guide/bbt/5-fields.md", title = "Руководство по BBT" }
-[[item]]
-key = "6"
-do = "gosub read"
-args = { file = "guide/bbt/6-colour-depth.md", title = "Руководство по BBT" }
-[[item]]
-key = "7"
-do = "gosub read"
-args = { file = "guide/bbt/7-texts.md", title = "Руководство по BBT" }
-[[item]]
-key = "8"
-do = "gosub read"
-args = { file = "guide/bbt/8-lists.md", title = "Руководство по BBT" }
-[[item]]
-key = "9"
-do = "gosub read"
-args = { file = "guide/bbt/9-art.md", title = "Руководство по BBT" }
-[[item]]
-key = "A"
-do = "gosub read"
-args = { file = "guide/bbt/10-errors.md", title = "Руководство по BBT" }
+data = { from = "files", args = { dir = "guide/bbt" } }
+rows = 16
+select = { do = "gosub read", args = { file = "{row.path}", title = "Руководство по BBT" } }
 [[item]]
 key = "ESC"
 do = "back"
@@ -56,29 +15,14 @@ do = "back"
 
               {!emer}■{!gold}  Тексты{!}
 
-              {!dim}Руководство по BBT{!}
+              {#if list.pages > 1}{!dim}{list.page} из {list.pages}{!}{/if}
 
-              {!gold}0{!}  {!emer}■{!}  {!ctl}Введение{!}
+{#each}            {#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
 
-              {!gold}1{!}  {!emer}■{!}  {!ctl}Каталог BBS{!}
 
-              {!gold}2{!}  {!emer}■{!}  {!ctl}Первый экран{!}
 
-              {!gold}3{!}  {!emer}■{!}  {!ctl}Шапка{!}
 
-              {!gold}4{!}  {!emer}■{!}  {!ctl}Меню с горячими клавишами{!}
 
-              {!gold}5{!}  {!emer}■{!}  {!ctl}Поля и условия{!}
-
-              {!gold}6{!}  {!emer}■{!}  {!ctl}Глубина цвета{!}
-
-              {!gold}7{!}  {!emer}■{!}  {!ctl}Тексты{!}
-
-              {!gold}8{!}  {!emer}■{!}  {!ctl}Списки{!}
-
-              {!gold}9{!}  {!emer}■{!}  {!ctl}Арт{!}
-
-              {!gold}A{!}  {!emer}■{!}  {!ctl}Ошибки{!}
 
 
 
@@ -89,29 +33,14 @@ do = "back"
 
 
               {!frame}────────────────────────────────────────────────────────────────────────────────────────────────────────{!}
-              {!hi}0-9 A{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К текстам{!}
+              {!hi}Enter{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К текстам{!}
 {#else}
 
     {!hi}V E L O U R{!}      {!white}Тексты{!}
     {!gold}───────────{!frame}───────────────────────────────────────────────────{!} {!emer}■{!}
 
-    {!dim}Руководство по BBT{!}
-    {!gold}0{!}  {!emer}■{!}  {!ctl}Введение{!}
-    {!gold}1{!}  {!emer}■{!}  {!ctl}Каталог BBS{!}
-    {!gold}2{!}  {!emer}■{!}  {!ctl}Первый экран{!}
-    {!gold}3{!}  {!emer}■{!}  {!ctl}Шапка{!}
-    {!gold}4{!}  {!emer}■{!}  {!ctl}Меню с горячими клавишами{!}
-    {!gold}5{!}  {!emer}■{!}  {!ctl}Поля и условия{!}
-    {!gold}6{!}  {!emer}■{!}  {!ctl}Глубина цвета{!}
-    {!gold}7{!}  {!emer}■{!}  {!ctl}Тексты{!}
-    {!gold}8{!}  {!emer}■{!}  {!ctl}Списки{!}
-    {!gold}9{!}  {!emer}■{!}  {!ctl}Арт{!}
-    {!gold}A{!}  {!emer}■{!}  {!ctl}Ошибки{!}
-
-
-
-
-
+    {#if list.pages > 1}{!dim}{list.page} из {list.pages}{!}{/if}
+{#each}  {#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
     {!frame}────────────────────────────────────────────────────────────────{!}
-    {!hi}0-9 A{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К текстам{!}
+    {!hi}Enter{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К текстам{!}
 {/if}

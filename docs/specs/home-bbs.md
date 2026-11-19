@@ -3,8 +3,9 @@
 This specification defines the home BBS of Velour: the station that shows the product,
 its guides and its features. It also defines the changes of the brandbook for it.
 Related parts: [brandbook](../brand/brandbook.md), [bbt-guide](bbt-guide.md),
-[setup-guide](setup-guide.md), [file-view](file-view.md), [session-fields](session-fields.md),
-[session-language](session-language.md) and [example-style](example-style.md).
+[setup-guide](setup-guide.md), [file-view](file-view.md), [list-view](list-view.md),
+[session-fields](session-fields.md), [session-language](session-language.md)
+and [example-style](example-style.md).
 
 ## 1. Goal
 
@@ -49,8 +50,8 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 | `main` | The common entry screen (section 3.2). | `R` `gosub ru/menu`, `E` `gosub en/menu`, `Q` `logoff`. |
 | `menu` | The menu (section 3.2). | `1` `gosub texts`, `2` `gosub about`, `ESC` `back`, `Q` `logoff`. |
 | `texts` | The catalog of the section Texts (section 3.3). | `1` `gosub setup`, `2` `gosub bbt`, `3` `gosub read` with the file `features.md` and the title `Velour`, `ESC` `back`. |
-| `setup` | The parts of the setup guide. | `0` for `README.md`, `1`–`5` for the parts: `gosub read` with the part and the title of the guide. `ESC` `back`. |
-| `bbt` | The parts of the BBT guide. | `0` for `README.md`, `1`–`9` and `A` for the parts 1–10: `gosub read` with the part and the title of the guide. `ESC` `back`. |
+| `setup` | The list of the parts of the setup guide (section 3.3). | `select`: `gosub read` with the part and the title of the guide. `ESC` `back`. |
+| `bbt` | The list of the parts of the BBT guide (section 3.3). | `select`: `gosub read` with the part and the title of the guide. `ESC` `back`. |
 | `read` | The file screen of the argument `file`, with the argument `title` in the header (section 3.4). | `SPACE` `page next`, `B` `page prev`, `ESC` `back`. |
 | `about` | The section About the station (section 3.5). | `ESC` `back`. |
 | `goodbye` | The goodbye screen in both languages, with the repository address (section 3.5). | — |
@@ -67,11 +68,10 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 | `main` | `R Русский    E English    Q Отключиться / Disconnect` | the same |
 | `menu` | `1 2 Открыть    Esc Ко входу    Q Выход` | `1 2 Open    Esc To entry    Q Quit` |
 | `texts` | `1 2 3 Открыть    Esc В меню` | `1 2 3 Open    Esc To menu` |
-| `setup`, `bbt` | `0-9 Открыть    Esc К текстам` | `0-9 Open    Esc To texts` |
+| `setup`, `bbt` | `Enter Открыть    Esc К текстам` | `Enter Open    Esc To texts` |
 | `read` | `B Назад    Пробел Дальше    Esc К списку` | `B Back    Space Next    Esc To list` |
 | `about` | `Esc В меню` | `Esc To menu` |
 
-- `setup` shows `0-5` in place of `0-9`. `bbt` shows `0-9 A`.
 - The More row, with the indent of the screens: `[screen] more` is `Any key Next`,
   `[lang.ru] more` is `Любая клавиша Дальше`. The entry shows the row of the session language:
   English at the start, Russian after a return from the Russian menu.
@@ -112,9 +112,15 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 - The catalog `texts` has two groups: Guides (the setup guide and the BBT guide)
   and Velour (the features text). Each entry has the gem `emer`, the title, a dot leader
   and a short note in `dim`. It has no lead.
-- A list of guide parts shows the hotkey and the title of each part.
-- Each entry of the catalog and of a list of guide parts starts with the character of its hotkey
-  in `gold`, in place of the selection.
+- Each entry of the catalog starts with the character of its hotkey in `gold`, in place of the selection.
+- `setup` and `bbt` are list screens ([list-view](list-view.md)) with the provider `files`
+  and the directory of the guide: `guide/setup` or `guide/bbt`. `rows` is 16.
+  The screen has no group heading: the first row, `README.md`, has the title of the guide.
+- A row of a list of guide parts has the gem `emer` and `row.title` in `ctl`.
+  The selected row has `∙` in `hi` two columns left of the edge and the title in `pick`.
+  A row has no hotkey.
+- When the list has more than one page, the row above the list shows `{list.page} из {list.pages}`
+  (English: `{list.page} of {list.pages}`) in `dim`. Else the row is empty.
 
 ### 3.4. Reading
 
@@ -158,7 +164,7 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 - `[theme.default]` gives the truecolor values of the brandbook, section 3.
   `[theme.256]` and `[theme.16]` give its 256 and 16 values.
 - The style names are the role names of the brandbook: `text` as `normal`, `dim`, `ctl`,
-  `frame`, `gold`, `hi`, `head`, `white`, the gems and the ramp `g0`–`g8`.
+  `frame`, `gold`, `hi`, `head`, `pick`, `white`, the gems and the ramp `g0`–`g8`.
 - The `md_*` styles follow the brandbook, sections 3 and 4: `md_h1` and `md_h2` as `head`,
   `md_h3` as `gold`, `md_strong` as `strong`, `md_em` as `em`, `md_code` as `code`,
   `md_link` as `link`, `md_mark` as `gold`, `md_frame` as `frame`, `md_dim` as `dim`.
@@ -168,7 +174,8 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 ## 5. Guide parts
 
 The guides are directories of parts ([bbt-guide](bbt-guide.md), section 3.1).
-`setup` and `bbt` list the parts in the order of their numbers.
+`setup` and `bbt` list the parts in the order of the provider `files`
+([list-view](list-view.md), section 4.1): `README.md` first, then the parts in the order of their numbers.
 
 ## 6. Features text
 
@@ -187,9 +194,8 @@ The guides are directories of parts ([bbt-guide](bbt-guide.md), section 3.1).
 | The opening menu (line 36), the menu screens and their `.ans` files | `Esc Назад` becomes `Esc Ко входу`. |
 | New section "Engine support" | One table: each brandbook element that the engine cannot show yet, and the specification or idea that would add it, or "none yet". |
 
-The table of "Engine support" lists: Messages, Files, Code, Blog, the arrow-key selection
-and the selection mark, the lead of the selection, the card at 132, the reading screen at 132,
-the table of contents, the syntax colours, the mono mode, italic,
+The table of "Engine support" lists: Messages, Files, Code, Blog, the lead of the selection,
+the card at 132, the reading screen at 132, the table of contents, the syntax colours, the mono mode, italic,
 the title with its rule above the meta, the first letter in `hi`,
 and the plural forms of the numbers.
 
