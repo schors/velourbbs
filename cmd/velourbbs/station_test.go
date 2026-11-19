@@ -23,6 +23,8 @@ func TestStation(t *testing.T) {
 	cases := []tcase{
 		{screen: "main", size: "80x24", colors: "16"}, {screen: "main", size: "80x24", colors: "16777216"},
 		{screen: "ru-texts", size: "80x24", colors: "16"}, {screen: "ru-texts", size: "80x24", colors: "16777216"},
+		// A list of guide parts on two pages: the page in the footer hairline.
+		{screen: "en-bbt", size: "80x16", colors: "256"},
 		// The 80 form on a wide terminal with fewer than 43 rows.
 		{screen: "main", size: "132x42", colors: "256"},
 		// The hint of home-bbs, section 3.2, in both forms.

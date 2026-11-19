@@ -15,7 +15,7 @@ do = "back"
 
               {!emer}■{!gold}  Texts{!}
 
-              {#if list.pages > 1}{!dim}{list.page} of {list.pages}{!}{/if}
+
 
 {#each}            {#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
 
@@ -32,15 +32,15 @@ do = "back"
 
 
 
-              {!frame}────────────────────────────────────────────────────────────────────────────────────────────────────────{!}
+              {!frame}{#if list.pages == 1}────────────────────────────────────────────────────────────────────────────────────────────────────────{#else}{#if list.pages < 10}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}────────────────────────────────────────────────{#else}{#if list.page < 10}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}───────────────────────────────────────────────{#else}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}──────────────────────────────────────────────{/if}{/if}{/if}{!}
               {!hi}Enter{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
 {#else}
 
     {!hi}V E L O U R{!}      {!white}Texts{!}
     {!gold}───────────{!frame}───────────────────────────────────────────────────{!} {!emer}■{!}
 
-    {#if list.pages > 1}{!dim}{list.page} of {list.pages}{!}{/if}
+
 {#each}  {#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
-    {!frame}────────────────────────────────────────────────────────────────{!}
+    {!frame}{#if list.pages == 1}────────────────────────────────────────────────────────────────{#else}{#if list.pages < 10}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}────────────────────────────{#else}{#if list.page < 10}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}───────────────────────────{#else}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}──────────────────────────{/if}{/if}{/if}{!}
     {!hi}Enter{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
 {/if}

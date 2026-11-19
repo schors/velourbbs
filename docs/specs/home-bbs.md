@@ -119,8 +119,8 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 - A row of a list of guide parts has the gem `emer` and `row.title` in `ctl`.
   The selected row has `∙` in `hi` two columns left of the edge and the title in `pick`.
   A row has no hotkey.
-- When the list has more than one page, the row above the list shows `{list.page} из {list.pages}`
-  (English: `{list.page} of {list.pages}`) in `dim`. Else the row is empty.
+- The footer hairline shows the page as `{list.page}/{list.pages}` in `dim` in its middle,
+  as the reading screen shows `file.page` (section 3.4). A single page gets the bare line.
 
 ### 3.4. Reading
 
@@ -195,7 +195,7 @@ The guides are directories of parts ([bbt-guide](bbt-guide.md), section 3.1).
 | New section "Engine support" | One table: each brandbook element that the engine cannot show yet, and the specification or idea that would add it, or "none yet". |
 
 The table of "Engine support" lists: Messages, Files, Code, Blog, the lead of the selection,
-the card at 132, the reading screen at 132, the table of contents, the syntax colours, the mono mode, italic,
+the empty row between the entries of a list at 132, the card at 132, the reading screen at 132, the table of contents, the syntax colours, the mono mode, italic,
 the title with its rule above the meta, the first letter in `hi`,
 and the plural forms of the numbers.
 
@@ -224,6 +224,7 @@ The English table of section 7 of the brandbook:
   - each screen at 80x24 with 256 colours;
   - each screen except a file screen also at 132x43 with 256 colours;
   - `main` and `ru-texts` also with 16 and 16777216 colours;
+  - `en-bbt` also at 80x16, with two list pages;
   - `ru-about` and `en-about` also with 16777216 colours, `term.ambiguous` 2,
     a `term.name`, sixel and a `term.bg_color` (a dark one and a light one);
   - `ru-about` also at 80x24 with a `term.type` and a `term.name` of 40 wide graphemes;

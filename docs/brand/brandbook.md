@@ -991,6 +991,7 @@ The engine cannot show each element of this book yet. A screen of the home stati
 | Code (Код) and its tree | none yet |
 | Blog (Блог) | none yet |
 | The lead of the selection | none yet |
+| The empty row between the entries of a list at 132 | none yet. A list line gives one row for each entry ([list-view](../specs/list-view.md), section 5). |
 | The card at 132 | none yet |
 | The reading screen at 132 | none yet. A file screen has one `margin` for each width ([file-view](../specs/file-view.md), section 3). |
 | The table of contents | [file-view](https://github.com/schors/velourbbs/issues/7) idea |
