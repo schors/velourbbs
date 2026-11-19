@@ -37,8 +37,10 @@ var listGoldens = []struct {
 	{"shelf-80x10.dump", []string{"shelf", "--set", "arg.dir=parts", "--size", "80x10"}},
 	// An empty list: each rectangle row is spaces in the styles of the list row.
 	{"shelf-empty-40x24.dump", []string{"shelf", "--set", "arg.dir=empty", "--size", "40x24"}},
-	// The cursor in art over a page border, ENTER to a file screen and back to the same cursor.
-	{"shelf-keys-40x24.dump", []string{"main", "--size", "40x24", "--keys", "4,DOWN,DOWN,DOWN,DOWN,UP,PGDN,ENTER,ESC,ESC,G"}},
+	// The cursor in art: UP at the start and DOWN at the end of the list do nothing; DOWN and UP
+	// over a page border; ENTER on row 7 to a file screen and back to the same cursor; PGUP.
+	{"shelf-keys-40x24.dump", []string{"main", "--size", "40x24", "--keys",
+		"4,UP,DOWN,DOWN,DOWN,DOWN,UP,PGDN,DOWN,DOWN,DOWN,ENTER,ESC,PGUP,ESC,G"}},
 }
 
 func TestPreviewList(t *testing.T) {

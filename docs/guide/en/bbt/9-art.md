@@ -172,6 +172,9 @@ The screen:
 ╚═[Enter]═[Space]═[Esc]════════════════╝
 ```
 
+Row 3 is the selected row: it is black on grey, the style `select`.
+The other rows have the colours of the art.
+
 - The art row with the `row.*` fields is the "list row". Art has at most one list row.
 - The "list rectangle" starts at the first cell of the first `row.*` token
   and ends at the last cell of the last `row.*` token. It has `rows` art rows from the list row down.
