@@ -705,6 +705,11 @@ more = "[далі]"
 	if !slices.Equal(cfg.Langs, []string{"en", "ru"}) || cfg.MoreText("ru") != "" || cfg.MoreText("en") != "-- More --" {
 		t.Errorf("langs %q, more ru %q, more en %q", cfg.Langs, cfg.MoreText("ru"), cfg.MoreText("en"))
 	}
+	// Without more, the engine text in the language (session-language, section 7.2).
+	cfg, _ = parseScreens([]byte("[lang.ru]\n[lang.de]"))
+	if cfg.MoreText("ru") != "-- Дальше --" || cfg.MoreText("de") != "-- More --" {
+		t.Errorf("more ru %q, more de %q", cfg.MoreText("ru"), cfg.MoreText("de"))
+	}
 }
 
 func TestLangErrors(t *testing.T) {

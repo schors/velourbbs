@@ -12,6 +12,7 @@ import (
 	// (screens-toml, section 3.1).
 	_ "time/tzdata"
 
+	"github.com/schors/velourbbs/internal/i18n"
 	"github.com/schors/velourbbs/internal/screen"
 	"github.com/schors/velourbbs/internal/term"
 	"github.com/schors/velourbbs/internal/tomlcheck"
@@ -79,9 +80,6 @@ func (c Config) SessionTheme(choice ThemeChoice, t screen.Term) map[string]scree
 	return c.dark[t.Colors]
 }
 
-// engineMore is the engine text of the More row (session-language, section 7).
-const engineMore = "-- More --"
-
 // MoreText gives the text of the More row in the language lang (session-language, section 7.2).
 func (c Config) MoreText(lang string) string {
 	if p := c.LangMore[lang]; p != nil {
@@ -90,7 +88,7 @@ func (c Config) MoreText(lang string) string {
 	if c.More != nil {
 		return *c.More
 	}
-	return engineMore
+	return i18n.Text(lang, i18n.More)
 }
 
 // The names of the settings files in the BBS directory and in the diagnostics.

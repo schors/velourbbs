@@ -69,6 +69,15 @@ func TestCheckGrapheme(t *testing.T) {
 	}
 }
 
+func TestCheckText(t *testing.T) {
+	if err := CheckText("-- Дальше 中 --"); err != nil {
+		t.Errorf("CheckText: %v", err)
+	}
+	if err := CheckText("a\tb\u200b"); !errors.Is(err, ErrControl) {
+		t.Errorf("CheckText = %v, want the first error %v", err, ErrControl)
+	}
+}
+
 func TestCheckGraphemeMessage(t *testing.T) {
 	if got, want := CheckGrapheme("\t", 0).Error(), "control character U+0009"; got != want {
 		t.Errorf("message = %q, want %q", got, want)
