@@ -245,7 +245,7 @@ func TestIsSetName(t *testing.T) {
 // An error of the rows of a set in each screen set and each list screen is one error
 // without a language (session-language, section 8).
 func TestPreviewSampleLangs(t *testing.T) {
-	fsys := overlay{os.DirFS(filepath.Join("..", "..", "station")),
+	fsys := overlay{newStationFS(),
 		fstest.MapFS{sampleFile: {Data: []byte("[a]\nrows = [{ path = \"nope.md\" }]\n")}}}
 	var out, errOut bytes.Buffer
 	status := run([]string{"preview", "main", "--sample", "a", "--keys", "G"}, t.TempDir(), fsys, &out, &errOut)
