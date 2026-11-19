@@ -1,14 +1,11 @@
 term.type        string   -  -  xterm
 term.cols        integer  3  -  80
 term.rows        integer  3  -  24
-term.charset     string   5  -  utf-8
 term.colors      integer  8  -  256
 term.name        string   -  -
-term.images      string   5  -
 term.ambiguous   integer  1  -  1
 term.background  string   5  -
 term.bg_color    string   -  -
-term.fg_color    string   -  -
 file.title       string   -  -
 file.page        integer  -  -  1
 file.pages       integer  -  -  1

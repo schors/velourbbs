@@ -38,7 +38,7 @@ func (f *fakeTerm) Term() screen.Term {
 	if len(f.rows) > 1 {
 		f.rows = f.rows[1:]
 	}
-	return screen.Term{Type: "ansi", Cols: c, Rows: r, Charset: "utf-8", Colors: 16}
+	return screen.Term{Type: "ansi", Cols: c, Rows: r, Colors: 16}
 }
 
 func (f *fakeTerm) Key(context.Context) (string, error) {
@@ -420,7 +420,7 @@ type styleTerm struct {
 }
 
 func (f *styleTerm) Term() screen.Term {
-	return screen.Term{Type: "ansi", Cols: 80, Rows: 10, Charset: "utf-8", Colors: f.colors, Background: f.background}
+	return screen.Term{Type: "ansi", Cols: 80, Rows: 10, Colors: f.colors, Background: f.background}
 }
 
 func (f *styleTerm) Key(context.Context) (string, error) {

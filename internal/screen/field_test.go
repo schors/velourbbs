@@ -15,10 +15,12 @@ func TestLookupField(t *testing.T) {
 		{path: "term.type", want: "term.type"},
 		{path: "term.cols", want: "term.cols"},
 		{path: "term.rows", want: "term.rows"},
-		{path: "term.charset", want: "term.charset"},
 		{path: "term.colors", want: "term.colors"},
 		{path: "w", want: "term.cols"},
 		{path: "term.colours", err: `unknown field "term.colours"`},
+		{path: "term.charset", err: `unknown field "term.charset"`},
+		{path: "term.images", err: `unknown field "term.images"`},
+		{path: "term.fg_color", err: `unknown field "term.fg_color"`},
 		{path: "x", err: `unknown field "x"`},
 		{path: "term", err: `unknown field "term"`},
 		{path: "user.name", err: `unknown field "user.name"`},
@@ -116,7 +118,7 @@ func TestNewAlias(t *testing.T) {
 
 func TestEnvText(t *testing.T) {
 	env := &Env{
-		Term: Term{Type: "xterm\x1b[31m", Cols: 132, Rows: -1, Charset: "utf-8", Colors: 256},
+		Term: Term{Type: "xterm\x1b[31m", Cols: 132, Rows: -1, Colors: 256},
 		Args: map[string]string{"file": "gold\x07.md"},
 		File: &FileValues{
 			Content: &Content{Title: "Gold\x1b", Meta: map[string]string{"author": "Ann"}},
@@ -133,7 +135,6 @@ func TestEnvText(t *testing.T) {
 		{"term.type", "xterm[31m"},
 		{"term.cols", "132"},
 		{"term.rows", "-1"},
-		{"term.charset", "utf-8"},
 		{"term.colors", "256"},
 		{"arg.file", "gold.md"},
 		{"arg.other", ""},
@@ -297,8 +298,8 @@ func TestRegistry(t *testing.T) {
 		}
 		paths = append(paths, r.String())
 	}
-	want := "term.type term.cols term.rows term.charset term.colors term.name term.images term.ambiguous " +
-		"term.background term.bg_color term.fg_color " +
+	want := "term.type term.cols term.rows term.colors term.name term.ambiguous " +
+		"term.background term.bg_color " +
 		"file.title file.page file.pages file.last file.section file.minutes " +
 		"list.page list.pages list.last list.empty " +
 		"session.ip session.theme session.lang session.online bbs.name bbs.version bbs.sessions bbs.time bbs.uptime"

@@ -807,7 +807,7 @@ func FuzzLoad(f *testing.F) {
 		}
 		checkSegs(t, screens["s"].Body)
 		env, _ := menu.Enabled(screens["s"], screen.Env{Term: screen.Term{
-			Type: "ansi", Cols: screen.MinCols, Rows: screen.MinRows, Charset: "utf-8", Colors: screen.Colors16,
+			Type: "ansi", Cols: screen.MinCols, Rows: screen.MinRows, Colors: screen.Colors16,
 		}})
 		for range screen.Render(screens["s"], env, theme, "more") {
 		}

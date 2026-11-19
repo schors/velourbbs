@@ -159,9 +159,9 @@ func TestRepliesAdd(t *testing.T) {
 		t.Errorf("logPalette() = %q", got)
 	}
 	// The DA2 reply of PuTTY gives 16777216. The empty XTVERSION text is no name.
-	// The OSC 10 and OSC 11 replies win over the OSC 4 replies for 256 and 258.
-	if tm, utf8 := r.values(); tm.Colors != 16777216 || tm.Name != "" || tm.Images != "sixel" || tm.Ambiguous != 2 || !utf8 ||
-		tm.FgColor != "#ffffff" || tm.BgColor != "#000000" || tm.Background != "dark" {
+	// The OSC 11 reply wins over the OSC 4 reply for 258.
+	if tm, utf8 := r.values(); tm.Colors != 16777216 || tm.Name != "" || tm.Ambiguous != 2 || !utf8 ||
+		tm.BgColor != "#000000" || tm.Background != "dark" {
 		t.Errorf("values() = %+v", tm)
 	}
 
@@ -175,33 +175,29 @@ func TestRepliesAdd(t *testing.T) {
 
 func TestQueryValues(t *testing.T) {
 	tests := []struct {
-		r            replies
-		colors       int
-		name, images string
+		r      replies
+		colors int
+		name   string
 	}{
-		{replies{}, 16, "", ""},
-		{replies{ttype: "xterm-256color", decrqss: "1$r0;30m"}, 256, "", ""},
-		{replies{ttype: "xterm", decrqss: "1$r0;38:2::1:2:3m"}, 16777216, "", ""},
-		{replies{ttype: "vt100", da2: ">0;136;0c"}, 16777216, "", ""},
-		{replies{ttype: "vt100", da2: ">0;136;1c"}, 16, "", ""},
-		{replies{ttype: "screen", da2: ">84;0;0c"}, 16777216, "", ""},
-		{replies{ttype: "screen", da2: ">841;0;0c"}, 256, "", ""},
+		{replies{}, 16, ""},
+		{replies{ttype: "xterm-256color", decrqss: "1$r0;30m"}, 256, ""},
+		{replies{ttype: "xterm", decrqss: "1$r0;38:2::1:2:3m"}, 16777216, ""},
+		{replies{ttype: "vt100", da2: ">0;136;0c"}, 16777216, ""},
+		{replies{ttype: "vt100", da2: ">0;136;1c"}, 16, ""},
+		{replies{ttype: "screen", da2: ">84;0;0c"}, 16777216, ""},
+		{replies{ttype: "screen", da2: ">841;0;0c"}, 256, ""},
 		// The parameters are numbers.
-		{replies{ttype: "screen", da2: ">084;0;0c"}, 16777216, "", ""},
-		{replies{ttype: "vt100", da2: ">00;136;000c"}, 16777216, "", ""},
-		{replies{da1: "?61;04c"}, 16, "", "sixel"},
-		{replies{da1: "?61;99999999999999999999;14c"}, 16, "", ""},
-		{replies{xtversion: ">|\x1b[1m" + strings.Repeat("x", 50)}, 16, "[1m" + strings.Repeat("x", 37), ""},
-		{replies{xtversion: ">|\x01"}, 16, "", ""},
-		{replies{da1: "?4c"}, 16, "", ""},
-		{replies{da1: "?62;14;4c"}, 16, "", "sixel"},
-		{replies{da1: "?62;44c"}, 16, "", ""},
+		{replies{ttype: "screen", da2: ">084;0;0c"}, 16777216, ""},
+		{replies{ttype: "vt100", da2: ">00;136;000c"}, 16777216, ""},
+		{replies{ttype: "vt100", da2: ">0;99999999999999999999;0c"}, 16, ""},
+		{replies{xtversion: ">|\x1b[1m" + strings.Repeat("x", 50)}, 16, "[1m" + strings.Repeat("x", 37)},
+		{replies{xtversion: ">|\x01"}, 16, ""},
 	}
 	for _, tt := range tests {
 		got, _ := tt.r.values()
-		if got.Colors != tt.colors || got.Name != tt.name || got.Images != tt.images {
-			t.Errorf("values(%+v) = %d %q %q, want %d %q %q",
-				tt.r, got.Colors, got.Name, got.Images, tt.colors, tt.name, tt.images)
+		if got.Colors != tt.colors || got.Name != tt.name {
+			t.Errorf("values(%+v) = %d %q, want %d %q",
+				tt.r, got.Colors, got.Name, tt.colors, tt.name)
 		}
 	}
 	if s := slices.Collect(strings.SplitSeq(new(replies).logPalette(), ",")); len(s) != paletteSize {
@@ -209,25 +205,25 @@ func TestQueryValues(t *testing.T) {
 	}
 }
 
-// TestColourValues: OSC 10 and OSC 11 give term.fg_color and term.bg_color. The OSC 4
-// replies for 256 and 258 give them only with the DA2 reply of PuTTY (section 6).
+// TestColourValues: OSC 11 gives term.bg_color. The OSC 4 reply for 258 gives it
+// only with the DA2 reply of PuTTY (section 6).
 func TestColourValues(t *testing.T) {
 	tests := []struct {
-		name               string
-		da2                string
-		replies            []string
-		fg, bg, background string
+		name           string
+		da2            string
+		replies        []string
+		bg, background string
 	}{
-		{"no reply", "", nil, "", "", ""},
-		{"OSC 10 and OSC 11", ">41;412;0c", []string{"10;rgb:0000/0000/0000", "11;rgb:FFFF/FFFF/FFFF"}, "#000000", "#ffffff", "light"},
-		{"only OSC 11", "", []string{"11;rgb:28/2c/34"}, "", "#282c34", "dark"},
-		{"only OSC 10", "", []string{"10;rgb:28/2c/34"}, "#282c34", "", ""},
-		{"PuTTY", ">0;136;0c", []string{"4;256;rgb:bbbb/bbbb/bbbb", "4;258;rgb:0000/0000/0000"}, "#bbbbbb", "#000000", "dark"},
-		{"PuTTY with a light background", ">0;136;0c", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "#000000", "#ffffff", "light"},
+		{"no reply", "", nil, "", ""},
+		{"OSC 10 and OSC 11", ">41;412;0c", []string{"10;rgb:0000/0000/0000", "11;rgb:FFFF/FFFF/FFFF"}, "#ffffff", "light"},
+		{"only OSC 11", "", []string{"11;rgb:28/2c/34"}, "#282c34", "dark"},
+		{"only OSC 10", "", []string{"10;rgb:28/2c/34"}, "", ""},
+		{"PuTTY", ">0;136;0c", []string{"4;256;rgb:bbbb/bbbb/bbbb", "4;258;rgb:0000/0000/0000"}, "#000000", "dark"},
+		{"PuTTY with a light background", ">0;136;0c", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "#ffffff", "light"},
 		// xterm gives the special colours for 256 and 258.
-		{"xterm with 256 and 258", ">41;412;0c", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "", "", ""},
-		{"no DA2 reply with 256 and 258", "", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "", "", ""},
-		{"tmux with 256 and 258", ">84;0;0c", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "", "", ""},
+		{"xterm with 256 and 258", ">41;412;0c", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "", ""},
+		{"no DA2 reply with 256 and 258", "", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "", ""},
+		{"tmux with 256 and 258", ">84;0;0c", []string{"4;256;rgb:0/0/0", "4;258;rgb:f/f/f"}, "", ""},
 	}
 	for _, tt := range tests {
 		r := replies{da2: tt.da2}
@@ -237,9 +233,9 @@ func TestColourValues(t *testing.T) {
 			}
 		}
 		got, _ := r.values()
-		if got.FgColor != tt.fg || got.BgColor != tt.bg || got.Background != tt.background {
-			t.Errorf("%s: values() = %q %q %q, want %q %q %q",
-				tt.name, got.FgColor, got.BgColor, got.Background, tt.fg, tt.bg, tt.background)
+		if got.BgColor != tt.bg || got.Background != tt.background {
+			t.Errorf("%s: values() = %q %q, want %q %q",
+				tt.name, got.BgColor, got.Background, tt.bg, tt.background)
 		}
 	}
 }

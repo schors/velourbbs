@@ -8,7 +8,7 @@ import (
 func TestCondEval(t *testing.T) {
 	fields := Fields{"w": {kind: refTerm, term: termCols}, "t": {kind: refTerm, term: termType}}
 	env := &Env{
-		Term:  Term{Type: "ansi", Cols: 80, Rows: 25, Charset: "utf-8", Colors: 16},
+		Term:  Term{Type: "ansi", Cols: 80, Rows: 25, Colors: 16},
 		Items: map[string]bool{"A": true, "B": true},
 		Args:  map[string]string{"file": "gold.md"},
 	}
@@ -36,7 +36,7 @@ func TestCondEval(t *testing.T) {
 		{`term.type != "vt100"`, true},
 		{`term.type != "ansi"`, false},
 		{`t=="ansi"and w==80`, true},
-		{`term.charset == ""`, false},
+		{`term.type == ""`, false},
 		{"item.A", true},
 		{"item.a", true}, // the case rule
 		{"item.C", false},

@@ -185,7 +185,7 @@ func (pr *probe) log(log *slog.Logger, accepted time.Time, term screen.Term, utf
 		}
 		return fmt.Sprintf("%d;%d", c.Row, c.Col)
 	}
-	charset := term.Charset
+	charset := "utf-8"
 	if !utf8 {
 		charset = "not utf-8"
 	}
@@ -196,8 +196,8 @@ func (pr *probe) log(log *slog.Logger, accepted time.Time, term screen.Term, utf
 		"da2", logReply(pr.r.da2), "da1", logReply(pr.r.da1), "palette", pr.r.logPalette(),
 		"osc10", pr.r.fg.log(), "osc11", pr.r.bg.log(), "osc4_256", pr.r.fg4.log(), "osc4_258", pr.r.bg4.log(),
 		"type", term.Type, "cols", term.Cols, "rows", term.Rows,
-		"charset", charset, "colors", term.Colors, "name", term.Name, "images", term.Images,
-		"ambiguous", term.Ambiguous, "fg_color", term.FgColor, "bg_color", term.BgColor,
+		"charset", charset, "colors", term.Colors, "name", term.Name,
+		"ambiguous", term.Ambiguous, "bg_color", term.BgColor,
 		"background", term.Background,
 		"time", time.Since(accepted))
 }

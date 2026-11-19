@@ -18,12 +18,9 @@ On a terminal of 80 columns and 24 rows, this line shows `Size     80×24`.
 | `term.rows` | The rows of the terminal, from 10 to 100. |
 | `term.colors` | The colour depth: `16`, `256` or `16777216` (task 6). |
 | `term.type` | The terminal type that the client sends, in lower case. Without a type, `ansi`. |
-| `term.charset` | Always `utf-8`. |
 | `term.name` | The name and the version that the terminal reports, for example `XTerm(412)`. Can be empty. Use it only to show it. |
-| `term.images` | `sixel` when the terminal reports sixel graphics. Else empty. Some terminals report it, but do not show sixel. |
 | `term.ambiguous` | `2` when the terminal shows East Asian Ambiguous characters, for example Cyrillic letters and `■`, in two cells. Else `1`. The layout does not change, so frames and columns break. Use it to show the user how to turn this setting off. |
 | `term.bg_color` | The background colour that the terminal reports, as `#rrggbb` in lower case. Empty when the terminal does not report it. |
-| `term.fg_color` | The foreground colour that the terminal reports, as `#rrggbb` in lower case. Empty when the terminal does not report it. |
 | `term.background` | `light` when `term.bg_color` is a light colour, for example `#bcbcbc` or lighter grey. `dark` for a dark colour. Empty when `term.bg_color` is empty. |
 
 - A field without spaces in its braces takes the width of its value.

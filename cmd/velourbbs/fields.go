@@ -116,8 +116,8 @@ func bbsFields(m *bbs.Model) []field {
 			w = digits(screen.ColorsTrue)
 		case "term.ambiguous":
 			w = 1
-		case "term.charset", "term.images", "term.background", "session.theme":
-			w = 5 // utf-8, sixel, light and dark, light and auto
+		case "term.background", "session.theme":
+			w = 5 // light and dark, light and auto
 		case "session.lang":
 			w = langWidth
 		case "list.page", "list.pages":
@@ -293,8 +293,8 @@ func writeFields(w io.Writer, list []field) error {
 // setPaths is the paths of --set that a sample set holds, in the order of the registry
 // (screen-render, section 3.2). arg.<name> is not in a sample of velourbbs fields --sample.
 var setPaths = []string{
-	"term.type", "term.colors", "term.name", "term.images", "term.ambiguous",
-	"term.background", "term.bg_color", "term.fg_color",
+	"term.type", "term.colors", "term.name", "term.ambiguous",
+	"term.background", "term.bg_color",
 	"session.ip", "session.theme", "session.lang", "session.online",
 	"bbs.name", "bbs.version", "bbs.sessions", "bbs.time", "bbs.uptime",
 }

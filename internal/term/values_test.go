@@ -69,7 +69,7 @@ func TestTypeColors(t *testing.T) {
 
 func TestValues(t *testing.T) {
 	term := func(typ string, cols, rows, colors int) screen.Term {
-		return screen.Term{Type: typ, Cols: cols, Rows: rows, Charset: "utf-8", Colors: colors, Ambiguous: 1}
+		return screen.Term{Type: typ, Cols: cols, Rows: rows, Colors: colors, Ambiguous: 1}
 	}
 	wide := term("ansi", 80, 24, 16)
 	wide.Ambiguous = 2

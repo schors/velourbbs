@@ -38,7 +38,7 @@ func previewTime(zone *time.Location) time.Time {
 // previewTerm gives the term.* values of velourbbs preview without --size and --set
 // (screen-render, section 3.2).
 func previewTerm() screen.Term {
-	return screen.Term{Type: "xterm", Cols: 80, Rows: 24, Charset: "utf-8", Colors: screen.Colors256, Ambiguous: 1}
+	return screen.Term{Type: "xterm", Cols: 80, Rows: 24, Colors: screen.Colors256, Ambiguous: 1}
 }
 
 // previewSession gives the values of session-fields, section 4, without the values of the config:
@@ -485,30 +485,19 @@ func setField(v string, t *screen.Term, set *termSet, args map[string]string) er
 	case path == "term.name":
 		t.Name = term.CleanName(value)
 		return nil
-	case path == "term.images":
-		if value != "" && value != screen.ImagesSixel {
-			return fmt.Errorf("term.images is %q, must be %s or empty", value, screen.ImagesSixel)
-		}
-		t.Images = value
-		return nil
 	case path == "term.ambiguous":
 		if value != "1" && value != "2" {
 			return fmt.Errorf("term.ambiguous is %q, must be 1 or 2", value)
 		}
 		t.Ambiguous = int(value[0] - '0')
 		return nil
-	case path == "term.bg_color" || path == "term.fg_color":
+	case path == "term.bg_color":
 		if value != "" && !isRGB(value) {
-			return fmt.Errorf("%s is %q, must be #rrggbb or empty", path, value)
+			return fmt.Errorf("term.bg_color is %q, must be #rrggbb or empty", value)
 		}
-		value = strings.ToLower(value)
-		if path == "term.fg_color" {
-			t.FgColor = value
-			return nil
-		}
-		t.BgColor = value
+		t.BgColor = strings.ToLower(value)
 		if !set.background {
-			t.Background = term.Background(value)
+			t.Background = term.Background(t.BgColor)
 		}
 		return nil
 	case path == "term.background":
@@ -518,8 +507,8 @@ func setField(v string, t *screen.Term, set *termSet, args map[string]string) er
 		t.Background, set.background = value, true
 		return nil
 	}
-	return fmt.Errorf("cannot set %q: only term.type, term.colors, term.name, term.images, term.ambiguous, "+
-		"term.bg_color, term.fg_color, term.background, arg.<name>, session.* and bbs.*", path)
+	return fmt.Errorf("cannot set %q: only term.type, term.colors, term.name, term.ambiguous, "+
+		"term.bg_color, term.background, arg.<name>, session.* and bbs.*", path)
 }
 
 // isRGB reports whether s is #rrggbb with hex digits in each case.

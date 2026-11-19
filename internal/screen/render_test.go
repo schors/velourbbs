@@ -64,7 +64,7 @@ func dump(t *testing.T, files map[string]string, name string, cols, rows int, it
 		t.Fatalf("diags: %v", ds)
 	}
 	env := &screen.Env{
-		Term:  screen.Term{Type: "ansi", Cols: cols, Rows: rows, Charset: "utf-8", Colors: 16},
+		Term:  screen.Term{Type: "ansi", Cols: cols, Rows: rows, Colors: 16},
 		Items: map[string]bool{},
 	}
 	for _, k := range items {
