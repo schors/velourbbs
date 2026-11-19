@@ -608,7 +608,7 @@ At SIGINT or SIGTERM, the host does these steps:
 | `internal/term` | The probe, the encoder, the colour reduction, the key decoder, the paste, the draw of the line input and the terminal of [menu-nav](menu-nav.md), section 8. |
 | `internal/server` | The listener, the limits, the PROXY protocol header and the sessions. |
 
-- `cmd/velourbbs` loads the screens and gives them to `internal/server`.
+- `cmd/velourbbs` loads the model ([session](session.md), section 3) and gives it to `internal/server`.
   It opens the listener of section 10.1.
 
 ## 12. Libraries
