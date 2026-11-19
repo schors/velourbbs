@@ -100,16 +100,25 @@ func TestSearchNotRegular(t *testing.T) {
 	modes := map[string]fs.FileMode{
 		"screens/ru/_logo.bbt": fs.ModeSymlink,
 		"screens/ru/menu.bbt":  fs.ModeDir,
+		"screens/ru/news.bbt":  fs.ModeSymlink,
 		"content/ru/a.txt":     fs.ModeNamedPipe,
 	}
 	_, msgs := loadLangs(files, modes, []string{"en", "ru"}, true)
 	want := []string{
 		`screens/main.bbt:6:1: fragment "screens/ru/_logo.bbt" does not exist (language "ru")`,
 		`screens/ru/menu.bbt:1:1: not a regular file`,
+		`screens/ru/news.bbt:1:1: not a regular file`,
 		`screens/text.bbt:2:1: file: content file "a.txt": not a regular file (language "ru")`,
 	}
 	if !slices.Equal(msgs, want) {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(msgs, "\n"), strings.Join(want, "\n"))
+	}
+
+	// A directory with an invalid screen name is not a regular file, as without languages.
+	_, msgs = loadLangs(map[string]string{"screens/main.bbt": item("G", "logoff")},
+		map[string]fs.FileMode{"screens/BAD.bbt": fs.ModeDir}, nil, false)
+	if want := []string{`screens/BAD.bbt:1:1: not a regular file`}; !slices.Equal(msgs, want) {
+		t.Errorf("directory: %q, want %q", msgs, want)
 	}
 }
 
@@ -180,6 +189,15 @@ func TestSetDiags(t *testing.T) {
 	}
 	if !slices.Equal(msgs, want) {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(msgs, "\n"), strings.Join(want, "\n"))
+	}
+
+	// The sets en and ru read content/ru/bad.txt: its error appears once.
+	_, msgs = loadLangs(map[string]string{
+		"screens/main.bbt":   reader(`file = "ru/bad.txt"`, "{>file}\n"),
+		"content/ru/bad.txt": "\x01\n",
+	}, nil, []string{"en", "ru"}, true)
+	if want := []string{`content/ru/bad.txt:1:1: control character U+0001`}; !slices.Equal(msgs, want) {
+		t.Errorf("content/ru/bad.txt: got %q, want %q", msgs, want)
 	}
 
 	// With one language, there is no suffix.

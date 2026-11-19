@@ -194,7 +194,8 @@ The text of the More row is the first of:
 - `velourbbs preview <name>` shows the screen `<name>` of the screen set of the session language.
 - The model of an argument file ([screen-render](screen-render.md), section 3.2) loads and checks
   the value in the screen set of each language, as section 6 does for the values of an item.
-  An error is an invalid argument.
+  The errors merge as in section 6. After an error, the command exits as after an error
+  of a content file of a value ([screen-render](screen-render.md), section 3.2).
 
 ## 9. Code
 

@@ -15,6 +15,7 @@ import (
 	"unicode"
 
 	"github.com/schors/velourbbs/internal/bbs"
+	"github.com/schors/velourbbs/internal/bbt"
 	"github.com/schors/velourbbs/internal/config"
 	"github.com/schors/velourbbs/internal/content"
 	"github.com/schors/velourbbs/internal/key"
@@ -119,7 +120,7 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		_, _ = fmt.Fprintf(stderr, "velourbbs preview: unknown screen %q\n", name)
 		return exitUsage
 	}
-	if errs := bbs.CheckArgs(s, argVals); len(errs) > 0 {
+	if errs := bbs.CheckArgs(s, name, argVals); len(errs) > 0 {
 		for _, err := range errs {
 			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		}
@@ -145,13 +146,17 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 
 // argFiles loads the content file of the argument of the screen name in the screen set
 // of each language, when the screen is a file screen with {arg.<name>}, with the checks
-// of file-view, section 7 (session-language, section 8). It gives m, or a new model
-// with the screens that can show the files. It writes the errors and gives nil after an error.
+// of file-view, section 7 (session-language, section 8). It merges the diagnostics and the errors
+// of the sets as bbt.SetDiags does. It gives m, or a new model with the screens that can show
+// the files. It writes the errors and gives nil after an error.
 // The model of the load stays immutable (session, section 4).
 func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, stderr io.Writer) *bbs.Model {
+	langs := m.Config.Langs
 	nm := &bbs.Model{Config: m.Config, Sets: maps.Clone(m.Sets)}
-	ok := true
-	for _, lang := range m.Config.Langs {
+	sd := bbt.NewSetDiags(langs)
+	var msgs []string              // the errors in the order of the first set that finds them
+	found := map[string][]string{} // the sets that find each error
+	for _, lang := range langs {
 		s := m.Sets[lang][name] // the check of the sets makes sure that each set has the screen
 		f := s.FileScreen
 		if f == nil || f.Arg == "" || f.Contents[args[f.Arg]] != nil {
@@ -159,34 +164,43 @@ func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, std
 		}
 		p := args[f.Arg]
 		c, ds, err := content.Load(fsys, lang, p)
-		writeDiags(stderr, ds)
+		sd.Add(lang, ds)
 		var errs []error
 		if err != nil {
 			errs = []error{err}
 		} else if c != nil {
 			errs = f.Check(p, c)
 		}
-		suffix := ""
-		if len(m.Config.Langs) > 1 {
-			suffix = fmt.Sprintf(" (language %q)", lang)
-		}
 		for _, err := range errs {
-			_, _ = fmt.Fprintf(stderr, "velourbbs preview: arg.%s: %v%s\n", f.Arg, err, suffix)
+			msg := fmt.Sprintf("arg.%s: %v", f.Arg, err)
+			if found[msg] == nil {
+				msgs = append(msgs, msg)
+			}
+			found[msg] = append(found[msg], lang)
 		}
 		if c == nil || len(errs) > 0 {
-			ok = false
+			nm = nil
 			continue
 		}
-		nf := *f
-		nf.Contents = maps.Clone(f.Contents)
-		nf.Contents[p] = c
-		ns := *s
-		ns.FileScreen = &nf
-		nm.Sets[lang] = maps.Clone(m.Sets[lang])
-		nm.Sets[lang][name] = &ns
+		if nm != nil {
+			nf := *f
+			nf.Contents = maps.Clone(f.Contents)
+			nf.Contents[p] = c
+			ns := *s
+			ns.FileScreen = &nf
+			nm.Sets[lang] = maps.Clone(m.Sets[lang])
+			nm.Sets[lang][name] = &ns
+		}
 	}
-	if !ok {
-		return nil
+	writeDiags(stderr, sd.Diags())
+	for _, msg := range msgs {
+		if len(found[msg]) == len(langs) {
+			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %s\n", msg)
+			continue
+		}
+		for _, lang := range found[msg] {
+			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %s (language %q)\n", msg, lang)
+		}
 	}
 	return nm
 }

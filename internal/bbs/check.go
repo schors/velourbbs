@@ -40,7 +40,7 @@ func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
 					ls.Errorf(s.File, 2, 1, "item %q: do: %v", it.Key, err)
 					continue
 				}
-				for _, err := range CheckArgs(Target(sets, lang, it.Do), it.Do.Args) {
+				for _, err := range CheckArgs(Target(sets, lang, it.Do), it.Do.Target(), it.Do.Args) {
 					ls.Errorf(s.File, 2, 1, "item %q: args: %v", it.Key, err)
 				}
 			}
@@ -88,16 +88,17 @@ func checkSets(langs []string, sets bbt.Sets, sd *bbt.SetDiags) {
 
 // CheckArgs reports each argument of s that args does not give
 // and each name of args that is not an argument of s (bbt-format, section 8.5).
-func CheckArgs(s *screen.Screen, args map[string]string) []error {
+// The errors name s as target: "<name>" or "<code>/<name>" (session-language, section 6).
+func CheckArgs(s *screen.Screen, target string, args map[string]string) []error {
 	var errs []error
 	for _, name := range s.Args {
 		if _, ok := args[name]; !ok {
-			errs = append(errs, fmt.Errorf("missing argument %q of screen %q", name, s.Name))
+			errs = append(errs, fmt.Errorf("missing argument %q of screen %q", name, target))
 		}
 	}
 	for _, name := range slices.Sorted(maps.Keys(args)) {
 		if !slices.Contains(s.Args, name) {
-			errs = append(errs, fmt.Errorf("screen %q has no argument %q", s.Name, name))
+			errs = append(errs, fmt.Errorf("screen %q has no argument %q", target, name))
 		}
 	}
 	return errs

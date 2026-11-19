@@ -69,6 +69,10 @@ func TestLangPreviewErrors(t *testing.T) {
 		{[]string{"long", "--set", "session.lang=de"}, "velourbbs preview: session.lang is \"de\", not a language of the BBS\n", exitUsage},
 		{[]string{"read", "--set", "arg.file=only.txt", "--set", "session.lang=ru"},
 			"velourbbs preview: arg.file: content file \"only.txt\" does not exist (language \"en\")\n", exitError},
+		// An equal error of each set appears once, without a suffix.
+		{[]string{"read", "--set", "arg.file=missing.txt"},
+			"velourbbs preview: arg.file: content file \"missing.txt\" does not exist\n", exitError},
+		{[]string{"read", "--set", "arg.file=bad.txt"}, "content/bad.txt:1:1: control character U+0001\n", exitError},
 	}
 	for _, tt := range tests {
 		out, errOut, status := runIn(t, "lang", append([]string{"preview"}, tt.args...)...)

@@ -129,8 +129,8 @@ func TestCheckSets(t *testing.T) {
 			"screens/read.bbt": front("ESC back") + "{arg.a}\n",
 		},
 		want: []string{
-			`screens/main.bbt:2:1: item "R": args: missing argument "a" of screen "read"`,
-			`screens/main.bbt:2:1: item "R": args: screen "read" has no argument "b"`,
+			`screens/main.bbt:2:1: item "R": args: missing argument "a" of screen "ru/read"`,
+			`screens/main.bbt:2:1: item "R": args: screen "ru/read" has no argument "b"`,
 		},
 	}}
 	for _, tt := range tests {

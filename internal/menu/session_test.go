@@ -800,13 +800,13 @@ func TestRunUnknownOp(t *testing.T) {
 	screens := load(t, nil)
 	for i, it := range screens["main"].Items {
 		if it.Key == "G" {
-			screens["main"].Items[i].Do.Op = screen.PageLast + 1
+			screens["main"].Items[i].Do.Op = screen.Lang + 1
 		}
 	}
 	ft := &fakeTerm{cols: []int{80}, keys: []string{"G"}}
 	defer func() {
-		if recover() == nil {
-			t.Error("no panic")
+		if r := recover(); r != fmt.Sprintf("menu: no case for action %d", screen.Lang+1) {
+			t.Errorf("panic %v, want the panic of an action without a case", r)
 		}
 		if slices.Contains(ft.log, "page: Bye") {
 			t.Errorf("log %q: the session logged off", ft.log)
@@ -827,6 +827,32 @@ func TestShutdownLang(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want := []string{"page: Перезапуск ru"}; !slices.Equal(ft.log, want) || ss.Lang() != "ru" {
+		t.Errorf("log %q, lang %q; want %q, ru", ft.log, ss.Lang(), want)
+	}
+}
+
+// gosub <code>/<name> sets the session language. top and goodbye then use the set of the language
+// (menu-nav, section 4, and session-language, section 4).
+func TestRunLang(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml":               {},
+		"screens/screens.toml":   {Data: []byte("[lang.en]\n[lang.ru]\n")},
+		"screens/main.bbt":       {Data: []byte("+++\n[[item]]\nkey = \"X\"\ndo = \"gosub ru/info\"\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\nMain {session.lang}\n")},
+		"screens/info.bbt":       {Data: []byte("+++\n[[item]]\nkey = \"T\"\ndo = \"top\"\n+++\nInfo {session.lang}\n")},
+		"screens/en/goodbye.bbt": {Data: []byte("Bye\n")},
+		"screens/ru/goodbye.bbt": {Data: []byte("Пока\n")},
+	}
+	m, ds := bbs.Load(fsys)
+	if m == nil {
+		t.Fatalf("load: %v", ds)
+	}
+	ft := &fakeTerm{cols: []int{80}, keys: []string{"X", "T", "G"}}
+	ss := New(m, ft, "main", nil, config.ThemeDark, "en", noValues)
+	if err := ss.Run(context.Background()); err != nil {
+		t.Fatalf("%v, log %q", err, ft.log)
+	}
+	want := []string{"page: Main en", "page: Info ru", "page: Main ru", "page: Пока"}
+	if !slices.Equal(ft.log, want) || ss.Lang() != "ru" {
 		t.Errorf("log %q, lang %q; want %q, ru", ft.log, ss.Lang(), want)
 	}
 }

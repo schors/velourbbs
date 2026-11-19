@@ -31,10 +31,10 @@ func (sd *SetDiags) Add(lang string, ds screen.Diags) {
 }
 
 // Diags gives the sorted diagnostics with the limit of screen.MaxFileDiags for each file.
-// An equal diagnostic appears once. With more than one language, a diagnostic ends
-// with ` (language "<code>")` for each set that finds it, unless each set of its file finds it
-// and the set is a set of its file. The sets of a file in screens/<code>/ or content/<code>/
-// are the set of <code>; the sets of each other file are all sets.
+// An equal diagnostic appears once. When each set of its file finds it, it has no suffix.
+// Else it appears once for each set that finds it, with the suffix ` (language "<code>")`.
+// The sets of a file in screens/<code>/ or content/<code>/ are the set of <code>;
+// the sets of each other file are all sets. With one language, there is no suffix.
 func (sd *SetDiags) Diags() screen.Diags {
 	var order []screen.Diag
 	found := map[screen.Diag][]string{}
@@ -67,16 +67,14 @@ func (sd *SetDiags) Diags() screen.Diags {
 	for _, d := range order {
 		in := found[d]
 		own := sd.fileLangs(d.File)
-		plain := len(sd.langs) == 1 || !slices.ContainsFunc(own, func(l string) bool { return !slices.Contains(in, l) })
-		if plain {
+		if len(sd.langs) == 1 || !slices.ContainsFunc(own, func(l string) bool { return !slices.Contains(in, l) }) {
 			add(d)
+			continue
 		}
 		for _, lang := range in {
-			if !plain || !slices.Contains(own, lang) {
-				s := d
-				s.Msg = fmt.Sprintf("%s (language %q)", d.Msg, lang)
-				add(s)
-			}
+			s := d
+			s.Msg = fmt.Sprintf("%s (language %q)", d.Msg, lang)
+			add(s)
 		}
 	}
 	var out screen.Diags

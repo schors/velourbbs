@@ -99,24 +99,29 @@ func (l *loader) load(used map[string]bool) {
 				continue
 			}
 			name := path.Join(dir, e.Name())
+			if e.IsDir() {
+				// A directory of the language takes the place of the common screen: unused reports it.
+				delete(byName, base)
+				continue
+			}
 			if !screen.IsName(base) {
 				used[name] = true // the error is its diagnostic (screen-render, section 3.1)
 				l.fd(name).Errorf(1, 1, "invalid screen name %q", base)
 				continue
 			}
-			// A directory entry of the language takes the place of the common screen,
-			// also when it is not a regular file: unused reports it.
-			delete(byName, base)
-			if !e.IsDir() {
-				byName[base] = name
-			}
+			// An entry of the language takes the place of the common screen.
+			byName[base] = name
 		}
 	}
 	// The order of the file names: the diagnostics at one position keep the order of the screens.
 	for _, base := range slices.SortedFunc(maps.Keys(byName), func(a, b string) int {
 		return strings.Compare(a+".bbt", b+".bbt")
 	}) {
-		if f, _ := l.file(byName[base], false); f != nil {
+		f, missing := l.file(byName[base], false)
+		if missing { // a broken symlink (bbt-format, section 2)
+			l.fd(byName[base]).Errorf(1, 1, "not a regular file")
+		}
+		if f != nil {
 			l.units = append(l.units, &unit{s: &screen.Screen{Name: base, File: byName[base]}, f: f})
 		}
 	}
