@@ -103,7 +103,7 @@ func TestTerminalQueue(t *testing.T) {
 		to := testTimeouts
 		to.Idle = 200 * time.Millisecond
 		term, f := connect(t, to)
-		// One read gives 70 keys. The queue keeps 64.
+		// One read gives maxKeys + 6 keys. The queue keeps maxKeys.
 		f.write(strings.Repeat("a", maxKeys) + "bcdefg")
 		if got := keys(t, term, maxKeys); slices.ContainsFunc(got, func(k string) bool { return k != "a" }) {
 			t.Errorf("keys %q, want %d times a", got, maxKeys)
