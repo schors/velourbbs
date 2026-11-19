@@ -24,6 +24,8 @@ func TestFields(t *testing.T) {
 		{filepath.Join("testdata", "list"), "list.txt"},
 		// No list screen: no row.* field.
 		{filepath.Join("testdata", "preview"), "preview.txt"},
+		// Two languages: the values of [screen] lang, the widths of each set, 10 rows and more.
+		{filepath.Join("..", "..", "station"), "station.txt"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.golden, func(t *testing.T) {
@@ -173,7 +175,16 @@ func TestPreviewSampleErrors(t *testing.T) {
 		{"field value", "[a]\nfields = { \"term.ambiguous\" = \"3\" }\n", []string{"parts", "--sample", "a"},
 			"velourbbs preview: sample.toml: fields: term.ambiguous is \"3\", must be 1 or 2\n", exitUsage},
 		{"another argument", "[a]\nfields = { \"arg.x\" = \"1\" }\n", []string{"news", "--sample", "a"},
-			"velourbbs preview: ", exitUsage},
+			"velourbbs preview: screen \"news\" has no argument \"x\"\n", exitUsage},
+		{"empty set name", "[a]\n", []string{"parts", "--sample="},
+			"velourbbs preview: sample.toml: unknown set \"\"\n", exitUsage},
+		// The command checks a value of the set also when --set replaces it.
+		{"field value under --set", "[a]\nfields = { \"term.ambiguous\" = \"3\" }\n",
+			[]string{"news", "--sample", "a", "--set", "term.ambiguous=1"},
+			"velourbbs preview: sample.toml: fields: term.ambiguous is \"3\", must be 1 or 2\n", exitUsage},
+		{"colors under --set", "[a]\nfields = { \"term.colors\" = \"17\" }\n",
+			[]string{"news", "--set", "term.colors=16", "--sample", "a"},
+			"velourbbs preview: sample.toml: fields: term.colors is 17, must be 16, 256 or 16777216\n", exitUsage},
 		{"unknown row field", "[a]\nrows = [{ name = \"x\" }]\n", []string{"news", "--sample", "a"},
 			"velourbbs preview: sample.toml: rows: row 1: provider \"files\" has no field \"name\"\n", exitError},
 		{"row num", "[a]\nrows = [{ num = 1 }]\n", []string{"news", "--sample", "a"},
@@ -184,6 +195,9 @@ func TestPreviewSampleErrors(t *testing.T) {
 			"velourbbs preview: sample.toml: rows: row 1: \"minutes\" must be an integer\n", exitError},
 		{"select not a content file", "[a]\nrows = [{ path = \"parts/nope.md\" }]\n", []string{"parts", "--set", "arg.dir=parts", "--sample", "a"},
 			"velourbbs preview: select: args: file: ", exitError},
+		// A content file with errors in it gives diagnostics and no content.
+		{"select a file with errors", "[a]\nrows = [{ path = \"bad.md\" }]\n", []string{"parts", "--set", "arg.dir=parts", "--sample", "a"},
+			"content/bad.md:", exitError},
 		{"select without path", "[a]\nrows = [{ title = \"x\" }]\n", []string{"parts", "--set", "arg.dir=parts", "--sample", "a"},
 			"velourbbs preview: select: args: file: ", exitError},
 		{"keys: each list screen", "[a]\nrows = [{ name = \"x\" }]\n", []string{"main", "--sample", "a", "--keys", "G"},
@@ -192,7 +206,7 @@ func TestPreviewSampleErrors(t *testing.T) {
 	base := os.DirFS(filepath.Join("testdata", "list"))
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			top := fstest.MapFS{}
+			top := fstest.MapFS{"content/bad.md": {Data: []byte("+++\ntitle = 1\n")}}
 			if tt.sample != "" {
 				top[sampleFile] = &fstest.MapFile{Data: []byte(tt.sample)}
 			}
@@ -248,5 +262,74 @@ func TestPreviewSampleLangs(t *testing.T) {
 	want := "velourbbs preview: select: args: file: content file \"nope.md\" does not exist\n"
 	if errOut.String() != want || status != exitError {
 		t.Errorf("stderr %q, status %d; want %q, status %d", errOut.String(), status, want, exitError)
+	}
+}
+
+func TestValueWidth(t *testing.T) {
+	tests := []struct {
+		v    any
+		want int
+	}{
+		{"", 0}, {"abc", 3}, {"Короткий", 8}, {"全角の題名", 10}, {"a\x1bb\tc", 3}, {12345, 5}, {true, 4},
+	}
+	for _, tt := range tests {
+		if got := valueWidth(tt.v); got != tt.want {
+			t.Errorf("valueWidth(%q) = %d, want %d", tt.v, got, tt.want)
+		}
+	}
+}
+
+// bbsFS is a BBS in two languages: the list screen main selects into the screen read
+// of the set ru. notes is a list screen with {arg.<name>} and no goto to it.
+var bbsFS = fstest.MapFS{
+	"bbs.toml":             {Data: nil},
+	"screens/screens.toml": {Data: []byte("[lang.en]\n[lang.ru]\n")},
+	"screens/main.bbt": {Data: []byte("+++\ndata = { from = \"files\", args = { dir = \"log\" } }\nrows = 3\n" +
+		"select = { do = \"gosub ru/read\", args = { file = \"{row.path}\" } }\n" +
+		"[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{#each}{row.title}{/each}\n")},
+	"screens/read.bbt": {Data: []byte("+++\nfile = \"{arg.file}\"\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{>file}\n")},
+	"screens/notes.bbt": {Data: []byte("+++\ndata = { from = \"files\", args = { dir = \"{arg.dir}\" } }\nrows = 3\n" +
+		"[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{#each}{row.title}{/each}\n")},
+	"content/log/a.md": {Data: []byte("# A\n")},
+	"content/en/x.md":  {Data: []byte("# English\n")},
+	"content/ru/x.md":  {Data: []byte("# Russian\n")},
+	"sample.toml":      {Data: []byte("[a]\nrows = [{ path = \"x.md\", title = \"X\" }]\n")},
+}
+
+// The content file of select of a row of the set is in the language of the target screen.
+func TestPreviewSampleTargetLang(t *testing.T) {
+	var out, errOut bytes.Buffer
+	status := run([]string{"preview", "main", "--sample", "a", "--keys", "ENTER"}, t.TempDir(), bbsFS, &out, &errOut)
+	if errOut.Len() != 0 || status != 0 || !strings.Contains(out.String(), "|Russian") || strings.Contains(out.String(), "English") {
+		t.Errorf("stderr %q, status %d, got\n%s\nwant the file of ru", errOut.String(), status, out.String())
+	}
+}
+
+// A list screen without lists gives the fields of its provider, with no width and no value.
+func TestFieldsNoLists(t *testing.T) {
+	fsys := fstest.MapFS{}
+	for name, f := range bbsFS {
+		if name != "screens/main.bbt" {
+			fsys[name] = f
+		}
+	}
+	fsys["screens/main.bbt"] = &fstest.MapFile{Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\nHi\n")}
+	var out, errOut bytes.Buffer
+	status := run([]string{"fields"}, t.TempDir(), fsys, &out, &errOut)
+	got := out.String()
+	for _, line := range []string{
+		"list.page        integer  1  -      1\n",
+		"list.empty       boolean  -  -      true\n",
+		"arg.dir          string   -  -\n",
+		"row.num          integer  1  -\n",
+		"row.path         string   0  files\n",
+		"row.minutes      integer  0  files\n",
+	} {
+		if !strings.Contains(got, line) {
+			t.Errorf("no line %q in\n%s", line, got)
+		}
+	}
+	if errOut.Len() != 0 || status != 0 {
+		t.Errorf("stderr %q, status %d", errOut.String(), status)
 	}
 }

@@ -167,12 +167,12 @@ term.type        string   -   -      xterm
 term.cols        integer  3   -      80
 term.colors      integer  8   -      256
 term.background  string   5   -
-session.lang     string   2   -      ru
+session.lang     string   2   -      en
 bbs.name         string   -   -      Kind Brothers BBS
 ```
 
 - Каждая строка даёт путь, тип, ширину, поставщика (задача 8) и пример значения.
-- Ширина — самое большое число клеток значения. `-` значит, что у значения нет предела.
+- Ширина — самое большое число клеток значения. `-` значит, что команда не даёт ширину.
   Используй ширину для поля фиксированной ширины: `{term.cols}` нужно 3 клетки, `{term.background}` — 5.
 - Пример значения — значение `velourbbs preview`.
 - Сначала команда делает проверки `velourbbs check`. После ошибки она выводит только ошибки.

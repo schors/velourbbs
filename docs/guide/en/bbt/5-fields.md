@@ -171,7 +171,7 @@ bbs.name         string   -   -      Kind Brothers BBS
 ```
 
 - Each line gives the path, the type, the width, the provider (task 8) and the sample value.
-- The width is the most cells that a value can have. `-` means that the value has no limit.
+- The width is the most cells that a value can have. `-` means that the command gives no width.
   Use the width for a fixed-width field: `{term.cols}` needs 3 cells, `{term.background}` needs 5.
 - The sample value is the value of `velourbbs preview`.
 - The command does the checks of `velourbbs check` first. After an error, it gives only the errors.

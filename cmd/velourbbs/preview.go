@@ -74,9 +74,9 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		return setField(v, &term, &set, argVals)
 	}
 	fl.Func("set", "", setValue)
-	sampleName := ""
+	sampleName, sampleGiven := "", false
 	fl.Func("sample", "", func(v string) error {
-		sampleName = v
+		sampleName, sampleGiven = v, true
 		return nil
 	})
 	var keys []string
@@ -107,14 +107,16 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	name := names[0]
 	// The values of the sample set come before the values of --set (screen-render, section 3.2).
 	var sample *sampleSet
-	if sampleName != "" {
+	if sampleGiven {
 		var msgs []string
 		sample, msgs = loadSample(fsys, sampleName)
 		for _, path := range sample.paths() {
-			if given[path] {
-				continue
+			v := path + "=" + sample.fields[path]
+			err := checkSetValue(v)
+			if err == nil && !given[path] {
+				err = setValue(v)
 			}
-			if err := setValue(path + "=" + sample.fields[path]); err != nil {
+			if err != nil {
 				msgs = append(msgs, fmt.Sprintf("%s: fields: %v", sampleFile, err))
 			}
 		}
@@ -275,7 +277,9 @@ func argFiles(fsys fs.FS, m *bbs.Model, name string, args map[string]string, sam
 			}
 		}
 	}
-	writeDiags(stderr, sd.Diags())
+	ds := sd.Diags()
+	writeDiags(stderr, ds)
+	failed = failed || ds.HasErrors() // a file with errors in it gives no content and no message
 	for _, msg := range msgs {
 		if len(found[msg]) == len(langs) {
 			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %s\n", msg)
@@ -380,6 +384,10 @@ func selectFiles(fsys fs.FS, lang string, m *bbs.Model, s *screen.Screen, rows [
 		return nil, nil
 	}
 	t := bbs.Target(m.Sets, lang, sel.Do) // the check of the sets makes sure that it exists
+	// The target is in the set of its language: its files too.
+	if sel.Do.Lang != "" {
+		lang = sel.Do.Lang
+	}
 	nt := t
 	var msgs []string
 	for i, r := range rows {
@@ -396,6 +404,23 @@ func selectFiles(fsys fs.FS, lang string, m *bbs.Model, s *screen.Screen, rows [
 		return nil, nil
 	}
 	return nt, nil
+}
+
+// checkSetValue checks the value of --set "<path>=<value>" with the default values of the preview,
+// without a change of the values of the preview. The checks of the arguments of the screen
+// come after the load.
+func checkSetValue(v string) error {
+	term, sv := previewTerm(), previewSession()
+	path, value, ok := strings.Cut(v, "=")
+	if ok {
+		if set, err := setSession(&sv, path, value); set {
+			return err
+		}
+	}
+	if err := setField(v, &term, &termSet{}, map[string]string{}); err != nil {
+		return err
+	}
+	return term.Check()
 }
 
 // parseSize sets the size of term from "<cols>x<rows>". term.Check checks the ranges.

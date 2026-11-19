@@ -75,7 +75,14 @@ func bbsFields(m *bbs.Model) []field {
 	for _, l := range lists {
 		maxRows = max(maxRows, len(l.rows))
 	}
-	providers := map[string][]listRows{} // the lists of each provider
+	providers := map[string][]listRows{} // the lists of each provider that a screen uses
+	for _, set := range m.Sets {
+		for _, s := range set {
+			if s.List != nil && providers[s.List.From] == nil {
+				providers[s.List.From] = []listRows{} // a screen with {arg.<name>} can have no lists
+			}
+		}
+	}
 	for _, l := range lists {
 		providers[l.from] = append(providers[l.from], l)
 	}
@@ -132,7 +139,7 @@ func bbsFields(m *bbs.Model) []field {
 		out = append(out, field{ref: screen.ArgRef(a), width: -1, sample: argValues[a]})
 	}
 
-	if len(lists) == 0 {
+	if len(providers) == 0 {
 		return out
 	}
 	num := field{ref: screen.RowRef(screen.RowNum), width: digits(maxRows), sample: ""}

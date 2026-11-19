@@ -311,7 +311,7 @@ A "sample set" gives `velourbbs preview` other rows and other field values.
 So you can test an empty list and a long title without new notes.
 The sets are in the file `sample.toml` in the BBS directory.
 `velourbbs fields --sample` writes this file with the set `default`:
-the value of each field and one row. It does not replace an existing file.
+the value of each field that `--set` takes, and one row. It does not replace an existing file.
 
 Add your sets to the file:
 
