@@ -103,8 +103,8 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `{      <path>}` | Field with the width of the token, aligned right. |
 | `{#if <cond>}` `{#else}` `{/if}` | Conditional block. Section 5. |
 | `{!<style>}` | Style change. Section 7.3. |
-| `{>_<name>}` | Include of `screens/_<name>.bbt`. Section 3.4. |
-| `{><name>.ans}` | Art insert of `screens/<name>.ans`. Sections 3.4 and 6.2. |
+| `{>_<name>}` | Include of the fragment `_<name>.bbt`. Section 3.4. |
+| `{><name>.ans}` | Art insert of the art `<name>.ans`. Sections 3.4 and 6.2. |
 | `{>file}` | The file area of a file screen: [file-view](file-view.md), section 3.1. |
 | `{@<id>}` `{/@}` | Reserved for marks. An error in the MVP. |
 | `{<punctuation>...}` | Each other token that starts with ASCII punctuation is reserved for new tokens. An error. |
@@ -118,7 +118,10 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 
 - An include or an art insert must be the only content of its source line.
 - An include inserts the body lines of the fragment in place of its line.
-- An include of a name without `_`, except `{>file}`, is an error. A missing file is an error.
+- The host finds the file of an include and of an art insert in the session language
+  ([session-language](session-language.md), section 4).
+- An include of a name without `_`, except `{>file}`, is an error. A missing file is an error
+  in each screen set that does not find it ([session-language](session-language.md), section 6).
 - Includes can nest. An include cycle is an error.
 - After an include, the style is the style before the include.
 
@@ -372,13 +375,13 @@ are the same keys.
 |---|---|
 | `goto <name>` | Show the screen `<name>` in place of the current screen. |
 | `gosub <name>` | Show the screen `<name>` over the current screen: [menu-nav](menu-nav.md), section 4.1. |
-| `goto <code>/<name>`, `gosub <code>/<name>` | Set the session language to `<code>`, then run `goto <name>` or `gosub <name>`: [session-language](session-language.md), section 5. |
+| `goto <code>/<name>`, `gosub <code>/<name>` | Show the screen `<name>` in the language `<code>`: [menu-nav](menu-nav.md), section 4. |
 | `back` | Show the screen below the current screen again: [menu-nav](menu-nav.md), section 4.1. |
 | `top` | Show the first screen of the navigation stack again: [menu-nav](menu-nav.md), section 4.1. |
 | `logoff` | End the session. |
 | `page next`, `page prev`, `page first`, `page last` | Show another page of a file screen: [file-view](file-view.md), section 3.3. |
 | `theme dark`, `theme light`, `theme auto` | Set the theme choice of the session: [screens-toml](screens-toml.md), section 3.2. |
-| `lang <code>` | Set the session language: [session-language](session-language.md), section 5. |
+| `lang <code>` | Set the session language: [menu-nav](menu-nav.md), section 4. |
 
 - The action words are lower case. `do` has no other spaces than the one space after `goto`, `gosub`, `page`, `theme` or `lang`.
 - `<name>` matches the screen name of section 2. `<code>` is a language code

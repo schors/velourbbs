@@ -78,8 +78,9 @@ The guide has these tasks in this order. Each task ends with a check of the resu
 - The guide also shows these features in snippets: `{{`, `align`, `valign`, the More row,
   an alias of `[fields]`, the art with a fragment for small terminals
   ([bbt-format](bbt-format.md), section 6.1), and a BBS in two languages: `[lang.<code>]`,
-  `[screen] lang`, the language directories, the action `lang` and `session.lang`
-  ([session-language](session-language.md), sections 3 to 5).
+  `[screen] lang` (`en` by default), the language directories, `gosub <code>/<name>`,
+  the action `lang` and `session.lang` ([session-language](session-language.md), sections 2 to 5,
+  and [menu-nav](menu-nav.md), section 4).
 - The guide names these features as not in the MVP: the features of [bbt-format](bbt-format.md),
   section 10, and the table of contents, the active links and the syntax colours
   of [file-view](file-view.md), section 12.

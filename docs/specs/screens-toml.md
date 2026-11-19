@@ -38,7 +38,7 @@ The other specifications define the effect of a key and refer to this specificat
 | `time` | string | `"2006-01-02 15:04:05"` | The layout of the Go package `time` for the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 | `zone` | string | `"Local"` | The time zone of the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 | `theme` | string | `"dark"` | The theme choice at the start of a session: `dark`, `light` or `auto` (section 3.2). |
-| `lang` | string | `"en"` | The session language at the start of a session ([session-language](session-language.md), section 5). It is a language of the BBS, also without a table of section 3.5. |
+| `lang` | string | `"en"` | The session language at the start of a session: [session-language](session-language.md), sections 2 and 5. |
 
 - `width`, `align`, `valign` and `fill` have the rules of the front matter keys
   ([bbt-format](bbt-format.md), section 3.2).

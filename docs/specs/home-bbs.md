@@ -73,8 +73,8 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 
 - `setup` shows `0-5` in place of `0-9`.
 - The More row, with the indent of the screens: `[screen] more` is `Any key Next`,
-  `[lang.ru] more` is `Любая клавиша Дальше`. The entry shows the English row:
-  the session is in `en` before the choice.
+  `[lang.ru] more` is `Любая клавиша Дальше`. The entry shows the row of the session language:
+  English at the start, Russian after a return from the Russian menu.
 - A file screen shows `B` and `Пробел` (`Space`) only where they work
   (`when` and `{#if item.<KEY>}`). Paging keys are on the left, the other keys flush right.
 
@@ -224,7 +224,7 @@ The English table of section 7 of the brandbook:
   - each file screen with the first file of each catalog.
 - A golden output of `velourbbs preview main --keys R,ESC,E` shows the entry,
   the Russian menu, the entry and the English menu.
-- The screens of `screens/ru/` and of `screens/en/` have the same names and the same items.
+- The screens of `screens/ru/` and of `screens/en/` have the same items.
 - `content/ru/guide` and `content/en/guide` are symlinks into `docs/guide/`.
 
 ## 9. Not in this specification
