@@ -28,6 +28,7 @@ func style(text string) screen.Style {
 // theme is the theme of the example of screens-toml, section 4, with the default more style.
 var theme = map[string]screen.Style{
 	"normal": style("7/0"), "more": style("15/0"), "title": style("15/4 bold"), "prompt": style("14/0"),
+	"select": style("0/7"),
 }
 
 // aliases is the [fields] of screens/screens.toml in the tests.

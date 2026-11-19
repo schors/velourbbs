@@ -3,6 +3,7 @@ package screen_test
 import (
 	"maps"
 	"slices"
+	"strings"
 	"testing"
 	"testing/fstest"
 
@@ -119,5 +120,81 @@ func TestSelectAction(t *testing.T) {
 	}
 	if len(sel.Do.Args) != 1 {
 		t.Errorf("the action of the model changed: %v", sel.Do.Args)
+	}
+}
+
+// The list row in art (list-view, section 9): rows rectangle rows show the list page in the cells
+// of the list row; the cells outside the rectangle stay. A rectangle row without a row is spaces
+// in the styles of the list row cells. The selected row takes select only in a screen with select.
+func TestRenderListArt(t *testing.T) {
+	row := "|\x1b[33m{ row.num}\x1b[0m {row.path  }|"
+	blank := "|" + strings.Repeat(" ", 23) + "|"
+	art := "+-----------------------+\n" + row + "\n" + blank + "\n" + blank + "\n+--{list.page}---------+"
+	fsys := fstest.MapFS{
+		"screens/l.bbt": {Data: []byte("+++\ndata = { from = \"files\", args = { dir = \"d\" } }\nrows = 3\n" +
+			"select = { do = \"back\" }\n+++\n{>l.ans}\n")},
+		"screens/m.bbt": {Data: []byte("+++\ndata = { from = \"files\", args = { dir = \"d\" } }\nrows = 3\n+++\n{>l.ans}\n")},
+		"screens/l.ans": {Data: []byte(sauceArt(art, 25))},
+	}
+	for _, n := range []string{"a.txt", "b.txt", "c.txt", "d.txt"} {
+		fsys["content/d/"+n] = &fstest.MapFile{Data: []byte("x\n")}
+	}
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 25, Max: 25}}})
+	if ds.HasErrors() {
+		t.Fatalf("diags: %v", ds)
+	}
+	render := func(s *screen.Screen, n, p, cursor int) screen.Page {
+		rows := s.List.List(nil)
+		env := &screen.Env{
+			Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Charset: "utf-8", Colors: 16},
+			List: &screen.ListValues{Page: n, Pages: (len(rows) + p - 1) / p, Cursor: cursor},
+		}
+		return screen.RenderList(s, env, theme, rows, n, p)
+	}
+	l := sets["en"]["l"]
+	a := l.Body[0].(screen.ArtInsert).Art
+	grey, yellow := a.Rows[1][0].Style, a.Rows[1][1].Style
+	if grey == yellow {
+		t.Fatalf("the art styles: %v %v", grey, yellow)
+	}
+
+	p := render(l, 1, 3, 1)
+	want := []string{"+-----------------------+", "|         1 d/a.txt     |", "|         2 d/b.txt     |",
+		"|         3 d/c.txt     |", "+--1          ---------+"}
+	if got := texts(p); !slices.Equal(got, want) {
+		t.Errorf("page 1: %q, want %q", got, want)
+	}
+	if c := p.Rows[1]; c[0].Style != grey || c[1].Style != yellow || c[11].Style != grey {
+		t.Errorf("row 1 styles: %v %v %v", c[0].Style, c[1].Style, c[11].Style)
+	}
+	if c := p.Rows[2]; c[0].Style != grey || c[1].Style != theme["select"] || c[23].Style != theme["select"] ||
+		c[24].Style != grey {
+		t.Errorf("selected row styles: %v %v %v %v", c[0].Style, c[1].Style, c[23].Style, c[24].Style)
+	}
+
+	// Page 2 has one row. P = 2 leaves the third rectangle row of page 1 without a row.
+	empty := "|" + strings.Repeat(" ", 23) + "|"
+	for _, tt := range []struct {
+		p    screen.Page
+		want []string
+	}{
+		{render(l, 2, 3, 3), []string{"|         4 d/d.txt     |", empty, empty}},
+		{render(l, 1, 2, 0), []string{"|         1 d/a.txt     |", "|         2 d/b.txt     |", empty}},
+	} {
+		if got := texts(tt.p)[1:4]; !slices.Equal(got, tt.want) {
+			t.Errorf("page %d: %q, want %q", tt.p.Num, got, tt.want)
+		}
+		if c := tt.p.Rows[3]; c[1].Style != yellow || c[11].Style != grey || c[24] != a.Rows[3][24] {
+			t.Errorf("page %d empty row: %v %v %v", tt.p.Num, c[1].Style, c[11].Style, c[24])
+		}
+	}
+
+	// Without select, the cursor row has the styles of the art.
+	if c := render(sets["en"]["m"], 1, 3, 1).Rows[2]; c[1].Style != yellow {
+		t.Errorf("row 2 without select: %v, want %v", c[1].Style, yellow)
+	}
+	// The render does not change the model.
+	if a.Rows[1][1].Style != yellow || a.Rows[2][1] != (screen.Cell{Grapheme: " ", Style: grey}) {
+		t.Errorf("the art model changed: %v %v", a.Rows[1][1], a.Rows[2][1])
 	}
 }

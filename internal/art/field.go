@@ -104,3 +104,23 @@ func checkToken(d *screen.FileDiags, row int, cells screen.Row, col int) bool {
 	}
 	return ok
 }
+
+// findList finds the list row: the art row with row.* fields (list-view, section 9).
+// A row.* field on another row is an error, once for each row.
+func findList(d *screen.FileDiags, fields []screen.ArtField) *screen.ArtList {
+	var l *screen.ArtList
+	bad := 0 // the last row with an error
+	for _, f := range fields {
+		switch {
+		case f.Ref.Row() == "":
+		case l == nil:
+			l = &screen.ArtList{Row: f.Row, First: f.Col, Last: f.Col + f.Width - 1}
+		case f.Row == l.Row:
+			l.Last = f.Col + f.Width - 1
+		case f.Row != bad:
+			d.Errorf(f.Row, f.Col, "field %q: art has at most one list row, the list row is row %d", f.Ref.String(), l.Row)
+			bad = f.Row
+		}
+	}
+	return l
+}

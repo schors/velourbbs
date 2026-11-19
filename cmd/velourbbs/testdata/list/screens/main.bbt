@@ -11,8 +11,12 @@ args = { dir = "empty" }
 key = "3"
 do = "gosub news"
 [[item]]
+key = "4"
+do = "gosub shelf"
+args = { dir = "parts" }
+[[item]]
 key = "G"
 do = "logoff"
 +++
 Lists
-1 Parts  2 Empty  3 News  G Goodbye
+1 Parts  2 Empty  3 News  4 Shelf  G Bye

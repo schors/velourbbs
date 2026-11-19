@@ -87,7 +87,8 @@ The fields of a row and of the list:
 | `list.last` | True on the last page. Only in a condition. |
 | `list.empty` | True when the list has no rows. Only in a condition. |
 
-- A `row.*` field is valid only in the row text and in a value of `args` of `select`.
+- A `row.*` field is valid only in the row text, in a value of `args` of `select`
+  and in the list row of art (task 9).
 - A `list.*` field is valid only in a list screen: in its text, its fragments, its art and its `when`.
 
 Full rules: [list-view](../../../specs/list-view.md), sections 5 and 6.

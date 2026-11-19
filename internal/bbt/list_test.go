@@ -17,7 +17,7 @@ const parts = "data = { from = \"files\", args = { dir = \"parts\" } }\nrows = 3
 // eachLine is a valid list line.
 const eachLine = "{#each}{row.num} {row.title}{/each}\n"
 
-// The errors of list-view, section 10, without select and art, with their positions.
+// The errors of list-view, section 10, without select, with their positions.
 func TestListErrors(t *testing.T) {
 	part := map[string]string{"content/parts/a.md": "# A\n"}
 	with := func(files map[string]string) map[string]string {
@@ -65,7 +65,7 @@ func TestListErrors(t *testing.T) {
 			"screens/shutdown.bbt": "+++\n" + parts + "\n+++\n" + eachLine,
 		}),
 		want: []string{
-			`screens/a.bbt:2:1: data: the screen has no list line`,
+			`screens/a.bbt:2:1: data: the screen has no list line and no list row in art`,
 			`screens/goodbye.bbt:2:1: data: the goodbye screen cannot be a list screen`,
 			`screens/shutdown.bbt:2:1: data: the shutdown screen cannot be a list screen`,
 		},
@@ -123,9 +123,8 @@ func TestListErrors(t *testing.T) {
 		files: with(map[string]string{
 			"screens/a.bbt": list(parts, "{row.title}\n{#if row.num > 1}x{/if}\n{list.page}\n"+
 				"{#each}{row.size}{/each}\n{#each}{#if row.selected}x{/if}{/each}\n{#each}{row.selected}{/each}\n"+
-				"{#each}{#if row.size == 1}x{/if}{/each}\n{>_frag}\n{>art.ans}\n{list.last}\n{list.empty}\n"),
+				"{#each}{#if row.size == 1}x{/if}{/each}\n{>_frag}\n{list.last}\n{list.empty}\n"),
 			"screens/_frag.bbt": "{row.path}\n{#each}{row.size}{/each}\n",
-			"screens/art.ans":   sauceArt("{row.num} {list.pages}", 22),
 			"screens/b.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\nwhen = \"list.last\"\n" +
 				"[[item]]\nkey = \"B\"\ndo = \"logoff\"\nwhen = \"row.num > 1\"\n" +
 				"[[item]]\nkey = \"C\"\ndo = \"logoff\"\n+++\nText\n",
@@ -141,13 +140,36 @@ func TestListErrors(t *testing.T) {
 			`screens/a.bbt:12:8: field "row.selected" is valid only in a screen with select`,
 			`screens/a.bbt:13:8: field "row.selected" is boolean, valid only in a condition`,
 			`screens/a.bbt:14:8: field "row.size": provider "files" has no field "size"`,
-			`screens/a.bbt:17:1: field "list.last" is boolean, valid only in a condition`,
-			`screens/a.bbt:18:1: field "list.empty" is boolean, valid only in a condition`,
-			`screens/art.ans:1:1: screen "a": field "row.num" is valid only in a list line`,
+			`screens/a.bbt:16:1: field "list.last" is boolean, valid only in a condition`,
+			`screens/a.bbt:17:1: field "list.empty" is boolean, valid only in a condition`,
 			`screens/b.bbt:2:1: item "A": when: field "list.last" is valid only in a list screen`,
 			`screens/b.bbt:2:1: item "B": when: field "row.num" is valid only in a list line`,
 			`screens/c.bbt:6:1: field "list.page" is valid only in a list screen`,
 			`screens/c.bbt:7:1: field "list.empty" is valid only in a list screen`,
+		},
+	}, {
+		// The list row in art (list-view, section 9): its fields, the list rectangle with rows of each screen.
+		// A list row in art is the list of a screen without a list line.
+		name: "art",
+		files: with(map[string]string{
+			"screens/a.bbt": list(parts, "{>list.ans}\n"),
+			"screens/b.bbt": list("data = { from = \"files\", args = { dir = \"parts\" } }\nrows = 5", "{>list.ans}\n"),
+			"screens/c.bbt": list(parts, "{>bad.ans}\n"+eachLine),
+			"screens/d.bbt": list(parts, "{>size.ans}\n"),
+			"screens/e.bbt": "+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n{>list.ans}\n",
+			// The rectangle has the columns 2 to 23; the borders "|" stay.
+			"screens/list.ans": sauceArt("+----------------------+\n|{ row.num} {row.title}|\n|"+
+				strings.Repeat(" ", 22)+"|\n|"+strings.Repeat(" ", 22)+"|\n+----------------------+", 24),
+			"screens/bad.ans":  sauceArt("x{row.num} {row.title}\n          \n  x  y\n", 22),
+			"screens/size.ans": sauceArt("{row.size}\n\n\n", 22),
+		}),
+		want: []string{
+			`screens/bad.ans:3:3: screen "c": list rectangle: cell is not a space`,
+			`screens/list.ans:2:2: screen "b": list rectangle: rows = 5 ends at row 6, below the art of 5 rows`,
+			`screens/list.ans:2:2: screen "e": field "row.num" is valid only in a list screen`,
+			`screens/list.ans:2:13: screen "e": field "row.title" is valid only in a list screen`,
+			`screens/list.ans:5:2: screen "b": list rectangle: cell is not a space`,
+			`screens/size.ans:1:1: screen "d": field "row.size": provider "files" has no field "size"`,
 		},
 	}}
 	for _, tt := range tests {

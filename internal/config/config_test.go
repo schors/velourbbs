@@ -58,7 +58,7 @@ func TestDefaults(t *testing.T) {
 	}
 	// The base theme of screens-toml, section 3.2, with the md_* styles of file-view, section 4.
 	want := map[string]string{
-		"normal": "7/0", "more": "15/0", "md_h1": "15/0 bold", "md_h2": "15/0 bold", "md_h3": "15/0",
+		"normal": "7/0", "more": "15/0", "select": "0/7", "md_h1": "15/0 bold", "md_h2": "15/0 bold", "md_h3": "15/0",
 		"md_strong": "15/0 bold", "md_em": "14/0", "md_code": "10/0", "md_link": "14/0 underline",
 		"md_mark": "11/0", "md_frame": "8/0", "md_dim": "8/0",
 	}
@@ -124,6 +124,7 @@ w = "term.cols"
 		"title":  "15/4 bold", // the example of screens-toml, section 4
 		"prompt": "14/1",      // the foreground from normal
 		"more":   "-/-",
+		"select": "0/7",
 	}
 	if len(cfg.Theme) != len(want)+len(mdStyles) {
 		t.Errorf("theme = %v", cfg.Theme)
@@ -480,6 +481,7 @@ more   = "1"
 		"more":   "1/#405060",
 		"title":  "#203040/4 bold",
 		"prompt": "14/#405060",
+		"select": "0/7",
 	}
 	th := dark(cfg, 256)
 	if len(th) != len(want)+len(mdStyles) {

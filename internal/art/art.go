@@ -37,6 +37,7 @@ func Parse(name string, file []byte, fields screen.Fields) (*screen.Art, screen.
 		return nil, d.Diags
 	}
 	art.Fields = findFields(d, art.Rows, fields)
+	art.List = findList(d, art.Fields)
 	if d.Diags.HasErrors() {
 		return nil, d.Diags
 	}
