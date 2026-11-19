@@ -113,7 +113,7 @@ The BBS finds the field in the art and puts the value in its place.
   All its characters except spaces must have one foreground colour.
   Else `velourbbs check` gives an error (task 10).
 - The value takes the colours of the first character of the token.
-- Art can hold only fields: no style tokens, no conditions and no includes.
+- Art can hold only fields and boxes (below): no style tokens and no includes.
   A short alias (task 5) gives a short field, for example `{w}`.
 
 Full rules: [art-format](../../../specs/art-format.md), section 4.
@@ -187,10 +187,39 @@ The other rows have the colours of the art.
 - A rectangle row without a row of the page is spaces in the colours of the list row.
 - The selected row takes the theme style `select`. The default is `0/7`: black on grey.
   Set it in `[theme.default]`, for example `select = "235/215"`.
-- Art has no conditions, so `row.selected` does not work in art.
+- A box cannot be in the list row, so `row.selected` does not work in art.
 - A list screen needs a list line (task 8) or a list row in art.
 
 Full rules: [list-view](../../../specs/list-view.md), section 9.
+
+## A box in art
+
+A "box" shows a part of an art row only when its condition is true.
+Example: the bottom row of `shelf.ans` shows `[Space]` only when the item `SPACE` works:
+
+```text
+╚═[Esc]═{#if item.SPACE}[Space]{/if}═══╝
+```
+
+The bottom row on pages 1 and 2, and on the last page 3:
+
+```text
+╚═[Esc]═[Space]                     ═══╝
+╚═[Esc]═                            ═══╝
+```
+
+- A box goes from `{#if <condition>}` to `{/if}` on one art row.
+  The condition is the condition of `{#if}` (task 5).
+- When the condition is true, the box shows the text between the two tokens from the first cell
+  of the box. The rest of the box is spaces.
+- When the condition is false, the box is spaces.
+- The spaces have the colours of the first cell of the box. The cells after the box do not move.
+- The text of a box can hold fields.
+- Boxes do not nest and have no `{#else}`. A box cannot be in the list row.
+- Each other token that starts with `{#`, `{/`, `{!` or `{>` is an error in art,
+  for example `{!title}`.
+
+Full rules: [art-format](../../../specs/art-format.md), section 5.
 
 ## The colours of art
 

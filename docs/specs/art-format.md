@@ -75,8 +75,11 @@ also from `38;5;n` and `48;5;n`.
 
 ## 5. Blocks in art
 
+- A `{` followed by `#`, `/`, `!` or `>` starts a token that ends at the first `}` on the row.
+  Such a token without `}` is an error.
 - A "box" is a span of one grid row from `{#if <cond>}` to `{/if}`.
   The condition has the grammar of [bbt-format](bbt-format.md), section 5.
+  It cannot have `row.*` fields: a box is not in the list row.
 - Boxes do not nest and have no `{#else}`. These are errors: a `{#if` without `{/if}` on the same row,
   a `{/if}` without a box, a box in the list row, and each other token of
   [bbt-format](bbt-format.md), section 3.3, that starts with `{#`, `{/`, `{!` or `{>`.

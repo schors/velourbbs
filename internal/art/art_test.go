@@ -282,7 +282,7 @@ func TestFields(t *testing.T) {
 		{"left", "{w  }", "[{1 1 5 term.cols false 7/0}]", ""},
 		{"right", "{  w}", "[{1 1 5 term.cols true 7/0}]", ""},
 		{"spaces on both sides", "{ term.cols }", "[{1 1 13 term.cols true 7/0}]", ""},
-		{"plain", "{ BBS } {a {} {!x} {{w}", "[{1 21 3 term.cols false 7/0}]", ""},
+		{"plain", "{ BBS } {a {} {{w} {@x}", "[{1 16 3 term.cols false 7/0}]", ""},
 		{"style of the first cell", "\x1b[33;44m{w}", "[{1 1 3 term.cols false 3/4}]", ""},
 		{"space with another foreground", "\x1b[31m{\x1b[32m \x1b[31mw}", "[{1 1 4 term.cols true 1/0}]", ""},
 		{"two foregrounds", "\n\n              \x1b[93m{\x1b[97mw}", "[]",
@@ -338,6 +338,62 @@ func TestListRow(t *testing.T) {
 				if got := fmt.Sprint(a.List); got != tt.list {
 					t.Errorf("list %s, want %s", got, tt.list)
 				}
+			}
+		})
+	}
+}
+
+// The boxes of section 5 and their errors. The position of an error is the start of its token.
+func TestBoxes(t *testing.T) {
+	tests := []struct {
+		name, data string
+		boxes      string
+		diags      string
+	}{
+		{"box", "ab\x1b[31m{#if term.cols > 40}[{w}]{/if}x", "[{1 3 32 23 5 1/0} {term.cols at 24}]", ""},
+		{"empty content", "{#if term.cols>1}{/if}", "[{1 1 22 18 0 7/0}]", ""},
+		{"two boxes", "{#if term.cols>1}a{/if}{#if term.rows>1}b{/if}", "[{1 1 23 18 1 7/0} {1 24 46 41 1 7/0}]", ""},
+		{"string", `{#if term.type == "{w"}x{/if}`, "[{1 1 29 24 1 7/0}]", ""},
+		{"item", "{#if item.S}[S]ysop{/if}", "[{1 1 24 13 7 7/0}]", ""},
+		{"no end", "x {#if term.cols > 1}abc", "",
+			"a.ans:1:3: {#if} has no {/if} on its row"},
+		{"end on the next row", "{#if term.cols > 1}a\n{/if}", "",
+			"a.ans:1:1: {#if} has no {/if} on its row\na.ans:2:1: {/if} without {#if}"},
+		{"nest", "{#if term.cols > 1}{#if term.rows > 1}a{/if}{/if}", "",
+			"a.ans:1:20: {#if} in a box: boxes do not nest\na.ans:1:45: {/if} without {#if}"},
+		{"other tokens", "{#else} {!title} {>file} {#each} {/each} {!}", "",
+			"a.ans:1:1: token \"{#else}\" is not valid in art\n" +
+				"a.ans:1:9: token \"{!title}\" is not valid in art\n" +
+				"a.ans:1:18: token \"{>file}\" is not valid in art\n" +
+				"a.ans:1:26: token \"{#each}\" is not valid in art\n" +
+				"a.ans:1:34: token \"{/each}\" is not valid in art\n" +
+				"a.ans:1:42: token \"{!}\" is not valid in art"},
+		{"no closing brace", "{w} {!title", "", `a.ans:1:5: token has no "}"`},
+		{"condition", "{#if term.colss > 1}a{/if}{#if}b{/if}{#if term.cols}c{/if}", "",
+			"a.ans:1:1: unknown field \"term.colss\"\n" +
+				"a.ans:1:27: expected a field, found end of condition\n" +
+				"a.ans:1:38: integer field \"term.cols\" needs an operator"},
+		{"row field", "{#if row.num > 1}a{/if}", "", `a.ans:1:1: field "row.num" is not valid in a box condition`},
+		{"list row", "{row.num} {#if term.cols > 1}a{/if}", "", "a.ans:1:11: box in the list row"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a, ds := art.Parse("a.ans", flat(tt.data, 60, 0), aliases)
+			if got := diagText(ds); got != tt.diags {
+				t.Errorf("diagnostics %q, want %q", got, tt.diags)
+			}
+			if a == nil {
+				return
+			}
+			var got []string
+			for _, b := range a.Boxes {
+				got = append(got, fmt.Sprintf("{%d %d %d %d %d %s}", b.Row, b.Col, b.End, b.Content, b.Len, b.Style))
+			}
+			for _, f := range a.Fields {
+				got = append(got, fmt.Sprintf("{%s at %d}", f.Ref, f.Col))
+			}
+			if s := "[" + strings.Join(got, " ") + "]"; s != tt.boxes {
+				t.Errorf("boxes %s, want %s", s, tt.boxes)
 			}
 		})
 	}

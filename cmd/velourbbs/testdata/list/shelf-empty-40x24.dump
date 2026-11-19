@@ -5,7 +5,7 @@ page 1 40x24 fill none
 |║                                      ║|
 |║                                      ║|
 |║                                      ║|
-|╚═[Enter]═[PgDn]═[Esc]═════════════════╝|
+|╚═[Esc]═                          ═════╝|
 |Up Down    choose                       |
 |Enter      read                         |
 |PgUp PgDn  page                         |

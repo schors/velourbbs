@@ -309,23 +309,40 @@ func (r *renderer) art(a ArtInsert) {
 	}
 }
 
-// artFields gives the cells of the art row n with the values of its fields in env.
-// Without a row in env, the row.* fields keep their cells.
+// artFields gives the cells of the art row n with the values of its fields in env, then with its boxes
+// (art-format, sections 4 and 5). Without a row in env, the row.* fields keep their cells.
 func (r *renderer) artFields(a *Art, n int, cells Row, env *Env) Row {
 	copied := false
-	for _, f := range a.Fields {
-		if f.Row != n || f.Ref.Row() != "" && env.Row == nil {
-			continue
-		}
+	own := func() {
 		if !copied {
 			cells = append(Row(nil), cells...) // the model is immutable
 			copied = true
 		}
+	}
+	for _, f := range a.Fields {
+		if f.Row != n || f.Ref.Row() != "" && env.Row == nil {
+			continue
+		}
+		own()
 		var value []Cell
 		for _, g := range FitValue(r.fieldText(f.Ref, env), f.Width, f.Right) {
 			value = appendCell(value, g, f.Style)
 		}
 		copy(cells[f.Col-1:], value)
+	}
+	for _, b := range a.Boxes {
+		if b.Row != n {
+			continue
+		}
+		own()
+		box := cells[b.Col-1 : b.End]
+		shown := 0
+		if b.Cond.Eval(env) { // the box content moves to the first cell of the box
+			shown = copy(box, cells[b.Content-1:b.Content-1+b.Len])
+		}
+		for i := shown; i < len(box); i++ {
+			box[i] = Cell{" ", b.Style}
+		}
 	}
 	return cells
 }

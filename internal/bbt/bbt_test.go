@@ -740,7 +740,7 @@ when = 'arg.w == "1"'
 {>_frag}
 `)},
 		"screens/_frag.bbt": {Data: []byte("{arg.frag}\n")},
-		"screens/a.ans":     {Data: []byte(sauceArt("{arg.art}", 10))},
+		"screens/a.ans":     {Data: []byte(sauceArt(`{arg.art} {#if arg.box == "1"}x{/if}`, 40))},
 		"screens/t.bbt":     {Data: []byte("+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{term.cols}\n")},
 	}
 	fields := screen.Fields{"f": alias("f", "arg.alias")}
@@ -749,7 +749,7 @@ when = 'arg.w == "1"'
 	if ds.HasErrors() {
 		t.Fatalf("diags %v", ds)
 	}
-	want := []string{"alias", "art", "body", "cond", "frag", "w"}
+	want := []string{"alias", "art", "body", "box", "cond", "frag", "w"}
 	if got := screens["s"].Args; !slices.Equal(got, want) {
 		t.Errorf("args %q, want %q", got, want)
 	}

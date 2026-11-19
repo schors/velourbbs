@@ -5,7 +5,7 @@ page 1 80x10 fill none
 |║          2 Introduction              ║                                        |
 |║          3 Fields                    ║                                        |
 |║                                      ║                                        |
-|╚═[Enter]═[PgDn]═[Esc]═════════════════╝                                        |
+|╚═[Esc]═[PgDn]                    ═════╝                                        |
 |Up Down    choose                                                               |
 |Enter      read                                                                 |
 |PgUp PgDn  page                                                                 |
@@ -27,7 +27,7 @@ page 2 80x10 fill none
 |║          5 3-notes.txt               ║                                        |
 |║          6 A very long title that is ║                                        |
 |║                                      ║                                        |
-|╚═[Enter]═[PgDn]═[Esc]═════════════════╝                                        |
+|╚═[Esc]═[PgDn]                    ═════╝                                        |
 |Up Down    choose                                                               |
 |Enter      read                                                                 |
 |PgUp PgDn  page                                                                 |
@@ -49,7 +49,7 @@ page 3 80x10 fill none
 |║                                      ║                                        |
 |║                                      ║                                        |
 |║                                      ║                                        |
-|╚═[Enter]═[PgDn]═[Esc]═════════════════╝                                        |
+|╚═[Esc]═                          ═════╝                                        |
 |Up Down    choose                                                               |
 |Enter      read                                                                 |
 |PgUp PgDn  page                                                                 |
