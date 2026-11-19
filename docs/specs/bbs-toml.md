@@ -2,7 +2,7 @@
 
 This specification defines the host settings file `bbs.toml`: each table and each key.
 Related parts: [screens-toml](screens-toml.md), [telnet-term](telnet-term.md),
-[screen-render](screen-render.md) and [session-fields](session-fields.md).
+[screen-render](screen-render.md), [session-fields](session-fields.md) and [data-store](data-store.md).
 
 ## 1. Goal
 
@@ -61,6 +61,14 @@ The connection limits and the timeouts of the host.
 - Each integer is from 1 to 1000000.
 - An entry of `allow` is an address or a prefix, as in section 3.1.
 
+### 3.4. `[store]`
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `path` | string | `"velourbbs.jsonl"` | The data file. A relative path is relative to the BBS directory. [data-store](data-store.md), section 2. |
+
+- `path` is not empty and has no NUL character.
+
 ## 4. Example
 
 ```toml
@@ -79,6 +87,9 @@ max_connects_per_min = 10
 allow = ["192.0.2.10", "2001:db8::/48"]
 idle_timeout = 600
 output_timeout = 60
+
+[store]
+path = "/var/lib/velourbbs/velourbbs.jsonl"
 ```
 
 ## 5. Code
