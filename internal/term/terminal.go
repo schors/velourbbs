@@ -97,13 +97,13 @@ func (t *Terminal) ReadLine(ctx context.Context, f line.Field) (string, bool, er
 	l := line.New(f, t.term.Cols, t.term.Rows)
 	t.mode = true
 	var out []byte // the draw that waits for the end of the queued keys
-	if err := t.write(t.appendDraw([]byte(pasteOn), l.Draw())); err != nil {
+	if err := t.write(context.Background(), t.appendDraw([]byte(pasteOn), l.Draw())); err != nil {
 		t.mode = false
 		return "", false, err
 	}
 	for {
 		if len(out) > 0 && !t.ready() {
-			if err := t.write(out); err != nil {
+			if err := t.write(context.Background(), out); err != nil {
 				t.mode = false
 				return "", false, err
 			}
@@ -131,7 +131,7 @@ func (t *Terminal) endInput(out []byte) error {
 	t.mode = false
 	t.keys = t.keys[:0]
 	t.drop = t.paste
-	return t.write(append(out, pasteOff...))
+	return t.write(context.Background(), append(out, pasteOff...))
 }
 
 // endMode turns the bracketed paste mode off at an end of the session in the line input.
@@ -139,7 +139,7 @@ func (t *Terminal) endInput(out []byte) error {
 func (t *Terminal) endMode() {
 	if t.mode {
 		t.mode = false
-		_ = t.write([]byte(pasteOff))
+		_ = t.write(context.Background(), []byte(pasteOff))
 	}
 }
 
@@ -165,7 +165,7 @@ func (t *Terminal) ready() bool {
 // It gives ErrIdle at the idle timeout, ErrStop at once after the end of ctx,
 // also with keys in the queue, and the errors of the connection and of the telnet parser.
 func (t *Terminal) next(ctx context.Context) (queued, error) {
-	defer t.cancelRead(ctx)()
+	defer onDone(ctx, func() { _ = t.c.SetReadDeadline(time.Now()) })()
 	for {
 		if ctx.Err() != nil {
 			return queued{}, ErrStop
@@ -196,26 +196,36 @@ func (t *Terminal) next(ctx context.Context) (queued, error) {
 
 // Page writes the page p in one write (sections 7.1 and 9.4).
 func (t *Terminal) Page(p screen.Page) error {
-	return t.write(telnet.Escape(nil, AppendPage(nil, p, t.term.Colors, t.vgaRGB)))
+	return t.write(context.Background(), telnet.Escape(nil, AppendPage(nil, p, t.term.Colors, t.vgaRGB)))
 }
 
-// cancelRead makes the end of ctx end a read: it sets the read deadline to the time
-// of the end. It gives the function that stops this. A page that writes completes.
-func (t *Terminal) cancelRead(ctx context.Context) (stop func() bool) {
-	return context.AfterFunc(ctx, func() { _ = t.c.SetReadDeadline(time.Now()) })
+// onDone calls f in its own goroutine when ctx ends. It gives the function that stops this.
+// The function waits for a call of f that started, so f has no effect after it returns:
+// a late deadline of f must not end the close after output of the server.
+func onDone(ctx context.Context, f func()) (stop func()) {
+	done := make(chan struct{})
+	stopF := context.AfterFunc(ctx, func() {
+		defer close(done)
+		f()
+	})
+	return func() {
+		if !stopF() {
+			<-done
+		}
+	}
 }
 
 // read writes the waiting replies, then reads the input once, until the deadline dl
 // at the latest. It gives the telnet events and the replies. The keys go to the queue.
 // The wait of the key decoder and the 10 s of a subnegotiation also end a read,
 // so a read can give nothing. After the end of ctx, it gives ErrStop without a write.
-// The caller makes the end of ctx end the read with cancelRead.
+// The caller makes the end of ctx end the read with onDone.
 func (t *Terminal) read(ctx context.Context, dl time.Time) ([]telnet.Event, []Reply, error) {
 	if ctx.Err() != nil {
 		return nil, nil, ErrStop
 	}
 	if len(t.out) > 0 {
-		err := t.write(t.out)
+		err := t.write(ctx, t.out)
 		t.out = t.out[:0]
 		if err != nil {
 			return nil, nil, err
@@ -231,7 +241,7 @@ func (t *Terminal) read(ctx context.Context, dl time.Time) ([]telnet.Event, []Re
 		return nil, nil, err
 	}
 	// The read checks ctx after it sets its deadline, so a read that starts
-	// before the deadline of cancelRead also ends.
+	// before the deadline of onDone also ends.
 	if ctx.Err() != nil {
 		return nil, nil, ErrStop
 	}
@@ -270,10 +280,16 @@ func (t *Terminal) queue(now time.Time, k string) {
 	}
 }
 
-// write writes b with the deadline output_timeout.
-func (t *Terminal) write(b []byte) error {
+// write writes b with the deadline output_timeout. After the end of ctx, it gives ErrStop.
+// A write that must complete, as a page, takes context.Background().
+func (t *Terminal) write(ctx context.Context, b []byte) error {
 	if err := t.c.SetWriteDeadline(time.Now().Add(t.to.Output)); err != nil {
 		return err
+	}
+	// The write checks ctx after it sets its deadline, so the deadline of an onDone
+	// of the probe also ends a write that starts before it.
+	if ctx.Err() != nil {
+		return ErrStop
 	}
 	_, err := t.c.Write(b)
 	return err

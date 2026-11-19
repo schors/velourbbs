@@ -270,6 +270,24 @@ func TestReadDeadline(t *testing.T) {
 	}
 }
 
+// The stop function of onDone waits for a call of f that started, also when ctx ended
+// before onDone: a late deadline must not follow the wait.
+func TestOnDoneWaits(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		ended := false
+		stop := onDone(ctx, func() {
+			time.Sleep(time.Second)
+			ended = true
+		})
+		stop()
+		if !ended {
+			t.Error("stop returned before the end of f")
+		}
+	})
+}
+
 // The end of the context ends a Key that waits and each later Key with ErrStop at once,
 // also with keys in the queue (session, section 6). A Page after the end writes.
 func TestTerminalStop(t *testing.T) {
@@ -287,13 +305,16 @@ func TestTerminalStop(t *testing.T) {
 		if err := <-done; !errors.Is(err, ErrStop) || time.Since(start) != 0 {
 			t.Errorf("waiting Key: %v after %v, want ErrStop at once", err, time.Since(start))
 		}
-		f.write("ab")
-		synctest.Wait()
+		// One read puts "a", "b" and "c" into the queue.
+		f.write("abc")
+		if got := keys(t, term, 1); got[0] != "a" || len(term.keys) != 2 {
+			t.Fatalf("key %q, queue %v; want a and 2 keys in the queue", got, term.keys)
+		}
 		if _, err := term.Key(ctx); !errors.Is(err, ErrStop) {
 			t.Errorf("Key with keys in the queue after the end: %v, want ErrStop", err)
 		}
-		if got := keys(t, term, 2); !slices.Equal(got, []string{"a", "b"}) {
-			t.Errorf("keys %q with a new context, want the queue \"a\", \"b\"", got)
+		if got := keys(t, term, 2); !slices.Equal(got, []string{"b", "c"}) {
+			t.Errorf("keys %q with a new context, want the queue \"b\", \"c\"", got)
 		}
 		before := len(f.output())
 		if err := term.Page(screen.Page{Rows: []screen.Row{{{Grapheme: "x"}}}, Cols: 1, Height: 1}); err != nil {

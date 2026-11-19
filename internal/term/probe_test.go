@@ -634,6 +634,26 @@ func TestProbeStop(t *testing.T) {
 	})
 }
 
+// The end of the context also ends a write of the probe to a client that does not read.
+func TestProbeStopWrite(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		host, cc := net.Pipe()
+		defer func() { _ = cc.Close() }()
+		ctx, cancel := context.WithCancel(t.Context())
+		done := make(chan error, 1)
+		go func() {
+			_, err := Probe(ctx, host, time.Now(), testTimeouts, slog.New(slog.DiscardHandler))
+			done <- err
+		}()
+		synctest.Wait()
+		start := time.Now()
+		cancel()
+		if err := <-done; !errors.Is(err, ErrStop) || time.Since(start) != 0 {
+			t.Errorf("Probe() error = %v after %v, want ErrStop at once", err, time.Since(start))
+		}
+	})
+}
+
 func TestProbeLate(t *testing.T) {
 	// probe_timeout passed before the probe (the PROXY header took the time).
 	// The requests go out before Probe returns, so before the first screen.
