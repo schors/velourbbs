@@ -36,8 +36,9 @@ func Parse(name string, file []byte, fields screen.Fields) (*screen.Art, screen.
 	if art == nil {
 		return nil, d.Diags
 	}
-	art.Fields = findFields(d, art.Rows, fields)
+	art.Fields, art.Boxes = findTokens(d, art.Rows, fields)
 	art.List = findList(d, art.Fields)
+	checkBoxes(d, art.Boxes, art.List)
 	if d.Diags.HasErrors() {
 		return nil, d.Diags
 	}

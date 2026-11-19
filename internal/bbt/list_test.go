@@ -171,6 +171,20 @@ func TestListErrors(t *testing.T) {
 			`screens/list.ans:5:2: screen "b": list rectangle: cell is not a space`,
 			`screens/size.ans:1:1: screen "d": field "row.size": provider "files" has no field "size"`,
 		},
+	}, {
+		// The checks of a box condition that depend on the screen (art-format, section 5).
+		name: "boxes",
+		files: with(map[string]string{
+			"screens/a.bbt":   list(parts, eachLine+"{>box.ans}\n"),
+			"screens/b.bbt":   "+++\n[[item]]\nkey = \"S\"\ndo = \"logoff\"\n+++\n{>box.ans}\n",
+			"screens/box.ans": sauceArt("{#if item.S}[S]{/if} {#if list.page > 1}<{/if} {#if file.page > 1}^{/if}", 80),
+		}),
+		want: []string{
+			`screens/box.ans:1:1: screen "a": unknown field "item.S"`,
+			`screens/box.ans:1:22: screen "b": field "list.page" is valid only in a list screen`,
+			`screens/box.ans:1:48: screen "a": field "file.page" is valid only in a file screen`,
+			`screens/box.ans:1:48: screen "b": field "file.page" is valid only in a file screen`,
+		},
 	}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

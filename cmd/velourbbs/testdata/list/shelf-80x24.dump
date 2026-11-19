@@ -5,7 +5,7 @@ page 1 80x24 fill none
 |║          2 Introduction              ║                                        |
 |║          3 Fields                    ║                                        |
 |║          4 The menu                  ║                                        |
-|╚═[Enter]═[PgDn]═[Esc]═════════════════╝                                        |
+|╚═[Esc]═[PgDn]                    ═════╝                                        |
 |Up Down    choose                                                               |
 |Enter      read                                                                 |
 |PgUp PgDn  page                                                                 |
@@ -29,7 +29,7 @@ page 2 80x24 fill none
 |║          6 A very long title that is ║                                        |
 |║          7 Art and colour            ║                                        |
 |║                                      ║                                        |
-|╚═[Enter]═[PgDn]═[Esc]═════════════════╝                                        |
+|╚═[Esc]═                          ═════╝                                        |
 |Up Down    choose                                                               |
 |Enter      read                                                                 |
 |PgUp PgDn  page                                                                 |

@@ -218,6 +218,16 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 				}
 				u.addArgs(f.Ref.Arg())
 			}
+			for _, b := range a.Boxes { // art-format, section 5
+				pos := screen.Pos{File: name, Line: b.Row, Col: b.Col}
+				u.conds = append(u.conds, condAt{b.Cond, pos})
+				u.addArgs(b.Cond.Args()...)
+				for _, r := range b.Cond.Refs() {
+					if l.checkField(u, pos, r) {
+						break
+					}
+				}
+			}
 			if a.List != nil && u.s.List != nil {
 				u.each = true
 				l.checkRect(u, name, a)

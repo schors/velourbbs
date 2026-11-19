@@ -104,12 +104,20 @@ func TestRender(t *testing.T) {
 		"_small.bbt": "{!14}small screen text that wraps\n",
 		"main.ans":   sauceArt("\x1b[93mart\x1b[0m", 30),
 	}
+	boxes := map[string]string{
+		"main.bbt": "+++\nwidth = [40, 40]\n[[item]]\nkey = \"S\"\ndo = \"logoff\"\n+++\n{>box.ans}\n",
+		"box.ans":  sauceArt("\x1b[31m{#if item.S}\x1b[32m[S]ysop {w}\x1b[0m{/if}|end", 40),
+	}
 	tests := []struct {
 		name       string
 		files      map[string]string
 		cols, rows int
 		items      []string
 	}{
+		// The boxes of art-format, section 5: a true box moves its content with a field to its first cell;
+		// a false box is spaces in the style of its first cell. The cells after the box do not move.
+		{"box-true", boxes, 40, 10, []string{"S"}},
+		{"box-false", boxes, 40, 10, nil},
 		// The example of screen-render, section 3.3.
 		{"example", map[string]string{
 			"main.bbt": "+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{!title}Welcome!{!}\n{!14}[G]oodbye\n",

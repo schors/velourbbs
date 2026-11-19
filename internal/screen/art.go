@@ -5,6 +5,7 @@ type Art struct {
 	Width, Height int
 	Rows          []Row // Height rows of Width cells
 	Fields        []ArtField
+	Boxes         []ArtBox
 	List          *ArtList // the list row, else nil
 }
 
@@ -22,4 +23,14 @@ type ArtField struct {
 // of the first row.* token to the last cell of the last row.* token.
 type ArtList struct {
 	Row, First, Last int
+}
+
+// ArtBox is a box in art: a span of one row from {#if <cond>} to {/if} (art-format, section 5).
+// The columns are 1-based. The box has the columns Col to End. The box content has Len cells
+// from the column Content. Style is the style of the first cell of the box.
+type ArtBox struct {
+	Row, Col, End int
+	Content, Len  int
+	Cond          *Cond
+	Style         Style
 }

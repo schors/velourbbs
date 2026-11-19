@@ -6,15 +6,27 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// findFields finds the field tokens in the rows of the art (section 4)
-// and resolves their paths with the aliases fields.
-// A token is "{", optional spaces, a path, optional spaces and "}" on one row.
-// Each other "{" is a plain character.
-func findFields(d *screen.FileDiags, rows []screen.Row, fields screen.Fields) []screen.ArtField {
+// findTokens finds the field tokens (section 4) and the boxes (section 5) in the rows of the art.
+// It resolves the paths with the aliases fields. A field token is "{", optional spaces, a path,
+// optional spaces and "}" on one row. A "{" followed by "#", "/", "!" or ">" starts a token
+// that ends at the first "}" on the row. Each other "{" is a plain character.
+func findTokens(d *screen.FileDiags, rows []screen.Row, fields screen.Fields) ([]screen.ArtField, []screen.ArtBox) {
 	var found []screen.ArtField
+	var boxes []screen.ArtBox
 	for i, row := range rows {
+		var open *screen.ArtBox // the box in progress on this row
 		for c := 0; c < len(row); c++ {
 			if row[c].Grapheme != "{" {
+				continue
+			}
+			if c+1 < len(row) && strings.Contains("#/!>", row[c+1].Grapheme) && row[c+1].Grapheme != "" {
+				end := closing(row, c)
+				if end < 0 {
+					d.Errorf(i+1, c+1, `token has no "}"`)
+					break
+				}
+				open, boxes = blockToken(d, row, i+1, c, end, open, boxes, fields)
+				c = end
 				continue
 			}
 			path, start, end, ok := scanToken(row, c)
@@ -35,8 +47,74 @@ func findFields(d *screen.FileDiags, rows []screen.Row, fields screen.Fields) []
 			}
 			c = end
 		}
+		if open != nil {
+			d.Errorf(open.Row, open.Col, "{#if} has no {/if} on its row")
+		}
 	}
-	return found
+	return found, boxes
+}
+
+// blockToken handles the token row[c:end+1] that starts with "{#", "{/", "{!" or "{>" on the row n
+// (section 5). open is the box in progress, else nil. It gives the box in progress and the boxes.
+// A box with an error of its condition is not in boxes.
+func blockToken(d *screen.FileDiags, row screen.Row, n, c, end int, open *screen.ArtBox,
+	boxes []screen.ArtBox, fields screen.Fields) (*screen.ArtBox, []screen.ArtBox) {
+	text := cellText(row[c+1 : end])
+	isIf := text == "#if" || strings.HasPrefix(text, "#if ")
+	if isIf || text == "/if" { // a block token has the colours of a token (section 4)
+		checkToken(d, n, row[c:end+1], c+1)
+	}
+	switch {
+	case isIf:
+		if open != nil {
+			d.Errorf(n, c+1, "{#if} in a box: boxes do not nest")
+			return open, boxes
+		}
+		cond, err := screen.ParseCond(text[len("#if"):], fields, true)
+		if err != nil {
+			d.Errorf(n, c+1, "%v", err)
+		} else {
+			for _, r := range cond.Refs() {
+				if r.Row() != "" {
+					d.Errorf(n, c+1, "field %q is not valid in a box condition", r.String())
+					cond = nil
+					break
+				}
+			}
+		}
+		return &screen.ArtBox{Row: n, Col: c + 1, Content: end + 2, Cond: cond, Style: row[c].Style}, boxes
+	case text == "/if":
+		if open == nil {
+			d.Errorf(n, c+1, "{/if} without {#if}")
+			return nil, boxes
+		}
+		open.Len, open.End = c+1-open.Content, end+1
+		if open.Cond != nil {
+			boxes = append(boxes, *open)
+		}
+		return nil, boxes
+	}
+	d.Errorf(n, c+1, "token %q is not valid in art", "{"+text+"}")
+	return open, boxes
+}
+
+// closing gives the index of the first "}" after row[c], else -1.
+func closing(row screen.Row, c int) int {
+	for j := c + 1; j < len(row); j++ {
+		if row[j].Grapheme == "}" {
+			return j
+		}
+	}
+	return -1
+}
+
+// cellText gives the text of cells.
+func cellText(cells screen.Row) string {
+	var b strings.Builder
+	for _, c := range cells {
+		b.WriteString(c.Grapheme)
+	}
+	return b.String()
 }
 
 // scanToken scans the token at row[c] == "{". It gives the path, the index of its
@@ -103,6 +181,15 @@ func checkToken(d *screen.FileDiags, row int, cells screen.Row, col int) bool {
 		}
 	}
 	return ok
+}
+
+// checkBoxes reports each box in the list row l (section 5).
+func checkBoxes(d *screen.FileDiags, boxes []screen.ArtBox, l *screen.ArtList) {
+	for _, b := range boxes {
+		if l != nil && b.Row == l.Row {
+			d.Errorf(b.Row, b.Col, "box in the list row")
+		}
+	}
 }
 
 // findList finds the list row: the art row with row.* fields (list-view, section 9).

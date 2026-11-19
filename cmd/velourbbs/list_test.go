@@ -32,6 +32,8 @@ var listGoldens = []struct {
 	{"set-40x10.dump", []string{"parts", "--set", "arg.dir=more", "--size", "40x10", "--keys", "ENTER,ESC"}},
 	// The list row in art (list-view, section 9): the first page and the last page with an empty
 	// rectangle row; the selected row in select; the frame and the fields outside the rectangle stay.
+	// The box {#if item.PGDN}[PgDn]{/if} of the bottom border is true on page 1 and false on page 2
+	// (art-format, section 5).
 	{"shelf-80x24.dump", []string{"shelf", "--set", "arg.dir=parts"}},
 	// P smaller than rows: the art does not shrink, so P = 3 leaves the fourth rectangle row empty.
 	{"shelf-80x10.dump", []string{"shelf", "--set", "arg.dir=parts", "--size", "80x10"}},
