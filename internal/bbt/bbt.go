@@ -319,17 +319,16 @@ func (l *loader) rows(ls *screen.ListSpec, values map[string]string) []error {
 
 // targetFiles loads the content file of each value of an argument of a file screen with {arg.<name>},
 // and the rows of each value of an argument of data of a list screen.
-// The values are the values of the goto and gosub actions to the screen in all screen sets.
+// The values are the values of the goto and gosub actions to the screen in all screen sets:
+// of the items and of select with the values of each row (list-view, section 8).
 // Each set loads and checks each value with its own search. An error is an error of the item
-// with the goto or the gosub in the set that finds it (file-view, section 7, list-view, section 10,
+// or of select in the set that finds it (file-view, section 7, list-view, section 10,
 // and session-language, section 6).
-// The menu checks report a target screen that does not exist and a missing argument.
+// The rows come first: the values of select need them, and a select value cannot give rows.
+// The menu checks report a target screen that does not exist, a missing argument
+// and a {row.<field>} value for an argument of data.
 func targetFiles(loaders []*loader) {
-	type value struct {
-		u  *unit
-		it screen.Item
-	}
-	var values []value // in the order of the sets, the screens and the items
+	var items, selects []target // in the order of the sets, the screens and the items
 	seen := map[string]bool{}
 	for _, l := range loaders {
 		for _, u := range l.units {
@@ -341,60 +340,116 @@ func targetFiles(loaders []*loader) {
 				k := u.f.name + "\x00" + it.Key
 				if it.Do.Op.HasTarget() && !seen[k] {
 					seen[k] = true
-					values = append(values, value{u, it})
+					items = append(items, target{u, fmt.Sprintf("item %q", it.Key), it.Do})
 				}
+			}
+			// The literal values of select: a {row.<field>} value cannot give rows.
+			if ls := u.s.List; ls != nil && ls.Select != nil && ls.Select.Do.Op.HasTarget() && !seen[u.f.name] {
+				seen[u.f.name] = true
+				selects = append(selects, target{u, "select", ls.Select.Do})
 			}
 		}
 	}
 	for _, l := range loaders {
-		byName := map[string]*unit{}
-		for _, u := range l.units {
-			byName[u.s.Name] = u
+		byName := l.byName()
+		for _, v := range slices.Concat(items, selects) {
+			if t := byName[v.a.Screen]; t != nil && t.done && t.s.List != nil {
+				l.targetRows(v, t.s.List)
+			}
 		}
+	}
+	values := slices.Concat(items, selectValues(loaders))
+	for _, l := range loaders {
+		byName := l.byName()
 		for _, v := range values {
-			t := byName[v.it.Do.Screen]
-			if t == nil || !t.done {
-				continue
-			}
-			if ls := t.s.List; ls != nil && len(ls.ArgRefs) > 0 && ls.From != "" {
-				l.targetRows(v.u, v.it, ls)
-				continue
-			}
-			if t.s.FileScreen == nil || t.s.FileScreen.Arg == "" {
-				continue
-			}
-			f := t.s.FileScreen
-			p, ok := v.it.Do.Args[f.Arg]
-			if !ok {
-				continue
-			}
-			c, err := l.content(p)
-			var errs []error
-			if err != nil {
-				errs = []error{err}
-			} else if c != nil {
-				errs = f.Check(p, c)
-			}
-			for _, err := range errs {
-				l.fd(v.u.f.name).Errorf(2, 1, "item %q: args: %s: %v", v.it.Key, f.Arg, err)
-			}
-			if c != nil && len(errs) == 0 {
-				f.Contents[p] = c
+			if t := byName[v.a.Screen]; t != nil && t.done && t.s.FileScreen != nil {
+				l.targetFile(v, t.s.FileScreen)
 			}
 		}
 	}
 }
 
-// targetRows reads the rows of the list screen ls for the args of the item it of the screen u
+// target is a goto or a gosub a of the screen u, with the values of its args.
+// label names the item or select in the errors.
+type target struct {
+	u     *unit
+	label string
+	a     screen.Action
+}
+
+// byName gives the screens of the set by name.
+func (l *loader) byName() map[string]*unit {
+	m := map[string]*unit{}
+	for _, u := range l.units {
+		m[u.s.Name] = u
+	}
+	return m
+}
+
+// selectValues gives the goto or the gosub of select of each list screen with the values of each row
+// of each list of the screen, in each set. A value with the same arguments appears once for each screen file.
+func selectValues(loaders []*loader) []target {
+	var values []target
+	seen := map[string]bool{}
+	for _, l := range loaders {
+		for _, u := range l.units {
+			ls := u.s.List
+			if !u.done || ls == nil || ls.Select == nil || !ls.Select.Do.Op.HasTarget() {
+				continue
+			}
+			for _, key := range slices.Sorted(maps.Keys(ls.Lists)) {
+				for i, r := range ls.Lists[key] {
+					a := ls.Select.Action(r, i+1)
+					k := u.f.name + "\x00" + screen.ListKey(a.Args)
+					if !seen[k] {
+						seen[k] = true
+						values = append(values, target{u, "select", a})
+					}
+				}
+			}
+		}
+	}
+	return values
+}
+
+// targetFile loads and checks the content file of the file screen f for the args of v.
+// A missing argument gives no file: the menu checks report it.
+func (l *loader) targetFile(v target, f *screen.FileSpec) {
+	if f.Arg == "" {
+		return
+	}
+	p, ok := v.a.Args[f.Arg]
+	if !ok {
+		return
+	}
+	c, err := l.content(p)
+	var errs []error
+	if err != nil {
+		errs = []error{err}
+	} else if c != nil {
+		errs = f.Check(p, c)
+	}
+	for _, err := range errs {
+		l.fd(v.u.f.name).Errorf(2, 1, "%s: args: %s: %v", v.label, f.Arg, err)
+	}
+	if c != nil && len(errs) == 0 {
+		f.Contents[p] = c
+	}
+}
+
+// targetRows reads the rows of the list screen ls for the args of the item v
 // (list-view, section 4). An error is an error of the item. A missing argument gives no rows:
 // the menu checks report it.
-func (l *loader) targetRows(u *unit, it screen.Item, ls *screen.ListSpec) {
+func (l *loader) targetRows(v target, ls *screen.ListSpec) {
+	if len(ls.ArgRefs) == 0 || ls.From == "" {
+		return
+	}
 	for _, arg := range ls.ArgRefs {
-		if _, ok := it.Do.Args[arg]; !ok {
+		if _, ok := v.a.Args[arg]; !ok {
 			return
 		}
 	}
-	for _, err := range l.rows(ls, ls.Values(it.Do.Args)) {
-		l.fd(u.f.name).Errorf(2, 1, "item %q: args: %v", it.Key, err)
+	for _, err := range l.rows(ls, ls.Values(v.a.Args)) {
+		l.fd(v.u.f.name).Errorf(2, 1, "%s: args: %v", v.label, err)
 	}
 }

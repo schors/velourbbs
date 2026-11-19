@@ -23,6 +23,11 @@ var listGoldens = []struct {
 	// Each page action; the disabled page next on the last page and page prev on the first page;
 	// back to the page of the frame; theme on page 2 keeps the page; an empty list.
 	{"keys-40x10.dump", []string{"main", "--size", "40x10", "--keys", "1,PGDN,PGDN,PGUP,PGUP,END,HOME,END,N,ESC,T,ESC,2,PGDN,ESC,G"}},
+	// The cursor of select: UP and DOWN on a page, over a page border and at the ends of the list;
+	// a page action puts the cursor on the first row; ENTER to a file screen and back to the same cursor;
+	// ENTER and DOWN in an empty list do nothing.
+	{"cursor-40x10.dump", []string{"main", "--size", "40x10", "--keys",
+		"1,DOWN,UP,UP,DOWN,DOWN,DOWN,DOWN,UP,END,DOWN,DOWN,DOWN,ENTER,ESC,HOME,ESC,2,ENTER,DOWN,ESC,G"}},
 }
 
 func TestPreviewList(t *testing.T) {

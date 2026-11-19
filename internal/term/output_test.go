@@ -238,6 +238,33 @@ func TestAppendPageErase(t *testing.T) {
 	}
 }
 
+// TestAppendUpdate: an update sends only the rows that differ from the shown page,
+// without the clear and without the fill rows (section 7.1).
+func TestAppendUpdate(t *testing.T) {
+	normal := screen.Style{Fg: idx(7), Bg: idx(0)}
+	page := func(sel int) screen.Page {
+		var rs []screen.Row
+		for i := range 3 {
+			c := cell(" ", idx(7), idx(0), 0)
+			if i == sel {
+				c = cell(">", idx(15), idx(4), 0)
+			}
+			rs = append(rs, screen.Row{c, cell(string(rune('a'+i)), idx(7), idx(0), 0)})
+		}
+		return screen.Page{Rows: rs, Cols: 2, Height: 5, Top: 1, Normal: normal, Fill: screen.FillSpaces}
+	}
+	want := "\x1b[?2026h\x1b[0m" +
+		"\x1b[2;1H\x1b[0;37;40m a" +
+		"\x1b[4;1H\x1b[0;97;44m>\x1b[0;37;40mc" +
+		"\x1b[0m\x1b[?2026l"
+	if got := string(AppendUpdate(nil, page(2), page(0), screen.Colors16, false)); got != want {
+		t.Errorf("AppendUpdate =\n%q\nwant\n%q", got, want)
+	}
+	if got, want := string(AppendUpdate(nil, page(0), page(0), screen.Colors16, false)), "\x1b[?2026h\x1b[0m\x1b[0m\x1b[?2026l"; got != want {
+		t.Errorf("AppendUpdate of the same page = %q, want %q", got, want)
+	}
+}
+
 func TestAppendPageAppends(t *testing.T) {
 	got := string(AppendPage([]byte("x"), screen.Page{}, screen.Colors16, false))
 	if want := "x\x1b[?2026h\x1b[0m\x1b[2J\x1b[0m\x1b[?2026l"; got != want {

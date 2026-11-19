@@ -35,7 +35,11 @@ type frontDoc struct {
 		From *string            `toml:"from"`
 		Args *map[string]string `toml:"args"`
 	} `toml:"data"`
-	Rows *int64 `toml:"rows"`
+	Rows   *int64 `toml:"rows"`
+	Select *struct {
+		Do   *string            `toml:"do"`
+		Args *map[string]string `toml:"args"`
+	} `toml:"select"`
 	Item []struct {
 		Key  *string            `toml:"key"`
 		Do   *string            `toml:"do"`
@@ -67,7 +71,7 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 	fr := &front{layout: screen.ParseLayoutKeys(doc.Width, doc.Align, doc.VAlign, doc.Fill,
 		func(key string, err error) { errorf("%s: %v", key, err) })}
 	fr.file = parseFileKeys(&doc, errorf)
-	fr.list = parseListKeys(&doc, errorf)
+	fr.list = parseListKeys(&doc, langs, errorf)
 	pages := doc.File != nil || doc.Data != nil // a page action is valid (file-view, section 3.3)
 	seen := map[string]bool{}
 	for i, it := range doc.Item {
@@ -83,6 +87,9 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 			label = fmt.Sprintf("item %q", k)
 			if seen[k] {
 				errorf("%s: key: duplicate key", label)
+			}
+			if doc.Select != nil && key.IsCursor(k) {
+				errorf("%s: key: %q is a key of select", label, k)
 			}
 			seen[k] = true
 		}
@@ -210,12 +217,16 @@ const (
 	maxListRows = 100
 )
 
-// parseListKeys parses the keys data and rows (list-view, sections 3 and 4).
+// parseListKeys parses the keys data, rows and select (list-view, sections 3, 4 and 8).
 // It gives nil without data. The loader reads the rows of the provider.
-func parseListKeys(doc *frontDoc, errorf func(format string, args ...any)) *screen.ListSpec {
+// langs is the languages of the BBS.
+func parseListKeys(doc *frontDoc, langs []string, errorf func(format string, args ...any)) *screen.ListSpec {
 	if doc.Data == nil {
 		if doc.Rows != nil {
 			errorf("rows: the screen has no data")
+		}
+		if doc.Select != nil {
+			errorf("select: the screen has no data")
 		}
 		return nil
 	}
@@ -262,7 +273,67 @@ func parseListKeys(doc *frontDoc, errorf func(format string, args ...any)) *scre
 	default:
 		l.Rows = int(*doc.Rows)
 	}
+	if doc.Select != nil {
+		l.Select = parseSelect(doc.Select.Do, doc.Select.Args, p, langs, errorf)
+	}
 	return l
+}
+
+// parseSelect parses the key select: its do and its args (list-view, section 8).
+// p is the provider of the screen, nil after an error of data.
+func parseSelect(do *string, args *map[string]string, p *provider.Provider, langs []string,
+	errorf func(format string, args ...any)) *screen.Select {
+	s := &screen.Select{Refs: map[string]string{}}
+	if do == nil {
+		errorf("select: do is missing")
+	} else if a, err := parseAction(*do, langs); err != nil {
+		errorf("select: do: %v", err)
+	} else {
+		s.Do = a
+	}
+	if args == nil {
+		return s
+	}
+	if s.Do.Op != 0 && !s.Do.Op.HasTarget() { // Op 0: the do has an error
+		errorf("select: args: only goto and gosub take arguments")
+	}
+	s.Do.Args = map[string]string{}
+	for _, name := range slices.Sorted(maps.Keys(*args)) {
+		v := (*args)[name]
+		field, token := rowToken(v)
+		switch {
+		case !token:
+			if err := screen.CheckArg(name, v); err != nil {
+				errorf("select: args: %v", err)
+			}
+			s.Do.Args[name] = v
+			continue
+		case !screen.IsIdent(name):
+			errorf("select: args: invalid argument name %q", name)
+		case field == "":
+			errorf("select: args: %s: invalid token %q, want a value or {row.<field>}", name, v)
+		case field == screen.RowSelected:
+			errorf("select: args: %s: field %q is valid only in a condition", name, "row."+field)
+		case p != nil && !p.HasField(field):
+			errorf("select: args: %s: provider %q has no field %q", name, p.Name, field)
+		}
+		s.Refs[name] = field
+	}
+	return s
+}
+
+// rowToken reports whether the value v starts with "{": a token. field is the <field> of a value
+// that is exactly one token {row.<field>}, else "" (list-view, section 8).
+func rowToken(v string) (field string, token bool) {
+	t, ok := strings.CutPrefix(v, "{")
+	if !ok {
+		return "", false
+	}
+	field, ok = strings.CutPrefix(strings.TrimSuffix(t, "}"), "row.")
+	if !ok || !strings.HasSuffix(t, "}") || !screen.IsIdent(field) {
+		return "", true
+	}
+	return field, true
 }
 
 // parseAction parses the do of an item (section 8.3). langs is the languages of the BBS

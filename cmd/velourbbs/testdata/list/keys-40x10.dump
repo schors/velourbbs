@@ -9,7 +9,7 @@ key 1
 screen parts
 page 1 40x10 fill none
 |Parts of parts  page 1/2                |
-|1. Read me first parts/README.md        |
+|>1. Read me first parts/README.md       |
 |2.Introduction parts/1-intro.md         |
 |3.Fields parts/02-fields.md             |
 |4.The menu parts/2-menu.md              |
@@ -17,7 +17,7 @@ page 1 40x10 fill none
 |Back                                    |
 styles
 1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
-2: 1-3 7/0, 4-17 15/0 bold, 18-40 8/0
+2: 1-4 7/0, 5-18 15/0 bold, 19-40 8/0
 3: 1-15 7/0, 16-40 8/0
 4: 1-9 7/0, 10-40 8/0
 5: 1-11 7/0, 12-40 8/0
@@ -26,7 +26,7 @@ styles
 key PGDN
 page 2 40x10 fill none
 |Parts of parts  page 2/2                |
-|5.3-notes.txt parts/3-notes.txt         |
+|>5.3-notes.txt parts/3-notes.txt        |
 |6.A very long title that is wider than t|
 |7.Art and colour parts/10-art.md        |
 |                                        |
@@ -34,7 +34,7 @@ page 2 40x10 fill none
 |Back                                    |
 styles
 1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
-2: 1-14 7/0, 15-40 8/0
+2: 1-15 7/0, 16-40 8/0
 3: 1-40 7/0
 4: 1-17 7/0, 18-40 8/0
 5: 1-40 7/0
@@ -44,7 +44,7 @@ key PGDN ignored
 key PGUP
 page 1 40x10 fill none
 |Parts of parts  page 1/2                |
-|1. Read me first parts/README.md        |
+|>1. Read me first parts/README.md       |
 |2.Introduction parts/1-intro.md         |
 |3.Fields parts/02-fields.md             |
 |4.The menu parts/2-menu.md              |
@@ -52,7 +52,7 @@ page 1 40x10 fill none
 |Back                                    |
 styles
 1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
-2: 1-3 7/0, 4-17 15/0 bold, 18-40 8/0
+2: 1-4 7/0, 5-18 15/0 bold, 19-40 8/0
 3: 1-15 7/0, 16-40 8/0
 4: 1-9 7/0, 10-40 8/0
 5: 1-11 7/0, 12-40 8/0
@@ -62,7 +62,7 @@ key PGUP ignored
 key END
 page 2 40x10 fill none
 |Parts of parts  page 2/2                |
-|5.3-notes.txt parts/3-notes.txt         |
+|>5.3-notes.txt parts/3-notes.txt        |
 |6.A very long title that is wider than t|
 |7.Art and colour parts/10-art.md        |
 |                                        |
@@ -70,7 +70,7 @@ page 2 40x10 fill none
 |Back                                    |
 styles
 1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
-2: 1-14 7/0, 15-40 8/0
+2: 1-15 7/0, 16-40 8/0
 3: 1-40 7/0
 4: 1-17 7/0, 18-40 8/0
 5: 1-40 7/0
@@ -79,7 +79,7 @@ styles
 key HOME
 page 1 40x10 fill none
 |Parts of parts  page 1/2                |
-|1. Read me first parts/README.md        |
+|>1. Read me first parts/README.md       |
 |2.Introduction parts/1-intro.md         |
 |3.Fields parts/02-fields.md             |
 |4.The menu parts/2-menu.md              |
@@ -87,7 +87,7 @@ page 1 40x10 fill none
 |Back                                    |
 styles
 1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
-2: 1-3 7/0, 4-17 15/0 bold, 18-40 8/0
+2: 1-4 7/0, 5-18 15/0 bold, 19-40 8/0
 3: 1-15 7/0, 16-40 8/0
 4: 1-9 7/0, 10-40 8/0
 5: 1-11 7/0, 12-40 8/0
@@ -96,7 +96,7 @@ styles
 key END
 page 2 40x10 fill none
 |Parts of parts  page 2/2                |
-|5.3-notes.txt parts/3-notes.txt         |
+|>5.3-notes.txt parts/3-notes.txt        |
 |6.A very long title that is wider than t|
 |7.Art and colour parts/10-art.md        |
 |                                        |
@@ -104,7 +104,7 @@ page 2 40x10 fill none
 |Back                                    |
 styles
 1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
-2: 1-14 7/0, 15-40 8/0
+2: 1-15 7/0, 16-40 8/0
 3: 1-40 7/0
 4: 1-17 7/0, 18-40 8/0
 5: 1-40 7/0
@@ -138,7 +138,7 @@ key ESC
 screen parts
 page 2 40x10 fill none
 |Parts of parts  page 2/2                |
-|5.3-notes.txt parts/3-notes.txt         |
+|>5.3-notes.txt parts/3-notes.txt        |
 |6.A very long title that is wider than t|
 |7.Art and colour parts/10-art.md        |
 |                                        |
@@ -146,7 +146,7 @@ page 2 40x10 fill none
 |Back                                    |
 styles
 1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
-2: 1-14 7/0, 15-40 8/0
+2: 1-15 7/0, 16-40 8/0
 3: 1-40 7/0
 4: 1-17 7/0, 18-40 8/0
 5: 1-40 7/0
@@ -155,7 +155,7 @@ styles
 key T
 page 2 40x10 fill none
 |Parts of parts  page 2/2                |
-|5.3-notes.txt parts/3-notes.txt         |
+|>5.3-notes.txt parts/3-notes.txt        |
 |6.A very long title that is wider than t|
 |7.Art and colour parts/10-art.md        |
 |                                        |
@@ -163,7 +163,7 @@ page 2 40x10 fill none
 |Back                                    |
 styles
 1: 1-14 15/15 bold, 15-16 0/15, 17-24 8/15, 25-40 0/15
-2: 1-14 0/15, 15-40 8/15
+2: 1-15 0/15, 16-40 8/15
 3: 1-40 0/15
 4: 1-17 0/15, 18-40 8/15
 5: 1-40 0/15

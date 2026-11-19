@@ -29,6 +29,9 @@ type Terminal interface {
 	Key(ctx context.Context) (string, error)
 	// Page shows the page p.
 	Page(p screen.Page) error
+	// Update shows the page p in place of the page that Page showed last: p differs from it
+	// only in the cells of its rows (section 5.3).
+	Update(p screen.Page) error
 }
 
 // Events takes the other events of section 7. Run sends them only to a Terminal
@@ -149,9 +152,10 @@ const maxFrames = 16
 // frame is a frame of the navigation stack (section 4.1). It holds the screen name:
 // the session finds its screen in the session language each time it shows the frame.
 type frame struct {
-	name string
-	args map[string]string
-	page int // the page of a file screen or of a list screen, 1-based
+	name   string
+	args   map[string]string
+	page   int // the page of a file screen or of a list screen, 1-based
+	cursor int // the index of the selected row of a list screen, from 0
 }
 
 // nav changes the navigation stack st with the action a: goto, gosub, back or top (section 4.1).
@@ -203,14 +207,17 @@ func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 		if err != nil {
 			return screen.Item{}, err
 		}
-		return ss.next(ctx, items)
+		return ss.next(ctx, items, nil)
 	}
 	if err := ss.ev.Screen(s.Name); err != nil {
 		return screen.Item{}, err
 	}
 	term := ss.t.Term()
 	cfg := ss.m.Config
-	v := newPager(s, term, f.args, cfg.SessionTheme(ss.choice, term), ss.sessionValues)
+	if s.List != nil {
+		return ss.runList(ctx, f, newListView(s, term, f.args, cfg.SessionTheme(ss.choice, term), ss.sessionValues))
+	}
+	v := newFileView(s, term, f.args, cfg.SessionTheme(ss.choice, term), ss.sessionValues)
 	n := min(f.page, v.count())
 	for {
 		f.page = n
@@ -218,43 +225,88 @@ func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 		if err := ss.t.Page(p); err != nil {
 			return screen.Item{}, err
 		}
-		it, err := ss.next(ctx, items)
+		it, err := ss.next(ctx, items, nil)
 		if err != nil || !it.Do.Op.IsPage() && it.Do.Op != screen.Theme {
 			return it, err
 		}
-		switch it.Do.Op {
-		case screen.Theme:
+		if it.Do.Op == screen.Theme {
 			ss.choice = config.ThemeChoice(it.Do.Theme)
 			v.setTheme(cfg.SessionTheme(ss.choice, term))
-		case screen.PageNext:
-			n = min(n+1, v.count())
-		case screen.PagePrev:
-			n = max(n-1, 1)
-		case screen.PageFirst:
-			n = 1
-		case screen.PageLast:
-			n = v.count()
+			continue
+		}
+		n = pageNum(it.Do.Op, n, v.count())
+	}
+}
+
+// runList shows the list screen of v for the frame f and gives the item that leaves it (section 5.3).
+// It starts at the page and the cursor of f and sets them to each shown page and cursor.
+func (ss *Session) runList(ctx context.Context, f *frame, v *listView) (screen.Item, error) {
+	n := min(f.page, v.count())
+	c := f.cursor
+	if c < v.first(n) || c > v.last(n) { // step 2
+		c = v.last(n)
+	}
+	var moves func(k string) bool // the cursor keys that do something (list-view, section 8)
+	if v.s.List.Select != nil {
+		moves = func(k string) bool { return v.moves(k, c) }
+	}
+	for {
+		f.page, f.cursor = n, c
+		p, items := v.page(n, c)
+		if err := ss.t.Page(p); err != nil {
+			return screen.Item{}, err
+		}
+		it, err := ss.next(ctx, items, moves)
+		// A cursor move on the same list page updates the page. A cursor key has no action.
+		for err == nil && it.Do.Op == 0 && (it.Key == key.Up && c > v.first(n) || it.Key == key.Down && c < v.last(n)) {
+			if it.Key == key.Up {
+				c--
+			} else {
+				c++
+			}
+			f.cursor = c
+			if err = ss.t.Update(v.move(c)); err == nil {
+				it, err = ss.next(ctx, items, moves)
+			}
+		}
+		if err != nil {
+			return it, err
+		}
+		if it.Do.Op == 0 {
+			switch it.Key {
+			case key.Up: // the previous list page with the cursor on its last row
+				n, c = n-1, c-1
+				continue
+			case key.Down: // the next list page with the cursor on its first row
+				n, c = n+1, c+1
+				continue
+			}
+			it.Do = v.s.List.Select.Action(v.list[c], c+1) // key.Enter
+		}
+		switch {
+		case it.Do.Op == screen.Theme:
+			ss.choice = config.ThemeChoice(it.Do.Theme)
+			v.setTheme(ss.m.Config.SessionTheme(ss.choice, v.term))
+		case it.Do.Op.IsPage():
+			n = pageNum(it.Do.Op, n, v.count())
+			c = v.first(n)
+		default:
+			return it, nil
 		}
 	}
 }
 
-// pager is a file screen or a list screen laid out for one terminal size: its pages.
-type pager interface {
-	// count gives the count of the pages.
-	count() int
-	// page renders the page n, 1-based, with the fields of this page, and gives its enabled items.
-	page(n int) (screen.Page, map[string]screen.Item)
-	// setTheme sets the session theme. The pages stay.
-	setTheme(theme map[string]screen.Style)
-}
-
-// newPager lays out the file screen or the list screen s.
-func newPager(s *screen.Screen, term screen.Term, args map[string]string, theme map[string]screen.Style,
-	sv func() screen.SessionValues) pager {
-	if s.List != nil {
-		return newListView(s, term, args, theme, sv)
+// pageNum gives the page after the page action op on the page n of count pages.
+func pageNum(op screen.Op, n, count int) int {
+	switch op {
+	case screen.PageNext:
+		return min(n+1, count)
+	case screen.PagePrev:
+		return max(n-1, 1)
+	case screen.PageFirst:
+		return 1
 	}
-	return newFileView(s, term, args, theme, sv)
+	return count // screen.PageLast
 }
 
 // show shows the screen s, not a file screen, with the arguments args: it renders s
@@ -299,8 +351,18 @@ func Pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[strin
 		env, _ := Enabled(s, screen.Env{Term: term, Args: args, Session: sv})
 		return screen.Render(s, env, theme, cfg.MoreText(sv.Lang))
 	}
+	values := func() screen.SessionValues { return sv }
 	return func(yield func(screen.Page) bool) {
-		v := newPager(s, term, args, theme, func() screen.SessionValues { return sv })
+		if s.List != nil { // the cursor on the first row of each list page
+			v := newListView(s, term, args, theme, values)
+			for n := 1; n <= v.count(); n++ {
+				if p, _ := v.page(n, v.first(n)); !yield(p) {
+					return
+				}
+			}
+			return
+		}
+		v := newFileView(s, term, args, theme, values)
 		for n := 1; n <= v.count(); n++ {
 			if p, _ := v.page(n); !yield(p) {
 				return
@@ -368,7 +430,8 @@ type listView struct {
 	theme map[string]screen.Style
 	sv    func() screen.SessionValues
 	list  []screen.ListRow
-	size  int // the page size P
+	size  int         // the page size P
+	env   *screen.Env // the field values of the page that page rendered last
 }
 
 // newListView finds the page size of the list screen s: it renders page 1 with P = rows.
@@ -385,7 +448,24 @@ func newListView(s *screen.Screen, term screen.Term, args map[string]string, the
 
 // values gives the list values of the page n.
 func (v *listView) values(n int) screen.ListValues {
-	return screen.ListValues{Page: n, Pages: v.count(), Empty: len(v.list) == 0}
+	return screen.ListValues{Page: n, Pages: v.count(), Empty: len(v.list) == 0, Cursor: v.first(n)}
+}
+
+// first gives the index of the first row of the list page n, last of its last row.
+// The page of an empty list has the row 0.
+func (v *listView) first(n int) int { return (n - 1) * v.size }
+func (v *listView) last(n int) int  { return max(v.first(n), min(n*v.size, len(v.list))-1) }
+
+// moves reports whether the cursor key k does something with the cursor on the row c
+// (list-view, section 8).
+func (v *listView) moves(k string, c int) bool {
+	switch k {
+	case key.Up:
+		return c > 0
+	case key.Down:
+		return c < len(v.list)-1
+	}
+	return len(v.list) > 0 // key.Enter
 }
 
 // count gives the count of the list pages. An empty list has one page.
@@ -393,11 +473,20 @@ func (v *listView) count() int { return max(1, (len(v.list)+v.size-1)/v.size) }
 
 func (v *listView) setTheme(theme map[string]screen.Style) { v.theme = theme }
 
-// page renders the list page n (section 5.3, step 3).
-func (v *listView) page(n int) (screen.Page, map[string]screen.Item) {
+// page renders the list page n with the cursor on the row c (section 5.3, step 3).
+func (v *listView) page(n, c int) (screen.Page, map[string]screen.Item) {
 	values := v.values(n)
+	values.Cursor = c
 	env, items := Enabled(v.s, screen.Env{Term: v.term, Args: v.args, List: &values, Session: v.sv()})
+	v.env = env
 	return screen.RenderList(v.s, env, v.theme, v.list, n, v.size), items
+}
+
+// move renders the page that page rendered last, with its field values and the cursor on the row c
+// of the same page (section 5.3, step 4).
+func (v *listView) move(c int) screen.Page {
+	v.env.List.Cursor = c
+	return screen.RenderList(v.s, v.env, v.theme, v.list, v.env.List.Page, v.size)
 }
 
 // Enabled evaluates the when of each item of s with the field values env without Items
@@ -416,16 +505,22 @@ func Enabled(s *screen.Screen, env screen.Env) (*screen.Env, map[string]screen.I
 }
 
 // next waits for keys until one matches an enabled item (section 3.3)
-// and gives this item.
-func (ss *Session) next(ctx context.Context, items map[string]screen.Item) (screen.Item, error) {
+// and gives this item. In a list screen with select, moves reports whether a cursor key
+// does something: next then gives an item with this key and no action for it, and ignores
+// the other cursor keys (list-view, section 8). moves is nil in each other screen.
+func (ss *Session) next(ctx context.Context, items map[string]screen.Item,
+	moves func(k string) bool) (screen.Item, error) {
 	for {
 		k, err := ss.t.Key(ctx)
 		if err != nil {
 			return screen.Item{}, err
 		}
 		k = key.Map(k)
-		it, ok := items[k]
-		if !ok {
+		var it screen.Item
+		var ok bool
+		if moves != nil && key.IsCursor(k) {
+			it, ok = screen.Item{Key: k}, moves(k)
+		} else if it, ok = items[k]; !ok {
 			it, ok = items[key.Any]
 		}
 		if err := ss.ev.KeyEvent(k, !ok); err != nil {

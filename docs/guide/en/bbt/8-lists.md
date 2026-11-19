@@ -2,7 +2,8 @@
 
 In this task, you add the keeper's log to Lamp. The screen `log` lists the notes
 of the directory `content/log/`. You do not write a row for each note:
-the BBS reads the directory and makes the rows.
+the BBS reads the directory and makes the rows. The arrow keys choose a note,
+and Enter opens it in the reader of task 7.
 
 ## The notes
 
@@ -80,15 +81,51 @@ The fields of a row and of the list:
 | `row.title` | The title of the file, as `file.title` (task 7). |
 | `row.minutes` | The reading time of the file. |
 | `row.path` | The path of the file in `content/`, for example `log/2-rain.md`. |
+| `row.selected` | True on the selected row (section "Selection"). Only in a condition. |
 | `list.page` | The number of the current page, from 1. |
 | `list.pages` | The page count. An empty list has one page. |
 | `list.last` | True on the last page. Only in a condition. |
 | `list.empty` | True when the list has no rows. Only in a condition. |
 
-- A `row.*` field is valid only in the row text.
+- A `row.*` field is valid only in the row text and in a value of `select`.
 - A `list.*` field is valid only in a list screen: in its text, its fragments, its art and its `when`.
 
 Full rules: [list-view](../../../specs/list-view.md), sections 5 and 6.
+
+## Selection
+
+The key `select` gives a list screen a "cursor": one selected row of the page.
+Enter runs the action of `select` with the selected row:
+
+```
+select = { do = "gosub reader", args = { file = "{row.path}" } }
+```
+
+- `do` is an action, as the `do` of an item (task 4).
+- A value of `args` is a text or exactly one field `{row.<field>}`.
+  Enter puts the value of the selected row into the argument.
+  Here `{row.path}` gives the screen `reader` of task 7 the file of the note.
+- The BBS loads the file of each row for `reader` at the start.
+  An error in a file is an error of `velourbbs check`.
+- `Up` and `Down` move the cursor. On the last row of a page, `Down` shows the next page.
+  On the first row of a page, `Up` shows the previous page.
+  At the ends of the list, the keys do nothing. Enter in an empty list does nothing.
+- In a screen with `select`, an item cannot have the key `UP`, `DOWN` or `ENTER`.
+- A `page` action puts the cursor on the first row of the new page.
+  `back` from `reader` shows the same page and the same row.
+- When the cursor moves on the same page, the BBS sends only the two rows that change.
+
+`row.selected` is true on the selected row. The row text of `log` shows the sign `☼`
+in `orn` before the number of the selected row, and its title in `title`:
+
+```
+{#each}{#if row.selected}       {!orn}☼{!} {#else}         {/if}{!dim}{row.num}{!}   {#if row.selected}{!title}{/if}{row.title                             }{!dim}{row.minutes} min{/each}
+```
+
+Both branches of the first block give 9 cells, so the number stays in column 10.
+
+Full rules: [list-view](../../../specs/list-view.md), section 8,
+and [menu-nav](../../../specs/menu-nav.md), sections 3.3 and 5.3.
 
 ## The screen `log`
 
@@ -97,6 +134,7 @@ Full rules: [list-view](../../../specs/list-view.md), sections 5 and 6.
 +++
 data = { from = "files", args = { dir = "log" } }
 rows = 5
+select = { do = "gosub reader", args = { file = "{row.path}" } }
 [[item]]
 key = "SPACE"
 do = "page next"
@@ -113,7 +151,7 @@ do = "back"
        {!title}The keeper's log{!}
        {!dim}notes of the nights  ∙  page {list.page}/{list.pages}{!}
 
-{#each}         {!dim}{row.num}{!}   {row.title                             }{!dim}{row.minutes} min{/each}
+{#each}{#if row.selected}       {!orn}☼{!} {#else}         {/if}{!dim}{row.num}{!}   {#if row.selected}{!title}{/if}{row.title                             }{!dim}{row.minutes} min{/each}
 
 
 
@@ -123,7 +161,7 @@ do = "back"
 
   {!line}────────────────────────────────────────────────────────────────────────────{!}
 
-    {#if item.SPACE}{!key}Space{!}  {!dim}next{!}   {/if}{#if item.B}{!key}B{!}  {!dim}prev{!}   {/if}{!key}Esc{!}  {!dim}back{!}
+    {!key}↑↓{!}  {!dim}choose{!}   {!key}Enter{!}  {!dim}read{!}   {#if item.SPACE}{!key}Space{!}  {!dim}next{!}   {/if}{#if item.B}{!key}B{!}  {!dim}prev{!}   {/if}{!key}Esc{!}  {!dim}back{!}
 ```
 
 The screen:
@@ -137,7 +175,7 @@ The screen:
        The keeper's log
        notes of the nights  ∙  page 1/2
 
-         1   The first night                         1 min
+       ☼ 1   The first night                         1 min
          2   Rain on the roof                        1 min
          3   A caller from the north                 1 min
          4   A new wick                              1 min
@@ -151,7 +189,7 @@ The screen:
 
   ────────────────────────────────────────────────────────────────────────────
 
-    Space  next   Esc  back
+    ↑↓  choose   Enter  read   Space  next   Esc  back
 ```
 
 - The rows of the list are the rows 9–13. The empty lines below the list line
@@ -175,7 +213,7 @@ so a page has 2 rows, and the list has 4 pages:
        The keeper's log
        notes of the nights  ∙  page 1/4
 
-         1   The first night                         1 min
+       ☼ 1   The first night                         1 min
          2   Rain on the roof                        1 min
 ```
 
@@ -263,15 +301,18 @@ velourbbs preview log
 The command gives the two pages of the list, one after the other.
 `--size 80x20` gives the four pages of the small terminal.
 
-`--keys` turns the pages:
+`--keys` moves the cursor, opens a note and turns the pages:
 
 ```
-velourbbs preview main --keys L,SPACE,B,ESC
+velourbbs preview main --keys L,DOWN,ENTER,ESC,SPACE,B,ESC
 ```
+
+A cursor move gives the whole page, with the cursor on the new row.
 
 ## Result
 
 - `velourbbs check` gives no output.
 - `velourbbs preview log` gives two pages. Page 1 is the screen above.
-- In the telnet client, `L` shows the log, `Space` and `B` turn the pages,
-  `Esc` goes back to the menu.
+- In the telnet client, `L` shows the log. `Up` and `Down` move the cursor,
+  Enter opens the note, `Esc` goes back to the same row.
+  `Space` and `B` turn the pages, `Esc` goes back to the menu.

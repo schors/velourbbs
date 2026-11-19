@@ -54,14 +54,15 @@ type Terminal struct {
 	p       *telnet.Parser
 	d       Decoder
 	term    screen.Term
-	vgaRGB  bool      // the palette is not VGA (section 5.7)
-	keys    []queued  // the key queue
-	lastKey time.Time // the start of the idle timeout
-	paste   bool      // the input is in a paste (section 8.4)
-	drop    bool      // drop the rest of the paste
-	mode    bool      // the bracketed paste mode is on
-	out     []byte    // the replies that wait for the next read
-	buf     []byte    // the read buffer
+	vgaRGB  bool        // the palette is not VGA (section 5.7)
+	keys    []queued    // the key queue
+	lastKey time.Time   // the start of the idle timeout
+	paste   bool        // the input is in a paste (section 8.4)
+	drop    bool        // drop the rest of the paste
+	mode    bool        // the bracketed paste mode is on
+	out     []byte      // the replies that wait for the next read
+	buf     []byte      // the read buffer
+	shown   screen.Page // the page of the last Page or Update
 }
 
 // queued is a key of the queue with its paste mark.
@@ -196,7 +197,16 @@ func (t *Terminal) next(ctx context.Context) (queued, error) {
 
 // Page writes the page p in one write (sections 7.1 and 9.4).
 func (t *Terminal) Page(p screen.Page) error {
+	t.shown = p
 	return t.write(context.Background(), telnet.Escape(nil, AppendPage(nil, p, t.term.Colors, t.vgaRGB)))
+}
+
+// Update writes the rows of the page p that differ from the page of the last Page or Update,
+// in one write (section 7.1). p has the size, the Top and the count of rows of that page.
+func (t *Terminal) Update(p screen.Page) error {
+	prev := t.shown
+	t.shown = p
+	return t.write(context.Background(), telnet.Escape(nil, AppendUpdate(nil, p, prev, t.term.Colors, t.vgaRGB)))
 }
 
 // onDone calls f in its own goroutine when ctx ends. It gives the function that stops this.

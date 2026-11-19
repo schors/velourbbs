@@ -59,6 +59,25 @@ func (f *fakeTerm) Page(p screen.Page) error {
 	return f.pageErr
 }
 
+// Update logs the rows of p after "update:", separated with "|".
+func (f *fakeTerm) Update(p screen.Page) error {
+	f.log = append(f.log, "update: "+rowsText(p))
+	return nil
+}
+
+// rowsText gives the text of the rows of p without the trailing spaces, separated with "|".
+func rowsText(p screen.Page) string {
+	var rows []string
+	for i := range p.Rows {
+		var row strings.Builder
+		for _, c := range p.Line(i, nil) {
+			row.WriteString(c.Grapheme)
+		}
+		rows = append(rows, strings.TrimRight(row.String(), " "))
+	}
+	return strings.Join(rows, "|")
+}
+
 // eventsTerm is a fakeTerm with Events. It logs the events as strings.
 type eventsTerm struct{ *fakeTerm }
 
@@ -416,6 +435,8 @@ func (f *styleTerm) Page(p screen.Page) error {
 	f.style = p.Line(0, nil)[0].Style.String()
 	return nil
 }
+
+func (f *styleTerm) Update(screen.Page) error { return nil }
 
 // The session renders with the session theme of the term.colors of the terminal.
 func TestRunSessionTheme(t *testing.T) {
@@ -854,5 +875,134 @@ func TestRunLang(t *testing.T) {
 	want := []string{"page: Main en", "page: Info ru", "page: Main ru", "page: Пока"}
 	if !slices.Equal(ft.log, want) || ss.Lang() != "ru" {
 		t.Errorf("log %q, lang %q; want %q, ru", ft.log, ss.Lang(), want)
+	}
+}
+
+// rowsTerm is an eventsTerm that logs each row of a page, separated with "|".
+type rowsTerm struct{ eventsTerm }
+
+func (f rowsTerm) Page(p screen.Page) error {
+	f.log = append(f.log, "page: "+rowsText(p))
+	return nil
+}
+
+// loadList loads the screens main, list and read: main opens the list screen list of the directory d
+// with 5 files a.txt to e.txt, rows = 2 and select to the file screen read. head is the text before
+// the list line.
+func loadList(t *testing.T, head string) map[string]*screen.Screen {
+	t.Helper()
+	fsys := fstest.MapFS{
+		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"L\"\ndo = \"gosub list\"\n+++\nMain\n")},
+		"screens/list.bbt": {Data: []byte(`+++
+data = { from = "files", args = { dir = "d" } }
+rows = 2
+select = { do = "gosub read", args = { file = "{row.path}" } }
+[[item]]
+key = "N"
+do = "page next"
+[[item]]
+key = "P"
+do = "page prev"
+[[item]]
+key = "T"
+do = "theme light"
+[[item]]
+key = "B"
+do = "back"
++++
+` + head + "{#each}{#if row.selected}>{#else} {/if}{row.title}{/each}\n")},
+		"screens/read.bbt": {Data: []byte("+++\nfile = \"{arg.file}\"\n[[item]]\nkey = \"B\"\ndo = \"back\"\n+++\n{>file}\n")},
+	}
+	for _, name := range []string{"a", "b", "c", "d", "e"} {
+		fsys["content/d/"+name+".txt"] = &fstest.MapFile{Data: []byte(strings.ToUpper(name) + "\n")}
+	}
+	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}})
+	ss := sets["en"]
+	ds = bbs.Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
+	if len(ds) > 0 {
+		t.Fatalf("load: %v", ds)
+	}
+	return ss
+}
+
+// The cursor of a list screen with select: UP and DOWN on a list page update the page,
+// over a page border they show the next or the previous page, at the ends of the list they do nothing.
+// ENTER runs select with the selected row, back shows the same page and cursor,
+// a page action puts the cursor on the first row and a theme action keeps it
+// (list-view, section 8, and menu-nav, section 5.3).
+func TestRunListCursor(t *testing.T) {
+	ss := loadList(t, "")
+	ft := &fakeTerm{cols: []int{80}, keys: []string{
+		"L", "UP", "DOWN", "DOWN", "UP", "DOWN", "DOWN", "DOWN", "DOWN", "ENTER", "B",
+		"P", "DOWN", "T", "N", "ENTER",
+	}}
+	_, err := runSession(rowsTerm{eventsTerm{ft}}, config.Config{Start: "main"}, ss, "main", noValues)
+	want := []string{
+		"screen main", "page: Main", "key L", "screen list", "page: >a.txt| b.txt",
+		"key UP ignored", "key DOWN", "update:  a.txt|>b.txt",
+		"key DOWN", "page: >c.txt| d.txt", "key UP", "page:  a.txt|>b.txt",
+		"key DOWN", "page: >c.txt| d.txt", "key DOWN", "update:  c.txt|>d.txt",
+		"key DOWN", "page: >e.txt|", "key DOWN ignored",
+		"key ENTER", "screen read", "page: E" + strings.Repeat("|", 9), "key B", "screen list", "page: >e.txt|",
+		"key P", "page: >c.txt| d.txt", "key DOWN", "update:  c.txt|>d.txt",
+		"key T", "page:  c.txt|>d.txt", "key N", "page: >e.txt|", "key ENTER", "screen read", "page: E" + strings.Repeat("|", 9),
+	}
+	if !errors.Is(err, io.EOF) || !slices.Equal(ft.log, want) {
+		t.Errorf("err %v, log:\n%s\nwant:\n%s", err, strings.Join(ft.log, "\n"), strings.Join(want, "\n"))
+	}
+
+	// Pages gives each list page with the cursor on its first row.
+	var got []string
+	for p := range Pages(config.Config{}, ss["list"], ft.Term(), nil, screen.SessionValues{}) {
+		got = append(got, rowsText(p))
+	}
+	if want := []string{">a.txt| b.txt", ">c.txt| d.txt", ">e.txt|"}; !slices.Equal(got, want) {
+		t.Errorf("Pages %q, want %q", got, want)
+	}
+}
+
+// After a resize, a list screen shows the page of its frame, or the last page; the cursor
+// stays when it is on this page, else it is on the last row of the page (menu-nav, section 5.3).
+func TestRunListResize(t *testing.T) {
+	// 9 rows of head and P = 2: 11 rows. At 10 rows, P is 1.
+	ss := loadList(t, strings.Repeat("h\n", 9))
+	ft := &fakeTerm{
+		cols: []int{80},
+		rows: []int{20, 20, 20, 10, 10},
+		keys: []string{"L", "N", "DOWN", "ENTER", "B", "ENTER", "B"},
+	}
+	_, err := runSession(rowsTerm{eventsTerm{ft}}, config.Config{Start: "main"}, ss, "main", noValues)
+	head := strings.Repeat("h|", 9)
+	want := []string{
+		"screen main", "page: Main", "key L", "screen list", "page: " + head + ">a.txt| b.txt",
+		"key N", "page: " + head + ">c.txt| d.txt", "key DOWN", "update: " + head + " c.txt|>d.txt",
+		"key ENTER", "screen read", "page: D" + strings.Repeat("|", 19), "key B", "screen list", "page: " + head + ">b.txt",
+		"key ENTER", "screen read", "page: B" + strings.Repeat("|", 9), "key B", "screen list", "page: " + head + ">b.txt",
+	}
+	if !errors.Is(err, io.EOF) || !slices.Equal(ft.log, want) {
+		t.Errorf("err %v, log:\n%s\nwant:\n%s", err, strings.Join(ft.log, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// A list screen without select has no cursor: UP, DOWN and ENTER run their items.
+func TestRunListNoSelect(t *testing.T) {
+	fsys := fstest.MapFS{
+		"screens/main.bbt": {Data: []byte("+++\ndata = { from = \"files\", args = { dir = \"d\" } }\nrows = 1\n" +
+			"[[item]]\nkey = \"UP\"\ndo = \"page next\"\n[[item]]\nkey = \"ENTER\"\ndo = \"page first\"\n" +
+			"[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n{#each}{row.num}{/each}\n")},
+		"content/d/a.txt": {Data: []byte("a\n")},
+		"content/d/b.txt": {Data: []byte("b\n")},
+	}
+	theme := map[string]screen.Style{"normal": {}, "more": {}}
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}})
+	if len(ds) > 0 {
+		t.Fatalf("load: %v", ds)
+	}
+	ft := &fakeTerm{cols: []int{80}, keys: []string{"UP", "DOWN", "ENTER"}}
+	_, err := runSession(eventsTerm{ft}, config.Config{Start: "main"}, sets["en"], "main", noValues)
+	want := []string{"screen main", "page: 1", "key UP", "page: 2", "key DOWN ignored", "key ENTER", "page: 1"}
+	if !errors.Is(err, io.EOF) || !slices.Equal(ft.log, want) {
+		t.Errorf("err %v, log:\n%s\nwant:\n%s", err, strings.Join(ft.log, "\n"), strings.Join(want, "\n"))
 	}
 }

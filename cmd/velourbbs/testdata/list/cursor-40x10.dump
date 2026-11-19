@@ -1,0 +1,296 @@
+screen main
+page 1 40x10 fill none
+|Lists                                   |
+|1 Parts  2 Empty  3 News  G Goodbye     |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+key 1
+screen parts
+page 1 40x10 fill none
+|Parts of parts  page 1/2                |
+|>1. Read me first parts/README.md       |
+|2.Introduction parts/1-intro.md         |
+|3.Fields parts/02-fields.md             |
+|4.The menu parts/2-menu.md              |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-4 7/0, 5-18 15/0 bold, 19-40 8/0
+3: 1-15 7/0, 16-40 8/0
+4: 1-9 7/0, 10-40 8/0
+5: 1-11 7/0, 12-40 8/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key DOWN
+page 1 40x10 fill none
+|Parts of parts  page 1/2                |
+|1. Read me first parts/README.md        |
+|>2.Introduction parts/1-intro.md        |
+|3.Fields parts/02-fields.md             |
+|4.The menu parts/2-menu.md              |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-3 7/0, 4-17 15/0 bold, 18-40 8/0
+3: 1-16 7/0, 17-40 8/0
+4: 1-9 7/0, 10-40 8/0
+5: 1-11 7/0, 12-40 8/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key UP
+page 1 40x10 fill none
+|Parts of parts  page 1/2                |
+|>1. Read me first parts/README.md       |
+|2.Introduction parts/1-intro.md         |
+|3.Fields parts/02-fields.md             |
+|4.The menu parts/2-menu.md              |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-4 7/0, 5-18 15/0 bold, 19-40 8/0
+3: 1-15 7/0, 16-40 8/0
+4: 1-9 7/0, 10-40 8/0
+5: 1-11 7/0, 12-40 8/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key UP ignored
+key DOWN
+page 1 40x10 fill none
+|Parts of parts  page 1/2                |
+|1. Read me first parts/README.md        |
+|>2.Introduction parts/1-intro.md        |
+|3.Fields parts/02-fields.md             |
+|4.The menu parts/2-menu.md              |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-3 7/0, 4-17 15/0 bold, 18-40 8/0
+3: 1-16 7/0, 17-40 8/0
+4: 1-9 7/0, 10-40 8/0
+5: 1-11 7/0, 12-40 8/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key DOWN
+page 1 40x10 fill none
+|Parts of parts  page 1/2                |
+|1. Read me first parts/README.md        |
+|2.Introduction parts/1-intro.md         |
+|>3.Fields parts/02-fields.md            |
+|4.The menu parts/2-menu.md              |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-3 7/0, 4-17 15/0 bold, 18-40 8/0
+3: 1-15 7/0, 16-40 8/0
+4: 1-10 7/0, 11-40 8/0
+5: 1-11 7/0, 12-40 8/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key DOWN
+page 1 40x10 fill none
+|Parts of parts  page 1/2                |
+|1. Read me first parts/README.md        |
+|2.Introduction parts/1-intro.md         |
+|3.Fields parts/02-fields.md             |
+|>4.The menu parts/2-menu.md             |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-3 7/0, 4-17 15/0 bold, 18-40 8/0
+3: 1-15 7/0, 16-40 8/0
+4: 1-9 7/0, 10-40 8/0
+5: 1-12 7/0, 13-40 8/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key DOWN
+page 2 40x10 fill none
+|Parts of parts  page 2/2                |
+|>5.3-notes.txt parts/3-notes.txt        |
+|6.A very long title that is wider than t|
+|7.Art and colour parts/10-art.md        |
+|                                        |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-15 7/0, 16-40 8/0
+3: 1-40 7/0
+4: 1-17 7/0, 18-40 8/0
+5: 1-40 7/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key UP
+page 1 40x10 fill none
+|Parts of parts  page 1/2                |
+|1. Read me first parts/README.md        |
+|2.Introduction parts/1-intro.md         |
+|3.Fields parts/02-fields.md             |
+|>4.The menu parts/2-menu.md             |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-3 7/0, 4-17 15/0 bold, 18-40 8/0
+3: 1-15 7/0, 16-40 8/0
+4: 1-9 7/0, 10-40 8/0
+5: 1-12 7/0, 13-40 8/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key END
+page 2 40x10 fill none
+|Parts of parts  page 2/2                |
+|>5.3-notes.txt parts/3-notes.txt        |
+|6.A very long title that is wider than t|
+|7.Art and colour parts/10-art.md        |
+|                                        |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-15 7/0, 16-40 8/0
+3: 1-40 7/0
+4: 1-17 7/0, 18-40 8/0
+5: 1-40 7/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key DOWN
+page 2 40x10 fill none
+|Parts of parts  page 2/2                |
+|5.3-notes.txt parts/3-notes.txt         |
+|>6.A very long title that is wider than |
+|7.Art and colour parts/10-art.md        |
+|                                        |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-14 7/0, 15-40 8/0
+3: 1-40 7/0
+4: 1-17 7/0, 18-40 8/0
+5: 1-40 7/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key DOWN
+page 2 40x10 fill none
+|Parts of parts  page 2/2                |
+|5.3-notes.txt parts/3-notes.txt         |
+|6.A very long title that is wider than t|
+|>7.Art and colour parts/10-art.md       |
+|                                        |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-14 7/0, 15-40 8/0
+3: 1-40 7/0
+4: 1-18 7/0, 19-40 8/0
+5: 1-40 7/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key DOWN ignored
+key ENTER
+screen read
+page 1 40x10 fill none
+|Art and colour  1/1                     |
+|Art                                     |
+|                                        |
+|Text.                                   |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-19 8/0, 20-40 7/0
+2: 1-3 15/0 bold, 4-40 7/0
+3: 1-40 7/0
+4: 1-40 7/0
+5: 1-40 7/0
+6: 1-40 7/0
+7: 1-40 7/0
+8: 1-40 7/0
+9: 1-40 7/0
+10: 1-40 7/0
+key ESC
+screen parts
+page 2 40x10 fill none
+|Parts of parts  page 2/2                |
+|5.3-notes.txt parts/3-notes.txt         |
+|6.A very long title that is wider than t|
+|>7.Art and colour parts/10-art.md       |
+|                                        |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-14 7/0, 15-40 8/0
+3: 1-40 7/0
+4: 1-18 7/0, 19-40 8/0
+5: 1-40 7/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key HOME
+page 1 40x10 fill none
+|Parts of parts  page 1/2                |
+|>1. Read me first parts/README.md       |
+|2.Introduction parts/1-intro.md         |
+|3.Fields parts/02-fields.md             |
+|4.The menu parts/2-menu.md              |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-4 7/0, 5-18 15/0 bold, 19-40 8/0
+3: 1-15 7/0, 16-40 8/0
+4: 1-9 7/0, 10-40 8/0
+5: 1-11 7/0, 12-40 8/0
+6: 1-18 14/0, 19-40 7/0
+7: 1-40 7/0
+key ESC
+screen main
+page 1 40x10 fill none
+|Lists                                   |
+|1 Parts  2 Empty  3 News  G Goodbye     |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+key 2
+screen parts
+page 1 40x10 fill none
+|Parts of empty  page 1/1                |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|No parts yet.                           |
+|PgUp PgDn Home End  N News  T Light  Esc|
+|Back                                    |
+styles
+1: 1-14 15/0 bold, 15-16 7/0, 17-24 8/0, 25-40 7/0
+2: 1-40 7/0
+3: 1-40 7/0
+4: 1-40 7/0
+5: 1-40 7/0
+6: 1-13 8/0, 14-40 7/0
+7: 1-18 14/0, 19-40 7/0
+8: 1-40 7/0
+key ENTER ignored
+key DOWN ignored
+key ESC
+screen main
+page 1 40x10 fill none
+|Lists                                   |
+|1 Parts  2 Empty  3 News  G Goodbye     |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+key G
+logoff

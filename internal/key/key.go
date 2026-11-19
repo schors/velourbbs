@@ -11,6 +11,16 @@ import (
 // Any is the key that matches each key without an enabled item of its own.
 const Any = "ANY"
 
+// The keys of the cursor of a list screen with select (list-view, section 8).
+const (
+	Up    = "UP"
+	Down  = "DOWN"
+	Enter = "ENTER"
+)
+
+// IsCursor reports whether k is a key of the cursor.
+func IsCursor(k string) bool { return k == Up || k == Down || k == Enter }
+
 // named are the named keys of bbt-format, section 8.1, without F1–F12.
 var named = []string{
 	"ESC", "ENTER", "SPACE", "TAB", "BS", "DEL", "UP", "DOWN", "LEFT", "RIGHT",

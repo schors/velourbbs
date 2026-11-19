@@ -461,6 +461,11 @@ func (t *keysTerm) Page(p screen.Page) error {
 	return screen.WritePage(t.w, p)
 }
 
+// Update writes the whole page: the dump of menu-nav, section 7.
+func (t *keysTerm) Update(p screen.Page) error {
+	return screen.WritePage(t.w, p)
+}
+
 func (t *keysTerm) Screen(name string) error {
 	_, err := fmt.Fprintf(t.w, "screen %s\n", name)
 	return err

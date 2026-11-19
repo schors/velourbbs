@@ -123,9 +123,9 @@ md_dim    = "8"
 | `normal` | The ground, the text, the labels of the menu items | `#e9dccb` on `#2a201d` | 223 on 235 | 7 on 0 |
 | `dim` | The tagline, the notes of the menu items, the closing line of `main`, the labels of `term`, row 7 of `reader` and of `log`, the row numbers and the reading time of `log`, the words of the key row | `#9e8a7c` | 137 | 8 |
 | `line` | The two hairlines | `#8a6a5c` | 95 | 8 |
-| `title` | The name of the BBS, the farewell of `goodbye`, the title of `reader` and of `log` | `#f7c7a3` bold | 230 bold | 15 bold |
+| `title` | The name of the BBS, the farewell of `goodbye`, the title of `reader` and of `log`, the title of the selected row of `log` | `#f7c7a3` bold | 230 bold | 15 bold |
 | `key` | The keys | `#ffb088` bold | 216 bold | 15 bold |
-| `orn` | The ornament `☼` | `#f2a27e` | 216 | 7 |
+| `orn` | The ornament `☼`, also the mark of the selected row of `log` | `#f2a27e` | 216 | 7 |
 | `more` | The More row | `#9e8a7c` | 137 | 8 |
 | `md_h1`, `md_strong` | Heading of level 1, strong emphasis: as `title` | `#f7c7a3` bold | 230 bold | 15 bold |
 | `md_h2` | Heading of level 2: as `orn` | `#f2a27e` | 216 | 15 |
@@ -321,7 +321,9 @@ At 80x24:
 ### 6.7. `log`
 
 The list screen: `data = { from = "files", args = { dir = "log" } }`, `rows = 5`
-([list-view](list-view.md), section 3).
+([list-view](list-view.md), section 3), and
+`select = { do = "gosub reader", args = { file = "{row.path}" } }` (section 8).
+Enter opens the selected note in `reader`.
 
 Items: `SPACE` `page next` with `when = "not list.last"`, `B` `page prev`
 with `when = "list.page > 1"`, `ESC` `back`.
@@ -332,7 +334,7 @@ At 80x24, page 1:
        The keeper's log
        notes of the nights  ∙  page 1/2
 
-         1   The first night                         1 min
+       ☼ 1   The first night                         1 min
          2   Rain on the roof                        1 min
          3   A caller from the north                 1 min
          4   A new wick                              1 min
@@ -343,9 +345,10 @@ At 80x24, page 1:
 - Row 8 is empty. The list line gives rows 9–13: `{row.num}` in `dim` at column 10,
   `{row.title}` at column 14 in a field of 40 cells, `{row.minutes}` and the word in `dim` at column 54.
   The row number is in `dim`, not in `key`: it is not a key.
+- The selected row has `☼` in `orn` at column 8 and its title in `title`.
 - Empty source lines fill rows 14–20. The hairline is row 21, the key row is row 23.
-- The key row is `Space  next   B  prev   Esc  back`, with the groups of `SPACE` and `B`
-  as in `reader` (section 6.6).
+- The key row is `↑↓  choose   Enter  read   Space  next   B  prev   Esc  back`,
+  with the groups of `SPACE` and `B` as in `reader` (section 6.6).
 
 `content/log/`:
 
@@ -375,7 +378,7 @@ At 80x24, page 1:
 | `main`, item `L` | Keeper's log — notes of the nights | Журнал смотрителя — заметки о ночах |
 | `log`, rows 6–7 | The keeper's log / notes of the nights ∙ page | Журнал смотрителя / заметки о ночах ∙ стр. |
 | `log`, list rows | `min` | `мин` |
-| `log`, key row | next, prev, back | дальше, пред., назад |
+| `log`, key row | choose, read, next, prev, back | выбор, читать, дальше, пред., назад |
 | `content/log/` | The first night, Rain on the roof, A caller from the north, A new wick, A long winter evening, Moths at the glass, Morning tea | Первая ночь, Дождь по крыше, Гость с севера, Новый фитиль, Долгий зимний вечер, Мотыльки у стекла, Утренний чай |
 | `texts`, rows 6–7 | The texts of the station. / Pick one and read it by the lamp. | Тексты станции. / Выбери и читай при лампе. |
 | `texts`, items | How the lamps were lit — a short history; Station rules — read them once | Как зажигали лампы — короткая история; Правила станции — прочти один раз |

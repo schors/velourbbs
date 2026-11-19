@@ -236,7 +236,7 @@ func (l *loader) checkField(u *unit, pos screen.Pos, r screen.Ref) bool {
 		msg = fmt.Sprintf("field %q is valid only in a file screen", r)
 	case r.IsList() && ls == nil:
 		msg = fmt.Sprintf("field %q is valid only in a list screen", r)
-	case r.Row() == screen.RowSelected:
+	case r.Row() == screen.RowSelected && (ls == nil || ls.Select == nil):
 		msg = fmt.Sprintf("field %q is valid only in a screen with select", r)
 	case r.Row() != "" && ls != nil && ls.From != "":
 		if p, _ := provider.Lookup(ls.From); !p.HasField(r.Row()) {
