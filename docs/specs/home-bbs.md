@@ -30,6 +30,8 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - One BBS directory holds both languages ([session-language](session-language.md)).
   The common entry `main` sets the language with `gosub ru/menu` or `gosub en/menu`.
   The screens of `screens/ru/` and `screens/en/` have the same items.
+- A screen of a language stays in its language: no item names a language
+  (`lang`, `goto <lang>/`, `gosub <lang>/`), and no file argument has a language directory.
 - The texts follow the copy rules of the brandbook, section 7, for their language.
 - Each screen except a file screen has an 80 form and a 132 form. The 132 form is
   for `term.cols >= 132 and term.rows >= 43`. A file screen has only the 80 form.

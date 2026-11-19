@@ -29,9 +29,10 @@ The guide is in the MVP.
 - Change the two languages in the same commit.
 - The guide in `<lang>` shows the files of `examples/lamp/<lang>/`. Both show the files
   of `examples/art/`. The guide does not show the `.ans` files.
+- After each task, `velourbbs check` gives no output in the BBS directory of the reader.
 - The guide shows each screen as plain text. It names the styles of the text in words.
-- The `README.md` names the features not in the MVP: [bbt-format](bbt-format.md), section 10,
-  and [file-view](file-view.md), section 12.
+- The `README.md` names the features not in the MVP: those of [bbt-format](bbt-format.md), section 10,
+  and the table of contents, the active links and the syntax colours of [file-view](file-view.md), section 12.
 
 ### 3.1. Parts
 
@@ -44,8 +45,7 @@ for each task.
 - The first line of a part is a level-1 heading: its title. Outside the code blocks,
   a part has no other level-1 heading.
 - A relative link is relative to the part file.
-- Each task ends with a check of the result. After each task, `velourbbs check` gives
-  no output in the BBS directory of the reader.
+- Each task ends with a check of the result.
 
 ## 4. File blocks
 
