@@ -211,7 +211,7 @@ Layout under the home directory of the user:
 | `[Service]` | `ExecStart=%h/velourbbs/current/velourbbs serve` | The command of the current release. |
 | `[Service]` | `WorkingDirectory=%h/velourbbs/current/station` | The BBS directory ([bbs-toml](bbs-toml.md), section 2). |
 | `[Service]` | `Restart=on-failure` | systemd starts the host again after a failure. |
-| `[Service]` | `MemoryMax=128M`, `TasksMax=64`, `LimitNOFILE=1024` | The limits of [setup-guide](setup-guide.md), section 5. |
+| `[Service]` | `MemoryMax=128M`, `TasksMax=64`, `LimitNOFILE=1024` | The limits of [setup-guide](setup-guide.md), section 4. |
 | `[Install]` | `WantedBy=default.target` | `enable` starts the host when the user manager starts. |
 
 - The host gets the socket by socket activation ([telnet-term](telnet-term.md), section 10).
@@ -230,7 +230,7 @@ Layout under the home directory of the user:
 ## 7. Target implementations
 
 - The runner is `ubuntu-latest` of GitHub.
-- The host has systemd 240 or later with cgroup v2 ([setup-guide](setup-guide.md), section 5.1).
+- The host has systemd 240 or later with cgroup v2 ([setup-guide](setup-guide.md), section 4).
 - `MemoryMax` and `TasksMax` of a user unit work only when `user@.service` delegates
   the `memory` and `pids` controllers. Check it on the host:
   `systemctl cat user@.service` must have `memory` and `pids` in `Delegate=`.

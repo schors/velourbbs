@@ -16,13 +16,13 @@ import (
 	"github.com/yuin/goldmark/v2/parser"
 )
 
-// The line before a file block: only a path in backticks and a colon (bbt-guide, section 4.1).
+// The line before a file block: only a path in backticks and a colon (bbt-guide, section 4).
 var pathLine = regexp.MustCompile("^`([^`]+)`:$")
 
 // The opening fence of a code block: 3 or more backticks and an optional info string.
 var openFence = regexp.MustCompile("^(```+)[^`]*$")
 
-// checkFileBlocks gives the problems of the file blocks of the guide md (bbt-guide, section 4.1).
+// checkFileBlocks gives the problems of the file blocks of the guide md (bbt-guide, section 4).
 // fsys is the repository root. Each problem starts with the line number of the path line.
 func checkFileBlocks(fsys fs.FS, md string) []string {
 	var problems []string
@@ -103,7 +103,7 @@ func checkPartHeadings(md string) []string {
 }
 
 // TestGuideFileBlocks compares each file block of the guides with its file
-// (bbt-guide, section 6; setup-guide, section 6).
+// (bbt-guide, section 5; setup-guide, section 5).
 func TestGuideFileBlocks(t *testing.T) {
 	root := os.DirFS("../..")
 	for guide := range guideParts {
@@ -127,7 +127,7 @@ func TestGuideFileBlocks(t *testing.T) {
 }
 
 // TestGuideParts checks the parts of each guide in each language
-// (bbt-guide, section 6; setup-guide, section 3).
+// (bbt-guide, section 5; setup-guide, section 3).
 func TestGuideParts(t *testing.T) {
 	root := os.DirFS("../..")
 	for guide, want := range guideParts {

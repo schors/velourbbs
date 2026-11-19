@@ -8,7 +8,7 @@ Related parts: [screens-toml](screens-toml.md), [bbt-format](bbt-format.md), [me
 [screen-render](screen-render.md) and [home-bbs](home-bbs.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
-[bbt-guide](bbt-guide.md), section 4.
+[bbt-guide](bbt-guide.md), section 3.
 
 ## 1. Goal
 

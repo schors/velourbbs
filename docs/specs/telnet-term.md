@@ -26,33 +26,46 @@ section 5).
 
 ## 3. Target implementations
 
-The host must work with these telnet clients:
-
-| Client | Notes |
-|---|---|
-| PuTTY | TTYPE `XTERM`. Accepts BINARY but does not ask for it. |
-| Tera Term | TTYPE `xterm`. Starts in line mode. |
-| inetutils telnet in a UTF-8 terminal | TTYPE is `$TERM` in upper case, then aliases. Sends CR NUL for Enter in character mode. |
-
-inetutils telnet passes the bytes unchanged, so its terminal answers the queries of section 5.7.
-The host must work with inetutils telnet in these terminals:
-
-| Terminal | Notes |
-|---|---|
-| Windows Terminal | With inetutils telnet in WSL. |
-| xterm and xterm-like terminals | |
-| tmux | tmux answers the queries itself. It does not pass them to the outer terminal, except OSC 4. |
-| iTerm2 | |
-| Ghostty and cmux | cmux uses Ghostty. |
+The host must work with these telnet clients: PuTTY, Tera Term, and inetutils telnet
+in a UTF-8 terminal. inetutils telnet passes the bytes unchanged, so its terminal answers
+the queries of section 5.7. The host must work with inetutils telnet in Windows Terminal (in WSL),
+xterm and xterm-like terminals, tmux, iTerm2, Ghostty and cmux.
 
 - The host supports other clients on a best-effort basis.
-- Windows telnet.exe is a best-effort client. It sends TTYPE `ANSI`, so it gets 16 colours.
-  Its UTF-8 support depends on the console code page. Its own escape sequence interpreter
-  breaks ANSI art and frames. Its replies to the queries of section 5.7 are not known.
-- SyncTERM and NetRunner show no UTF-8. The probe finds them as "not UTF-8" (section 5.4).
 - The PROXY protocol senders are HAProxy, nginx, Traefik and stunnel.
-  They send version 1 or 2, so the host accepts both (section 9.3).
-  AWS NLB works only when it sends the header at connect (section 9.3).
+  They send version 1 or 2 (section 9.3).
+
+### 3.1. Client quirks
+
+The rules of this specification handle these quirks of the clients and the terminals:
+
+| Client | Quirk | Rule |
+|---|---|---|
+| All target terminals | They answer DA1 and send the replies in the order of the queries. | DA1 goes last (section 5.7). |
+| All target terminals | No escape sequence switches the ambiguous width. A write to the second cell of a wide character erases the character. | The layout does not use `term.ambiguous` (section 6). |
+| PuTTY, Tera Term, xterm | The terminfo entries have `xenl` and `bce`. In PuTTY, bce is a setting, on by default. | A page writes the last cell. `fill = "erase"` works (section 7.1). |
+| PuTTY | TTYPE `XTERM`. It accepts BINARY but does not ask for it. | Section 4.1. |
+| PuTTY | It sends no reply to an OSC 4 query with more than one index. | One query for each index (section 5.7). |
+| PuTTY 0.71 and later | It shows RGB. It answers no DECRQSS, no OSC 10 and no OSC 11. It answers OSC 4 for 256 (the default foreground) and 258 (the default background). | The client table and the colours of section 6. |
+| PuTTY 0.83 and earlier | It shows the DECRQSS query as the text `$qm`. | The erase of section 5.7. |
+| PuTTY, inetutils telnet | They echo the input before character mode. | The queries go after step 3 of section 5.1. |
+| Tera Term | TTYPE `xterm`. It starts in line mode. It answers DECRQSS with an index colour: `0;30`. | Section 4.1. It gets 256 colours (section 6). |
+| inetutils telnet | TTYPE is `$TERM` in upper case, then aliases. It sends CR NUL for Enter in character mode. | Sections 5.3, 6 and 8.1. |
+| Windows Terminal 1.19 and later, xterm, Ghostty | They send the RGB reply `38:2::1:2:3`. iTerm2 sends `38:2:1:1:2:3`. xterm without direct colour sends `0;38:5:16`. | The RGB reply of section 5.7. |
+| Other target terminals | For the OSC 4 indexes 256 and 258, xterm and Tera Term give special colours, Windows Terminal 1.22 and later give reserved entries, iTerm2 gives black, tmux and Ghostty send no reply. No target terminal shows these queries as text. | The host sends them to each terminal and uses them only for PuTTY (section 6). |
+| Windows Terminal 1.25 and later | It can send its own CPR query after an unknown sequence and take the next CPR reply. | The CPR probes go first (section 5.7). |
+| Windows Terminal | Its wide mode keeps U+2500–U+259F narrow and makes Cyrillic wide. | The ambiguous probe uses a Cyrillic letter (section 5.4). |
+| Windows Terminal 1.21 and earlier | Its ConPTY answers DA1, DA2 and DECRQSS itself, at once. It drops OSC 10 and OSC 11 and answers no OSC 4 and no XTVERSION. | No reply comes after the DA1 reply. |
+| Windows Terminal | Its DA1 reply has 39 bytes. | The limit of 128 bytes (section 8.2). |
+| tmux | It answers the queries itself. It sends only OSC 4 to the outer terminal. It answers OSC 10 and OSC 11 with the colours of the pane or of the outer terminal, or sends no reply. | Section 5.7. |
+| tmux 3.6 and later | After OSC 4, it delays its next replies until the outer terminal answers: at most about 0.6 s in 3.7 and later, 3.5 s in 3.6, 3.6a and 3.6b. | OSC 4 goes directly before DA1, so only the DA1 reply can be late (section 5.7). |
+| tmux | DA2 first parameter `84`. It reduces RGB for the outer terminal itself. 3.6 and later send an invalid DECRQSS reply. | The client table of section 6. |
+| tmux | It answers the CPR with its own widths. | `term.ambiguous` is 1 also when the outer terminal shows wide characters (section 6). |
+| tmux, GNU screen | No `bce`. | The fill rows of `fill = "erase"` have the default colours (section 7.1). |
+| PuTTY, xterm, Tera Term, VTE | With the default settings, an emoji with VS16 (`❤️`) takes one cell. A ZWJ sequence (`👨‍👩‍👧`) takes two cells for each emoji in PuTTY, xterm and VTE. | The re-sync of section 7.4. |
+| Windows telnet.exe | TTYPE `ANSI`. Its UTF-8 support depends on the console code page. Its escape sequence interpreter breaks ANSI art and frames. | Best effort. It gets 16 colours (section 6). |
+| SyncTERM, NetRunner | No UTF-8. | Section 5.5. |
+| AWS NLB | By default, it waits for client data before it sends the PROXY protocol header. | It does not work (section 9.3). |
 
 ## 4. Telnet
 
@@ -161,9 +174,8 @@ The second CPR reply is the reply to the ambiguous probe.
 - Ambiguous width: the reply column 3 gives `term.ambiguous` 2. Each other reply,
   or no reply, gives 1.
 - U+00E2 has the East Asian Width N, so a CJK terminal also shows it in one cell.
-- U+0436 has the East Asian Width A. Windows Terminal keeps U+2500–U+259F narrow
-  in its wide mode, but makes Cyrillic wide. So the probe uses a Cyrillic letter,
-  not a box drawing character.
+- U+0436 has the East Asian Width A. The probe uses a Cyrillic letter,
+  not a box drawing character (section 3.1).
 - The bytes of both characters are printable characters in ISO-8859-1, CP437, CP866 and KOI8-R.
   A byte from 0x80 to 0x9F is a C1 control in some 8-bit terminals, so the probes do not use one.
 
@@ -214,32 +226,15 @@ Step 4 of section 5.1 sends this write:
 
 `ST` is `ESC \`.
 
-- DA1 goes last. Each target terminal answers DA1 and sends its replies in the order
-  of the queries. So the DA1 reply comes after the other replies.
-- The CPR probes go first, in the order of section 5.4. Windows Terminal 1.25 and later can send its own CPR query after
-  an unknown sequence and take the next CPR reply.
-- PuTTY sends no reply to an OSC 4 query with more than one index. So each index has its own query.
-- PuTTY 0.71 and later answer OSC 4 for the indexes 256 (the default foreground)
-  and 258 (the default background). PuTTY answers no OSC 10 and no OSC 11.
-  Other terminals answer the indexes 256 and 258 with other colours or ignore them:
-  xterm and Tera Term give special colours, Windows Terminal 1.22 and later give reserved
-  entries, iTerm2 gives black, tmux and Ghostty send no reply.
-  No target terminal shows these queries as text.
-  The host sends these two queries to each terminal, because the one write goes before
-  the DA2 reply. It uses their replies only for PuTTY (section 6).
-- Windows Terminal 1.22 and later, xterm, tmux, iTerm2, Ghostty, cmux and Tera Term answer
-  OSC 10 and OSC 11. tmux answers with the colours of the pane or of the outer terminal,
-  and sends no reply when it does not know the colour. tmux does not delay its next replies
-  after OSC 10 and OSC 11. The ConPTY of Windows Terminal 1.21 and earlier drops OSC 10
-  and OSC 11 with no reply.
-- tmux 3.6 and later sends OSC 4 to the outer terminal. It delays its next replies until
-  the outer terminal answers: for about 0.6 s at most in tmux 3.7 and later, for 3.5 s
-  at most in tmux 3.6, 3.6a and 3.6b. OSC 4 goes directly before DA1, so only the DA1 reply can be late.
-- The ConPTY of Windows Terminal 1.21 and earlier answers DA1, DA2 and DECRQSS itself, at once.
-  Windows Terminal 1.21 answers no OSC 4 and no XTVERSION. So no reply is lost.
-- PuTTY 0.83 and earlier show the DECRQSS query as the text `$qm`. The erase removes it.
-- The host sends the queries after step 3. So PuTTY and inetutils telnet are in character
-  mode and do not echo the replies.
+- The CPR probes go first, in the order of section 5.4. DA1 goes last, so the DA1 reply
+  comes after the other replies. OSC 4 goes directly before DA1.
+- Each OSC 4 index has its own query.
+- The host sends the OSC 4 queries for 256 and 258 to each terminal, because the one write
+  goes before the DA2 reply. It uses their replies only for PuTTY (section 6).
+- The erase removes a query that a terminal shows as text.
+- The host sends the queries after step 3, so the client is in character mode
+  and does not echo the replies.
+- Section 3.1 gives the client quirks behind these rules.
 - The host takes the first reply to each query, and for OSC 4 to each index.
   It drops a reply before step 4, a second reply and a reply that does not match this section.
 
@@ -248,9 +243,7 @@ Reply rules:
 - DECRQSS: the "RGB reply" is a reply with `1$r` whose parameters, split at `;`, have
   the colour 1, 2, 3 in one of these forms: the five parameters `38`, `2`, `1`, `2`, `3`,
   or one parameter `38:2:1:2:3` or `38:2:<id>:1:2:3`, where `<id>` is empty or a number.
-  Windows Terminal 1.19 and later, xterm and Ghostty send `38:2::1:2:3`.
-  iTerm2 sends `38:2:1:1:2:3`. A terminal that maps RGB to its palette sends an index colour:
-  Tera Term sends `0;30`, xterm without direct colour sends `0;38:5:16`.
+  A terminal that maps RGB to its palette sends an index colour (section 3.1).
 - OSC 4: `<n>` is 0–15, 256 or 258. Each of `<r>`, `<g>` and `<b>` has 1–4 hex digits.
   A value v with d digits gives the 8-bit value `round(v × 255 / (16^d − 1))`.
   For example, `ffff` and `ff` give 255, `8080` gives 128.
@@ -287,27 +280,10 @@ Reply rules:
 - `term.background` selects the session theme with `[screen] theme = "auto"`
   ([screens-toml](screens-toml.md), section 3.2).
 - `term.images` is for a future image output. Today no output uses it.
-  Tera Term with the terminal ID VT282 or VT382 (not the default) has the feature `4`, but no sixel.
-- `term.ambiguous` 2 comes from a setting of the terminal. Each setting is off by default:
-
-  | Terminal | Setting |
-  |---|---|
-  | PuTTY | Window > Translation: "Treat CJK ambiguous characters as wide". |
-  | Tera Term | `UnicodeAmbiguousWidth`. The installer sets it to 2 when the Windows UI language is Chinese, Japanese or Korean. |
-  | xterm | `cjkWidth`. |
-  | iTerm2 | Profiles > Text, the profile key `Ambiguous Double Width`. |
-  | Windows Terminal 1.25 and later | `compatibility.ambiguousWidth`. It keeps U+2500–U+259F narrow. |
-  | VTE (GNOME Terminal) | `cjk-utf8-ambiguous-width`. |
-
-  Ghostty and cmux have no such setting. They show these characters in one cell.
-  tmux has no ambiguous width setting. Its option `codepoint-widths` (3.6 and later) sets
-  the width of single code points. The probe sees only the width of U+0436.
-- The layout does not use `term.ambiguous`: with 2, the columns of a page move,
+- `term.ambiguous` 2 comes from a setting of the terminal, off by default.
+  The probe sees only the width of U+0436.
+- The layout does not use `term.ambiguous` (section 3.1): with 2, the columns of a page move,
   and frames and art break. A screen can show the user how to turn the setting off.
-  The host cannot fix the layout: no target terminal switches the setting by an escape
-  sequence, and a write to the second cell of a wide character erases the character.
-- tmux answers the CPR with its own widths. When the outer terminal shows ambiguous
-  characters as wide, `term.ambiguous` is 1.
 - Colour depth: the first rule that matches gives it:
   1. the DECRQSS reply is the RGB reply (section 5.7): 16777216;
   2. the DA2 reply is in the client table below: 16777216;
@@ -318,17 +294,14 @@ Reply rules:
   6. each other `term.type`: 256.
 - The client table has the terminals that show RGB but do not answer DECRQSS with it:
 
-  | Client | DA2 reply | Reason |
-  |---|---|---|
-  | PuTTY | The parameters are `0;136;0`. | PuTTY shows RGB by default since 0.71. It answers no DECRQSS. |
-  | tmux | The first parameter is `84`. | tmux reduces RGB for the outer terminal itself. tmux 3.6 and later send an invalid DECRQSS reply. |
+  | Client | DA2 reply |
+  |---|---|
+  | PuTTY | The parameters are `0;136;0`. |
+  | tmux | The first parameter is `84`. |
 
 - Rule 5 has only names where 16 colours are certain. A terminal without `38;5` reads
   `38;5;n` as other SGR parameters, for example `5` as blink. Without a name, `term.type`
   is `ansi`, so rule 5 gives 16.
-- Tera Term (`xterm`) gets 256. It answers DECRQSS with an index colour.
-  Truecolor art is reduced to 256 for it.
-- Windows Terminal, iTerm2, Ghostty, cmux and xterm with direct colour get 16777216 by rule 1.
 
 ## 7. Output
 
@@ -355,12 +328,9 @@ The host shows a page ([menu-nav](menu-nav.md), section 5) in this order:
 - Each row starts at its own position, so a page has no line ends
   and the terminal does not scroll (one exception: section 7.4).
 - A page writes the last cell of the last terminal row when its rows or its fill rows
-  with `fill = "spaces"` reach that row. The terminal of each target implementation
-  delays the wrap after the last column, so it does not scroll.
-  The terminfo entries `putty`, `teraterm` and `xterm` have `xenl`.
-- `fill = "erase"` needs bce. The terminfo entries `putty`, `teraterm` and `xterm` have `bce`.
-  In PuTTY, bce is a setting, on by default. GNU screen and tmux have no `bce`:
-  in them the fill rows have the default colours.
+  with `fill = "spaces"` reach that row. A terminal with `xenl` delays the wrap
+  after the last column, so it does not scroll (section 3.1).
+- `fill = "erase"` needs bce. In a terminal without bce, the fill rows have the default colours.
 
 ### 7.2. Styles
 
@@ -406,9 +376,7 @@ the last cell of the grapheme. The re-sync is a space in the style of the graphe
 then `ESC[<row>;<col>H`. `<row>` is the terminal row. `<col>` is the terminal column
 after the last cell of the grapheme.
 
-- Terminals give different widths to these graphemes. An emoji with VS16 (`❤️`) takes one cell
-  in PuTTY, xterm, Tera Term and VTE with their default settings. A ZWJ sequence (`👨‍👩‍👧`)
-  takes two cells for each emoji in PuTTY, xterm and VTE.
+- Terminals give different widths to these graphemes (section 3.1).
 - After the re-sync, the next cells are in their columns.
   - A terminal that shows the grapheme narrow writes the space after it.
     The space has the background of the grapheme.
@@ -461,7 +429,7 @@ The key decoder gives:
 - An invalid byte ends the sequence. The decoder drops the sequence and handles the byte
   as new input.
 - The decoder drops a sequence or a control string longer than 128 bytes up to its end,
-  also its final byte or its terminator. The DA1 reply of Windows Terminal has 39 bytes.
+  also its final byte or its terminator.
 - The decoder drops each sequence that is not in the table as a whole.
   It never becomes separate keys. Keys with modifiers, for example `ESC[1;5A`, are dropped.
 - A CPR reply after the probe is dropped.
@@ -550,7 +518,7 @@ The keys of `[telnet]` and `[limits]` are in [bbs-toml](bbs-toml.md), sections 3
 - Version 1 has at most 107 bytes. Version 2 has at most 16 + 536 bytes.
 - An invalid or missing header closes the connection without output.
 - The proxy must send the header at connect. The host sends first, so a proxy that waits
-  for client data before the header does not work. AWS NLB waits by default.
+  for client data before the header does not work.
 
 ### 9.4. Output
 

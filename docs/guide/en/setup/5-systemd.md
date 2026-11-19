@@ -141,7 +141,7 @@ The limits of `bbs.toml` count the connections. The limits of systemd limit the 
 `MemoryMax` and the peak. systemd 255 or later shows the peak.
 With an older systemd, read `Memory` while the BBS is under load.
 
-Full rules: [setup-guide](../../../specs/setup-guide.md), section 5,
+Full rules: [setup-guide](../../../specs/setup-guide.md), section 4,
 and [telnet-term](../../../specs/telnet-term.md), section 10.
 
 ## Result
