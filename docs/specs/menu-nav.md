@@ -225,7 +225,8 @@ page 1 80x25 fill none
 |---|---|
 | `internal/key` | The key names, the parse of `key` and the Russian layout map. |
 | `internal/bbt` | The parse of `key` and `do` and the checks of one file. |
-| `internal/menu` | The checks of section 6 between files, and the session of section 5 with a terminal interface. |
+| `internal/bbs` | The checks of section 6 between files ([session](session.md), section 3). |
+| `internal/menu` | The session of section 5 with a terminal interface ([session](session.md), section 4). |
 
 - The model (`screen.Item`) holds the key in upper case and the parsed action.
   `internal/screen` uses `internal/key` for the case rule of `item.<KEY>`.
