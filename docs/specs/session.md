@@ -32,18 +32,20 @@ and the reload of screens ([#14](https://github.com/schors/velourbbs/issues/14))
 ## 4. Session object
 
 - The session object owns the state of one session: the model, the terminal,
-  the field values, the theme choice and the navigation stack ([menu-nav](menu-nav.md), section 4.1).
+  the field values, the theme choice, the session language
+  ([session-language](session-language.md), section 5) and the navigation stack ([menu-nav](menu-nav.md), section 4.1).
   The server also gives it the client address and the accept time.
   A new state of a session is a field of the session object.
 - The maker gives the model, the terminal, the start screen and its arguments,
-  the start theme choice and the field values.
+  the start theme choice, the start session language and the field values.
   - The server makes the session object when the session opens, after the probe.
     It starts at `[menu] start` with no arguments. It gives the field values
     of [session-fields](session-fields.md), section 3, from the client address
     and the accept time of the session object.
   - `velourbbs preview --keys` makes it without a server and with no client address
     ([menu-nav](menu-nav.md), section 7). It gives the field values
-    of [session-fields](session-fields.md), section 4, and its start theme choice.
+    of [session-fields](session-fields.md), section 4, its start theme choice
+    and its start session language.
     For an argument file, it makes a new model. It does not change the loaded model.
 - The goroutine of the session changes the state. A field that another goroutine reads
   needs a lock.
@@ -96,6 +98,5 @@ and the reload of screens ([#14](https://github.com/schors/velourbbs/issues/14))
 
 - The change of a session to a new model: [reload](https://github.com/schors/velourbbs/issues/14).
 - Who is online and the last callers: [#81](https://github.com/schors/velourbbs/issues/81).
-- The session language: [#83](https://github.com/schors/velourbbs/issues/83).
 - The data store: [#80](https://github.com/schors/velourbbs/issues/80).
 - The end of one session by the sysop.

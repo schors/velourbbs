@@ -3,8 +3,8 @@
 This specification defines the home BBS of Velour: the station that shows the product,
 its guides and its features. It also defines the changes of the brandbook for it.
 Related parts: [brandbook](../brand/brandbook.md), [bbt-guide](bbt-guide.md),
-[setup-guide](setup-guide.md), [file-view](file-view.md), [session-fields](session-fields.md)
-and [example-style](example-style.md).
+[setup-guide](setup-guide.md), [file-view](file-view.md), [session-fields](session-fields.md),
+[session-language](session-language.md) and [example-style](example-style.md).
 
 ## 1. Goal
 
@@ -19,8 +19,9 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 | `station/` | The BBS directory of the home BBS ([bbs-toml](bbs-toml.md), section 2). |
 | `station/bbs.toml` | `[bbs] name = "Velour"` and `[store] path = "data/velourbbs.jsonl"`. No `[telnet]` and no `[limits]` table. |
 | `station/data/` | The directory of the data file ([data-store](data-store.md)). Not in git (`.gitignore`). The deploy makes it a symlink ([release-deploy](release-deploy.md), section 4.5). |
-| `station/screens/screens.toml` | The theme of section 4 and the screen settings. |
-| `station/screens/` | The screens of section 3 and their fragments. |
+| `station/screens/screens.toml` | The theme of section 4, the screen settings and the language `[lang.ru]`. |
+| `station/screens/` | The common screens of section 3 and their fragments. |
+| `station/screens/<lang>/` | The screens of section 3 in the language `<lang>` ([session-language](session-language.md), section 3). |
 | `station/content/<lang>/features.md` | The features text (section 6). |
 | `station/content/<lang>/guide` | A relative symlink to `../../../docs/guide/<lang>` ([file-view](file-view.md), section 2). |
 | `cmd/velourbbs/testdata/station/` | The golden cell dumps of section 8. |
@@ -35,23 +36,28 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 
 ## 3. Screens
 
-One BBS directory holds both languages. The session has no language state:
-each language has its own screens with the prefix `ru-` or `en-`.
+One BBS directory holds both languages ([session-language](session-language.md)).
+The languages are `en` (`[screen] lang` by default) and `[lang.ru]`.
+A session starts in `en` on the common entry `main`. The entry sets the language
+with `gosub ru/menu` or `gosub en/menu`. Then the session sees the screens of `screens/<lang>/`.
+The names below are screen names: `menu` is `screens/<lang>/menu.bbt`.
 The station has two sections of the brandbook: Texts (Тексты) and About the station
 (О станции). The guides and the features are texts.
 
 | Screen | Content | Items |
 |---|---|---|
-| `main` | The entry screen (section 3.1). | `R` `gosub ru-menu`, `E` `gosub en-menu`, `Q` `logoff`. |
-| `<lang>-menu` | The menu (section 3.2). | `1` `gosub <lang>-texts`, `2` `gosub <lang>-about`, `ESC` `back`, `Q` `logoff`. |
-| `<lang>-texts` | The catalog of the section Texts (section 3.3). | `1` `gosub <lang>-setup`, `2` `gosub <lang>-bbt`, `3` `gosub <lang>-read` with the features text and the title `Velour`, `ESC` `back`. |
-| `<lang>-setup` | The parts of the setup guide. | `0` for `README.md`, `1`–`5` for the parts: `gosub <lang>-read` with the part and the title of the guide. `ESC` `back`. |
-| `<lang>-bbt` | The parts of the BBT guide. | `0` for `README.md`, `1`–`9` for the parts: `gosub <lang>-read` with the part and the title of the guide. `ESC` `back`. |
-| `<lang>-read` | The file screen of the argument `file`, with the argument `title` in the header (section 3.4). | `SPACE` `page next`, `B` `page prev`, `ESC` `back`. |
-| `<lang>-about` | The section About the station (section 3.5). | `ESC` `back`. |
+| `main` | The common entry screen (section 3.2). | `R` `gosub ru/menu`, `E` `gosub en/menu`, `Q` `logoff`. |
+| `menu` | The menu (section 3.2). | `1` `gosub texts`, `2` `gosub about`, `ESC` `back`, `Q` `logoff`. |
+| `texts` | The catalog of the section Texts (section 3.3). | `1` `gosub setup`, `2` `gosub bbt`, `3` `gosub read` with the file `features.md` and the title `Velour`, `ESC` `back`. |
+| `setup` | The parts of the setup guide. | `0` for `README.md`, `1`–`5` for the parts: `gosub read` with the part and the title of the guide. `ESC` `back`. |
+| `bbt` | The parts of the BBT guide. | `0` for `README.md`, `1`–`9` for the parts: `gosub read` with the part and the title of the guide. `ESC` `back`. |
+| `read` | The file screen of the argument `file`, with the argument `title` in the header (section 3.4). | `SPACE` `page next`, `B` `page prev`, `ESC` `back`. |
+| `about` | The section About the station (section 3.5). | `ESC` `back`. |
 | `goodbye` | The goodbye screen in both languages, with the repository address (section 3.5). | — |
 | `shutdown` | The restart notice in both languages: the station restarts, call again in a minute. | — |
 
+- The files of `args` have no language directory: `features.md`, `guide/setup/README.md`.
+  The search finds them in `content/<lang>/` ([session-language](session-language.md), section 4).
 - The home BBS shows each part of a guide as one file. It does not copy the parts.
 - The texts follow the copy rules of the brandbook, section 7, for their language.
 - The key rows:
@@ -59,13 +65,16 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 | Screen | Russian | English |
 |---|---|---|
 | `main` | `R Русский    E English    Q Отключиться / Disconnect` | the same |
-| `<lang>-menu` | `1 2 Открыть    Esc Ко входу    Q Выход` | `1 2 Open    Esc To entry    Q Quit` |
-| `<lang>-texts` | `1 2 3 Открыть    Esc В меню` | `1 2 3 Open    Esc To menu` |
-| `<lang>-setup`, `<lang>-bbt` | `0-9 Открыть    Esc К текстам` | `0-9 Open    Esc To texts` |
-| `<lang>-read` | `B Назад    Пробел Дальше    Esc К списку` | `B Back    Space Next    Esc To list` |
-| `<lang>-about` | `Esc В меню` | `Esc To menu` |
+| `menu` | `1 2 Открыть    Esc Ко входу    Q Выход` | `1 2 Open    Esc To entry    Q Quit` |
+| `texts` | `1 2 3 Открыть    Esc В меню` | `1 2 3 Open    Esc To menu` |
+| `setup`, `bbt` | `0-9 Открыть    Esc К текстам` | `0-9 Open    Esc To texts` |
+| `read` | `B Назад    Пробел Дальше    Esc К списку` | `B Back    Space Next    Esc To list` |
+| `about` | `Esc В меню` | `Esc To menu` |
 
-- `<lang>-setup` shows `0-5` in place of `0-9`.
+- `setup` shows `0-5` in place of `0-9`.
+- The More row, with the indent of the screens: `[screen] more` is `Any key Next`,
+  `[lang.ru] more` is `Любая клавиша Дальше`. The entry shows the row of the session language:
+  English at the start, Russian after a return from the Russian menu.
 - A file screen shows `B` and `Пробел` (`Space`) only where they work
   (`when` and `{#if item.<KEY>}`). Paging keys are on the left, the other keys flush right.
 
@@ -89,10 +98,10 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
   Each row fits 80 columns when each Cyrillic letter takes two cells.
   The last row of the hint is empty: the key row with its padding is wider than `term.cols`
   and wraps into it, so the page does not scroll with 23 rows.
-- `<lang>-menu` is the brandbook screen "Меню" with two items:
+- `menu` is the brandbook screen "Меню" with two items:
   Texts (gem `emer`) and About the station (gem `gold`).
   A hotkey is the digit of the item. The menu has no selection mark.
-- The key row of `<lang>-menu` ends in the clock of the brandbook, section 6:
+- The key row of `menu` ends in the clock of the brandbook, section 6:
   `bbs.time` with `time = "15:04 MST"` and `zone = "UTC"` in `screens.toml`.
 
 ### 3.3. Section screens
@@ -100,7 +109,7 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 - The header and the signature line of the brandbook, section 5.
   The header lists the section Texts. In the section Texts it is in `white`.
   The signature line ends in the gem of the section: `emer` for Texts, `gold` for About the station.
-- The catalog `<lang>-texts` has two groups: Guides (the setup guide and the BBT guide)
+- The catalog `texts` has two groups: Guides (the setup guide and the BBT guide)
   and Velour (the features text). Each entry has the gem `emer`, the title, a dot leader
   and a short note in `dim`. It has no lead.
 - A list of guide parts shows the number and the title of each part.
@@ -159,7 +168,7 @@ The station has two sections of the brandbook: Texts (Тексты) and About th
 ## 5. Guide parts
 
 The guides are directories of parts ([bbt-guide](bbt-guide.md), section 3.1).
-`<lang>-setup` and `<lang>-bbt` list the parts in the order of their numbers.
+`setup` and `bbt` list the parts in the order of their numbers.
 
 ## 6. Features text
 
@@ -203,7 +212,9 @@ The English table of section 7 of the brandbook:
 
 - A Go test in `cmd/velourbbs` runs `velourbbs check` in `station/`. It gives no output.
 - The test compares `velourbbs preview` cell dumps with golden files
-  `cmd/velourbbs/testdata/station/<screen>-<size>-<colors>.dump`:
+  `cmd/velourbbs/testdata/station/<screen>-<size>-<colors>.dump`.
+  `<screen>` is the name of a common screen, or `<lang>-<name>` for a screen of a language
+  with `--set session.lang=<lang>`. Example: `ru-menu` is the Russian menu.
   - each screen at 80x24 with 256 colours;
   - each screen except a file screen also at 132x43 with 256 colours;
   - `main` and `ru-texts` also with 16 and 16777216 colours;
@@ -211,7 +222,9 @@ The English table of section 7 of the brandbook:
     a `term.name`, sixel and a `term.bg_color` (a dark one and a light one);
   - `ru-about` also at 80x24 with a `term.type` and a `term.name` of 40 wide graphemes;
   - each file screen with the first file of each catalog.
-- The `ru-` and the `en-` screens have the same items.
+- A golden output of `velourbbs preview main --keys R,ESC,E` shows the entry,
+  the Russian menu, the entry and the English menu.
+- The screens of `screens/ru/` and of `screens/en/` have the same items.
 - `content/ru/guide` and `content/en/guide` are symlinks into `docs/guide/`.
 
 ## 9. Not in this specification

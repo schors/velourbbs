@@ -24,6 +24,7 @@ The limits of section 9 catch mistakes, for example a file that is too large.
 | `screens/screens.toml` | Settings of the screens: [screens-toml](screens-toml.md). |
 | `bbs.toml` | Host settings: [bbs-toml](bbs-toml.md). |
 | `content/<path>` | A content file of a file screen: [file-view](file-view.md), section 2. |
+| `screens/<code>/`, `content/<code>/` | The files of a language: [session-language](session-language.md), section 3. |
 
 - `<name>` matches `[a-z0-9][a-z0-9_-]*`. Example: `main_wide`.
 - An `.ans` file is art only. Only an art insert in a BBS template shows it.
@@ -102,8 +103,8 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 | `{      <path>}` | Field with the width of the token, aligned right. |
 | `{#if <cond>}` `{#else}` `{/if}` | Conditional block. Section 5. |
 | `{!<style>}` | Style change. Section 7.3. |
-| `{>_<name>}` | Include of `screens/_<name>.bbt`. Section 3.4. |
-| `{><name>.ans}` | Art insert of `screens/<name>.ans`. Sections 3.4 and 6.2. |
+| `{>_<name>}` | Include of the fragment `_<name>.bbt`. Section 3.4. |
+| `{><name>.ans}` | Art insert of the art `<name>.ans`. Sections 3.4 and 6.2. |
 | `{>file}` | The file area of a file screen: [file-view](file-view.md), section 3.1. |
 | `{@<id>}` `{/@}` | Reserved for marks. An error in the MVP. |
 | `{<punctuation>...}` | Each other token that starts with ASCII punctuation is reserved for new tokens. An error. |
@@ -117,7 +118,10 @@ In art, only [art-format](art-format.md), section 4, defines the field tokens.
 
 - An include or an art insert must be the only content of its source line.
 - An include inserts the body lines of the fragment in place of its line.
-- An include of a name without `_`, except `{>file}`, is an error. A missing file is an error.
+- The host finds the file of an include and of an art insert in the session language
+  ([session-language](session-language.md), section 4).
+- An include of a name without `_`, except `{>file}`, is an error. A missing file is an error
+  in each screen set that does not find it ([session-language](session-language.md), section 6).
 - Includes can nest. An include cycle is an error.
 - After an include, the style is the style before the include.
 
@@ -239,7 +243,7 @@ The body gives rows in source order:
 - A file screen has its own pages: [file-view](file-view.md), section 3.2.
 - When another screen has more rows than `term.rows`, the host shows it in pages of `term.rows - 1` rows.
   After each page except the last, the host shows the "More row" ([menu-nav](menu-nav.md), section 5).
-- The More row is `[screen] more` ([screens-toml](screens-toml.md), section 3.1),
+- The More row is the text of [session-language](session-language.md), section 7.2,
   in the theme style `more`, at the left edge of the screen area.
   The host cuts it at the screen area.
 
@@ -371,14 +375,17 @@ are the same keys.
 |---|---|
 | `goto <name>` | Show the screen `<name>` in place of the current screen. |
 | `gosub <name>` | Show the screen `<name>` over the current screen: [menu-nav](menu-nav.md), section 4.1. |
+| `goto <code>/<name>`, `gosub <code>/<name>` | Show the screen `<name>` in the language `<code>`: [menu-nav](menu-nav.md), section 4. |
 | `back` | Show the screen below the current screen again: [menu-nav](menu-nav.md), section 4.1. |
 | `top` | Show the first screen of the navigation stack again: [menu-nav](menu-nav.md), section 4.1. |
 | `logoff` | End the session. |
 | `page next`, `page prev`, `page first`, `page last` | Show another page of a file screen: [file-view](file-view.md), section 3.3. |
 | `theme dark`, `theme light`, `theme auto` | Set the theme choice of the session: [screens-toml](screens-toml.md), section 3.2. |
+| `lang <code>` | Set the session language: [menu-nav](menu-nav.md), section 4. |
 
-- The action words are lower case. `do` has no other spaces than the one space after `goto`, `gosub`, `page` or `theme`.
-- `<name>` matches the screen name of section 2.
+- The action words are lower case. `do` has no other spaces than the one space after `goto`, `gosub`, `page`, `theme` or `lang`.
+- `<name>` matches the screen name of section 2. `<code>` is a language code
+  of [session-language](session-language.md), section 2.
 - [menu-nav](menu-nav.md), section 4, defines how the host runs the actions.
 
 ### 8.4. Errors

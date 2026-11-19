@@ -17,6 +17,7 @@ The user pages forward and back. A Markdown file has theme styles and front matt
 |---|---|
 | `content/<path>` | A "content file": a file that a file screen shows. |
 
+- The host finds `<path>` in the session language: [session-language](session-language.md), section 4.
 - The content files are files of the sysop. The host trusts them ([bbt-format](bbt-format.md), section 1).
 - `<path>` is one or more segments separated with `/`. A segment matches `[A-Za-z0-9_][A-Za-z0-9_.-]*`.
   Example: `xfer/src/crc16.c`.

@@ -4,7 +4,7 @@ This specification defines the screens settings file `screens/screens.toml`:
 each table and each key.
 Related parts: [bbt-format](bbt-format.md), [menu-nav](menu-nav.md),
 [telnet-term](telnet-term.md), [screen-render](screen-render.md), [bbs-toml](bbs-toml.md),
-[file-view](file-view.md) and [session-fields](session-fields.md).
+[file-view](file-view.md), [session-fields](session-fields.md) and [session-language](session-language.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -31,13 +31,14 @@ The other specifications define the effect of a key and refer to this specificat
 | Key | Type | Default | Meaning |
 |---|---|---|---|
 | `width` | array of 2 integers | `[40, 80]` | The width limits `[min, max]` of a screen without `width` in its front matter: [bbt-format](bbt-format.md), section 6.1. |
-| `more` | string | `"-- More --"` | The text of the More row: [bbt-format](bbt-format.md), section 6.4. |
+| `more` | string | — | The text of the More row: [session-language](session-language.md), section 7.2. |
 | `align` | string | `"center"` | The horizontal position of a screen: [bbt-format](bbt-format.md), section 6.1. |
 | `valign` | string | `"top"` | The vertical position of a screen: [bbt-format](bbt-format.md), section 6.5. |
 | `fill` | string | `"none"` | The fill rows: [bbt-format](bbt-format.md), section 6.5. |
 | `time` | string | `"2006-01-02 15:04:05"` | The layout of the Go package `time` for the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 | `zone` | string | `"Local"` | The time zone of the field `bbs.time`: [session-fields](session-fields.md), section 3.5. |
 | `theme` | string | `"dark"` | The theme choice at the start of a session: `dark`, `light` or `auto` (section 3.2). |
+| `lang` | string | `"en"` | The session language at the start of a session: [session-language](session-language.md), sections 2 and 5. |
 
 - `width`, `align`, `valign` and `fill` have the rules of the front matter keys
   ([bbt-format](bbt-format.md), section 3.2).
@@ -127,6 +128,18 @@ the foreground to an index from 0 to 15.
 - `start` matches the screen name of [bbt-format](bbt-format.md), section 2.
 - [menu-nav](menu-nav.md), section 6, has the checks of the start screen.
 
+### 3.5. `[lang]`
+
+Each table `[lang.<code>]` makes `<code>` a language of the BBS
+([session-language](session-language.md), section 2).
+
+| Key | Type | Default | Meaning |
+|---|---|---|---|
+| `more` | string | — | The text of the More row in this language: [session-language](session-language.md), section 7.2. |
+
+- `<code>` and `[screen] lang` are language codes of [session-language](session-language.md), section 2.
+- `more` has the rules of `[screen] more`.
+
 ## 4. Example
 
 ```toml
@@ -136,6 +149,10 @@ more = "-- More --"
 valign = "middle"
 fill = "spaces"
 theme = "auto"
+lang = "en"
+
+[lang.ru]
+more = "-- Дальше --"
 
 [theme.default]
 normal = "7/0"

@@ -3,8 +3,8 @@
 This specification defines the key match, the navigation of a session,
 the menu checks between screens of `velourbbs check` and the key sequences of `velourbbs preview`.
 [bbt-format](bbt-format.md), section 8, defines the menu items and the keys.
-Related parts: [screens-toml](screens-toml.md), [screen-render](screen-render.md), [file-view](file-view.md)
-and [telnet-term](telnet-term.md).
+Related parts: [screens-toml](screens-toml.md), [screen-render](screen-render.md), [file-view](file-view.md),
+[session-language](session-language.md) and [telnet-term](telnet-term.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -68,7 +68,14 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
   ([screens-toml](screens-toml.md), section 3.2). The choice lasts until the end of the session.
   Then the host shows the screen of the top frame again (section 5). The stack does not change.
   In a file screen, it shows the current page again (section 5.1).
-- `logoff` shows `screens/goodbye.bbt` if it exists. Then the host disconnects.
+- `goto <code>/<name>` and `gosub <code>/<name>` set the session language
+  ([session-language](session-language.md), section 5) to `<code>` until the end of the session.
+  Then they run `goto <name>` or `gosub <name>`. The new frame holds `<name>`, without `<code>`.
+- `lang <code>` sets the session language to `<code>` until the end of the session. Then the host shows the screen of the top frame
+  again from the screen set of the new language (section 5). The stack does not change.
+  A file screen shows the page of the frame (section 5.1).
+- `logoff` shows the screen `goodbye` if it exists ([session-language](session-language.md), section 4).
+  Then the host disconnects.
   The host does not wait for a key after the last page of `goodbye`.
 
 ### 4.1. Navigation stack
@@ -83,6 +90,8 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
 - `top` removes each frame above the first frame.
 - After each of these actions, the host shows the screen of the top frame
   with its arguments (section 5). A file screen shows the page of the frame (section 5.1).
+- A frame holds the name of the screen. The host finds the file of the name
+  in the session language each time it shows the frame ([session-language](session-language.md), section 4).
 - A `goto` to the current screen also gives a new frame with page 1.
   The host reads the terminal size again (section 5).
 - A `goto` on the first frame replaces the first frame. Then `top` shows its screen,
@@ -128,7 +137,8 @@ The host shows a file screen ([file-view](file-view.md), section 3) in these ste
 ### 5.2. Stop
 
 When the host stops ([telnet-term](telnet-term.md), section 10.2), it shows
-`screens/shutdown.bbt` to each open session if the file exists. Then it disconnects.
+the screen `shutdown` to each open session if it exists
+([session-language](session-language.md), section 4). Then it disconnects.
 
 - The host renders `shutdown` with the size of the current screen and shows its first page.
   It does not wait for a key.
@@ -138,7 +148,8 @@ When the host stops ([telnet-term](telnet-term.md), section 10.2), it shows
 ## 6. `velourbbs check`
 
 `velourbbs check` ([screen-render](screen-render.md), section 3.1) finds the item errors
-of [bbt-format](bbt-format.md), section 8.4. It also finds these errors:
+of [bbt-format](bbt-format.md), section 8.4. It also finds these errors in the screen set
+of each language of the BBS ([session-language](session-language.md), section 6):
 
 - a `goto` or a `gosub` to a screen that does not exist;
 - a `goto` or a `gosub` to a screen without items, for example `goodbye` or `shutdown`;
@@ -186,7 +197,7 @@ It is the test harness for the navigation.
 - The other arguments of `velourbbs preview` ([screen-render](screen-render.md), section 3.2) apply.
 - The output has one part for each event:
   - `screen <name>` and the cell dump of the first shown page, when the host shows a screen,
-    also after `back` and `top`;
+    also after `back`, `top` and `lang`;
   - the cell dump of the next page, after a key on a More row;
   - the cell dump of the page, after a `page` action or a `theme` action in a file screen;
   - `key <key>` before each key. `key <key> ignored` for an ignored key;
