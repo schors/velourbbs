@@ -77,8 +77,9 @@ also from `38;5;n` and `48;5;n`.
 
 - A "box" is a span of one grid row from `{#if <cond>}` to `{/if}`.
   The condition has the grammar of [bbt-format](bbt-format.md), section 5.
-- Boxes do not nest and have no `{#else}`. A `{#if` without `{/if}` on the same row is an error.
-  A box in the list row is an error.
+- Boxes do not nest and have no `{#else}`. These are errors: a `{#if` without `{/if}` on the same row,
+  a `{/if}` without a box, a box in the list row, and each other token of
+  [bbt-format](bbt-format.md), section 3.3, that starts with `{#`, `{/`, `{!` or `{>`.
 - The "box content" is the cells between the two markers. It can have field tokens.
 - When the condition is true, the box shows the box content from its first cell,
   with the styles of its cells. The cells after the content up to the end of the box are spaces

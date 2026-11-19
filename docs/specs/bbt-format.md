@@ -222,6 +222,7 @@ The body gives rows in source order:
 
 - The content of a false block gives nothing: no text, no line end, no art and no include.
 - A source line with a block token gives no row when it has only spaces after the evaluation.
+  A list line is an exception ([list-view](list-view.md), section 5).
 - An art insert gives the rows of the art. Each row starts at the left edge of the screen area.
   The host cuts the art at W. `velourbbs check` warns when the art is wider than `max`.
 - A cut of a row at W or at `term.cols` through a wide grapheme leaves a space in its style.
@@ -411,9 +412,10 @@ without items, the items of `goodbye` and `shutdown`, and the start screen. It a
 - `args` is a table of strings: an inline table or the table `[item.args]`.
   Example: `args = { file = "gold.md" }`.
 - A name matches `[a-z][a-z0-9_]*`. A value cannot have a control character or `{`.
+  `select` of a list screen is an exception ([list-view](list-view.md), section 8).
 - The "arguments of a screen" are the names of the `arg.<name>` fields of the screen:
-  in its body, its fragments, its art, its `when` and its `file`
-  ([file-view](file-view.md), section 3).
+  in its body, its fragments, its art, its `when`, its `file`
+  ([file-view](file-view.md), section 3) and its `data` ([list-view](list-view.md), section 4).
 - A `goto` or a `gosub` gives exactly the arguments of its target screen. A missing argument
   or another argument is an error.
 - The field `arg.<name>` gives the value of the `goto` or the `gosub` that shows the screen.
@@ -439,7 +441,7 @@ without items, the items of `goodbye` and `shutdown`, and the start screen. It a
 - Marks and arrow-key selection of items: [marks](https://github.com/schors/velourbbs/issues/67).
   Items have hotkeys only. A list screen selects a row with the arrow keys ([list-view](list-view.md), section 8).
 - `require` (access checks). It needs users.
-- `ask`, and a field token in an `args` value: [args](https://github.com/schors/velourbbs/issues/66).
+- `ask`, and a field token in an `args` value of an item: [args](https://github.com/schors/velourbbs/issues/66).
 - Punctuation keys, for example `?`.
 - A `label` for an item. The host does not print item text.
 

@@ -66,7 +66,7 @@ section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), sectio
   A style of `[theme.default]` replaces the style with the same name.
   A "name of the theme" is a name of the base theme.
   The effect of `normal` and `more`: [bbt-format](bbt-format.md), sections 6.2, 6.4 and 7.3.
-  The effect of `select`: [list-view](list-view.md), section 8.
+  The effect of `select`: [list-view](list-view.md), section 9.
 - Each name of a depth theme and of a light table must be a name of the theme.
 - The "dark theme" of one `term.colors` is the base theme with each style of the depth theme
   of `term.colors` in place of the style with the same name.

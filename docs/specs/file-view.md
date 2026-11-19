@@ -134,7 +134,8 @@ args = { file = "gold.md" }
 | `page last` | Show the last page. |
 
 - A `page` action is valid only in a file screen and in a list screen ([list-view](list-view.md), section 7).
-- [menu-nav](menu-nav.md), section 5.1, defines the show of a page.
+- [menu-nav](menu-nav.md), section 5.1, defines the show of a page of a file screen,
+  and section 5.3 of a list screen.
 
 ### 3.4. Fields
 

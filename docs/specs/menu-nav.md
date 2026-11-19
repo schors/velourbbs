@@ -72,12 +72,14 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
   ([screens-toml](screens-toml.md), section 3.2). The choice lasts until the end of the session.
   Then the host shows the screen of the top frame again (section 5). The stack does not change.
   In a file screen, it shows the current page again (section 5.1).
+  A list screen shows the page and the cursor of the frame (section 5.3).
 - `goto <code>/<name>` and `gosub <code>/<name>` set the session language
   ([session-language](session-language.md), section 5) to `<code>` until the end of the session.
   Then they run `goto <name>` or `gosub <name>`. The new frame holds `<name>`, without `<code>`.
 - `lang <code>` sets the session language to `<code>` until the end of the session. Then the host shows the screen of the top frame
   again from the screen set of the new language (section 5). The stack does not change.
   A file screen shows the page of the frame (section 5.1).
+  A list screen shows the page and the cursor of the frame (section 5.3).
 - `logoff` shows the screen `goodbye` if it exists ([session-language](session-language.md), section 4).
   Then the host disconnects.
   The host does not wait for a key after the last page of `goodbye`.
@@ -113,6 +115,7 @@ shows `main`. From `reader`, `top` shows `main`. From `reader`, `goto main` give
 - The first screen is `[menu] start` ([screens-toml](screens-toml.md), section 3.4).
   The session starts with one frame: the start screen with no arguments.
 - The host shows a screen in these steps. Section 5.1 has the steps of a file screen.
+  Section 5.3 has the steps of a list screen.
   1. Read `term.cols` and `term.rows`. A resize takes effect at the next screen.
   2. Evaluate the `when` of each item.
   3. Render the screen ([screen-render](screen-render.md), section 2).
@@ -155,21 +158,20 @@ the screen `shutdown` to each open session if it exists
 
 The host shows a list screen ([list-view](list-view.md), section 3) in these steps:
 
-1. Read `term.cols` and `term.rows`. They stay until the next screen.
-2. For the current list page, evaluate the `when` of each item, render the page and
-   clear the terminal screen and show it. The first page is the page of the top frame,
-   or the last list page when the list has fewer pages
-   ([list-view](list-view.md), section 7). If the cursor of the frame is not on this page,
-   the host puts it on the last row of the page. The host then sets the page and the cursor
-   of the top frame.
-3. Wait for keys and match them (section 3.3).
-   - A `page` action sets the current page and puts the cursor on its first row.
-     Continue at step 2.
-   - `UP` or `DOWN` to a row of another list page: continue at step 2 with that page.
-   - `UP` or `DOWN` on the same list page: evaluate the `when` of each item, render the page
-     and update it: the terminal sends only the rows that differ from the shown page
-     ([telnet-term](telnet-term.md), section 7.1). Continue at step 3.
-   - A `theme` action continues at step 2. Each other action leaves the screen.
+The current list page and the cursor are the page and the cursor of the top frame.
+
+1. Read `term.cols` and `term.rows`. Find the page size ([list-view](list-view.md), section 7).
+   The size and the page size stay until the next screen.
+2. When the list has fewer pages than the current page, the current page is the last list page.
+   When the cursor is not on the current page, it is on the last row of the page.
+3. Evaluate the `when` of each item, render the current page,
+   clear the terminal screen and show it.
+4. Wait for keys and match them (section 3.3).
+   - A `page` action or a cursor move to another list page ([list-view](list-view.md), section 8)
+     continues at step 3. A `theme` action continues at step 3.
+   - A cursor move on the same list page renders the page with the values of step 3
+     and updates it ([telnet-term](telnet-term.md), section 7.1). Continue at step 4.
+   - Each other action leaves the screen.
 
 ## 6. `velourbbs check`
 
@@ -181,7 +183,8 @@ of each language of the BBS ([session-language](session-language.md), section 6)
 - a `goto` or a `gosub` to a screen without items, for example `goodbye` or `shutdown`;
 - a screen without items, except `goodbye` and `shutdown`;
 - items in `goodbye` or `shutdown`;
-- a file screen as `goodbye` or `shutdown` ([file-view](file-view.md), section 3);
+- a file screen or a list screen as `goodbye` or `shutdown` ([file-view](file-view.md), section 3,
+  [list-view](list-view.md), section 3);
 - a start screen that does not exist or has no items;
 - a `goto` or a `gosub` whose `args` differ from the arguments of the target screen
   ([bbt-format](bbt-format.md), section 8.5);

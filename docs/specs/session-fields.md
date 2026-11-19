@@ -30,6 +30,9 @@ the online time, the BBS name, the version, the open sessions, the server time a
 - A file screen takes the values at step 1 of [menu-nav](menu-nav.md), section 5.1,
   for the area height ([file-view](file-view.md), section 3.2). It takes them again for each page
   at step 2.
+- A list screen takes the values at step 1 of [menu-nav](menu-nav.md), section 5.3,
+  for the page size ([list-view](list-view.md), section 7). It takes them again for each page
+  at step 3. A cursor move on the same list page keeps them.
 
 ## 3. Values
 
