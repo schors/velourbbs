@@ -76,8 +76,10 @@ The guide has these tasks in this order. Each task ends with a check of the resu
   and task 7 adds `R` and shows the whole file.
 - The column "Files of the example" lists the file blocks of each task.
 - The guide also shows these features in snippets: `{{`, `align`, `valign`, the More row,
-  an alias of `[fields]`, and the art with a fragment for small terminals
-  ([bbt-format](bbt-format.md), section 6.1).
+  an alias of `[fields]`, the art with a fragment for small terminals
+  ([bbt-format](bbt-format.md), section 6.1), and a BBS in two languages: `[lang.<code>]`,
+  `[screen] lang`, the language directories, the action `lang` and `session.lang`
+  ([session-language](session-language.md), sections 3 to 5).
 - The guide names these features as not in the MVP: the features of [bbt-format](bbt-format.md),
   section 10, and the table of contents, the active links and the syntax colours
   of [file-view](file-view.md), section 12.

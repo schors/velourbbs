@@ -24,6 +24,7 @@ The limits of section 9 catch mistakes, for example a file that is too large.
 | `screens/screens.toml` | Settings of the screens: [screens-toml](screens-toml.md). |
 | `bbs.toml` | Host settings: [bbs-toml](bbs-toml.md). |
 | `content/<path>` | A content file of a file screen: [file-view](file-view.md), section 2. |
+| `screens/<code>/`, `content/<code>/` | The files of a language: [session-language](session-language.md), section 3. |
 
 - `<name>` matches `[a-z0-9][a-z0-9_-]*`. Example: `main_wide`.
 - An `.ans` file is art only. Only an art insert in a BBS template shows it.
@@ -239,7 +240,7 @@ The body gives rows in source order:
 - A file screen has its own pages: [file-view](file-view.md), section 3.2.
 - When another screen has more rows than `term.rows`, the host shows it in pages of `term.rows - 1` rows.
   After each page except the last, the host shows the "More row" ([menu-nav](menu-nav.md), section 5).
-- The More row is `[screen] more` ([screens-toml](screens-toml.md), section 3.1),
+- The More row is the text of [session-language](session-language.md), section 7.2,
   in the theme style `more`, at the left edge of the screen area.
   The host cuts it at the screen area.
 
@@ -376,8 +377,9 @@ are the same keys.
 | `logoff` | End the session. |
 | `page next`, `page prev`, `page first`, `page last` | Show another page of a file screen: [file-view](file-view.md), section 3.3. |
 | `theme dark`, `theme light`, `theme auto` | Set the theme choice of the session: [screens-toml](screens-toml.md), section 3.2. |
+| `lang <code>` | Set the session language: [session-language](session-language.md), section 5. |
 
-- The action words are lower case. `do` has no other spaces than the one space after `goto`, `gosub`, `page` or `theme`.
+- The action words are lower case. `do` has no other spaces than the one space after `goto`, `gosub`, `page`, `theme` or `lang`.
 - `<name>` matches the screen name of section 2.
 - [menu-nav](menu-nav.md), section 4, defines how the host runs the actions.
 
