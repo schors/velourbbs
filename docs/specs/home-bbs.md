@@ -45,11 +45,12 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   So, counted from 1, the kicker is at row 5 at 80x24 and 80x25 and at row 6 at 132x43.
   The keys are at row 23 at 80x24 and 80x25 and at row 41 at 132x43.
 - The logotype is `_logo-132` with `term.cols >= 132 and term.rows >= 43`, else `_logo-80`.
-- A file screen keeps the layout of 80 columns: `width = [80, 80]`, `align = "left"` and `gutter = 0`.
+- A file screen has `width = [68, 68]`, `align = "left"` and `margin = [2, 2]`.
+  So its column is 8 to 71 at each width: the brandbook has no reading screen at 132 yet.
 - With `term.ambiguous` 2, `main` shows a hint in both languages in place of the greeting:
   the screens break, and the setting for one cell in the common terminals.
-  Each row of the hint fits the render width of 68 cells. It also fits 80 columns
-  when each Cyrillic letter takes two cells.
+  The hint follows the layout rules above. Each row of the hint fits 80 columns
+  also when each Cyrillic letter takes two cells.
 - The guides and the features text are texts. The station shows each part of a guide
   as one file through the symlink. It does not copy the parts.
 - The lists of guide parts use the provider `files`, so `README.md` is the first row.
@@ -77,7 +78,8 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - A Go test in `cmd/velourbbs` runs `velourbbs check` in `station/`. It gives no output.
 - The test compares the `velourbbs preview` cell dump of each screen at 80x24 and at 132x43
   with 256 colours with its golden file `cmd/velourbbs/testdata/station/<screen>-<size>-256.dump`.
-  `<screen>` is a common screen, or `<lang>-<name>` with `--set session.lang=<lang>`.
+  `<screen>` is a common screen, `<lang>-<name>` with `--set session.lang=<lang>`,
+  or `main-ambiguous`: `main` with `--set term.ambiguous=2`.
   The test has no other cases.
 - The station tests use a guide fixture in place of `content/<lang>/guide`.
   An edit of `docs/guide/` does not change their result.

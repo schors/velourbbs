@@ -479,14 +479,17 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 
 
-                                            Enter Войти    Q Отключиться
 
+                                            Enter Войти    Q Отключиться
 
 ```
 
 ### Вход, 132x43
 
 ```text
+
+
+
 
 
 
@@ -525,9 +528,6 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 
                                                                                           Enter Войти    Q Отключиться
-
-
-
 
 ```
 

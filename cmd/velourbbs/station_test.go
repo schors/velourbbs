@@ -52,13 +52,15 @@ func TestStation(t *testing.T) {
 		t.Errorf("check: stdout %q, stderr %q, status %d; want no output and status 0", out.String(), errOut.String(), status)
 	}
 	for _, size := range []string{"80x24", "132x43"} {
-		for _, screen := range []string{"main", "goodbye", "shutdown", "ru-menu", "en-menu", "ru-about", "en-about",
+		for _, screen := range []string{"main", "main-ambiguous", "goodbye", "shutdown", "ru-menu", "en-menu", "ru-about", "en-about",
 			"ru-texts", "en-texts", "ru-setup", "en-setup", "ru-bbt", "en-bbt", "ru-read", "en-read"} {
 			out.Reset()
 			errOut.Reset()
 			args := []string{"preview", screen, "--size", size, "--set", "term.colors=256"}
 			// A screen of a language is <lang>-<name> (home-bbs, section 5).
-			if lang, name, ok := strings.Cut(screen, "-"); ok {
+			if screen == "main-ambiguous" {
+				args = []string{"preview", "main", "--size", size, "--set", "term.colors=256", "--set", "term.ambiguous=2"}
+			} else if lang, name, ok := strings.Cut(screen, "-"); ok {
 				args = []string{"preview", name, "--size", size, "--set", "term.colors=256", "--set", "session.lang=" + lang}
 			}
 			if strings.HasSuffix(screen, "-read") {
