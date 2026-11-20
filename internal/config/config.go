@@ -47,6 +47,9 @@ type Config struct {
 	Zone *time.Location
 	// Start is the name of the first screen of a session (screens-toml, section 3.4).
 	Start string
+	// StartPos is the position of the key menu.start in screens/screens.toml.
+	// An error of the start screen has this position (menu-nav, section 6).
+	StartPos tomlcheck.Pos
 	// Telnet is the table [telnet] (bbs-toml, section 3.1).
 	Telnet Telnet
 	// Limits is the table [limits] (bbs-toml, section 3.3).
@@ -142,7 +145,7 @@ func Load(fsys fs.FS) (Config, screen.Diags) {
 func parseHost(data []byte, cfg *Config) screen.Diags {
 	fd := screen.FileDiags{File: File}
 	var d hostDoc
-	errs := tomlcheck.Decode(bytes.TrimPrefix(data, screen.BOM), &d)
+	root, errs := tomlcheck.Decode(bytes.TrimPrefix(data, screen.BOM), &d)
 	for _, e := range errs {
 		fd.Errorf(e.Line, e.Col, "%s", e.Msg)
 	}
@@ -152,10 +155,9 @@ func parseHost(data []byte, cfg *Config) screen.Diags {
 	if d.BBS.Name != nil {
 		cfg.Name = *d.BBS.Name
 	}
-	// Each other error has the position 1:1 (screen-render, section 3.1).
-	errorf := func(format string, args ...any) { fd.Errorf(1, 1, format, args...) }
-	cfg.Telnet = telnet(d.Telnet, errorf)
-	cfg.Limits = limits(d.Limits, errorf)
-	cfg.Store = store(d.Store, errorf)
+	errorf := func(at tomlcheck.Pos, format string, args ...any) { fd.Errorf(at.Line, at.Col, format, args...) }
+	cfg.Telnet = telnet(d.Telnet, root.At("telnet"), errorf)
+	cfg.Limits = limits(d.Limits, root.At("limits"), errorf)
+	cfg.Store = store(d.Store, root.At("store"), errorf)
 	return fd.Diags
 }

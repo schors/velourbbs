@@ -55,7 +55,7 @@ type frontDoc struct {
 func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs []string) *front {
 	var doc frontDoc
 	data := []byte(strings.Join(lines, "\n"))
-	errs := tomlcheck.Decode(data, &doc)
+	_, errs := tomlcheck.Decode(data, &doc)
 	for _, e := range errs {
 		// The line after "+++" and a column in code points.
 		d.Errorf(e.Line+1, e.RuneCol(data), "%s", e.Msg)

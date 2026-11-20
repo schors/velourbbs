@@ -278,15 +278,24 @@ type Fields map[string]Ref
 // reserved are the names that an alias cannot have (screens-toml, section 3.3).
 var reserved = []string{"term", "item", "arg", "file", "meta", "row", "list", "session", "bbs", "and", "or", "not"}
 
-// NewAlias checks the alias name and its path against screens-toml, section 3.3,
-// and gives the field of the path.
-func NewAlias(name, path string) (Ref, error) {
+// CheckAlias checks the alias name against screens-toml, section 3.3.
+func CheckAlias(name string) error {
 	switch {
 	case !IsIdent(name):
-		return Ref{}, fmt.Errorf("invalid alias %q", name)
+		return fmt.Errorf("invalid alias %q", name)
 	case slices.Contains(reserved, name):
-		return Ref{}, fmt.Errorf("alias %q is a reserved word", name)
-	case !strings.Contains(path, "."):
+		return fmt.Errorf("alias %q is a reserved word", name)
+	}
+	return nil
+}
+
+// NewAlias checks the alias name (CheckAlias) and its path against screens-toml, section 3.3,
+// and gives the field of the path.
+func NewAlias(name, path string) (Ref, error) {
+	if err := CheckAlias(name); err != nil {
+		return Ref{}, err
+	}
+	if !strings.Contains(path, ".") {
 		return Ref{}, fmt.Errorf("alias %q: %q is not a registry path", name, path)
 	}
 	r, err := resolve(path, nil)

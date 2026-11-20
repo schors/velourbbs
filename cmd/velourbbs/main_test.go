@@ -41,7 +41,7 @@ func TestCheckMenu(t *testing.T) {
 	}{
 		{"[[item]]\nkey = \"s\"\ndo = \"goto sysinf\"\n", `screens/about.bbt:1:1: screen has no items
 screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"
-screens/screens.toml:1:1: menu: start: unknown screen "mian"
+screens/screens.toml:2:9: menu: start: unknown screen "mian"
 `},
 		{"[[item]]\nkey = \"s\"\ndo = \"logoff\"\n[[item]]\ndo = \"logoff\"\nkey = \"?\"\n", `screens/main.bbt:2:1: item 2: key: invalid key "?"
 `},
@@ -92,8 +92,8 @@ func TestCheckLimits(t *testing.T) {
 		"bbs.toml":         {Data: []byte("[limits]\nmax_conns = 0\nallow = [\"x\"]\n")},
 		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"g\"\ndo = \"logoff\"\n+++\n")},
 	}
-	want := `bbs.toml:1:1: limits.max_conns: 0 is not from 1 to 1000000
-bbs.toml:1:1: limits.allow: invalid address or prefix "x"
+	want := `bbs.toml:2:13: limits.max_conns: 0 is not from 1 to 1000000
+bbs.toml:3:9: limits.allow: invalid address or prefix "x"
 `
 	var out, errOut bytes.Buffer
 	status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut)
@@ -107,7 +107,7 @@ bbs.toml:1:1: limits.allow: invalid address or prefix "x"
 func TestCheckAliases(t *testing.T) {
 	tests := []struct{ config, want string }{
 		{"[fields]\nw = \"term.cols\"\nr = \"term.rows\"\n", ""},
-		{"[fields]\nw = \"term.cols\"\nr = \"item.A\"\n", `screens/screens.toml:1:1: fields: alias "r": "item.A" is valid only in {#if}
+		{"[fields]\nw = \"term.cols\"\nr = \"item.A\"\n", `screens/screens.toml:3:5: fields: alias "r": "item.A" is valid only in {#if}
 `},
 		{"[fields]\nw = \"term.cols\"\nr = 1\n", `screens/screens.toml:3:5: fields.r: must be a string
 `},

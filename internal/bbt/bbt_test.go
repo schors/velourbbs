@@ -282,9 +282,9 @@ func TestFrontMatter(t *testing.T) {
 			`screens/s.bbt:2:1: item 1: key is missing`,
 			`screens/s.bbt:2:1: item 1: do is missing`,
 		}},
-		// A key that matches only without case and a table in place of [[item]] have 2:1.
-		{map[string]string{"s.bbt": "+++\n[[item]]\nKEY = \"a\"\nkey = \"b\"\ndo = \"logoff\"\n+++\n"}, []string{`screens/s.bbt:2:1: unknown key "item.KEY"`}},
-		{map[string]string{"s.bbt": "+++\n[item]\nkey = \"a\"\ndo = \"logoff\"\n+++\n"}, []string{`screens/s.bbt:2:1: item: must be an array of tables`}},
+		// A key that matches only without case and a table in place of [[item]] have the position of the key.
+		{map[string]string{"s.bbt": "+++\n[[item]]\nKEY = \"a\"\nkey = \"b\"\ndo = \"logoff\"\n+++\n"}, []string{`screens/s.bbt:3:1: unknown key "item.KEY"`}},
+		{map[string]string{"s.bbt": "+++\n[item]\nkey = \"a\"\ndo = \"logoff\"\n+++\n"}, []string{`screens/s.bbt:2:2: item: must be an array of tables`}},
 		{map[string]string{"s.bbt": "+++\nwidth = [\n+++\n"}, []string{`screens/s.bbt:2:9: array is incomplete`}},
 		{map[string]string{"s.bbt": "+++\n" + strings.Repeat("#\n", 33<<10) + "+++\n"}, []string{`screens/s.bbt:2:1: TOML document is over 65536 bytes`}},
 		{map[string]string{"s.bbt": "+++\nwidth = [1, 2]\n"}, []string{`screens/s.bbt:1:1: front matter has no closing "+++"`}},

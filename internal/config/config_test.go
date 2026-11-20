@@ -177,7 +177,7 @@ func TestNormalAttributes(t *testing.T) {
 	}
 }
 
-// Each other error has the position 1:1 (screen-render, section 3.1).
+// Each other error has the position of its value, or of its key name (screen-render, section 3.1).
 func TestErrors(t *testing.T) {
 	data := strings.Join([]string{
 		`[screen]`,
@@ -212,25 +212,25 @@ func TestErrors(t *testing.T) {
 	}, "\n")
 	cfg, ds := parseScreens([]byte(data))
 	want := []string{
-		`screens/screens.toml:1:1: screen.width: width [80, 40] is not in 1 <= min <= max <= 255`,
-		`screens/screens.toml:1:1: screen.align: invalid value "centre", want "left", "center" or "right"`,
-		`screens/screens.toml:1:1: screen.valign: invalid value "Top", want "top", "middle" or "bottom"`,
-		`screens/screens.toml:1:1: screen.fill: invalid value "", want "none", "spaces" or "erase"`,
-		`screens/screens.toml:1:1: screen.gutter: 101, must be from 0 to 100`,
-		`screens/screens.toml:1:1: screen.more: zero-width grapheme U+200B`,
-		`screens/screens.toml:1:1: screen.zone: unknown time zone "Mars/Olympus"`,
-		`screens/screens.toml:1:1: screen.theme: invalid value "Dark", want "dark", "light" or "auto"`,
-		`screens/screens.toml:1:1: menu.start: invalid screen name "Main"`,
-		`screens/screens.toml:1:1: theme.default: invalid style name "Title"`,
-		`screens/screens.toml:1:1: theme.default.bad: invalid style "x": invalid colour "x"`,
+		`screens/screens.toml:2:9: screen.width: width [80, 40] is not in 1 <= min <= max <= 255`,
+		`screens/screens.toml:4:9: screen.align: invalid value "centre", want "left", "center" or "right"`,
+		`screens/screens.toml:5:10: screen.valign: invalid value "Top", want "top", "middle" or "bottom"`,
+		`screens/screens.toml:6:8: screen.fill: invalid value "", want "none", "spaces" or "erase"`,
+		`screens/screens.toml:7:10: screen.gutter: 101, must be from 0 to 100`,
+		`screens/screens.toml:3:8: screen.more: zero-width grapheme U+200B`,
+		`screens/screens.toml:9:8: screen.zone: unknown time zone "Mars/Olympus"`,
+		`screens/screens.toml:8:9: screen.theme: invalid value "Dark", want "dark", "light" or "auto"`,
+		`screens/screens.toml:29:9: menu.start: invalid screen name "Main"`,
+		`screens/screens.toml:11:1: theme.default: invalid style name "Title"`,
+		`screens/screens.toml:13:7: theme.default.bad: invalid style "x": invalid colour "x"`,
 		// A name with an invalid style is a name of the theme: bad gives no error in theme.16.
-		`screens/screens.toml:1:1: theme.16: invalid style name "Title"`,
-		`screens/screens.toml:1:1: theme.16.normal: invalid style "1 bolt": unknown attribute "bolt"`,
-		`screens/screens.toml:1:1: theme.16: unknown style "title"`,
-		`screens/screens.toml:1:1: theme.light.default.normal: invalid style "1 bolt": unknown attribute "bolt"`,
-		`screens/screens.toml:1:1: theme.light.default: unknown style "x"`,
-		`screens/screens.toml:1:1: theme.light.16: unknown style "title"`,
-		`screens/screens.toml:1:1: theme.light.256: invalid style name "Bad"`,
+		`screens/screens.toml:15:1: theme.16: invalid style name "Title"`,
+		`screens/screens.toml:18:10: theme.16.normal: invalid style "1 bolt": unknown attribute "bolt"`,
+		`screens/screens.toml:16:1: theme.16: unknown style "title"`,
+		`screens/screens.toml:23:10: theme.light.default.normal: invalid style "1 bolt": unknown attribute "bolt"`,
+		`screens/screens.toml:22:1: theme.light.default: unknown style "x"`,
+		`screens/screens.toml:25:1: theme.light.16: unknown style "title"`,
+		`screens/screens.toml:27:1: theme.light.256: invalid style name "Bad"`,
 	}
 	if got := messages(ds); !slices.Equal(got, want) {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
@@ -273,37 +273,38 @@ func TestTOMLErrors(t *testing.T) {
 		{"[telnet]\nlisten = \":1\"", []string{`1:2: unknown key "telnet"`}},
 		{"menu = \"main\"", []string{`1:8: menu: must be a table`}},
 		{"[menu]\nstart = 1", []string{`2:9: menu.start: must be a string`}},
-		{"[screen]\nwidth = [1]", []string{`1:1: screen.width: must be an array of 2 integers`}},
+		{"[screen]\nwidth = [1]", []string{`2:9: screen.width: must be an array of 2 integers`}},
 		{"[screen]\nwidth = [1, \"2\"]", []string{`2:13: screen.width: must be an array of integers`}},
 		{"[screen]\nmore = 1", []string{`2:8: screen.more: must be a string`}},
 		{"[screen]\nfill = 1", []string{`2:8: screen.fill: must be a string`}},
-		{"[screen]\nmore = \"\t\"", []string{`1:1: screen.more: control character U+0009`}},
+		{"[screen]\nmore = \"\t\"", []string{`2:8: screen.more: control character U+0009`}},
 		{"[screen]\nwidth = ", []string{`2:8: expected value, not end of input`}},
-		{"[theme.default]\nprompt = \"14 bolt\"", []string{`1:1: theme.default.prompt: invalid style "14 bolt": unknown attribute "bolt"`}},
+		{"[theme.default]\nprompt = \"14 bolt\"", []string{`2:10: theme.default.prompt: invalid style "14 bolt": unknown attribute "bolt"`}},
 		{"a.b = 1", []string{`1:1: unknown key "a.b"`}},
-		{"[MENU]\nstart = \"x\"", []string{`1:1: unknown key "MENU"`}},
-		{"[menu]\nstart = \"x\"\nSTART = \"y\"", []string{`1:1: unknown key "menu.START"`}},
+		{"[MENU]\nstart = \"x\"", []string{`1:2: unknown key "MENU"`}},
+		{"[menu]\nstart = \"x\"\nSTART = \"y\"", []string{`3:1: unknown key "menu.START"`}},
 		{"\n[foo.bar]\nx = 1", []string{`2:2: unknown key "foo.bar"`}},
 		// A type error comes before an unknown key, an unknown key before an other error.
 		{"[theme.default]\nx = \"bad\"\ny = 1\nz = \"bad\"", []string{`3:5: theme.default.y: must be a string`}},
 		{"a = 1\n[theme.default]\nx = \"bad\"\nz = \"bad\"", []string{`1:1: unknown key "a"`}},
 		{"[theme.default]\nx = \"bad\"\nz = \"bad\"", []string{
-			`1:1: theme.default.x: invalid style "bad": invalid colour "bad"`,
-			`1:1: theme.default.z: invalid style "bad": invalid colour "bad"`,
+			`2:5: theme.default.x: invalid style "bad": invalid colour "bad"`,
+			`3:5: theme.default.z: invalid style "bad": invalid colour "bad"`,
 		}},
 		{"a = 1\n[screen]\nb = 2\nwidth = [1, 1]", []string{`1:1: unknown key "a"`, `3:1: unknown key "screen.b"`}},
 		{"[fields]\nw = 1", []string{`2:5: fields.w: must be a string`}},
-		// Each invalid alias is an other error at 1:1 (screens-toml, section 3.3).
+		// An invalid alias name has the position of the key, an invalid path of the value
+		// (screens-toml, section 3.3).
 		{"fields = { \"яя\" = \"term.cols\", and = \"term.rows\", k = \"item.A\", u = \"term.x\", v = \"w\" }", []string{
-			`1:1: fields: alias "and" is a reserved word`,
-			`1:1: fields: alias "k": "item.A" is valid only in {#if}`,
-			`1:1: fields: alias "u": unknown field "term.x"`,
-			`1:1: fields: alias "v": "w" is not a registry path`,
-			`1:1: fields: invalid alias "яя"`,
+			`1:34: fields: alias "and" is a reserved word`,
+			`1:57: fields: alias "k": "item.A" is valid only in {#if}`,
+			`1:71: fields: alias "u": unknown field "term.x"`,
+			`1:85: fields: alias "v": "w" is not a registry path`,
+			`1:12: fields: invalid alias "яя"`,
 		}},
 		{"fields = { row = \"term.cols\", list = \"term.rows\", p = \"list.page\", n = \"row.num\" }", []string{
-			`1:1: fields: alias "list" is a reserved word`,
-			`1:1: fields: alias "row" is a reserved word`,
+			`1:31: fields: alias "list" is a reserved word`,
+			`1:12: fields: alias "row" is a reserved word`,
 		}},
 	}
 	for _, tt := range tests {
@@ -345,7 +346,7 @@ func TestZone(t *testing.T) {
 	}
 	for _, name := range []string{"", "Europe/Nowhere", "../etc/passwd", "/etc/localtime"} {
 		cfg, ds := parseScreens([]byte("[screen]\nzone = \"" + name + "\"\n"))
-		want := []string{ScreensFile + `:1:1: screen.zone: unknown time zone "` + name + `"`}
+		want := []string{ScreensFile + `:2:8: screen.zone: unknown time zone "` + name + `"`}
 		if got := messages(ds); !slices.Equal(got, want) {
 			t.Errorf("zone %q: got %q, want %q", name, got, want)
 		}
@@ -362,8 +363,8 @@ func TestHostErrors(t *testing.T) {
 		{"[theme]\ntitle = \"1\"", `bbs.toml:1:2: unknown key "theme"`},
 		{"[fields]\nw = \"term.cols\"", `bbs.toml:1:2: unknown key "fields"`},
 		{"[menu]\nstart = \"x\"", `bbs.toml:1:2: unknown key "menu"`},
-		{"[TELNET]\nlisten = \":1\"", `bbs.toml:1:1: unknown key "TELNET"`},
-		{"[telnet]\nlisten = \":1\"\nLISTEN = \":2\"", `bbs.toml:1:1: unknown key "telnet.LISTEN"`},
+		{"[TELNET]\nlisten = \":1\"", `bbs.toml:1:2: unknown key "TELNET"`},
+		{"[telnet]\nlisten = \":1\"\nLISTEN = \":2\"", `bbs.toml:3:1: unknown key "telnet.LISTEN"`},
 		{"telnet = 1", `bbs.toml:1:10: telnet: must be a table`},
 		{"[bbs]\nname = 1", `bbs.toml:2:8: bbs.name: must be a string`},
 		{"[bbs]\nnode = 1", `bbs.toml:2:1: unknown key "bbs.node"`},
@@ -732,9 +733,9 @@ func TestLangErrors(t *testing.T) {
 	}, "\n")
 	cfg, ds := parseScreens([]byte(data))
 	want := []string{
-		`screens/screens.toml:1:1: screen.lang: invalid language code "RU"`,
-		`screens/screens.toml:1:1: lang.de.more: zero-width grapheme U+200B`,
-		`screens/screens.toml:1:1: lang: invalid language code "e"`,
+		`screens/screens.toml:2:8: screen.lang: invalid language code "RU"`,
+		`screens/screens.toml:5:8: lang.de.more: zero-width grapheme U+200B`,
+		`screens/screens.toml:3:7: lang: invalid language code "e"`,
 	}
 	if got := messages(ds); !slices.Equal(got, want) {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
