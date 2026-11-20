@@ -17,6 +17,10 @@ A new terminal size takes effect at the next screen.
 Screens are text files of the sysop in the BBT format. A file has text, styles, fields and conditions.
 One screen can have different forms for a narrow and a wide terminal.
 
+A row can stretch to the width of the screen: dot leaders, rules and centred fields.
+A spacer line keeps the last rows at the bottom of each terminal.
+A screen can grow with the terminal and keep empty columns on each side.
+
 A theme gives the styles, and each colour depth can have its own.
 Velour replaces a colour that the terminal does not have with the nearest one.
 

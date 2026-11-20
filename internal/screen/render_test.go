@@ -293,6 +293,20 @@ func TestRenderPageMemory(t *testing.T) {
 	}
 }
 
+// A row with many stretch tokens does not grow the memory of the render:
+// the row keeps at most 2W tokens (section 6.6).
+func TestRenderStretchMemory(t *testing.T) {
+	s := load(t, "x"+strings.Repeat("{~}", 300000)+"\n")
+	env := &screen.Env{Term: screen.Term{Cols: 80, Rows: 25}}
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	countRows(s, env)
+	runtime.ReadMemStats(&after)
+	if n := after.TotalAlloc - before.TotalAlloc; n > 1<<20 {
+		t.Errorf("render allocated %d bytes, want at most 1 MB", n)
+	}
+}
+
 // A long source line that gives no row does not grow the memory of the render:
 // the buffers of a line have at most W cells.
 func TestRenderLineMemory(t *testing.T) {

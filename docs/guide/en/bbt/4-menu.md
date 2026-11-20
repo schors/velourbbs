@@ -207,7 +207,8 @@ After `logoff`, the BBS shows the screen `goodbye` and ends the session.
 
 ```
 
-The 3 empty lines at the end of the file keep the hairline at row 21. The screen has 24 rows:
+The 3 empty lines at the end of the file keep the hairline at row 21.
+The screen has 24 rows. Rows 22–24 are empty:
 
 ```text
 
@@ -301,5 +302,5 @@ Full rules: [menu-nav](../../../specs/menu-nav.md), section 7.
 
 - `velourbbs check` gives no output.
 - `velourbbs preview main --keys A,ESC,G` gives the event lines above.
-- `velourbbs preview goodbye` gives the 24 rows above.
+- `velourbbs preview goodbye` gives the 24 rows above: rows 22–24 are empty.
 - In the telnet client, `A` shows `about`, `Esc` goes back, `G` shows `goodbye` and ends the session.

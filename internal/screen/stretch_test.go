@@ -59,6 +59,8 @@ func TestStretch(t *testing.T) {
 		// The cut through a wide grapheme leaves a space.
 		{"wide cut", "a中中中中{~.}中", 10, []string{"a中中中中 "}},
 		{"wide", "中{~.}中", 10, []string{"中......中"}},
+		// More than 2W tokens: only the last free cells' tokens get a cell.
+		{"many", "a" + strings.Repeat("{~1}", 25) + strings.Repeat("{~2}", 5) + "b", 10, []string{"a11122222b"}},
 		// A fixed-width field is its cells.
 		{"field", "{term.type   }{~.}{term.cols}", 20, []string{"ansi          ....20"}},
 		// A stretch token in a false block has no effect: the line wraps.

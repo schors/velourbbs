@@ -351,7 +351,7 @@ velourbbs preview log
 ```
 
 The command gives the two pages of the list, one after the other.
-`--size 80x20` gives the four pages of the small terminal.
+`--size 80x15` gives the three pages of the small terminal.
 
 `--keys` moves the cursor, opens a note and turns the pages:
 

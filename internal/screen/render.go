@@ -279,7 +279,7 @@ func (r *renderer) walk(segs []Seg, cur Style) Style {
 			case r.counting != nil:
 				r.reached = true
 			case r.stretching:
-				r.sl.stretch(seg.Fill, cur)
+				r.sl.stretch(seg.Fill, cur, r.w)
 			}
 		case Spacer:
 			r.spacerLine()
@@ -364,11 +364,13 @@ func (r *renderer) countRows(n int) {
 }
 
 // stretchLine is a row with stretch tokens before the share of its free cells (section 6.6).
-// It keeps at most w + 1 cells: the row cuts the rest.
+// It keeps at most w + 1 cells: the row cuts the rest. It keeps at most the last 2w tokens:
+// with more than w tokens, only the last w tokens can get a cell.
 type stretchLine struct {
 	cells []Cell
 	width int // the cells of the row without its stretch tokens
 	toks  []stretchTok
+	n     int // the stretch tokens of the row
 }
 
 // stretchTok is a stretch token at the position at of the cells, with its fill cell.
@@ -385,9 +387,13 @@ func (l *stretchLine) add(g Grapheme, style Style, w int) {
 	}
 }
 
-// stretch adds a stretch token with the fill g in style.
-func (l *stretchLine) stretch(g Grapheme, style Style) {
+// stretch adds a stretch token with the fill g in style to the row of the width w.
+func (l *stretchLine) stretch(g Grapheme, style Style, w int) {
+	if len(l.toks) == 2*w {
+		l.toks = l.toks[:copy(l.toks, l.toks[w:])]
+	}
 	l.toks = append(l.toks, stretchTok{len(l.cells), Cell{g.Text, style}})
+	l.n++
 }
 
 // row gives the cells of the row of the width w: the stretch tokens share the free cells.
@@ -399,9 +405,10 @@ func (l *stretchLine) row(w int) []Cell {
 	}
 	out := make([]Cell, 0, w)
 	prev := 0
+	first := l.n - len(l.toks) // the tokens before l.toks have 0 cells
 	for i, t := range l.toks {
 		out = append(out, l.cells[prev:t.at]...)
-		for range share(free, len(l.toks), i) {
+		for range share(free, l.n, first+i) {
 			out = append(out, t.cell)
 		}
 		prev = t.at
@@ -411,7 +418,7 @@ func (l *stretchLine) row(w int) []Cell {
 
 // reset empties the row.
 func (l *stretchLine) reset() {
-	l.cells, l.width, l.toks = l.cells[:0], 0, l.toks[:0]
+	l.cells, l.width, l.toks, l.n = l.cells[:0], 0, l.toks[:0], 0
 }
 
 // value gives the graphemes of the field r, once for each render.
@@ -474,7 +481,7 @@ func (r *renderer) rowText(segs []Seg, cur Style, env *Env, l *stretchLine) Styl
 		case SetStyle:
 			cur = seg.Apply(cur, r.theme)
 		case Stretch:
-			l.stretch(seg.Fill, cur)
+			l.stretch(seg.Fill, cur, r.w)
 		case If:
 			if seg.Cond.Eval(env) {
 				cur = r.rowText(seg.Then, cur, env, l)
