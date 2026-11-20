@@ -1,7 +1,8 @@
 // Package term holds the terminal of the telnet-term specification: the probe and
 // the terminal values (sections 5 and 6), the page output, the colour reduction
 // and the encoder (section 7), the key decoder, the key queue and the paste (section 8),
-// and the terminal of the line input (docs/specs/line-input.md).
+// the terminal of the line input (docs/specs/line-input.md) and the line form of
+// velourbbs preview (docs/specs/screen-render.md, section 3.7).
 // Specification: docs/specs/telnet-term.md.
 package term
 
@@ -32,35 +33,22 @@ func AppendUpdate(dst []byte, p, prev screen.Page, colors int, vgaRGB bool) []by
 
 // appendPage appends the output of the page p, or of its update when prev is the shown page.
 func appendPage(dst []byte, p screen.Page, prev *screen.Page, colors int, vgaRGB bool) []byte {
-	var model, out screen.Style // the model style and the output style of the previous cell
-	dst = append(dst, "\x1b[?2026h"...)
+	e := encoder{dst: append(dst, "\x1b[?2026h"...), colors: colors, vgaRGB: vgaRGB}
 	if p.Fill == screen.FillErase {
-		model, out = p.Normal, reduceStyle(p.Normal, colors, vgaRGB)
-		dst = appendSGR(dst, out)
+		e.model, e.out = p.Normal, reduceStyle(p.Normal, colors, vgaRGB)
+		e.dst = appendSGR(e.dst, e.out)
 	} else {
-		dst = append(dst, "\x1b[0m"...)
+		e.dst = append(e.dst, "\x1b[0m"...)
 	}
 	if prev == nil {
-		dst = append(dst, "\x1b[2J"...)
-	}
-	appendCell := func(c screen.Cell) {
-		if c.Style != model {
-			model = c.Style
-			if s := reduceStyle(model, colors, vgaRGB); s != out {
-				out = s
-				dst = appendSGR(dst, out)
-			}
-		}
-		dst = appendUTF8(dst, c.Grapheme)
+		e.dst = append(e.dst, "\x1b[2J"...)
 	}
 	fillRow := func(row int) {
 		if p.Fill != screen.FillSpaces || prev != nil {
 			return
 		}
-		dst = appendPos(dst, row)
-		for range p.Cols {
-			appendCell(screen.Cell{Grapheme: " ", Style: p.Normal})
-		}
+		e.dst = appendPos(e.dst, row)
+		e.spaces(p)
 	}
 	// The terminal rows from the top (section 7.1, step 2).
 	for row := range p.Top {
@@ -75,27 +63,92 @@ func appendPage(dst []byte, p screen.Page, prev *screen.Page, colors int, vgaRGB
 				continue
 			}
 		}
-		dst = appendPos(dst, row)
-		for j, c := range line {
-			if c.Grapheme == "" { // the second cell of a wide grapheme gives no output
-				continue
-			}
-			appendCell(c)
-			// The re-sync (section 7.4). next is the index of the cell after the grapheme.
-			next := j + 1
-			if next < len(line) && line[next].Grapheme == "" {
-				next++
-			}
-			if next < len(line) && utf8.RuneCountInString(c.Grapheme) > 1 {
-				dst = append(dst, ' ')
-				dst = appendCUP(dst, row, next+1)
-			}
-		}
+		e.dst = appendPos(e.dst, row)
+		e.row(line, func(dst []byte, col int) []byte { return appendCUP(dst, row, col) })
 	}
 	for row := p.Top + len(p.Rows); row < p.Height; row++ {
 		fillRow(row + 1)
 	}
-	return append(dst, "\x1b[0m\x1b[?2026l"...)
+	return append(e.dst, "\x1b[0m\x1b[?2026l"...)
+}
+
+// AppendLines appends the line form of page p (screen-render, section 3.7) to dst
+// for a terminal with term.colors = colors. The arguments are as of AppendPage.
+// A VGA colour goes out as its RGB value.
+func AppendLines(dst []byte, p screen.Page, colors int) []byte {
+	dst = append(append(dst, p.Header()...), '\n')
+	e := encoder{dst: dst, colors: colors, vgaRGB: true}
+	// endRow resets the style: each row starts with default colours without attributes.
+	endRow := func() {
+		e.dst = append(e.dst, "\x1b[0m\n"...)
+		e.model, e.out = screen.Style{}, screen.Style{}
+	}
+	fillRow := func() {
+		if p.Fill != screen.FillNone {
+			e.spaces(p)
+		}
+		endRow()
+	}
+	for range p.Top {
+		fillRow()
+	}
+	var line screen.Row
+	for i := range p.Rows {
+		line = p.Line(i, line)
+		e.row(line, appendCHA)
+		endRow()
+	}
+	for range p.Height - p.Top - len(p.Rows) {
+		fillRow()
+	}
+	return e.dst
+}
+
+// encoder appends cells to dst with the SGR of section 7.2 and the colour reduction of section 7.3.
+type encoder struct {
+	dst        []byte
+	colors     int
+	vgaRGB     bool
+	model, out screen.Style // the model style and the output style of the previous cell
+}
+
+// cell appends the cell c: the SGR when its output style differs, then its grapheme.
+func (e *encoder) cell(c screen.Cell) {
+	if c.Style != e.model {
+		e.model = c.Style
+		if s := reduceStyle(e.model, e.colors, e.vgaRGB); s != e.out {
+			e.out = s
+			e.dst = appendSGR(e.dst, e.out)
+		}
+	}
+	e.dst = appendUTF8(e.dst, c.Grapheme)
+}
+
+// spaces appends the cells of a fill row: p.Cols spaces in p.Normal.
+func (e *encoder) spaces(p screen.Page) {
+	for range p.Cols {
+		e.cell(screen.Cell{Grapheme: " ", Style: p.Normal})
+	}
+}
+
+// row appends the cells of line with the re-sync of section 7.4.
+// resync appends the move to the 1-based column col of the row.
+func (e *encoder) row(line screen.Row, resync func(dst []byte, col int) []byte) {
+	for j, c := range line {
+		if c.Grapheme == "" { // the second cell of a wide grapheme gives no output
+			continue
+		}
+		e.cell(c)
+		// next is the index of the cell after the grapheme.
+		next := j + 1
+		if next < len(line) && line[next].Grapheme == "" {
+			next++
+		}
+		if next < len(line) && utf8.RuneCountInString(c.Grapheme) > 1 {
+			e.dst = append(e.dst, ' ')
+			e.dst = resync(e.dst, next+1)
+		}
+	}
 }
 
 // appendPos appends ESC[<row>;1H.
@@ -110,6 +163,13 @@ func appendCUP(dst []byte, row, col int) []byte {
 	dst = append(dst, ';')
 	dst = strconv.AppendInt(dst, int64(col), 10)
 	return append(dst, 'H')
+}
+
+// appendCHA appends ESC[<col>G.
+func appendCHA(dst []byte, col int) []byte {
+	dst = append(dst, "\x1b["...)
+	dst = strconv.AppendInt(dst, int64(col), 10)
+	return append(dst, 'G')
 }
 
 // appendUTF8 is the encoder of section 7.4. The model holds valid UTF-8

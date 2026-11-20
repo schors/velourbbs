@@ -32,6 +32,17 @@ velourbbs preview main
 Полные правила: [screen-render](../../../specs/screen-render.md), раздел 3.2.
 Подробно: задача 1 [руководства по BBT](../bbt/1-bbs-directory.md).
 
+`--view` показывает экран в цвете в твоём терминале, а не текстовым дампом:
+
+```
+velourbbs preview main --view
+velourbbs preview main --view --set term.colors=16
+```
+
+Она пишет страницы одну за другой и не ждёт клавишу.
+Каждая страница начинается со своей строки `page`.
+Полные правила: [screen-render](../../../specs/screen-render.md), раздел 3.7.
+
 ## `velourbbs preview --keys`
 
 Она нажимает клавиши и показывает каждый экран. Используй её, чтобы проверить клавиши экрана:
@@ -39,6 +50,8 @@ velourbbs preview main
 ```
 velourbbs preview main --keys A,ESC,G
 ```
+
+С `--keys` и `--view` вместе каждая страница будет в цвете.
 
 Подробно: задача 4 [руководства по BBT](../bbt/4-menu.md).
 

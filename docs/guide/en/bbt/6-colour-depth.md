@@ -167,7 +167,16 @@ velourbbs preview main --set term.type=vt100
 
 Both commands show the screen with the styles of `[theme.16]`.
 The dump shows the colours of the theme as you wrote them.
-Only the telnet client shows the nearest colours of its depth.
+Add `--view` to see the colours of the depth in your terminal:
+
+```
+velourbbs preview main --view
+velourbbs preview main --view --set term.colors=16
+```
+
+`--view` gives the nearest colours of the depth, as a telnet client gets them.
+At 256 and 16777216 colours, the art has the same colours in each terminal.
+At 16 colours, the terminal shows the indexes 0–15 in its own palette.
 
 ## The light theme
 

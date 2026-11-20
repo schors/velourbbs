@@ -17,10 +17,17 @@ func WriteDump(w io.Writer, pages iter.Seq[Page]) error {
 	return nil
 }
 
+// Header gives the first line of the part of page p, without the line end:
+// the page number, the terminal size and fill (screen-render, sections 3.3 and 3.7).
+func (p Page) Header() string {
+	return fmt.Sprintf("page %d %dx%d fill %s", p.Num, p.Cols, p.Height, p.Fill)
+}
+
 // WritePage writes the part of the cell dump for the page p (screen-render, section 3.3).
 func WritePage(w io.Writer, p Page) error {
 	var b bytes.Buffer
-	fmt.Fprintf(&b, "page %d %dx%d fill %s\n", p.Num, p.Cols, p.Height, p.Fill)
+	b.WriteString(p.Header())
+	b.WriteByte('\n')
 	var line Row
 	for i := range p.Rows {
 		line = p.Line(i, line)
