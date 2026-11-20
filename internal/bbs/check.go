@@ -8,6 +8,7 @@ import (
 	"github.com/schors/velourbbs/internal/bbt"
 	"github.com/schors/velourbbs/internal/config"
 	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
 // Check does the checks of menu-nav, section 6, between files in the screen set of each language:
@@ -32,23 +33,27 @@ func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
 			if end && len(s.Args) > 0 {
 				ls.Errorf(s.File, 1, 1, "the %s screen cannot have arguments", name)
 			}
-			for _, it := range s.Items {
+			// An error between an item and another screen has the position of its key path
+			// (screen-render, section 3.1).
+			errorf := func(at tomlcheck.Place, format string, args ...any) {
+				p := at.Value()
+				ls.Errorf(s.File, p.Line, p.Col, format, args...)
+			}
+			for i, it := range s.Items {
 				if !it.Do.Op.HasTarget() {
 					continue
 				}
-				// An error between an item and another screen has the position 2:1.
+				at := bbt.ItemPlace(s.Front, i)
 				if err := CheckTarget(sets, lang, it.Do); err != nil {
-					ls.Errorf(s.File, 2, 1, "item %q: do: %v", it.Key, err)
+					errorf(at.At("do"), "item %q: do: %v", it.Key, err)
 					continue
 				}
 				for _, err := range CheckArgs(Target(sets, lang, it.Do), it.Do.Target(), it.Do.Args) {
-					ls.Errorf(s.File, 2, 1, "item %q: args: %v", it.Key, err)
+					errorf(at.At("args"), "item %q: args: %v", it.Key, err)
 				}
 			}
 			if s.List != nil && s.List.Select != nil {
-				for _, err := range checkSelect(sets, lang, s.List.Select) {
-					ls.Errorf(s.File, 2, 1, "select: %v", err)
-				}
+				checkSelect(sets, lang, s.List.Select, s.Front.At("select"), errorf)
 			}
 		}
 		start := screen.Action{Screen: cfg.Start}
@@ -68,29 +73,29 @@ func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
 
 // checkSelect checks the goto or the gosub of select in a screen of the set lang: its target,
 // its arguments and each {row.<field>} value for an argument that the target uses in data
-// (list-view, section 8).
-func checkSelect(sets bbt.Sets, lang string, sel *screen.Select) []error {
+// (list-view, section 8). at is the place of select.
+func checkSelect(sets bbt.Sets, lang string, sel *screen.Select, at tomlcheck.Place,
+	errorf func(at tomlcheck.Place, format string, args ...any)) {
 	a := sel.Action(nil, 1) // each argument with a value
 	if !a.Op.HasTarget() {
-		return nil
+		return
 	}
 	if err := CheckTarget(sets, lang, a); err != nil {
-		return []error{fmt.Errorf("do: %w", err)}
+		errorf(at.At("do"), "select: do: %v", err)
+		return
 	}
 	t := Target(sets, lang, a)
-	var errs []error
 	for _, err := range CheckArgs(t, a.Target(), a.Args) {
-		errs = append(errs, fmt.Errorf("args: %w", err))
+		errorf(at.At("args"), "select: args: %v", err)
 	}
 	if t.List == nil {
-		return errs
+		return
 	}
 	for _, name := range slices.Sorted(maps.Keys(sel.Refs)) {
 		if slices.Contains(slices.Collect(maps.Values(t.List.ArgRefs)), name) {
-			errs = append(errs, fmt.Errorf("args: %s: screen %q uses the argument in data", name, a.Target()))
+			errorf(at.At("args", name), "select: args: %s: screen %q uses the argument in data", name, a.Target())
 		}
 	}
-	return errs
 }
 
 // checkSets reports each screen name of a set that is not in the set of each other language,

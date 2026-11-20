@@ -35,7 +35,7 @@ type Provider struct {
 	// Check checks the value of the argument name.
 	Check func(name, value string) error
 	// Rows gives the rows for the argument values args in the language lang of the screen set.
-	// fsys is the BBS directory. Each error starts with the name of an argument.
+	// fsys is the BBS directory. Each error is a screen.KeyError of an argument.
 	rows func(fsys fs.FS, lang string, args map[string]string, load Load) ([]screen.ListRow, []error)
 }
 
@@ -78,13 +78,13 @@ func (p *Provider) CheckArgs(args []string) []error {
 }
 
 // Rows checks the values args and gives the rows of p in the language lang (section 4).
-// Each error starts with the name of an argument: "<name>: <error>".
+// Each error is a screen.KeyError of an argument: "<name>: <error>".
 func (p *Provider) Rows(fsys fs.FS, lang string, args map[string]string, load Load) ([]screen.ListRow, []error) {
 	var errs []error
 	for _, a := range p.Args {
 		if v, ok := args[a.Name]; ok {
 			if err := p.Check(a.Name, v); err != nil {
-				errs = append(errs, fmt.Errorf("%s: %w", a.Name, err))
+				errs = append(errs, screen.KeyError{Key: a.Name, Err: err})
 			}
 		}
 	}
@@ -94,6 +94,9 @@ func (p *Provider) Rows(fsys fs.FS, lang string, args map[string]string, load Lo
 	return p.rows(fsys, lang, args, load)
 }
 
+// dirError gives an error of the argument dir.
+func dirError(err error) error { return screen.KeyError{Key: "dir", Err: err} }
+
 // fileRows gives the rows of the provider files: the content files of the directory dir
 // (section 4.1).
 func fileRows(fsys fs.FS, lang string, args map[string]string, load Load) ([]screen.ListRow, []error) {
@@ -102,15 +105,15 @@ func fileRows(fsys fs.FS, lang string, args map[string]string, load Load) ([]scr
 	info, err := fs.Stat(fsys, name)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		return nil, []error{fmt.Errorf("dir: directory %q does not exist", dir)}
+		return nil, []error{dirError(fmt.Errorf("directory %q does not exist", dir))}
 	case err != nil:
-		return nil, []error{fmt.Errorf("dir: directory %q: %w", dir, err)}
+		return nil, []error{dirError(fmt.Errorf("directory %q: %w", dir, err))}
 	case !info.IsDir():
-		return nil, []error{fmt.Errorf("dir: %q is not a directory", dir)}
+		return nil, []error{dirError(fmt.Errorf("%q is not a directory", dir))}
 	}
 	entries, err := fs.ReadDir(fsys, name)
 	if err != nil {
-		return nil, []error{fmt.Errorf("dir: directory %q: %w", dir, err)}
+		return nil, []error{dirError(fmt.Errorf("directory %q: %w", dir, err))}
 	}
 	var names []string
 	for _, e := range entries {
@@ -129,7 +132,7 @@ func fileRows(fsys fs.FS, lang string, args map[string]string, load Load) ([]scr
 		p := dir + "/" + n
 		c, err := load(p)
 		if err != nil {
-			errs = append(errs, fmt.Errorf("dir: %w", err))
+			errs = append(errs, dirError(err))
 		}
 		if c != nil {
 			rows = append(rows, screen.ListRow{"path": p, "title": c.Title, "minutes": c.Minutes(0, 0)})

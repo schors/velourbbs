@@ -108,7 +108,7 @@ func TestSearchNotRegular(t *testing.T) {
 		`screens/main.bbt:6:1: fragment "screens/ru/_logo.bbt" does not exist (language "ru")`,
 		`screens/ru/menu.bbt:1:1: not a regular file`,
 		`screens/ru/news.bbt:1:1: not a regular file`,
-		`screens/text.bbt:2:1: file: content file "a.txt": not a regular file (language "ru")`,
+		`screens/text.bbt:2:8: file: content file "a.txt": not a regular file (language "ru")`,
 	}
 	if !slices.Equal(msgs, want) {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(msgs, "\n"), strings.Join(want, "\n"))
@@ -159,7 +159,7 @@ func TestLangActions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		_, msgs := loadLangs(map[string]string{"screens/main.bbt": item("A", tt.do)}, nil, []string{"en", "ru"}, true)
-		want := `screens/main.bbt:2:1: item "A": do: ` + tt.want
+		want := `screens/main.bbt:4:6: item "A": do: ` + tt.want
 		if !slices.Equal(msgs, []string{want}) {
 			t.Errorf("%q: %q, want %q", tt.do, msgs, want)
 		}
@@ -185,7 +185,7 @@ func TestSetDiags(t *testing.T) {
 	want := []string{
 		`screens/main.bbt:6:1: unknown style "nostyle"`,
 		`screens/main.bbt:7:1: fragment "screens/_x.bbt" does not exist (language "en")`,
-		`screens/ru/texts.bbt:2:1: item "3": args: file: content file "x.md" does not exist (language "en")`,
+		`screens/ru/texts.bbt:5:17: item "3": args: file: content file "x.md" does not exist (language "en")`,
 	}
 	if !slices.Equal(msgs, want) {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(msgs, "\n"), strings.Join(want, "\n"))

@@ -47,7 +47,7 @@ func TestFieldsErrors(t *testing.T) {
 		want   string
 		status int
 	}{
-		{"check", nil, "screens/main.bbt:2:1: item \"S\": when: unknown field \"term.colours\"\n", exitError},
+		{"check", nil, "screens/main.bbt:7:8: item \"S\": when: unknown field \"term.colours\"\n", exitError},
 		{"list", []string{"x"}, "velourbbs fields: no arguments expected\n", exitUsage},
 		{"list", []string{"--sample=x"}, "invalid boolean value \"x\" for -sample: parse error\n", exitUsage},
 	}

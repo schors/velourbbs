@@ -78,7 +78,7 @@ screens/term.bbt:14:38: integer field "term.colors" needs an operator
 ## `item: must be an array of tables`
 
 ```
-screens/main.bbt:2:1: item: must be an array of tables
+screens/main.bbt:2:2: item: must be an array of tables
 screens/main.bbt:5:2: table item already exists
 screens/main.bbt:5:2: table item already exists as an array of tables
 screens/main.bbt:5:3: key item already exists as a table, but should be an array table
@@ -90,7 +90,7 @@ The first message comes from a screen with one item. The other messages give the
 ## `unknown screen`
 
 ```
-screens/main.bbt:2:1: item "T": do: unknown screen "term"
+screens/main.bbt:13:6: item "T": do: unknown screen "term"
 ```
 
 `gosub term` needs the file `screens/term.bbt`. Create the file, or correct the name.
@@ -127,8 +127,8 @@ Or delete the file and each item that opens it.
 ## `content file ... does not exist`
 
 ```
-screens/code.bbt:2:1: file: content file "src/lamp.c" does not exist
-screens/texts.bbt:2:1: item "1": args: file: content file "lmap.md" does not exist
+screens/code.bbt:2:8: file: content file "src/lamp.c" does not exist
+screens/texts.bbt:5:17: item "1": args: file: content file "lmap.md" does not exist
 ```
 
 - The screen `code` holds the snippet of task 7 ("A source file").
@@ -140,7 +140,7 @@ screens/texts.bbt:2:1: item "1": args: file: content file "lmap.md" does not exi
 ## `directory ... does not exist`
 
 ```
-screens/log.bbt:2:1: data: args: dir: directory "lgo" does not exist
+screens/log.bbt:2:41: data: args: dir: directory "lgo" does not exist
 ```
 
 The key `data` of the list screen `log` names the directory `lgo` (task 8),

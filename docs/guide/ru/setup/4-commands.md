@@ -10,7 +10,7 @@
 Иначе она выводит по одной строке на каждую ошибку или предупреждение:
 
 ```
-screens/main.bbt:2:1: item "S": when: unknown field "term.colours"
+screens/main.bbt:7:8: item "S": when: unknown field "term.colours"
 screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100
 ```
 

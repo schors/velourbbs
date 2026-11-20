@@ -244,32 +244,32 @@ func TestFileForm(t *testing.T) {
 }
 
 func TestFrontMatter(t *testing.T) {
-	// A TOML error has the position of its key or value; each other error has 2:1 (screen-render, section 3.1).
+	// Each error has the position of its key or value (screen-render, section 3.1).
 	tests := []struct {
 		files map[string]string
 		want  []string
 	}{
 		{map[string]string{"main.bbt": "+++\n\n\n[[item]]\nkey = \"S\"\ndo = \"logoff\"\nwhen = \"term.colours == 1\"\n+++\n"},
-			[]string{`screens/main.bbt:2:1: item "S": when: unknown field "term.colours"`}},
+			[]string{`screens/main.bbt:7:8: item "S": when: unknown field "term.colours"`}},
 		{map[string]string{"s.bbt": "+++\nwidth = 5\ncolor = 1\n+++\n"}, []string{`screens/s.bbt:2:9: width: must be an array of integers`}},
 		{map[string]string{"s.bbt": "+++\nwidth = [0, 300]\nnarrow = \"small\"\n+++\n"}, []string{`screens/s.bbt:3:1: unknown key "narrow"`}},
 		{map[string]string{"s.bbt": "+++\nwidth = [0, 300]\n+++\n"},
-			[]string{`screens/s.bbt:2:1: width: width [0, 300] is not in 1 <= min <= max <= 255`}},
-		{map[string]string{"s.bbt": "+++\n\nwidth = [1]\n+++\n"}, []string{`screens/s.bbt:2:1: width: must be an array of 2 integers`}},
+			[]string{`screens/s.bbt:2:9: width: width [0, 300] is not in 1 <= min <= max <= 255`}},
+		{map[string]string{"s.bbt": "+++\n\nwidth = [1]\n+++\n"}, []string{`screens/s.bbt:3:9: width: must be an array of 2 integers`}},
 		{map[string]string{"s.bbt": "+++\nalign = \"middle\"\nvalign = \"center\"\nfill = \"clear\"\n+++\n"}, []string{
-			`screens/s.bbt:2:1: align: invalid value "middle", want "left", "center" or "right"`,
-			`screens/s.bbt:2:1: valign: invalid value "center", want "top", "middle" or "bottom"`,
-			`screens/s.bbt:2:1: fill: invalid value "clear", want "none", "spaces" or "erase"`,
+			`screens/s.bbt:2:9: align: invalid value "middle", want "left", "center" or "right"`,
+			`screens/s.bbt:3:10: valign: invalid value "center", want "top", "middle" or "bottom"`,
+			`screens/s.bbt:4:8: fill: invalid value "clear", want "none", "spaces" or "erase"`,
 		}},
 		{map[string]string{"s.bbt": "+++\nfill = 1\n+++\n"}, []string{`screens/s.bbt:2:8: fill: must be a string`}},
-		{map[string]string{"s.bbt": "+++\ngutter = 101\n+++\n"}, []string{`screens/s.bbt:2:1: gutter: 101, must be from 0 to 100`}},
-		{map[string]string{"s.bbt": "+++\ngutter = -1\n+++\n"}, []string{`screens/s.bbt:2:1: gutter: -1, must be from 0 to 100`}},
+		{map[string]string{"s.bbt": "+++\ngutter = 101\n+++\n"}, []string{`screens/s.bbt:2:10: gutter: 101, must be from 0 to 100`}},
+		{map[string]string{"s.bbt": "+++\ngutter = -1\n+++\n"}, []string{`screens/s.bbt:2:10: gutter: -1, must be from 0 to 100`}},
 		{map[string]string{"s.bbt": "+++\ngutter = \"6\"\n+++\n"}, []string{`screens/s.bbt:2:10: gutter: must be an integer`}},
 		// The column counts code points.
 		{map[string]string{"s.bbt": "+++\nitem = [{ key = \"яя\", do = 1 }]\n+++\n"}, []string{`screens/s.bbt:2:28: item: invalid type`}},
-		// An alias of screens/screens.toml in when: a type error at 2:1.
+		// An alias of screens/screens.toml in when: a type error at the value of when.
 		{map[string]string{"s.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\nwhen = \"t > 1\"\n+++\n"},
-			[]string{`screens/s.bbt:2:1: item "A": when: string field "term.type" takes a string, found an integer`}},
+			[]string{`screens/s.bbt:5:8: item "A": when: string field "term.type" takes a string, found an integer`}},
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ndo = 1\nx = \"y\"\n+++\n"}, []string{`screens/s.bbt:5:6: item.do: must be a string`}},
 		// The aliases are in screens/screens.toml: [fields] in a front matter is an unknown key (section 3.2).
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ny = 1\nx = 2\n+++\n"}, []string{
@@ -278,9 +278,10 @@ func TestFrontMatter(t *testing.T) {
 			`screens/s.bbt:6:1: unknown key "item.x"`,
 		}},
 		{map[string]string{"s.bbt": "+++\nwidth = [1, 0]\n[[item]]\n+++\n"}, []string{
-			`screens/s.bbt:2:1: width: width [1, 0] is not in 1 <= min <= max <= 255`,
-			`screens/s.bbt:2:1: item 1: key is missing`,
-			`screens/s.bbt:2:1: item 1: do is missing`,
+			// A missing key at the [[item]] header.
+			`screens/s.bbt:2:9: width: width [1, 0] is not in 1 <= min <= max <= 255`,
+			`screens/s.bbt:3:1: item 1: key is missing`,
+			`screens/s.bbt:3:1: item 1: do is missing`,
 		}},
 		// A key that matches only without case and a table in place of [[item]] have the position of the key.
 		{map[string]string{"s.bbt": "+++\n[[item]]\nKEY = \"a\"\nkey = \"b\"\ndo = \"logoff\"\n+++\n"}, []string{`screens/s.bbt:3:1: unknown key "item.KEY"`}},
@@ -362,12 +363,12 @@ func TestItemErrors(t *testing.T) {
 		items []string // the lines of each [[item]] table
 		want  []string
 	}{
-		// An invalid key or do is an other error at 2:1. An item without a valid key has its number.
-		{[]string{`key = "?"`, `do = "logoff"`}, []string{`screens/s.bbt:2:1: item 1: key: invalid key "?"`}},
-		{[]string{`key = "ы"`, `do = "logoff"`}, []string{`screens/s.bbt:2:1: item 1: key: invalid key "ы"`}},
+		// An invalid key or do has the position of its value. An item without a valid key has its number.
+		{[]string{`key = "?"`, `do = "logoff"`}, []string{`screens/s.bbt:3:7: item 1: key: invalid key "?"`}},
+		{[]string{`key = "ы"`, `do = "logoff"`}, []string{`screens/s.bbt:3:7: item 1: key: invalid key "ы"`}},
 		{[]string{`key = "F13"`, `do = "x"`}, []string{
-			`screens/s.bbt:2:1: item 1: key: invalid key "F13"`,
-			`screens/s.bbt:2:1: item 1: do: unknown action "x"`,
+			`screens/s.bbt:3:7: item 1: key: invalid key "F13"`,
+			`screens/s.bbt:4:6: item 1: do: unknown action "x"`,
 		}},
 		// A type error hides the other errors.
 		{[]string{`do = "x"`, `key = 1`}, []string{`screens/s.bbt:4:7: item.key: must be a string`}},
@@ -375,65 +376,67 @@ func TestItemErrors(t *testing.T) {
 		{[]string{`key = 1.5`}, []string{`screens/s.bbt:3:7: item.key: must be a string`}},
 		{[]string{`key = {}`}, []string{`screens/s.bbt:3:7: item.key: must be a string`}},
 		{[]string{`do = "logoff"`, `[item.key]`}, []string{`screens/s.bbt:4:2: item.key: must be a string`}},
-		{[]string{`key = "esc"`, `do = "Goto main"`}, []string{`screens/s.bbt:2:1: item "ESC": do: unknown action "Goto"`}},
-		{[]string{`key = "A"`, `do = ""`}, []string{`screens/s.bbt:2:1: item "A": do: unknown action ""`}},
-		{[]string{`key = "A"`, `do = "goto"`}, []string{`screens/s.bbt:2:1: item "A": do: goto needs a screen name`}},
-		{[]string{`key = "A"`, `do = "goto  main"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name " main"`}},
-		{[]string{`key = "A"`, `do = "goto Main"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name "Main"`}},
-		{[]string{`key = "A"`, `do = "goto _f"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name "_f"`}},
-		{[]string{`key = "A"`, `do = "gosub"`}, []string{`screens/s.bbt:2:1: item "A": do: gosub needs a screen name`}},
-		{[]string{`key = "A"`, `do = "gosub Main"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid screen name "Main"`}},
-		{[]string{`key = "A"`, `do = "back main"`}, []string{`screens/s.bbt:2:1: item "A": do: back takes no argument`}},
-		{[]string{`key = "A"`, `do = "top "`}, []string{`screens/s.bbt:2:1: item "A": do: top takes no argument`}},
-		{[]string{`key = "A"`, `do = "Back"`}, []string{`screens/s.bbt:2:1: item "A": do: unknown action "Back"`}},
+		{[]string{`key = "esc"`, `do = "Goto main"`}, []string{`screens/s.bbt:4:6: item "ESC": do: unknown action "Goto"`}},
+		{[]string{`key = "A"`, `do = ""`}, []string{`screens/s.bbt:4:6: item "A": do: unknown action ""`}},
+		{[]string{`key = "A"`, `do = "goto"`}, []string{`screens/s.bbt:4:6: item "A": do: goto needs a screen name`}},
+		{[]string{`key = "A"`, `do = "goto  main"`}, []string{`screens/s.bbt:4:6: item "A": do: invalid screen name " main"`}},
+		{[]string{`key = "A"`, `do = "goto Main"`}, []string{`screens/s.bbt:4:6: item "A": do: invalid screen name "Main"`}},
+		{[]string{`key = "A"`, `do = "goto _f"`}, []string{`screens/s.bbt:4:6: item "A": do: invalid screen name "_f"`}},
+		{[]string{`key = "A"`, `do = "gosub"`}, []string{`screens/s.bbt:4:6: item "A": do: gosub needs a screen name`}},
+		{[]string{`key = "A"`, `do = "gosub Main"`}, []string{`screens/s.bbt:4:6: item "A": do: invalid screen name "Main"`}},
+		{[]string{`key = "A"`, `do = "back main"`}, []string{`screens/s.bbt:4:6: item "A": do: back takes no argument`}},
+		{[]string{`key = "A"`, `do = "top "`}, []string{`screens/s.bbt:4:6: item "A": do: top takes no argument`}},
+		{[]string{`key = "A"`, `do = "Back"`}, []string{`screens/s.bbt:4:6: item "A": do: unknown action "Back"`}},
 		{[]string{`key = "A"`, `do = "back"`, `args = { f = "a" }`}, []string{
-			`screens/s.bbt:2:1: item "A": args: only goto and gosub take arguments`,
+			`screens/s.bbt:5:8: item "A": args: only goto and gosub take arguments`,
 		}},
 		{[]string{`key = "A"`, `do = "top"`, `args = { f = "a" }`}, []string{
-			`screens/s.bbt:2:1: item "A": args: only goto and gosub take arguments`,
+			`screens/s.bbt:5:8: item "A": args: only goto and gosub take arguments`,
 		}},
-		{[]string{`key = "A"`, `do = "logoff now"`}, []string{`screens/s.bbt:2:1: item "A": do: logoff takes no argument`}},
-		{[]string{`key = "A"`, `do = "logoff "`}, []string{`screens/s.bbt:2:1: item "A": do: logoff takes no argument`}},
-		{[]string{`key = "A"`, `do = "theme"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid theme action "theme"`}},
-		{[]string{`key = "A"`, `do = "theme blue"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid theme action "theme blue"`}},
-		{[]string{`key = "A"`, `do = "theme Dark"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid theme action "theme Dark"`}},
-		{[]string{`key = "A"`, `do = "theme  dark"`}, []string{`screens/s.bbt:2:1: item "A": do: invalid theme action "theme  dark"`}},
+		{[]string{`key = "A"`, `do = "logoff now"`}, []string{`screens/s.bbt:4:6: item "A": do: logoff takes no argument`}},
+		{[]string{`key = "A"`, `do = "logoff "`}, []string{`screens/s.bbt:4:6: item "A": do: logoff takes no argument`}},
+		{[]string{`key = "A"`, `do = "theme"`}, []string{`screens/s.bbt:4:6: item "A": do: invalid theme action "theme"`}},
+		{[]string{`key = "A"`, `do = "theme blue"`}, []string{`screens/s.bbt:4:6: item "A": do: invalid theme action "theme blue"`}},
+		{[]string{`key = "A"`, `do = "theme Dark"`}, []string{`screens/s.bbt:4:6: item "A": do: invalid theme action "theme Dark"`}},
+		{[]string{`key = "A"`, `do = "theme  dark"`}, []string{`screens/s.bbt:4:6: item "A": do: invalid theme action "theme  dark"`}},
 		{[]string{`key = "A"`, `do = "theme dark"`, `args = { f = "a" }`}, []string{
-			`screens/s.bbt:2:1: item "A": args: only goto and gosub take arguments`,
+			`screens/s.bbt:5:8: item "A": args: only goto and gosub take arguments`,
 		}},
 		{[]string{`key = "a"`, `do = 1`, `when = "item.A"`, `x = 1`}, []string{`screens/s.bbt:4:6: item.do: must be a string`}},
-		// Each when error is an other error at 2:1, also a syntax error.
+		// Each when error has the position of the value of when, also a syntax error.
+		// A missing key has the position of the [[item]] header.
 		{[]string{`key = "a"`, `do = "logoff"`, `when = "item.A"`}, []string{
-			`screens/s.bbt:2:1: item "A": when: field "item.A" is valid only in {#if}`,
+			`screens/s.bbt:5:8: item "A": when: field "item.A" is valid only in {#if}`,
 		}},
 		{[]string{`key = "a"`, `when = "term.cols >"`}, []string{
 			`screens/s.bbt:2:1: item "A": do is missing`,
-			`screens/s.bbt:2:1: item "A": when: expected an integer or a string, found end of condition`,
+			`screens/s.bbt:4:8: item "A": when: expected an integer or a string, found end of condition`,
 		}},
-		// The args errors of section 8.4 are other errors at 2:1. A type error has its position.
+		// The args errors of section 8.4 have the position of the value of args or of the argument,
+		// an invalid argument name the position of its key.
 		{[]string{`key = "A"`, `do = "logoff"`, `args = { file = "a.md" }`}, []string{
-			`screens/s.bbt:2:1: item "A": args: only goto and gosub take arguments`,
+			`screens/s.bbt:5:8: item "A": args: only goto and gosub take arguments`,
 		}},
 		{[]string{`key = "A"`, `do = "x"`, `args = { file = "a.md" }`}, []string{
-			`screens/s.bbt:2:1: item "A": do: unknown action "x"`,
+			`screens/s.bbt:4:6: item "A": do: unknown action "x"`,
 		}},
 		{[]string{`key = "A"`, `do = "x"`, `args = { File = "{" }`}, []string{
-			`screens/s.bbt:2:1: item "A": do: unknown action "x"`,
-			`screens/s.bbt:2:1: item "A": args: invalid argument name "File"`,
+			`screens/s.bbt:4:6: item "A": do: unknown action "x"`,
+			`screens/s.bbt:5:10: item "A": args: invalid argument name "File"`,
 		}},
 		{[]string{`key = "A"`, `do = "logoff"`, `args = { f = "\u202e" }`}, []string{
-			`screens/s.bbt:2:1: item "A": args: only goto and gosub take arguments`,
-			`screens/s.bbt:2:1: item "A": args: f: value has a control character`,
+			`screens/s.bbt:5:8: item "A": args: only goto and gosub take arguments`,
+			`screens/s.bbt:5:14: item "A": args: f: value has a control character`,
 		}},
 		{[]string{`key = "A"`, `do = "goto r"`, `args = { File = "a.md", 2f = "b", "a-b" = "c" }`}, []string{
-			`screens/s.bbt:2:1: item "A": args: invalid argument name "2f"`,
-			`screens/s.bbt:2:1: item "A": args: invalid argument name "File"`,
-			`screens/s.bbt:2:1: item "A": args: invalid argument name "a-b"`,
+			`screens/s.bbt:5:10: item "A": args: invalid argument name "File"`,
+			`screens/s.bbt:5:25: item "A": args: invalid argument name "2f"`,
+			`screens/s.bbt:5:35: item "A": args: invalid argument name "a-b"`,
 		}},
 		{[]string{`key = "A"`, `do = "goto r"`, `args = { a = "{arg.a}", b = "x\ty", c = "x\u0085" }`}, []string{
-			`screens/s.bbt:2:1: item "A": args: a: value has "{"`,
-			`screens/s.bbt:2:1: item "A": args: b: value has a control character`,
-			`screens/s.bbt:2:1: item "A": args: c: value has a control character`,
+			`screens/s.bbt:5:14: item "A": args: a: value has "{"`,
+			`screens/s.bbt:5:29: item "A": args: b: value has a control character`,
+			`screens/s.bbt:5:41: item "A": args: c: value has a control character`,
 		}},
 		{[]string{`key = "A"`, `do = "goto r"`, `args = { file = 1 }`}, []string{
 			`screens/s.bbt:5:17: item.args: must be a table of strings`,
@@ -467,8 +470,8 @@ do = "logoff"
 +++
 `
 	want := []string{
-		`screens/s.bbt:2:1: item "S": key: duplicate key`,
-		`screens/s.bbt:2:1: item "ANY": key: duplicate key`,
+		`screens/s.bbt:9:7: item "S": key: duplicate key`,
+		`screens/s.bbt:12:7: item "ANY": key: duplicate key`,
 	}
 	if _, msgs := load(map[string]string{"s.bbt": data}); !slices.Equal(msgs, want) {
 		t.Errorf("duplicates:\n got %q\nwant %q", msgs, want)
@@ -706,9 +709,9 @@ func TestItemPaths(t *testing.T) {
 		want  []string
 	}{
 		{map[string]string{"goodbye.bbt": "+++\nwidth = [40, 80]\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n"},
-			[]string{`screens/goodbye.bbt:2:1: the goodbye screen cannot have items`}},
+			[]string{`screens/goodbye.bbt:3:1: item: the goodbye screen cannot have items`}},
 		{map[string]string{"shutdown.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n"},
-			[]string{`screens/shutdown.bbt:2:1: the shutdown screen cannot have items`}},
+			[]string{`screens/shutdown.bbt:2:1: item: the shutdown screen cannot have items`}},
 		{map[string]string{
 			"main.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\n+++\n{#if item.A and item.B}a{/if}\n{>_f}",
 			"_f.bbt":   "{#if item.C}a{/if}",

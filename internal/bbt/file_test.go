@@ -50,42 +50,42 @@ func TestFileErrors(t *testing.T) {
 	}{{
 		name:  "literal file does not exist",
 		files: map[string]string{"screens/reader.bbt": reader(`file = "gold.md"`, "{>file}\n")},
-		want:  []string{`screens/reader.bbt:2:1: file: content file "gold.md" does not exist`},
+		want:  []string{`screens/reader.bbt:2:8: file: content file "gold.md" does not exist`},
 	}, {
 		name: "goto file does not exist",
 		files: map[string]string{
 			"screens/reader.bbt": reader(`file = "{arg.file}"`, "{>file}\n"),
 			"screens/texts.bbt":  gotoReader("gild.md"),
 		},
-		want: []string{`screens/texts.bbt:2:1: item "1": args: file: content file "gild.md" does not exist`},
+		want: []string{`screens/texts.bbt:5:17: item "1": args: file: content file "gild.md" does not exist`},
 	}, {
 		name: "gosub file does not exist",
 		files: map[string]string{
 			"screens/reader.bbt": reader(`file = "{arg.file}"`, "{>file}\n"),
 			"screens/texts.bbt":  strings.Replace(gotoReader("gild.md"), "goto", "gosub", 1),
 		},
-		want: []string{`screens/texts.bbt:2:1: item "1": args: file: content file "gild.md" does not exist`},
+		want: []string{`screens/texts.bbt:5:17: item "1": args: file: content file "gild.md" does not exist`},
 	}, {
 		name: "goto invalid path",
 		files: map[string]string{
 			"screens/reader.bbt": reader(`file = "{arg.file}"`, "{>file}\n"),
 			"screens/texts.bbt":  gotoReader("../gold.md"),
 		},
-		want: []string{`screens/texts.bbt:2:1: item "1": args: file: invalid content path "../gold.md"`},
+		want: []string{`screens/texts.bbt:5:17: item "1": args: file: invalid content path "../gold.md"`},
 	}, {
 		name: "not a regular file",
 		files: map[string]string{
 			"screens/reader.bbt": reader(`file = "dir"`, "{>file}\n"),
 			"content/dir/":       "",
 		},
-		want: []string{`screens/reader.bbt:2:1: file: content file "dir": not a regular file`},
+		want: []string{`screens/reader.bbt:2:8: file: content file "dir": not a regular file`},
 	}, {
 		name: "over the size limit",
 		files: map[string]string{
 			"screens/reader.bbt": reader(`file = "big.txt"`, "{>file}\n"),
 			"content/big.txt":    strings.Repeat("a", screen.MaxFileBytes+1),
 		},
-		want: []string{`screens/reader.bbt:2:1: file: content file "big.txt": file is over 1048576 bytes`},
+		want: []string{`screens/reader.bbt:2:8: file: content file "big.txt": file is over 1048576 bytes`},
 	}, {
 		// An error in a content file appears once for the two screens that use it.
 		name: "content error",
@@ -112,10 +112,10 @@ func TestFileErrors(t *testing.T) {
 			"content/gold.md":  gold,
 		},
 		want: []string{
-			`screens/both.bbt:2:1: lines: "gold.md" is a Markdown file`,
-			`screens/both.bbt:2:1: numbers: "gold.md" is a Markdown file`,
-			`screens/code.bbt:2:1: lines: "gold.md" is a Markdown file`,
-			`screens/num.bbt:2:1: numbers: "gold.md" is a Markdown file`,
+			`screens/both.bbt:3:9: lines: "gold.md" is a Markdown file`,
+			`screens/both.bbt:4:11: numbers: "gold.md" is a Markdown file`,
+			`screens/code.bbt:3:9: lines: "gold.md" is a Markdown file`,
+			`screens/num.bbt:3:11: numbers: "gold.md" is a Markdown file`,
 		},
 	}, {
 		name: "last after the end",
@@ -123,7 +123,7 @@ func TestFileErrors(t *testing.T) {
 			"screens/code.bbt": reader("file = \"a.c\"\nlines = [2, 4]", "{>file}\n"),
 			"content/a.c":      "1\n2\n3\n",
 		},
-		want: []string{`screens/code.bbt:2:1: lines: last line 4 is after the end of "a.c" (3 lines)`},
+		want: []string{`screens/code.bbt:3:9: lines: last line 4 is after the end of "a.c" (3 lines)`},
 	}, {
 		// The lines of the file screen apply to each file of a goto.
 		name: "goto lines of a Markdown file",
@@ -133,8 +133,8 @@ func TestFileErrors(t *testing.T) {
 			"content/gold.md":    gold,
 		},
 		want: []string{
-			`screens/code.bbt:2:1: item "2": args: file: lines: "gold.md" is a Markdown file`,
-			`screens/code.bbt:2:1: item "2": args: file: numbers: "gold.md" is a Markdown file`,
+			`screens/code.bbt:5:17: item "2": args: file: lines: "gold.md" is a Markdown file`,
+			`screens/code.bbt:5:17: item "2": args: file: numbers: "gold.md" is a Markdown file`,
 		},
 	}, {
 		name: "goodbye as a file screen",
@@ -142,14 +142,14 @@ func TestFileErrors(t *testing.T) {
 			"screens/goodbye.bbt": "+++\nfile = \"a.txt\"\n+++\n{>file}\n",
 			"content/a.txt":       "a\n",
 		},
-		want: []string{`screens/goodbye.bbt:2:1: file: the goodbye screen cannot be a file screen`},
+		want: []string{`screens/goodbye.bbt:2:8: file: the goodbye screen cannot be a file screen`},
 	}, {
 		name: "shutdown as a file screen",
 		files: map[string]string{
 			"screens/shutdown.bbt": "+++\nfile = \"a.txt\"\n+++\n{>file}\n",
 			"content/a.txt":        "a\n",
 		},
-		want: []string{`screens/shutdown.bbt:2:1: file: the shutdown screen cannot be a file screen`},
+		want: []string{`screens/shutdown.bbt:2:8: file: the shutdown screen cannot be a file screen`},
 	}, {
 		name: "file keys",
 		files: map[string]string{
@@ -165,15 +165,15 @@ func TestFileErrors(t *testing.T) {
 			"content/a.txt": "a\n",
 		},
 		want: []string{
-			`screens/a.bbt:2:1: file: invalid content path "../gold.md"`,
-			`screens/b.bbt:2:1: file: invalid token "{arg.File}", want a content path or {arg.<name>}`,
-			`screens/c.bbt:2:1: file: invalid token "{arg.file} ", want a content path or {arg.<name>}`,
-			`screens/d.bbt:2:1: file: invalid token "{term.type}", want a content path or {arg.<name>}`,
-			`screens/e.bbt:2:1: lines: [3, 2] is not in 1 <= first <= last`,
-			`screens/f.bbt:2:1: lines: must be an array of 2 integers`,
-			`screens/g.bbt:2:1: lines: [0, 1] is not in 1 <= first <= last`,
-			`screens/h.bbt:2:1: lines: the screen has no file`,
-			`screens/h.bbt:2:1: numbers: the screen has no file`,
+			`screens/a.bbt:2:8: file: invalid content path "../gold.md"`,
+			`screens/b.bbt:2:8: file: invalid token "{arg.File}", want a content path or {arg.<name>}`,
+			`screens/c.bbt:2:8: file: invalid token "{arg.file} ", want a content path or {arg.<name>}`,
+			`screens/d.bbt:2:8: file: invalid token "{term.type}", want a content path or {arg.<name>}`,
+			`screens/e.bbt:3:9: lines: [3, 2] is not in 1 <= first <= last`,
+			`screens/f.bbt:3:9: lines: must be an array of 2 integers`,
+			`screens/g.bbt:3:9: lines: [0, 1] is not in 1 <= first <= last`,
+			`screens/h.bbt:2:9: lines: the screen has no file`,
+			`screens/h.bbt:3:11: numbers: the screen has no file`,
 			`screens/i.bbt:2:8: file: must be a string`,
 		},
 	}, {
@@ -190,13 +190,13 @@ func TestFileErrors(t *testing.T) {
 			"content/a.txt": "a\n",
 		},
 		want: []string{
-			`screens/a.bbt:2:1: margin: [20, 20]: left + right is not less than the min width 40`,
-			`screens/b.bbt:2:1: margin: [40, 0]: left + right is not less than the min width 40`,
-			`screens/c.bbt:2:1: margin: [0, 20]: left + right is not less than the min width 20`,
-			`screens/d.bbt:2:1: margin: must be an array of 2 integers`,
-			`screens/e.bbt:2:1: margin: [2, -1] has a value less than 0`,
-			`screens/f.bbt:2:1: margin: the screen has no file`,
-			`screens/g.bbt:2:1: margin: [9223372036854775807, 9223372036854775807]: left + right is not less than the min width 40`,
+			`screens/a.bbt:3:10: margin: [20, 20]: left + right is not less than the min width 40`,
+			`screens/b.bbt:3:10: margin: [40, 0]: left + right is not less than the min width 40`,
+			`screens/c.bbt:4:10: margin: [0, 20]: left + right is not less than the min width 20`,
+			`screens/d.bbt:3:10: margin: must be an array of 2 integers`,
+			`screens/e.bbt:3:10: margin: [2, -1] has a value less than 0`,
+			`screens/f.bbt:2:10: margin: the screen has no file`,
+			`screens/g.bbt:3:10: margin: [9223372036854775807, 9223372036854775807]: left + right is not less than the min width 40`,
 		},
 	}, {
 		name: "file area",
@@ -212,7 +212,7 @@ func TestFileErrors(t *testing.T) {
 		},
 		want: []string{
 			`screens/_frag.bbt:2:1: {>file} in a fragment`,
-			`screens/a.bbt:2:1: file: the body has no {>file}`,
+			`screens/a.bbt:2:8: file: the body has no {>file}`,
 			`screens/b.bbt:9:1: second {>file}`,
 			`screens/c.bbt:8:1: {>file} in a block`,
 			`screens/e.bbt:8:1: {>file} in a screen without file`,
@@ -230,9 +230,9 @@ func TestFileErrors(t *testing.T) {
 		},
 		want: []string{
 			`screens/_frag.bbt:1:1: screen "b": field "meta.author" is valid only in a file screen`,
-			`screens/a.bbt:2:1: item "B": do: "page next" is valid only in a file screen or a list screen`,
-			`screens/a.bbt:2:1: item "C": when: field "file.page" is valid only in a file screen`,
-			`screens/a.bbt:2:1: item "D": do: invalid page action "page up"`,
+			`screens/a.bbt:4:6: item "B": do: "page next" is valid only in a file screen or a list screen`,
+			`screens/a.bbt:8:8: item "C": when: field "file.page" is valid only in a file screen`,
+			`screens/a.bbt:11:6: item "D": do: invalid page action "page up"`,
 			`screens/art.ans:1:1: screen "b": field "file.page" is valid only in a file screen`,
 			`screens/b.bbt:6:1: field "file.title" is valid only in a file screen`,
 			`screens/b.bbt:7:1: field "file.last" is valid only in a file screen`,

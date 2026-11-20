@@ -78,7 +78,7 @@ screens/term.bbt:14:38: integer field "term.colors" needs an operator
 ## `item: must be an array of tables`
 
 ```
-screens/main.bbt:2:1: item: must be an array of tables
+screens/main.bbt:2:2: item: must be an array of tables
 screens/main.bbt:5:2: table item already exists
 screens/main.bbt:5:2: table item already exists as an array of tables
 screens/main.bbt:5:3: key item already exists as a table, but should be an array table
@@ -90,7 +90,7 @@ screens/main.bbt:5:3: key item already exists as a table, but should be an array
 ## `unknown screen`
 
 ```
-screens/main.bbt:2:1: item "T": do: unknown screen "term"
+screens/main.bbt:13:6: item "T": do: unknown screen "term"
 ```
 
 Для `gosub term` нужен файл `screens/term.bbt`. Создай файл или исправь имя.
@@ -127,8 +127,8 @@ screens/old.bbt:1:1: warning: a user cannot reach this screen
 ## `content file ... does not exist`
 
 ```
-screens/code.bbt:2:1: file: content file "src/lamp.c" does not exist
-screens/texts.bbt:2:1: item "1": args: file: content file "lmap.md" does not exist
+screens/code.bbt:2:8: file: content file "src/lamp.c" does not exist
+screens/texts.bbt:5:17: item "1": args: file: content file "lmap.md" does not exist
 ```
 
 - Экран `code` содержит сниппет из задачи 7 («Исходный код»).
@@ -140,7 +140,7 @@ screens/texts.bbt:2:1: item "1": args: file: content file "lmap.md" does not exi
 ## `directory ... does not exist`
 
 ```
-screens/log.bbt:2:1: data: args: dir: directory "lgo" does not exist
+screens/log.bbt:2:41: data: args: dir: directory "lgo" does not exist
 ```
 
 Ключ `data` экрана-списка `log` называет каталог `lgo` (задача 8),

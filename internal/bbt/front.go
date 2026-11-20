@@ -15,6 +15,7 @@ import (
 
 // front is the front matter of a screen (section 3.2).
 type front struct {
+	at     tomlcheck.Place // the root table, with positions in the screen file
 	layout screen.LayoutKeys
 	items  []screen.Item
 	file   *screen.FileSpec // the keys of a file screen, else nil (file-view, section 3)
@@ -55,75 +56,76 @@ type frontDoc struct {
 func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs []string) *front {
 	var doc frontDoc
 	data := []byte(strings.Join(lines, "\n"))
-	_, errs := tomlcheck.Decode(data, &doc)
+	root, errs := tomlcheck.DecodeFront(data, &doc)
 	for _, e := range errs {
-		// The line after "+++" and a column in code points.
-		d.Errorf(e.Line+1, e.RuneCol(data), "%s", e.Msg)
+		d.Errorf(e.Line, e.Col, "%s", e.Msg)
 	}
 	if len(errs) > 0 {
 		return nil
 	}
-	// Each other error has the position 2:1 (screen-render, section 3.1).
+	// Each other error has the position of the key path of its message (screen-render, section 3.1).
 	ok := true
-	errorf := func(format string, args ...any) {
-		d.Errorf(2, 1, format, args...)
+	errorf := func(at tomlcheck.Pos, format string, args ...any) {
+		d.Errorf(at.Line, at.Col, format, args...)
 		ok = false
 	}
-	fr := &front{layout: screen.ParseLayoutKeys(doc.Width, doc.Align, doc.VAlign, doc.Fill, doc.Gutter,
-		func(key string, err error) { errorf("%s: %v", key, err) })}
-	fr.file = parseFileKeys(&doc, errorf)
-	fr.list = parseListKeys(&doc, langs, errorf)
+	fr := &front{at: root, layout: screen.ParseLayoutKeys(doc.Width, doc.Align, doc.VAlign, doc.Fill, doc.Gutter,
+		func(key string, err error) { errorf(root.At(key).Value(), "%s: %v", key, err) })}
+	fr.file = parseFileKeys(&doc, root, errorf)
+	fr.list = parseListKeys(&doc, root, langs, errorf)
 	pages := doc.File != nil || doc.Data != nil // a page action is valid (file-view, section 3.3)
 	seen := map[string]bool{}
 	for i, it := range doc.Item {
+		at := ItemPlace(root, i)
 		// The label of menu-nav, section 6: the valid key, else the number.
 		label := fmt.Sprintf("item %d", i+1)
 		var item screen.Item
 		if it.Key == nil {
-			errorf("%s: key is missing", label)
+			errorf(at.Value(), "%s: key is missing", label)
 		} else if k, valid := key.Parse(*it.Key); !valid {
-			errorf("%s: key: invalid key %q", label, *it.Key)
+			errorf(at.At("key").Value(), "%s: key: invalid key %q", label, *it.Key)
 		} else {
 			item.Key = k
 			label = fmt.Sprintf("item %q", k)
 			if seen[k] {
-				errorf("%s: key: duplicate key", label)
+				errorf(at.At("key").Value(), "%s: key: duplicate key", label)
 			}
 			if doc.Select != nil && key.IsCursor(k) {
-				errorf("%s: key: %q is a key of select", label, k)
+				errorf(at.At("key").Value(), "%s: key: %q is a key of select", label, k)
 			}
 			seen[k] = true
 		}
 		if it.Do == nil {
-			errorf("%s: do is missing", label)
+			errorf(at.Value(), "%s: do is missing", label)
 		} else if a, err := parseAction(*it.Do, langs); err != nil {
-			errorf("%s: do: %v", label, err)
+			errorf(at.At("do").Value(), "%s: do: %v", label, err)
 		} else if a.Op.IsPage() && !pages {
-			errorf("%s: do: %q is valid only in a file screen or a list screen", label, *it.Do)
+			errorf(at.At("do").Value(), "%s: do: %q is valid only in a file screen or a list screen", label, *it.Do)
 		} else {
 			item.Do = a
 		}
 		if it.Args != nil {
 			if item.Do.Op != 0 && !item.Do.Op.HasTarget() { // Op 0: the do has an error
-				errorf("%s: args: only goto and gosub take arguments", label)
+				errorf(at.At("args").Value(), "%s: args: only goto and gosub take arguments", label)
 			}
 			for _, name := range slices.Sorted(maps.Keys(*it.Args)) {
 				if err := screen.CheckArg(name, (*it.Args)[name]); err != nil {
-					errorf("%s: args: %v", label, err)
+					errorf(argPos(at.At("args"), name), "%s: args: %v", label, err)
 				}
 			}
 			item.Do.Args = *it.Args
 		}
 		if it.When != nil {
+			when := at.At("when").Value()
 			c, err := screen.ParseCond(*it.When, fields, false)
 			if err != nil {
-				errorf("%s: when: %v", label, err)
+				errorf(when, "%s: when: %v", label, err)
 			} else if f := c.FileField(); f != "" && doc.File == nil {
-				errorf("%s: when: field %q is valid only in a file screen", label, f)
+				errorf(when, "%s: when: field %q is valid only in a file screen", label, f)
 			} else if f := c.ListField(); f != "" && doc.Data == nil {
-				errorf("%s: when: field %q is valid only in a list screen", label, f)
+				errorf(when, "%s: when: field %q is valid only in a list screen", label, f)
 			} else if r := rowField(c); r != "" {
-				errorf("%s: when: field %q is valid only in a list line", label, r)
+				errorf(when, "%s: when: field %q is valid only in a list line", label, r)
 			}
 			item.When = c
 		}
@@ -135,18 +137,36 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 	return fr
 }
 
+// errorFunc reports an error of a front matter at a position in the screen file.
+type errorFunc func(at tomlcheck.Pos, format string, args ...any)
+
+// ItemPlace gives the place of the 0-based item i of the front matter with the root table root.
+func ItemPlace(root tomlcheck.Place, i int) tomlcheck.Place {
+	return root.At("item").Elem(i)
+}
+
+// argPos gives the position of an error of the argument name in the table args (screen.CheckArg):
+// the key of an invalid name, else the value (screen-render, section 3.1).
+func argPos(args tomlcheck.Place, name string) tomlcheck.Pos {
+	if !screen.IsIdent(name) {
+		return args.At(name).Key()
+	}
+	return args.At(name).Value()
+}
+
 // parseFileKeys parses the keys file, lines, numbers and margin (file-view, section 3).
 // It gives nil without file. The loader checks margin against the width limits.
-func parseFileKeys(doc *frontDoc, errorf func(format string, args ...any)) *screen.FileSpec {
+// root is the root table of the front matter.
+func parseFileKeys(doc *frontDoc, root tomlcheck.Place, errorf errorFunc) *screen.FileSpec {
 	if doc.File == nil {
 		if doc.Lines != nil {
-			errorf("lines: the screen has no file")
+			errorf(root.At("lines").Value(), "lines: the screen has no file")
 		}
 		if doc.Numbers != nil {
-			errorf("numbers: the screen has no file")
+			errorf(root.At("numbers").Value(), "numbers: the screen has no file")
 		}
 		if doc.Margin != nil {
-			errorf("margin: the screen has no file")
+			errorf(root.At("margin").Value(), "margin: the screen has no file")
 		}
 		return nil
 	}
@@ -154,20 +174,20 @@ func parseFileKeys(doc *frontDoc, errorf func(format string, args ...any)) *scre
 	v := *doc.File
 	if name, token := argToken(v); token {
 		if name == "" {
-			errorf("file: invalid token %q, want a content path or {arg.<name>}", v)
+			errorf(root.At("file").Value(), "file: invalid token %q, want a content path or {arg.<name>}", v)
 		}
 		f.Arg = name
 	} else if err := content.CheckPath(v); err != nil {
-		errorf("file: %v", err)
+		errorf(root.At("file").Value(), "file: %v", err)
 	} else {
 		f.Path = v
 	}
 	if p := doc.Lines; p != nil {
 		switch l := *p; {
 		case len(l) != 2:
-			errorf("lines: must be an array of 2 integers")
+			errorf(root.At("lines").Value(), "lines: must be an array of 2 integers")
 		case l[0] < 1 || l[0] > l[1]:
-			errorf("lines: [%d, %d] is not in 1 <= first <= last", l[0], l[1])
+			errorf(root.At("lines").Value(), "lines: [%d, %d] is not in 1 <= first <= last", l[0], l[1])
 		default:
 			f.First, f.Last = int(l[0]), int(l[1])
 		}
@@ -178,9 +198,9 @@ func parseFileKeys(doc *frontDoc, errorf func(format string, args ...any)) *scre
 	if p := doc.Margin; p != nil {
 		switch m := *p; {
 		case len(m) != 2:
-			errorf("margin: must be an array of 2 integers")
+			errorf(root.At("margin").Value(), "margin: must be an array of 2 integers")
 		case m[0] < 0 || m[1] < 0:
-			errorf("margin: [%d, %d] has a value less than 0", m[0], m[1])
+			errorf(root.At("margin").Value(), "margin: [%d, %d] has a value less than 0", m[0], m[1])
 		default:
 			f.Left, f.Right = int(m[0]), int(m[1])
 		}
@@ -220,19 +240,20 @@ const (
 
 // parseListKeys parses the keys data, rows and select (list-view, sections 3, 4 and 8).
 // It gives nil without data. The loader reads the rows of the provider.
-// langs is the languages of the BBS.
-func parseListKeys(doc *frontDoc, langs []string, errorf func(format string, args ...any)) *screen.ListSpec {
+// root is the root table of the front matter. langs is the languages of the BBS.
+func parseListKeys(doc *frontDoc, root tomlcheck.Place, langs []string, errorf errorFunc) *screen.ListSpec {
 	if doc.Data == nil {
 		if doc.Rows != nil {
-			errorf("rows: the screen has no data")
+			errorf(root.At("rows").Value(), "rows: the screen has no data")
 		}
 		if doc.Select != nil {
-			errorf("select: the screen has no data")
+			errorf(root.At("select").Value(), "select: the screen has no data")
 		}
 		return nil
 	}
+	data := root.At("data")
 	if doc.File != nil {
-		errorf("data: a list screen cannot have file")
+		errorf(data.Value(), "data: a list screen cannot have file")
 	}
 	l := &screen.ListSpec{Args: map[string]string{}, ArgRefs: map[string]string{}, Lists: map[string][]screen.ListRow{}}
 	var args map[string]string
@@ -241,54 +262,54 @@ func parseListKeys(doc *frontDoc, langs []string, errorf func(format string, arg
 	}
 	var p *provider.Provider
 	if doc.Data.From == nil {
-		errorf("data: from is missing")
+		errorf(data.At("from").Value(), "data: from is missing")
 	} else if found, ok := provider.Lookup(*doc.Data.From); !ok {
-		errorf("data: from: unknown provider %q", *doc.Data.From)
+		errorf(data.At("from").Value(), "data: from: unknown provider %q", *doc.Data.From)
 	} else {
 		p, l.From = found, found.Name
 		for _, err := range p.CheckArgs(slices.Sorted(maps.Keys(args))) {
-			errorf("data: args: %v", err)
+			errorf(data.At("args").Value(), "data: args: %v", err)
 		}
 	}
 	for _, name := range slices.Sorted(maps.Keys(args)) {
 		v := args[name]
 		if arg, token := argToken(v); token {
 			if arg == "" {
-				errorf("data: args: %s: invalid token %q, want a value or {arg.<name>}", name, v)
+				errorf(data.At("args", name).Value(), "data: args: %s: invalid token %q, want a value or {arg.<name>}", name, v)
 			}
 			l.ArgRefs[name] = arg
 			continue
 		}
 		if p != nil && slices.ContainsFunc(p.Args, func(a provider.Arg) bool { return a.Name == name }) {
 			if err := p.Check(name, v); err != nil {
-				errorf("data: args: %s: %v", name, err)
+				errorf(data.At("args", name).Value(), "data: args: %s: %v", name, err)
 			}
 		}
 		l.Args[name] = v
 	}
 	switch {
 	case doc.Rows == nil:
-		errorf("rows is missing")
+		errorf(root.At("rows").Value(), "rows is missing")
 	case *doc.Rows < minListRows || *doc.Rows > maxListRows:
-		errorf("rows: %d, must be from %d to %d", *doc.Rows, minListRows, maxListRows)
+		errorf(root.At("rows").Value(), "rows: %d, must be from %d to %d", *doc.Rows, minListRows, maxListRows)
 	default:
 		l.Rows = int(*doc.Rows)
 	}
 	if doc.Select != nil {
-		l.Select = parseSelect(doc.Select.Do, doc.Select.Args, p, langs, errorf)
+		l.Select = parseSelect(doc.Select.Do, doc.Select.Args, root.At("select"), p, langs, errorf)
 	}
 	return l
 }
 
 // parseSelect parses the key select: its do and its args (list-view, section 8).
-// p is the provider of the screen, nil after an error of data.
-func parseSelect(do *string, args *map[string]string, p *provider.Provider, langs []string,
-	errorf func(format string, args ...any)) *screen.Select {
+// at is the place of select. p is the provider of the screen, nil after an error of data.
+func parseSelect(do *string, args *map[string]string, at tomlcheck.Place, p *provider.Provider, langs []string,
+	errorf errorFunc) *screen.Select {
 	s := &screen.Select{Refs: map[string]string{}}
 	if do == nil {
-		errorf("select: do is missing")
+		errorf(at.At("do").Value(), "select: do is missing")
 	} else if a, err := parseAction(*do, langs); err != nil {
-		errorf("select: do: %v", err)
+		errorf(at.At("do").Value(), "select: do: %v", err)
 	} else {
 		s.Do = a
 	}
@@ -296,27 +317,28 @@ func parseSelect(do *string, args *map[string]string, p *provider.Provider, lang
 		return s
 	}
 	if s.Do.Op != 0 && !s.Do.Op.HasTarget() { // Op 0: the do has an error
-		errorf("select: args: only goto and gosub take arguments")
+		errorf(at.At("args").Value(), "select: args: only goto and gosub take arguments")
 	}
 	s.Do.Args = map[string]string{}
 	for _, name := range slices.Sorted(maps.Keys(*args)) {
 		v := (*args)[name]
+		pos := argPos(at.At("args"), name)
 		field, token := rowToken(v)
 		switch {
 		case !token:
 			if err := screen.CheckArg(name, v); err != nil {
-				errorf("select: args: %v", err)
+				errorf(pos, "select: args: %v", err)
 			}
 			s.Do.Args[name] = v
 			continue
 		case !screen.IsIdent(name):
-			errorf("select: args: invalid argument name %q", name)
+			errorf(pos, "select: args: invalid argument name %q", name)
 		case field == "":
-			errorf("select: args: %s: invalid token %q, want a value or {row.<field>}", name, v)
+			errorf(pos, "select: args: %s: invalid token %q, want a value or {row.<field>}", name, v)
 		case field == screen.RowSelected:
-			errorf("select: args: %s: field %q is valid only in a condition", name, "row."+field)
+			errorf(pos, "select: args: %s: field %q is valid only in a condition", name, "row."+field)
 		case p != nil && !p.HasField(field):
-			errorf("select: args: %s: provider %q has no field %q", name, p.Name, field)
+			errorf(pos, "select: args: %s: provider %q has no field %q", name, p.Name, field)
 		}
 		s.Refs[name] = field
 	}

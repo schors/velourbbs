@@ -2,11 +2,13 @@ package tomlcheck
 
 import (
 	"sort"
+	"unicode/utf8"
 
 	"github.com/pelletier/go-toml/v2/unstable"
 )
 
 // Pos is a 1-based position in a document. Col counts bytes.
+// DecodeFront gives positions in the file of a front matter.
 type Pos struct{ Line, Col int }
 
 // Place is a key path in a document. It gives the positions of screen-render, section 3.1.
@@ -15,6 +17,7 @@ type Place struct {
 	n *node // nil when the document does not set the path
 	// last is the position of the last table on the path that the document sets.
 	last Pos
+	ix   *index // the document, nil in the zero Place
 }
 
 // node is a key of a document and its value.
@@ -36,7 +39,7 @@ func (p Place) At(path ...string) Place {
 		}
 		c := p.n.keys[k]
 		if c == nil {
-			return Place{last: p.last}
+			return Place{last: p.last, ix: p.ix}
 		}
 		p.n = c
 		if c.keys != nil {
@@ -49,13 +52,13 @@ func (p Place) At(path ...string) Place {
 // Elem gives the place of the 0-based element i of the array or the array of tables at p.
 func (p Place) Elem(i int) Place {
 	if p.n == nil || i < 0 || i >= len(p.n.elems) {
-		return Place{last: p.last}
+		return Place{last: p.last, ix: p.ix}
 	}
 	e := p.n.elems[i]
 	if e.keys != nil {
-		return Place{e, e.value}
+		return Place{e, e.value, p.ix}
 	}
-	return Place{e, p.last}
+	return Place{e, p.last, p.ix}
 }
 
 // Value gives the position of the value at p: its first byte, or the position of the table.
@@ -65,30 +68,30 @@ func (p Place) Elem(i int) Place {
 // of an array, and no key of the host has a nested array.
 func (p Place) Value() Pos {
 	if p.n == nil {
-		return p.last
+		return p.ix.file(p.last)
 	}
-	return p.n.value
+	return p.ix.file(p.n.value)
 }
 
 // Key gives the position of the key name at p, where the document sets the key first.
 // A path that is not set has the position of the last table on it.
 func (p Place) Key() Pos {
 	if p.n == nil {
-		return p.last
+		return p.ix.file(p.last)
 	}
-	return p.n.key
+	return p.ix.file(p.n.key)
 }
 
 // Root gives the place of the root table of data. data has no syntax error.
 // The root table has the position 1:1.
-// The decode of go-toml gives no positions of keys and values, so the parser of go-toml gives them.
 func Root(data []byte) Place {
-	ix := index{data: data, lines: []int{0}}
-	for i, c := range data {
-		if c == '\n' {
-			ix.lines = append(ix.lines, i+1)
-		}
-	}
+	return newIndex(data, false).root()
+}
+
+// root gives the place of the root table of the document.
+// The decode of go-toml gives no positions of keys and values, so the parser of go-toml gives them.
+func (ix *index) root() Place {
+	data := ix.data
 	root := newTable(Pos{1, 1}, Pos{1, 1})
 	cur := root
 	var p unstable.Parser
@@ -118,13 +121,41 @@ func Root(data []byte) Place {
 			a.elems = append(a.elems, cur)
 		}
 	}
-	return Place{root, root.value}
+	return Place{root, root.value, ix}
 }
 
 // index builds the nodes of a document.
 type index struct {
 	data  []byte
 	lines []int // the offset of each line
+	// front is true for a front matter: line 1 of data is line 2 of its file,
+	// and a column counts code points (screen-render, section 3.1).
+	front bool
+}
+
+func newIndex(data []byte, front bool) *index {
+	ix := &index{data: data, lines: []int{0}, front: front}
+	for i, c := range data {
+		if c == '\n' {
+			ix.lines = append(ix.lines, i+1)
+		}
+	}
+	return ix
+}
+
+// file gives the position in the file of the position p in the document.
+func (ix *index) file(p Pos) Pos {
+	if ix == nil || !ix.front {
+		return p
+	}
+	if p.Line < 1 || p.Line > len(ix.lines) {
+		return Pos{p.Line + 1, p.Col}
+	}
+	line := ix.data[ix.lines[p.Line-1]:]
+	if p.Line < len(ix.lines) {
+		line = line[:ix.lines[p.Line]-ix.lines[p.Line-1]]
+	}
+	return Pos{p.Line + 1, utf8.RuneCount(line[:min(max(p.Col-1, 0), len(line))]) + 1}
 }
 
 func newTable(key, value Pos) *node {
