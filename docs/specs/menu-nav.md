@@ -267,6 +267,8 @@ It is the test harness for the navigation.
     or a list screen, and after a cursor move in a list screen;
   - `key <key>` before each key. `key <key> ignored` for an ignored key;
   - `logoff` when an item runs `logoff`. The pages of `goodbye` follow it.
+- With `--view`, each page is in the line form ([screen-render](screen-render.md), section 3.7)
+  in place of the cell dump. The other lines stay as they are.
 - The output gives a key after the map of section 3.2. A letter, a digit or a key name
   is in upper case. Each other character is as it is. Example: `ы` gives `key S`.
 - When the list ends, `velourbbs preview` stops after the current page and exits with status 0.

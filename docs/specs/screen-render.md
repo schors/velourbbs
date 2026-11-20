@@ -11,7 +11,8 @@ Related parts: [bbt-format](bbt-format.md), [art-format](art-format.md), [bbs-to
 The host loads the screen files ([bbt-format](bbt-format.md) and [art-format](art-format.md))
 into an in-memory screen model at start.
 It renders a screen for one terminal of any size. 80x24 is not a limit.
-`velourbbs check` finds the errors in the files. `velourbbs preview` renders a screen to a "cell dump".
+`velourbbs check` finds the errors in the files. `velourbbs preview` renders a screen to a "cell dump",
+or to the "line form" for the terminal of the sysop.
 
 The host parses the screen files at load. There is no compile step and no cache.
 
@@ -108,8 +109,8 @@ screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 1
 
 ### 3.2. `velourbbs preview`
 
-`velourbbs preview <name> [--size <cols>x<rows>] [--sample <set>] [--set <path>=<value>]...` renders a screen
-and writes its cell dump to the standard output.
+`velourbbs preview <name> [--size <cols>x<rows>] [--sample <set>] [--set <path>=<value>]... [--keys <keys>] [--view]`
+renders a screen and writes its cell dump to the standard output.
 
 - It does the checks of `velourbbs check` first. After an error it writes no dump
   and exits with status 1.
@@ -138,6 +139,7 @@ and writes its cell dump to the standard output.
 - A size outside the ranges of [bbt-format](bbt-format.md), section 4.1, and an unknown screen
   are invalid arguments.
 - `--keys` runs a session: [menu-nav](menu-nav.md), section 7.
+- `--view` writes each page in the line form (section 3.7) in place of the cell dump.
 - `--sample <set>` takes the values of a sample set (section 3.5). `--set` replaces them,
   in each order of the options.
 - A list screen shows the rows of its provider ([list-view](list-view.md), section 4).
@@ -310,6 +312,62 @@ Example at 80x24 with `width = [68, 108]` and `gutter = 6`:
 screens/main.bbt:12:1: warning: at 80x24: the line wraps to 2 rows
 screens/_logo.bbt:3:1: warning: screen "main": at 80x24: the row is 75 cells wide, the screen shows 68
 screens/about.bbt:1:1: warning: at 80x24: 31 rows, the screen gets a More row
+```
+
+### 3.7. Line form
+
+The line form shows the pages in colour in the terminal of the sysop.
+The page output of the host ([telnet-term](telnet-term.md), section 7.1) clears the terminal screen
+and puts each row at its position, so the next page replaces the page before it.
+The line form writes the pages one after another, and each page stays in the scrollback.
+
+For each page, the line form writes:
+
+1. The first line of the cell dump of the page (section 3.3), then a line end.
+2. For each terminal row from the top, with the terminal rows of [bbt-format](bbt-format.md),
+   section 6.5:
+   - a row of the page: the cells of the row;
+   - a fill row with `fill = "none"`: no cells;
+   - a fill row with `fill = "spaces"` or `"erase"`: `term.cols` spaces in `normal`.
+
+   Then `ESC[0m` and a line end.
+
+- A line end is LF.
+- Before a cell whose style differs from the style of the previous cell, the line form
+  sends the SGR of [telnet-term](telnet-term.md), section 7.2. Each row starts with `default` colours
+  without attributes.
+- The colours have the reduction to `term.colors` of [telnet-term](telnet-term.md), section 7.3.
+  A VGA colour becomes its RGB value, as for a terminal whose palette is not VGA.
+  So with 256 and 16777216 colours, the palette of the terminal of the sysop does not change
+  the colours of the art. With 16 colours, the art has the indexes 0–15 in that palette.
+- The encoder of [telnet-term](telnet-term.md), section 7.4, writes the cells.
+  The re-sync moves to the column with `ESC[<col>G` in place of `ESC[<row>;<col>H`.
+  The re-sync is not an SGR sequence: a viewer that passes only SGR, such as `less -R`,
+  shows it as text.
+- The line form has no synchronized output, no clear and no positions of rows.
+- The `ESC[0m` before the line end stops a terminal with bce from filling
+  the next row in the background of the last cell.
+- When the terminal of the sysop shows a row wider than its columns, the row wraps
+  to extra lines, and the columns after a re-sync are not correct. Examples: a terminal
+  with fewer columns than `term.cols`, a grapheme wider than in the model, ambiguous characters
+  shown wide. No later output overwrites the extra lines: the wrap rule of
+  [telnet-term](telnet-term.md), section 7.4, does not apply.
+
+Example: the page of section 3.3, with the colours of the example, at 80x10 with `fill = "none"`.
+`␛` is ESC. `...` stands for the spaces up to column 80. The terminal rows 3–10 are fill rows:
+
+```
+page 1 80x10 fill none
+␛[0;1;97;44mWelcome!␛[0;37;40m    ...␛[0m
+␛[0;96;40m[G]oodbye␛[0;37;40m    ...␛[0m
+␛[0m
+␛[0m
+␛[0m
+␛[0m
+␛[0m
+␛[0m
+␛[0m
+␛[0m
 ```
 
 ## 4. Code
