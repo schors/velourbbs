@@ -213,27 +213,29 @@ screens/screens.toml:1:1: menu: start: unknown screen "mian"
 
 ### 6.1. Unreachable screen
 
-`velourbbs check` also warns about each screen that a caller cannot reach:
-`screens/old.bbt:1:1: warning: a caller cannot reach this screen`.
+`velourbbs check` also warns about each screen that a user cannot reach:
+`screens/old.bbt:1:1: warning: a user cannot reach this screen`.
 
 - The check walks pairs of a language and a screen name. The walk starts at the start screen
   in `[screen] lang` ([session-language](session-language.md), section 5).
+- The "actions" of a screen are the action of each item and the action of its `select`.
 - From a reached pair of the language L and the screen S, the walk reaches:
-  - the target of each `goto` and `gosub` of S, also of the `select` of S:
+  - the target of each `goto` and `gosub` of the actions of S:
     the language `<code>` and the screen `<name>` for `goto <code>/<name>` and `gosub <code>/<name>`,
     else L and `<name>`;
-  - the language `<code>` and S, for each `lang <code>` of S;
-  - the language M and S, when the walk from the target of a `gosub` of S reaches a pair
-    of the language M. S stays on the stack below the target, and `back` and `top`
-    show S in the session language (section 4.1).
+  - the language `<code>` and S, for each `lang <code>` of the actions of S;
+  - the language M and S, when the walk from the target of a `gosub` of the actions of S
+    reaches a pair of the language M. S stays on the stack below the target,
+    and `back` shows S again in the session language (section 4.1).
 - The walk ignores `when`: each item is a path. It ignores the limit of 16 frames.
-  It does not need a `back` item. So the check can miss a screen that a caller cannot reach,
-  but it does not warn about a screen that a caller can reach.
+  It does not need a `back` item. So the check can miss a screen that a user cannot reach,
+  but it does not warn about a screen that a user can reach.
 - Each pair that the walk does not reach gives the warning at 1:1 of the file of the screen
   in the screen set of the language, except `goodbye` and `shutdown`.
   The language suffix of [session-language](session-language.md), section 6, applies.
-- The warning does not change the exit status. The check runs with the checks between files
-  of section 6, only when the files have no other errors.
+- The warning does not change the exit status. The check runs only when the files,
+  the other checks of this section and the checks of [session-language](session-language.md),
+  section 6, give no error.
 
 Example with the languages `en` and `ru`, `[screen] lang = "en"` and the start screen `main`.
 The common screen `main` runs `gosub en/menu` and `gosub ru/menu`.
@@ -241,9 +243,9 @@ The common screen `main` runs `gosub en/menu` and `gosub ru/menu`.
 
 - `main` in `ru` gets no warning: the walk from `ru/menu` reaches `ru`,
   and `back` from `ru/menu` shows `main` in `ru`.
-- `screens/ru/news.bbt:1:1: warning: a caller cannot reach this screen`.
+- `screens/ru/news.bbt:1:1: warning: a user cannot reach this screen`.
   With a common file `screens/news.bbt`, the warning is
-  `screens/news.bbt:1:1: warning: a caller cannot reach this screen (language "ru")`.
+  `screens/news.bbt:1:1: warning: a user cannot reach this screen (language "ru")`.
 
 ## 7. `velourbbs preview --keys`
 
