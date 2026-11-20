@@ -19,13 +19,8 @@ do = "back"
        {!dim}notes of the nights  ∙  page {list.page}/{list.pages}{!}
 
 {#each}{#if row.selected}       {!orn}☼{!} {#else}         {/if}{!dim}{row.num}{!}   {#if row.selected}{!title}{/if}{row.title                             }{!dim}{row.minutes} min{/each}
-
-
-
-
-
-
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+{~}
+  {!line}{~─}{!}  
 
     {!key}↑↓{!}  {!dim}choose{!}   {!key}Enter{!}  {!dim}read{!}   {#if item.SPACE}{!key}Space{!}  {!dim}next{!}   {/if}{#if item.B}{!key}B{!}  {!dim}prev{!}   {/if}{!key}Esc{!}  {!dim}back{!}
+

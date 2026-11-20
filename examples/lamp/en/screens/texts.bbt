@@ -16,17 +16,11 @@ do = "back"
        Pick one and read it by the lamp.
 
 
-         {!key}1{!}   How the lamps were lit                  {!dim}a short history{!}
+         {!key}1{!}   How the lamps were lit {!line}{~.}{!} {!dim}a short history{!}  
 
-         {!key}2{!}   Station rules                           {!dim}read them once{!}
-
-
-
-
-
-
-
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+         {!key}2{!}   Station rules {!line}{~.}{!} {!dim}read them once{!}  
+{~}
+  {!line}{~─}{!}  
 
     {!key}1 2{!}  {!dim}choose{!}   {!key}Esc{!}  {!dim}back{!}
+

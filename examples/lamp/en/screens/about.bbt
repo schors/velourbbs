@@ -12,16 +12,8 @@ do = "back"
 
        The station runs on Velour BBS.
        Its screens are plain text files.
-
-
-
-
-
-
-
-
-
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+{~}
+  {!line}{~─}{!}  
 
     {!key}Esc Enter{!}  {!dim}back{!}
+

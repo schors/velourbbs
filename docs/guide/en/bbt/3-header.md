@@ -27,7 +27,7 @@ Move the 5 rows to the fragment:
 `examples/lamp/en/screens/_head.bbt`:
 ```
 
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+  {!line}{~─}{!}  
 
        {!title}Lamp{!}  {!orn}☼ {!dim}a BBS by lamplight{!}
 

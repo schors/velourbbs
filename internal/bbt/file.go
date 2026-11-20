@@ -16,8 +16,8 @@ type file struct {
 	body  []node
 }
 
-// node is a body part after the file pass: screen.Text, screen.SetStyle, field,
-// lineEnd, *ifNode, include, artInsert, fileArea or *eachNode. The file pass resolves the fields and
+// node is a body part after the file pass: screen.Text, screen.SetStyle, screen.Stretch, field,
+// lineEnd, spacerLine, *ifNode, include, artInsert, fileArea or *eachNode. The file pass resolves the fields and
 // the conditions with the aliases of screens/screens.toml. The screen pass gives screen.Seg.
 type node any
 
@@ -42,6 +42,11 @@ type eachNode struct {
 type lineEnd struct {
 	row   int
 	block bool
+}
+
+// spacerLine is a spacer line {~} (section 6.6). No lineEnd follows it.
+type spacerLine struct {
+	row int
 }
 
 type ifNode struct {
@@ -196,6 +201,10 @@ func (s *scanner) pieces(row int, line string) []piece {
 }
 
 func (s *scanner) line(row int, line string) {
+	if line == "{~}" {
+		s.add(spacerLine{row})
+		return
+	}
 	ps := s.pieces(row, line)
 	if len(ps) == 1 && ps[0].token && ps[0].text[0] == '>' {
 		if n := s.insert(screen.Pos{File: s.d.File, Line: row, Col: ps[0].col}, ps[0].text); n != nil {
@@ -250,6 +259,8 @@ func (s *scanner) tokens(row int, ps []piece) bool {
 			block = s.block(pos, p.text) || block
 		case '!':
 			s.style(pos, p.text[1:])
+		case '~':
+			s.stretch(pos, p.text[1:])
 		case '>':
 			s.d.Errorf(row, p.col, "an include or an art insert must be the only content of its line")
 		case '@':
@@ -351,6 +362,34 @@ func (s *scanner) style(pos screen.Pos, text string) {
 		}
 	}
 }
+
+// stretch handles a stretch token with the text after "~" (section 6.6).
+func (s *scanner) stretch(pos screen.Pos, text string) {
+	for g, w := range screen.Graphemes("~" + text) {
+		if screen.CheckGrapheme(g, w) != nil {
+			return // graphemes reported it
+		}
+	}
+	if text == "" {
+		s.add(screen.Stretch{Fill: space})
+		return
+	}
+	n := 0
+	var fill screen.Grapheme
+	for g, w := range screen.Graphemes(text) {
+		fill = screen.Grapheme{Text: g, Width: w}
+		n++
+	}
+	// A grapheme of width 0 joins "~" in the token text: it is not an error of graphemes.
+	if n != 1 || fill.Width != 1 || screen.CheckGrapheme(fill.Text, fill.Width) != nil {
+		s.d.Errorf(pos.Line, pos.Col, "invalid stretch token %q, want {~} or {~<c>} with one character of width 1", "{~"+text+"}")
+		return
+	}
+	s.add(screen.Stretch{Fill: fill})
+}
+
+// space is the fill of {~}.
+var space = screen.Grapheme{Text: " ", Width: 1}
 
 // field handles a field token (sections 3.3, 4.1 and 4.2).
 func (s *scanner) field(pos screen.Pos, c string) {

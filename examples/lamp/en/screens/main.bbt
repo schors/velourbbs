@@ -19,18 +19,19 @@ do = "logoff"
        Good evening. It's quiet and warm here.
        Pull up a chair by the lamp.
 
-         {!key}A{!}   About                                   {!dim}who we are{!}
+         {!key}A{!}   About {!line}{~.}{!} {!dim}who we are{!}  
 
-         {!key}R{!}   Reading room                            {!dim}stories by the lamp{!}
+         {!key}R{!}   Reading room {!line}{~.}{!} {!dim}stories by the lamp{!}  
 
-         {!key}L{!}   Keeper's log                            {!dim}notes of the nights{!}
+         {!key}L{!}   Keeper's log {!line}{~.}{!} {!dim}notes of the nights{!}  
 
-         {!key}T{!}   Your terminal                           {!dim}size and colours{!}
+         {!key}T{!}   Your terminal {!line}{~.}{!} {!dim}size and colours{!}  
 
-         {!key}G{!}   Goodbye                                 {!dim}the lamp will wait{!}
-
+         {!key}G{!}   Goodbye {!line}{~.}{!} {!dim}the lamp will wait{!}  
+{~}
        {!dim}The light stays on till morning.{!}
 
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+  {!line}{~─}{!}  
 
     {!key}A R L T G{!}  {!dim}choose{!}
+

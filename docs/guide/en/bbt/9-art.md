@@ -56,7 +56,7 @@ do = "logoff"
 
 - The art is 40 columns wide. `width = [40, 40]` in the front matter makes this screen
   40 columns wide.
-- The keys `width`, `align`, `valign` and `fill` in the front matter set the layout of one screen.
+- The keys `width`, `align`, `valign`, `fill` and `gutter` in the front matter set the layout of one screen.
   In `[screen]` of `screens/screens.toml`, they set the layout of all screens.
 - Here `screens/screens.toml` has no `[screen]`. So the screen has the default `align = "center"`:
   on a terminal of 80 columns, the BBS puts the screen in the centre.
@@ -98,9 +98,26 @@ valign = "middle"
 
 - `align` is the position on a wider terminal: `"left"`, `"center"` (the default) or `"right"`.
 - `valign` is the position of a screen with fewer rows than the terminal:
-  `"top"` (the default), `"middle"` or `"bottom"`.
+  `"top"` (the default), `"middle"` or `"bottom"`. A screen with a spacer line (task 2)
+  fills the terminal, so `valign` has no effect on it.
 
-Full rules: [bbt-format](../../../specs/bbt-format.md), sections 6.1 and 6.5.
+A screen for terminals of 80 and 132 columns can grow with the terminal:
+
+```
++++
+width = [68, 108]
+gutter = 6
++++
+```
+
+- `gutter` is the cells that the screen leaves on each side of the terminal: from 0 (the default) to 100.
+  The width of the screen is the terminal width minus 2 gutters, in the limits of `width`.
+- At 80 columns, the screen is 68 columns wide, with 6 empty columns on each side.
+  At 132 columns, the screen is 108 columns wide, in the centre: 12 empty columns on each side.
+- A stretch token (task 2) fills the width of the screen at each size.
+  So `{~─}` gives a hairline of 68 cells at 80 columns and of 108 cells at 132 columns.
+
+Full rules: [bbt-format](../../../specs/bbt-format.md), sections 6.1, 6.5 and 6.6.
 
 ## A field in art
 
@@ -258,6 +275,9 @@ do = "logoff"
 
 On a terminal of fewer than 80 columns, the screen shows the fragment `screens/_main_small.bbt`:
 text or smaller art.
+
+When `[screen]` in `screens/screens.toml` has a `gutter`, add `gutter = 0` to the front matter.
+So the art gets the full width of the terminal.
 
 Full rules: [bbt-format](../../../specs/bbt-format.md), section 6.1.
 

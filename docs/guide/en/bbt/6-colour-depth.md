@@ -60,23 +60,24 @@ more = "    more ∙ any key"
 
 `more` gives the text of the More row. Without `more`, the text is `-- More --`.
 The style `more` gives its colours.
-With the file `screens/screens.toml` below, at 20 rows, the screen `about` has two pages:
+With the file `screens/screens.toml` below, at 12 rows, the screen `about` has two pages:
 
 ```
-velourbbs preview about --size 80x20
+velourbbs preview about --size 80x12
 ```
 
 ```
-page 1 80x20 fill spaces
+page 1 80x12 fill spaces
 ...
 |    more ∙ any key                                                              |
 styles
 ...
-page 2 80x20 fill spaces
+page 2 80x12 fill spaces
 ...
 ```
 
-Page 1 has rows 1–19 of the screen and the More row. Page 2 has rows 20–23.
+The screen has 14 rows without the spacer line. So the spacer line gives no rows.
+Page 1 has rows 1–11 of the screen and the More row. Page 2 has rows 12–14.
 
 Full rules: [bbt-format](../../../specs/bbt-format.md), section 6.4,
 and [menu-nav](../../../specs/menu-nav.md), section 5.

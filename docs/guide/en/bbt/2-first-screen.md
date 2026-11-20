@@ -50,6 +50,27 @@ Example:
 This line shows "Lamp" in the light peach `title` in bold, the sun `☼` in the warm orange `orn`
 and the tagline in the grey-brown `dim`.
 
+## Stretch tokens and spacer lines
+
+- `{~─}` is a "stretch token". It fills the free cells of its row with the character `─`.
+  The free cells are the width of the screen minus the other cells of the row.
+  The spaces at the start and at the end of the line count.
+- `{~.}` fills the free cells with dots. `{~}` fills them with spaces.
+- A line with a stretch token is always one row. It does not break.
+- A line that has only `{~}` is a "spacer line". It gives the empty rows that the terminal has
+  after the other rows of the screen. So the rows after it stay at the bottom of the terminal.
+
+Example:
+
+```
+  {!line}{~─}{!}  
+```
+
+The line starts and ends with 2 spaces. At the width 80, the stretch token gives 76 characters `─`
+in columns 3–78.
+
+Full rules: [bbt-format](../../../specs/bbt-format.md), section 6.6.
+
 ## The screen
 
 Write `screens/main.bbt` again with this text:
@@ -61,31 +82,24 @@ key = "G"
 do = "logoff"
 +++
 
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+  {!line}{~─}{!}  
 
        {!title}Lamp{!}  {!orn}☼ {!dim}a BBS by lamplight{!}
 
        Good evening. It's quiet and warm here.
        Pull up a chair by the lamp.
-
-
-
-
-
-
-
-
-
-
-
+{~}
        {!dim}The light stays on till morning.{!}
 
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+  {!line}{~─}{!}  
 
     {!key}G{!}  {!dim}goodbye{!}
+
 ```
 
-The screen has 23 rows:
+The two hairlines end with 2 spaces. The file ends with an empty line after the key row.
+
+At 80x24, the spacer line gives 11 empty rows, and the screen has 24 rows:
 
 ```text
 
@@ -115,6 +129,9 @@ The screen has 23 rows:
 
 - The ground is dark brown. The text is cream.
 - The two lines are in the brown `line`. They take columns 3–78.
+- Row 24 is empty: it is the empty line at the end of the file.
+  On a terminal of 43 rows, the spacer line gives 30 empty rows.
+  The closing line, the hairline and the key row stay at the bottom.
 - The closing line and the word "goodbye" are in the grey-brown `dim`.
 - The key `G` is in the orange `key` in bold.
 
@@ -124,7 +141,7 @@ Task 6 gives the styles for 256 colours.
 ## Result
 
 - `velourbbs check` gives no output.
-- `velourbbs preview main` gives 23 rows. Rows 2 and 4 have these style runs:
+- `velourbbs preview main` gives 24 rows. Rows 2 and 4 have these style runs:
 
 ```
 2: 1-2 #e9dccb/#2a201d, 3-78 #8a6a5c/#2a201d, 79-80 #e9dccb/#2a201d

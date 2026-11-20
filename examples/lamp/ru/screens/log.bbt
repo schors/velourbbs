@@ -19,13 +19,8 @@ do = "back"
        {!dim}заметки о ночах  ∙  стр. {list.page}/{list.pages}{!}
 
 {#each}{#if row.selected}       {!orn}☼{!} {#else}         {/if}{!dim}{row.num}{!}   {#if row.selected}{!title}{/if}{row.title                             }{!dim}{row.minutes} мин{/each}
-
-
-
-
-
-
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+{~}
+  {!line}{~─}{!}  
 
     {!key}↑↓{!}  {!dim}выбор{!}   {!key}Enter{!}  {!dim}читать{!}   {#if item.SPACE}{!key}Space{!}  {!dim}дальше{!}   {/if}{#if item.B}{!key}B{!}  {!dim}пред.{!}   {/if}{!key}Esc{!}  {!dim}назад{!}
+

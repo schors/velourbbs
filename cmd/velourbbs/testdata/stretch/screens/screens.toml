@@ -1,0 +1,9 @@
+[screen]
+width = [68, 108]
+align = "center"
+gutter = 6
+fill = "spaces"
+
+[theme.default]
+frame = "8"
+key = "15 bold"

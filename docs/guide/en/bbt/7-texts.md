@@ -29,7 +29,7 @@ Full rules: [file-view](../../../specs/file-view.md), section 2.
 ## The screen `main`
 
 The item `R` goes to the screen `texts`.
-Its row is between the rows of `A` and `T`. Remove two empty lines below the row of `G`.
+Its row is between the rows of `A` and `T`. The spacer line gives 2 empty rows less.
 The file `screens/main.bbt` after this task (task 8 shows its last form):
 
 ```
@@ -52,20 +52,20 @@ do = "logoff"
        Pull up a chair by the lamp.
 
 
-         {!key}A{!}   About                                   {!dim}who we are{!}
+         {!key}A{!}   About {!line}{~.}{!} {!dim}who we are{!}  
 
-         {!key}R{!}   Reading room                            {!dim}stories by the lamp{!}
+         {!key}R{!}   Reading room {!line}{~.}{!} {!dim}stories by the lamp{!}  
 
-         {!key}T{!}   Your terminal                           {!dim}size and colours{!}
+         {!key}T{!}   Your terminal {!line}{~.}{!} {!dim}size and colours{!}  
 
-         {!key}G{!}   Goodbye                                 {!dim}the lamp will wait{!}
-
-
+         {!key}G{!}   Goodbye {!line}{~.}{!} {!dim}the lamp will wait{!}  
+{~}
        {!dim}The light stays on till morning.{!}
 
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+  {!line}{~─}{!}  
 
     {!key}A R T G{!}  {!dim}choose{!}
+
 ```
 
 The screen:
@@ -80,13 +80,13 @@ The screen:
        Pull up a chair by the lamp.
 
 
-         A   About                                   who we are
+         A   About ................................................ who we are
 
-         R   Reading room                            stories by the lamp
+         R   Reading room ................................ stories by the lamp
 
-         T   Your terminal                           size and colours
+         T   Your terminal .................................. size and colours
 
-         G   Goodbye                                 the lamp will wait
+         G   Goodbye ...................................... the lamp will wait
 
 
        The light stays on till morning.
@@ -136,20 +136,14 @@ do = "back"
        Pick one and read it by the lamp.
 
 
-         {!key}1{!}   How the lamps were lit                  {!dim}a short history{!}
+         {!key}1{!}   How the lamps were lit {!line}{~.}{!} {!dim}a short history{!}  
 
-         {!key}2{!}   Station rules                           {!dim}read them once{!}
-
-
-
-
-
-
-
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+         {!key}2{!}   Station rules {!line}{~.}{!} {!dim}read them once{!}  
+{~}
+  {!line}{~─}{!}  
 
     {!key}1 2{!}  {!dim}choose{!}   {!key}Esc{!}  {!dim}back{!}
+
 ```
 
 The screen:
@@ -164,9 +158,9 @@ The screen:
        Pick one and read it by the lamp.
 
 
-         1   How the lamps were lit                  a short history
+         1   How the lamps were lit .......................... a short history
 
-         2   Station rules                           read them once
+         2   Station rules .................................... read them once
 
 
 
@@ -244,6 +238,9 @@ and [menu-nav](../../../specs/menu-nav.md), section 5.1.
   For a plain text or source file, it counts the words of the lines that the screen shows.
 - Row 7 of `reader` shows the author only when the file has `author`:
   `{#if meta.author != ""}{meta.author}  ∙  {/if}`.
+- The lower line shows the page number in its centre:
+  `{~─} {!dim}{file.page}/{file.pages}{!line} {~─}`. The two stretch tokens share the free cells.
+  With an odd count of free cells, the right token gets one more cell.
 
 Full rules: [file-view](../../../specs/file-view.md), sections 3.4 and 3.5.
 
@@ -266,11 +263,11 @@ do = "back"
 +++
 {>_head}
        {!title}{file.title}{!}
-       {!dim}{#if meta.author != ""}{meta.author}  ∙  {/if}{file.minutes} min  ∙  page {file.page}/{file.pages}{!}
+       {!dim}{#if meta.author != ""}{meta.author}  ∙  {/if}{file.minutes} min{!}
 
 {>file}
 
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+  {!line}{~─} {!dim}{file.page}/{file.pages}{!line} {~─}{!}  
 
     {#if item.SPACE}{!key}Space{!}  {!dim}next{!}   {/if}{#if item.B}{!key}B{!}  {!dim}prev{!}   {/if}{!key}Esc{!}  {!dim}list{!}
 
@@ -285,7 +282,7 @@ The screen with `lamp.md`, page 1:
        Lamp  ☼ a BBS by lamplight
 
        How the lamps were lit
-       Anna Lind  ∙  1 min  ∙  page 1/3
+       Anna Lind  ∙  1 min
 
        People lit the first lamps long before they wrote the first words. For
        thousands of years, a lamp gave a small, steady light.
@@ -299,7 +296,7 @@ The screen with `lamp.md`, page 1:
        │ A good lamp does not smoke. It only asks for a little care.
 
 
-  ────────────────────────────────────────────────────────────────────────────
+  ─────────────────────────────────── 1/3 ────────────────────────────────────
 
     Space  next   Esc  list
 
@@ -472,7 +469,7 @@ The screen with `rules.txt`:
        Lamp  ☼ a BBS by lamplight
 
        rules.txt
-       1 min  ∙  page 1/1
+       1 min
 
        1. Be kind. Everyone here is a guest.
        2. Write as you speak to a friend at the table.
@@ -486,7 +483,7 @@ The screen with `rules.txt`:
 
 
 
-  ────────────────────────────────────────────────────────────────────────────
+  ─────────────────────────────────── 1/1 ────────────────────────────────────
 
     Esc  list
 
@@ -657,7 +654,7 @@ page 1 80x24 fill spaces
 ## Result
 
 - `velourbbs check` gives no output.
-- `velourbbs preview reader --set arg.file=lamp.md` gives three pages. Page 1 is the screen above, with `page 1/3`.
+- `velourbbs preview reader --set arg.file=lamp.md` gives three pages. Page 1 is the screen above, with `1/3` on the lower line.
 - `velourbbs preview reader --set arg.file=lamp.md --keys SPACE,SPACE` gives page 3. Its key row is `B  prev   Esc  list`.
 - In the telnet client, `R` shows the list, `1` shows the text, `Space` and `B` turn the pages,
   `Esc` goes back to the list.

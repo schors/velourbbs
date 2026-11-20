@@ -27,6 +27,7 @@ type frontDoc struct {
 	Align   *string  `toml:"align"`
 	VAlign  *string  `toml:"valign"`
 	Fill    *string  `toml:"fill"`
+	Gutter  *int64   `toml:"gutter"`
 	File    *string  `toml:"file"`
 	Lines   *[]int64 `toml:"lines"`
 	Numbers *bool    `toml:"numbers"`
@@ -68,7 +69,7 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 		d.Errorf(2, 1, format, args...)
 		ok = false
 	}
-	fr := &front{layout: screen.ParseLayoutKeys(doc.Width, doc.Align, doc.VAlign, doc.Fill,
+	fr := &front{layout: screen.ParseLayoutKeys(doc.Width, doc.Align, doc.VAlign, doc.Fill, doc.Gutter,
 		func(key string, err error) { errorf("%s: %v", key, err) })}
 	fr.file = parseFileKeys(&doc, errorf)
 	fr.list = parseListKeys(&doc, langs, errorf)

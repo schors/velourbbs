@@ -1,0 +1,14 @@
++++
+[[item]]
+key = "G"
+do = "logoff"
++++
+{!frame}{~─}{!}
+{~}{bbs.name}{~}
+{!frame}{~─}{!}
+
+  Texts {!frame}{~.}{!} guides and features
+  Files {!frame}{~.}{!} the file area
+{~}
+{!frame}{~─}{!}
+  {!key}G{!} Goodbye{~}{term.cols}x{term.rows}

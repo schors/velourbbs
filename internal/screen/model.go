@@ -216,7 +216,8 @@ func (a Action) Target() string {
 // HasTarget reports whether o shows the screen of Action.Screen with Action.Args: Goto or Gosub.
 func (o Op) HasTarget() bool { return o == Goto || o == Gosub }
 
-// Seg is one segment of a body: Text, Field, SetStyle, If, Include, ArtInsert, FileArea, ListLine or LineEnd.
+// Seg is one segment of a body: Text, Field, SetStyle, Stretch, If, Include, ArtInsert, FileArea, ListLine,
+// Spacer or LineEnd.
 // Blocks can start and end inside a line, so If holds segments, not lines.
 type Seg interface{ seg() }
 
@@ -246,6 +247,16 @@ func (s SetStyle) Apply(cur Style, theme map[string]Style) Style {
 	}
 	return s.Spec.Over(cur)
 }
+
+// Stretch is a stretch token: it fills the free cells of its row with Fill (section 6.6).
+// Fill is one grapheme of width 1.
+type Stretch struct {
+	Fill Grapheme
+}
+
+// Spacer is a spacer line: it gives the free rows of the page (section 6.6).
+// It is a whole source line: no LineEnd follows it.
+type Spacer struct{}
 
 // If is a conditional block. Else is empty without {#else}.
 type If struct {
@@ -284,6 +295,8 @@ type LineEnd struct {
 func (Text) seg()      {}
 func (Field) seg()     {}
 func (SetStyle) seg()  {}
+func (Stretch) seg()   {}
+func (Spacer) seg()    {}
 func (If) seg()        {}
 func (Include) seg()   {}
 func (ArtInsert) seg() {}

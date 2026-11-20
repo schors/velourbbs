@@ -5,15 +5,19 @@ import (
 	"strings"
 )
 
-// Layout is the position and the fill of a screen: the keys width, align, valign and fill
+// Layout is the position and the fill of a screen: the keys width, align, valign, fill and gutter
 // of the front matter and of [screen] (section 3.2 and screens-toml, section 3.1).
-// The zero values of Align, VAlign and Fill are the defaults.
+// The zero values of Align, VAlign, Fill and Gutter are the defaults.
 type Layout struct {
 	Width  WidthLimits
 	Align  Align
 	VAlign VAlign
 	Fill   Fill
+	Gutter int
 }
+
+// MaxGutter is the largest value of the key gutter (section 3.2).
+const MaxGutter = 100
 
 // LayoutKeys is the keys of a layout that a TOML table sets. A nil pointer is a key that is not set.
 type LayoutKeys struct {
@@ -21,11 +25,13 @@ type LayoutKeys struct {
 	Align  *Align
 	VAlign *VAlign
 	Fill   *Fill
+	Gutter *int
 }
 
-// ParseLayoutKeys parses the TOML values of the keys width, align, valign and fill.
+// ParseLayoutKeys parses the TOML values of the keys width, align, valign, fill and gutter.
 // A nil pointer is a key that is not set. errorf gets the key and the error of each invalid value.
-func ParseLayoutKeys(width *[]int64, align, valign, fill *string, errorf func(key string, err error)) LayoutKeys {
+func ParseLayoutKeys(width *[]int64, align, valign, fill *string, gutter *int64,
+	errorf func(key string, err error)) LayoutKeys {
 	var k LayoutKeys
 	if width != nil {
 		if w, err := NewWidth(*width); err != nil {
@@ -38,6 +44,14 @@ func ParseLayoutKeys(width *[]int64, align, valign, fill *string, errorf func(ke
 	k.Align = parseKey(align, "align", []Align{AlignLeft, AlignCenter, AlignRight}, errorf)
 	k.VAlign = parseKey(valign, "valign", []VAlign{VAlignTop, VAlignMiddle, VAlignBottom}, errorf)
 	k.Fill = parseKey(fill, "fill", []Fill{FillNone, FillSpaces, FillErase}, errorf)
+	if gutter != nil {
+		if g := *gutter; g < 0 || g > MaxGutter {
+			errorf("gutter", fmt.Errorf("%d, must be from 0 to %d", g, MaxGutter))
+		} else {
+			n := int(g)
+			k.Gutter = &n
+		}
+	}
 	return k
 }
 
@@ -54,6 +68,9 @@ func (k LayoutKeys) Over(l Layout) Layout {
 	}
 	if k.Fill != nil {
 		l.Fill = *k.Fill
+	}
+	if k.Gutter != nil {
+		l.Gutter = *k.Gutter
 	}
 	return l
 }

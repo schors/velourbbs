@@ -53,7 +53,7 @@ func TestDefaults(t *testing.T) {
 	if cfg.Lang != "en" || !slices.Equal(cfg.Langs, []string{"en"}) || len(cfg.LangMore) != 0 {
 		t.Errorf("lang %q, langs %q, lang more %v", cfg.Lang, cfg.Langs, cfg.LangMore)
 	}
-	if cfg.Align != screen.AlignCenter || cfg.VAlign != screen.VAlignTop || cfg.Fill != screen.FillNone {
+	if cfg.Align != screen.AlignCenter || cfg.VAlign != screen.VAlignTop || cfg.Fill != screen.FillNone || cfg.Gutter != 0 {
 		t.Errorf("layout = %+v", cfg.Layout)
 	}
 	// The base theme of screens-toml, section 3.2, with the md_* styles of file-view, section 4.
@@ -136,7 +136,7 @@ w = "term.cols"
 	}
 }
 
-// Each value of align, valign and fill (screens-toml, section 3.1).
+// Each value of align, valign and fill, and the limits of gutter (screens-toml, section 3.1).
 func TestLayout(t *testing.T) {
 	tests := []struct {
 		data string
@@ -151,6 +151,8 @@ func TestLayout(t *testing.T) {
 		{`fill = "none"`, screen.Layout{Fill: screen.FillNone}},
 		{`fill = "spaces"`, screen.Layout{Fill: screen.FillSpaces}},
 		{`fill = "erase"`, screen.Layout{Fill: screen.FillErase}},
+		{`gutter = 0`, screen.Layout{}},
+		{`gutter = 100`, screen.Layout{Gutter: 100}},
 	}
 	for _, tt := range tests {
 		cfg, ds := parseScreens([]byte("[screen]\n" + tt.data))
@@ -184,6 +186,7 @@ func TestErrors(t *testing.T) {
 		`align = "centre"`,
 		`valign = "Top"`,
 		`fill = ""`,
+		`gutter = 101`,
 		`theme = "Dark"`,
 		`zone = "Mars/Olympus"`,
 		`[theme.default]`,
@@ -213,6 +216,7 @@ func TestErrors(t *testing.T) {
 		`screens/screens.toml:1:1: screen.align: invalid value "centre", want "left", "center" or "right"`,
 		`screens/screens.toml:1:1: screen.valign: invalid value "Top", want "top", "middle" or "bottom"`,
 		`screens/screens.toml:1:1: screen.fill: invalid value "", want "none", "spaces" or "erase"`,
+		`screens/screens.toml:1:1: screen.gutter: 101, must be from 0 to 100`,
 		`screens/screens.toml:1:1: screen.more: zero-width grapheme U+200B`,
 		`screens/screens.toml:1:1: screen.zone: unknown time zone "Mars/Olympus"`,
 		`screens/screens.toml:1:1: screen.theme: invalid value "Dark", want "dark", "light" or "auto"`,

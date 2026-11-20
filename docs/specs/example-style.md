@@ -21,8 +21,13 @@ can edit without counting cells.
 - Much empty space. A screen has few lines. The keys of a screen are always visible in the key row.
 - The screen is 80 columns wide. The rows of the terminal below the screen have the ground colour.
 - Grid at 80x24: the hairlines are rows 2 and 21, there are no side lines. The name, the ornament
-  and the tagline are row 4. The text starts at column 8. A menu item has the key at column 10,
-  the label at column 14 and the note at column 54. The key row is row 23, from column 5.
+  and the tagline are row 4. The text starts at column 8. A menu item has the key at column 10
+  and the label at column 14. A dot leader in `line` joins the label and the note.
+  The note ends at column 78. The key row is row 23, from column 5. Row 24 is empty.
+- The hairlines and the dot leaders are stretch tokens. A spacer line gives the empty rows
+  above the closing rows, so the closing rows stay at the bottom of each terminal
+  ([bbt-format](bbt-format.md), section 6.6). The reader shows the page number
+  in the centre of its bottom hairline.
 - A key that works only on some pages is in the key row only on these pages.
 
 ## 3. Files

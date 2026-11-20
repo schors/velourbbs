@@ -40,6 +40,7 @@ type screensDoc struct {
 		Align  *string  `toml:"align"`
 		VAlign *string  `toml:"valign"`
 		Fill   *string  `toml:"fill"`
+		Gutter *int64   `toml:"gutter"`
 		More   *string  `toml:"more"`
 		Time   *string  `toml:"time"`
 		Zone   *string  `toml:"zone"`
@@ -86,7 +87,7 @@ func parseScreens(data []byte) (Config, screen.Diags) {
 	}
 	// Each other error has the position 1:1 (screen-render, section 3.1).
 	errorf := func(format string, args ...any) { fd.Errorf(1, 1, format, args...) }
-	cfg.Layout = screen.ParseLayoutKeys(d.Screen.Width, d.Screen.Align, d.Screen.VAlign, d.Screen.Fill,
+	cfg.Layout = screen.ParseLayoutKeys(d.Screen.Width, d.Screen.Align, d.Screen.VAlign, d.Screen.Fill, d.Screen.Gutter,
 		func(key string, err error) { errorf("screen.%s: %v", key, err) }).Over(defaultLayout)
 	cfg.More = more(d.Screen.More, "screen.more", errorf)
 	if p := d.Screen.Time; p != nil {
