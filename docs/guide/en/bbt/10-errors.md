@@ -89,6 +89,25 @@ screens/x.bbt:1:1: screen has no items
 
 Each screen except `goodbye` and `shutdown` needs at least one item. Add an item.
 
+## `a user cannot reach this screen`
+
+```
+screens/old.bbt:1:1: warning: a user cannot reach this screen
+```
+
+`velourbbs check` follows each `goto`, `gosub`, `select` and `lang` from the first screen `main`.
+No path goes to the screen `old`.
+Add an item that opens the screen, for example `do = "gosub old"` in `main`. Or delete the file.
+
+- Screens that only open each other also get the warning.
+- An item with `when` is a path.
+- `goodbye` and `shutdown` get no warning.
+- In a BBS in two languages (task 7), the check follows each language.
+  `screens/en/menu.bbt` has an item `gosub news`, and `screens/ru/menu.bbt` does not.
+  Then the common file `screens/news.bbt` gets the warning for `ru`:
+  `screens/news.bbt:1:1: warning: a user cannot reach this screen (language "ru")`.
+- A warning does not stop the BBS.
+
 ## `content file ... does not exist`
 
 ```

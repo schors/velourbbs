@@ -1,5 +1,8 @@
 +++
 [[item]]
+key = "R"
+do = "lang ru"
+[[item]]
 key = "ESC"
 do = "back"
 +++

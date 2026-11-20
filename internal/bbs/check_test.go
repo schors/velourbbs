@@ -52,7 +52,7 @@ var valid = map[string][]string{
 }
 
 func TestCheck(t *testing.T) {
-	start := config.Config{Start: "main", Langs: []string{"en"}}
+	start := config.Config{Start: "main", Lang: "en", Langs: []string{"en"}}
 	tests := []struct {
 		name   string
 		change map[string][]string // the screens to add or replace; nil deletes a screen
@@ -128,7 +128,7 @@ func TestCheckLimit(t *testing.T) {
 	var ds screen.Diags
 	ds.Warnf("screens/main.bbt", 1, 1, "w")
 	ds.Warnf("screens/x.ans", 1, 1, "w")
-	got := messages(Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds))
+	got := messages(Check(config.Config{Start: "main", Lang: "en", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds))
 	if len(got) != screen.MaxFileDiags+2 {
 		t.Fatalf("%d diagnostics, want %d", len(got), screen.MaxFileDiags+2)
 	}
@@ -175,12 +175,12 @@ func TestCheckArgs(t *testing.T) {
 		`screens/main.bbt:2:1: item "8": args: screen "view" has no argument "x"`,
 		`screens/shutdown.bbt:1:1: the shutdown screen cannot have arguments`,
 	}
-	got := messages(Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, nil))
+	got := messages(Check(config.Config{Start: "main", Lang: "en", Langs: []string{"en"}}, bbt.Sets{"en": ss}, nil))
 	if !slices.Equal(got, want) {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 
-	got = messages(Check(config.Config{Start: "view", Langs: []string{"en"}}, bbt.Sets{"en": ss}, nil))
+	got = messages(Check(config.Config{Start: "view", Lang: "en", Langs: []string{"en"}}, bbt.Sets{"en": ss}, nil))
 	if !slices.Contains(got, `screens/screens.toml:1:1: menu: start: screen "view" has arguments`) {
 		t.Errorf("start view: got\n%s", strings.Join(got, "\n"))
 	}

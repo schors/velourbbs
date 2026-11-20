@@ -88,7 +88,7 @@ func TestPreviewFileArg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		fsys := fstest.MapFS{"content/bad.txt": {Data: []byte("abc\xff\n")}}
-		for _, name := range []string{"bbs.toml", "screens/main.bbt", "screens/reader.bbt", "screens/code.bbt",
+		for _, name := range []string{"bbs.toml", "screens/main.bbt", "screens/reader.bbt", "screens/code.bbt", "screens/margin.bbt",
 			"content/gold.md", "content/notes.md", "content/plain.txt", "content/xfer/crc16.c"} {
 			data, err := os.ReadFile(filepath.Join("testdata", "file", name))
 			if err != nil {
@@ -107,10 +107,12 @@ func TestPreviewFileArg(t *testing.T) {
 // The lines of the file screen apply to a file of --set arg.file.
 func TestPreviewFileArgLines(t *testing.T) {
 	fsys := fstest.MapFS{
-		"bbs.toml":         {},
-		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\nMain\n")},
+		"bbs.toml": {},
+		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"V\"\ndo = \"gosub view\"\nargs = { file = \"b.txt\" }\n" +
+			"[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\nMain\n")},
 		"screens/view.bbt": {Data: []byte("+++\nfile = \"{arg.file}\"\nlines = [1, 2]\n[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n{>file}\n")},
 		"content/a.md":     {Data: []byte("# A\n")},
+		"content/b.txt":    {Data: []byte("1\n2\n")},
 	}
 	var out, errOut bytes.Buffer
 	status := run([]string{"preview", "view", "--set", "arg.file=a.md"}, t.TempDir(), fsys, &out, &errOut)
