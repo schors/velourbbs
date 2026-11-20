@@ -33,11 +33,23 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - A screen of a language stays in its language: no item names a language
   (`lang`, `goto <lang>/`, `gosub <lang>/`), and no file argument has a language directory.
 - The texts follow the copy rules of the brandbook, section 7, for their language.
-- Each screen except a file screen has an 80 form and a 132 form. The 132 form is
-  for `term.cols >= 132 and term.rows >= 43`. A file screen has only the 80 form.
+- Each screen except a file screen has one layout for 80 and 132 columns and for 24 and 43 rows.
+  `[screen]` has `width = [68, 108]`, `align = "center"` and `gutter = 6`.
+  A source line starts with 2 spaces, and a row with a stretch token ends with 2 spaces.
+  So the column is 8 to 71 at 80 columns and 14 to 117 at 132, counted from 0,
+  as in the grid of the brandbook, section 5.
+- Stretch tokens give the rules, the dot leaders and the right edge of the key rows.
+  A spacer line above the footer takes the free rows ([bbt-format](bbt-format.md), section 6.6).
+- On a section screen, a block with `term.rows >= 43` gives the empty row above the kicker.
+  On each screen with keys, a block with `term.rows >= 25` gives the empty row below the keys.
+  So, counted from 1, the kicker is at row 5 at 80x24 and 80x25 and at row 6 at 132x43.
+  The keys are at row 23 at 80x24 and 80x25 and at row 41 at 132x43.
+- The logotype is `_logo-132` with `term.cols >= 132 and term.rows >= 43`, else `_logo-80`.
+- A file screen keeps the layout of 80 columns: `width = [80, 80]`, `align = "left"` and `gutter = 0`.
 - With `term.ambiguous` 2, `main` shows a hint in both languages in place of the greeting:
   the screens break, and the setting for one cell in the common terminals.
-  Each row of the hint fits 80 columns when each Cyrillic letter takes two cells.
+  Each row of the hint fits the render width of 68 cells. It also fits 80 columns
+  when each Cyrillic letter takes two cells.
 - The guides and the features text are texts. The station shows each part of a guide
   as one file through the symlink. It does not copy the parts.
 - The lists of guide parts use the provider `files`, so `README.md` is the first row.
@@ -46,7 +58,8 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   or `Velour` for the features text.
 - The screen `about` shows the repository address, the session and BBS fields
   and each `term.*` value that the probe detects. `term.type` and `term.name` are
-  fixed-width fields of 40 cells, so the 80 form keeps its 23 rows.
+  fixed-width fields of 36 cells, so each of their rows fits the column of 64 cells
+  and the screen fits 24 rows.
 - The station facts (the SysOp name, the address, the port) come from the operator.
   The screens do not invent them.
 - The theme gives the colours of the brandbook in each colour depth. The style names are
@@ -62,8 +75,8 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 ## 5. Acceptance
 
 - A Go test in `cmd/velourbbs` runs `velourbbs check` in `station/`. It gives no output.
-- The test compares the `velourbbs preview` cell dump of each screen at 80x24 with 256 colours
-  with its golden file `cmd/velourbbs/testdata/station/<screen>-80x24-256.dump`.
+- The test compares the `velourbbs preview` cell dump of each screen at 80x24 and at 132x43
+  with 256 colours with its golden file `cmd/velourbbs/testdata/station/<screen>-<size>-256.dump`.
   `<screen>` is a common screen, or `<lang>-<name>` with `--set session.lang=<lang>`.
   The test has no other cases.
 - The station tests use a guide fixture in place of `content/<lang>/guide`.

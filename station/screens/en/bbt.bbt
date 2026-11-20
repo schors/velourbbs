@@ -1,5 +1,4 @@
 +++
-width = [80, 132]
 data = { from = "files", args = { dir = "guide/bbt" } }
 rows = 16
 select = { do = "gosub read", args = { file = "{row.path}", title = "BBT guide" } }
@@ -7,40 +6,20 @@ select = { do = "gosub read", args = { file = "{row.path}", title = "BBT guide" 
 key = "ESC"
 do = "back"
 +++
-{#if term.cols >= 132 and term.rows >= 43}
 
-              {!hi}V E L O U R{!}      {!white}Texts{!}
-              {!gold}───────────{!frame}───────────────────────────────────────────────────────────────────────────────────────────{!} {!emer}■{!}
+  {!hi}V E L O U R{!}      {!white}Texts{!}
+  {!gold}───────────{!frame}{~─}{!} {!emer}■{!}  
 
+{#if term.rows >= 43}
 
-              {!emer}■{!gold}  Texts{!}
+{/if}
+  {!emer}■{!gold}  Texts{!}
 
+{#each}{#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
+{~}
+  {!frame}{#if list.pages == 1}{~─}{#else}{~─}{!dim}   {list.page}/{list.pages}   {!frame}{~─}{/if}{!}  
+  {!hi}Enter{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
 
+{#if term.rows >= 25}
 
-{#each}            {#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-              {!frame}{#if list.pages == 1}────────────────────────────────────────────────────────────────────────────────────────────────────────{#else}{#if list.pages < 10}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}────────────────────────────────────────────────{#else}{#if list.page < 10}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}───────────────────────────────────────────────{#else}───────────────────────────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}──────────────────────────────────────────────{/if}{/if}{/if}{!}
-              {!hi}Enter{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
-{#else}
-
-    {!hi}V E L O U R{!}      {!white}Texts{!}
-    {!gold}───────────{!frame}───────────────────────────────────────────────────{!} {!emer}■{!}
-
-
-{#each}  {#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
-    {!frame}{#if list.pages == 1}────────────────────────────────────────────────────────────────{#else}{#if list.pages < 10}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}────────────────────────────{#else}{#if list.page < 10}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}───────────────────────────{#else}───────────────────────────{!dim}   {list.page}/{list.pages}   {!frame}──────────────────────────{/if}{/if}{/if}{!}
-    {!hi}Enter{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
 {/if}

@@ -1,6 +1,9 @@
 +++
 file = "{arg.file}"
 margin = [4, 12]
+width = [80, 80]
+align = "left"
+gutter = 0
 [[item]]
 key = "B"
 do = "page prev"
