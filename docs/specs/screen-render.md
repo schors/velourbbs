@@ -338,21 +338,35 @@ For each page, the line form writes:
   without attributes.
 - The colours have the reduction to `term.colors` of [telnet-term](telnet-term.md), section 7.3.
   A VGA colour becomes its RGB value, as for a terminal whose palette is not VGA.
-  The palette of the terminal of the sysop does not change the colours of the art.
+  So with 256 and 16777216 colours, the palette of the terminal of the sysop does not change
+  the colours of the art. With 16 colours, the art has the indexes 0–15 in that palette.
 - The encoder of [telnet-term](telnet-term.md), section 7.4, writes the cells.
   The re-sync moves to the column with `ESC[<col>G` in place of `ESC[<row>;<col>H`.
+  The re-sync is not an SGR sequence: a viewer that passes only SGR, such as `less -R`,
+  shows it as text.
 - The line form has no synchronized output, no clear and no positions of rows.
 - The `ESC[0m` before the line end stops a terminal with bce from filling
   the next row in the background of the last cell.
-- A terminal of the sysop with fewer columns than `term.cols` wraps the rows.
+- When the terminal of the sysop shows a row wider than its columns, the row wraps
+  to extra lines, and the columns after a re-sync are not correct. Examples: a terminal
+  with fewer columns than `term.cols`, a grapheme wider than in the model, ambiguous characters
+  shown wide. No later output overwrites the extra lines: the wrap rule of
+  [telnet-term](telnet-term.md), section 7.4, does not apply.
 
-Example: the page of section 3.3, with the colours of the example, at 80x3 with `fill = "none"`.
-`␛` is ESC. `...` stands for the spaces up to column 80. The third terminal row is a fill row:
+Example: the page of section 3.3, with the colours of the example, at 80x10 with `fill = "none"`.
+`␛` is ESC. `...` stands for the spaces up to column 80. The terminal rows 3–10 are fill rows:
 
 ```
-page 1 80x3 fill none
+page 1 80x10 fill none
 ␛[0;1;97;44mWelcome!␛[0;37;40m    ...␛[0m
 ␛[0;96;40m[G]oodbye␛[0;37;40m    ...␛[0m
+␛[0m
+␛[0m
+␛[0m
+␛[0m
+␛[0m
+␛[0m
+␛[0m
 ␛[0m
 ```
 
