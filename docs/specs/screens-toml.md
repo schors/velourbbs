@@ -54,14 +54,23 @@ The other specifications define the effect of a key and refer to this specificat
 ### 3.2. `[theme]`
 
 The theme maps a style name to a style in the syntax of [bbt-format](bbt-format.md),
-section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), section 7.3.
+section 7.2, or to a reference (below). The style tokens use the theme:
+[bbt-format](bbt-format.md), section 7.3.
 
 - `[theme]` has only the tables `default`, `16`, `256` and `light`.
   `[theme.16]` and `[theme.256]` are the "depth themes". A depth theme gives other styles
   for one colour depth `term.colors` ([telnet-term](telnet-term.md), section 6).
 - `[theme.light]` has only the tables `default`, `16` and `256`: the "light tables".
   They give other styles in the light theme (below).
-- A style name matches `[a-z][a-z0-9_]*`. Its value is a string.
+- A style name matches `[a-z][a-z0-9_]*`. Its value is a string: a style or a "reference".
+  A reference is a style name and optional attributes:
+
+  ```
+  reference = name { " " attr } ;
+  ```
+
+  `attr` is an attribute of [bbt-format](bbt-format.md), section 7.2.
+  Examples: `"head"`, `"head bold underline"`.
 - The "base theme" is `normal = "7/0"`, `more = "15/0"`, `select = "0/7"`, the `md_*` styles of
   [file-view](file-view.md), section 4, and the styles of `[theme.default]`.
   A style of `[theme.default]` replaces the style with the same name.
@@ -76,14 +85,28 @@ section 7.2. The style tokens use the theme: [bbt-format](bbt-format.md), sectio
   of `[theme.light.default]`, then each style of the light table of `term.colors`,
   in place of the style with the same name.
   When `term.colors` has no light table, only `[theme.light.default]` applies.
+- In the dark theme and in the light theme of each `term.colors`, a reference gives
+  the style of its name in the same theme, with the attributes of the reference added.
+  When that style is also a reference, the same rule applies to it.
+  A reference that leads back to its own style is an error: a "cycle".
+  The host checks the dark theme and the light theme of 16, 256 and 16777216 colours.
+- Errors of a reference have the position of its value
+  ([screen-render](screen-render.md), section 3.1):
+  - A name that is not a name of the theme: `theme.default.md_h1: unknown style "haed"`.
+  - A cycle: `theme.16.md_h1: cycle: md_h1 -> head -> md_h1`. Each key of a cycle gives
+    one error, also when the cycle is in more than one theme. The path starts and ends
+    with the name of the key. When the path differs between themes, the first theme
+    in this order gives it: the dark theme of 16, 256 and 16777216 colours, then the light theme
+    of 16, 256 and 16777216 colours. A reference that leads into a cycle and not back
+    to its own style gives no error.
 - The "theme choice" of a session is `dark`, `light` or `auto`. It starts as `[screen] theme`.
   The action `theme` changes it ([menu-nav](menu-nav.md), section 4).
   The field `session.theme` gives it ([session-fields](session-fields.md), section 2).
 - The "session theme" is the light theme of `term.colors` when the theme choice is `light`,
   or when it is `auto` and `term.background` is `light` ([telnet-term](telnet-term.md), section 6).
   Else it is the dark theme of `term.colors`.
-- A style of the session theme without a foreground or a background takes it
-  from `normal` of the session theme. `normal` takes it from `7/0` in the dark theme
+- After the references, a style of the session theme without a foreground or a background
+  takes it from `normal` of the session theme. `normal` takes it from `7/0` in the dark theme
   and from `0/15` in the light theme.
 
 Example:
@@ -92,6 +115,7 @@ Example:
 [theme.default]
 normal = "#c0c0c0/#101020"
 title  = "#60a0d0 bold"
+md_h1  = "title underline"
 
 [theme.16]
 normal = "7/0"
@@ -109,6 +133,8 @@ With 16 colours, `title` is `15/0 bold` in the dark theme. With 256 colours,
 it is `#60a0d0/#101020 bold`, and the host reduces it ([telnet-term](telnet-term.md), section 7.3).
 In the light theme with 16 colours, `title` is `#004080/7 bold`, and the host reduces
 the foreground to an index from 0 to 15.
+`md_h1` is `title` with `underline` in each theme: `15/0 bold underline` in the dark theme
+with 16 colours, and `#004080/7 bold underline` in the light theme with 16 colours.
 
 ### 3.3. `[fields]`
 
