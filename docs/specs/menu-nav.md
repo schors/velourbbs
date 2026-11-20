@@ -31,7 +31,8 @@ All sessions are anonymous. Login is a later idea.
 [bbt-format](bbt-format.md), section 8.1, defines the key names.
 Other characters are keys too, but an item cannot have them. They match only `ANY`.
 
-- Case does not matter in `--keys`, as in `key`.
+- Case does not matter in a key name of `--keys`, as in `key`. A letter is a key name,
+  except in the line input (section 5.4): there it is a character with its case.
 - [telnet-term](telnet-term.md), section 8, decodes the input bytes to these names
   and to characters.
 
@@ -93,11 +94,11 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
   the values of the `args` of the item, page 1 and the cursor on the first row.
 - `gosub <name>` adds a new frame on top: the screen `<name>`, the values of the `args` of the item, page 1
   and the cursor on the first row.
+  When the stack has 16 frames, the host first removes the second frame:
+  the oldest frame above the first frame.
 - The host takes the values of `args` before it changes the stack
   ([bbt-format](bbt-format.md), section 8.5): `{arg.<name>}` from the top frame,
   `{in}` from the line of `ask`, `{row.<field>}` from the selected row.
-  When the stack has 16 frames, the host first removes the second frame:
-  the oldest frame above the first frame.
 - `back` removes the top frame. On the first frame, it removes nothing.
 - `top` removes each frame above the first frame.
 - After each of these actions, the host shows the screen of the top frame
@@ -183,7 +184,8 @@ The current list page and the cursor are the page and the cursor of the top fram
 When an item with `ask` ([bbt-format](bbt-format.md), section 8.6) runs, the host:
 
 1. Takes the "ask row": the last row of the shown page that the terminal shows.
-   A page cut at `term.rows` has the row `term.rows`.
+   A page cut at `term.rows` has the row `term.rows`. A page without rows gets one row:
+   the row where a page of 1 row starts ([bbt-format](bbt-format.md), section 6.5).
 2. Shows the page with the ask row in place of that row.
    The ask row has the cells of the row outside the screen area. In the screen area,
    it has the prompt in the theme style `more`, then M + 1 spaces in the theme style `select`,
@@ -198,13 +200,14 @@ When an item with `ask` ([bbt-format](bbt-format.md), section 8.6) runs, the hos
 - M is the free cells of the prompt ([bbt-format](bbt-format.md), section 8.6),
   in the screen area that the terminal shows, and at most `ask_max`.
 - When `term.cols` < `min`, M can be less than 1. Then the host cuts the end of the prompt
-  at a grapheme boundary until M is 1.
+  at a grapheme boundary until M is at least 1. `ask_max` applies after the cut.
 - The key of the item does not go into the line. The keys after it in the input queue do.
 - The line input clears the key queue at its end ([line-input](line-input.md), section 6).
+  The `--keys` list of `velourbbs preview` is not a queue: the clear drops no key of it (section 7).
 
-Example: the screen `area` at 80x25 ends with an empty row 24. `J` shows
-`Message number: ` and 6 cells of the field on row 24. The user types `12` and `ENTER`.
-The host runs `gosub msg` with `n = "12"`.
+Example: the screen `area` at 80x25 ends with an empty row 24. `J` of [bbt-format](bbt-format.md),
+section 8.6, shows `Message number: ` and 6 cells of the field on row 24.
+The user types `12` and `ENTER`. The host runs `gosub msg` with `n = "12"`.
 
 ## 6. `velourbbs check`
 
@@ -221,6 +224,8 @@ of each language of the BBS ([session-language](session-language.md), section 6)
 - a start screen that does not exist or has no items;
 - a `goto` or a `gosub` whose `args` differ from the arguments of the target screen
   ([bbt-format](bbt-format.md), section 8.5);
+- an error of the values of [bbt-format](bbt-format.md), section 8.5: an open value
+  or a `{row.<field>}` value that reaches `file` or `data`;
 - arguments of the start screen, of `goodbye` or of `shutdown`.
 
 - An error in an item has the position of its key path ([screen-render](screen-render.md), section 3.1).
@@ -229,7 +234,7 @@ of each language of the BBS ([session-language](session-language.md), section 6)
 - An error of a screen without items has the position 1:1.
 - An error of the start screen is an error of the key `menu.start` of `screens/screens.toml`,
   also when the file is missing.
-- The checks of a `goto` and a `gosub`, of a screen without items and of the start screen use all screens.
+- The checks of a `goto` and a `gosub`, of the values, of a screen without items and of the start screen use all screens.
   `velourbbs check` does them only when the files have no other errors.
 
 Examples:
@@ -302,7 +307,8 @@ It is the test harness for the navigation.
   - `logoff` when an item runs `logoff`. The pages of `goodbye` follow it;
   - `ask` and the cell dump of the page with the ask row, when an item with `ask` runs
     (section 5.4);
-  - `key <key>` before each key of the line input, with the key as it is, without the map of section 3.2;
+  - `key <key>` before each key of the line input, without the map of section 3.2 and without `ignored`.
+    A character is as it is, with its case;
   - `line "<line>"` after `ENTER` with a line, and `line cancelled` after `ESC`
     or `ENTER` with an empty line. Before `"` and `\` in `<line>`, the output has a `\`.
     After `line cancelled`, the cell dump of the page follows.

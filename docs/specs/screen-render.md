@@ -132,6 +132,10 @@ renders a screen and writes its cell dump to the standard output.
   ([bbt-format](bbt-format.md), section 8.5). A missing argument, another argument and
   an invalid value are invalid arguments. A content file of a value has the checks of
   [file-view](file-view.md), section 7. After an error, the command writes no dump and exits with status 1.
+- The values of `--set arg.<name>` and of `rows` of a sample set (section 3.5) are values of
+  [bbt-format](bbt-format.md), section 8.5, too. Before the render, the command loads the content files
+  and the rows of each screen that they reach, also through the `{arg.<name>}` of other screens.
+  An error of a `--set` value is an invalid argument. An error of a value of `rows` is an error of the preview.
 - `--set term.type` applies the rules of [telnet-term](telnet-term.md), section 6:
   it cleans the name, cuts it and makes it lower case. An empty name gives `ansi`.
   The name gives `term.colors` by rules 3–6. `--set term.colors` overrides it, in each order of the options.
@@ -205,8 +209,9 @@ styles
   [session-fields](session-fields.md), section 4). The screen set of `[screen] lang` gives the first
   values, with the screens in name order. For `arg.<name>`, it is the first value
   that a `goto` or a `gosub` gives: the items in source order, then `select` with the first row
-  of the screen. `{arg.<name>}` gives the sample value of the argument of its own screen.
-  When that leads back to the same argument, the action gives no value, and the next action counts.
+  of the screen. `{arg.<name>}` gives the sample value of the argument of its own screen,
+  by the same rule. An argument that is already on this path gives no value: the action does not count,
+  and the next action counts. An argument without a value has an empty sample value.
   `{in}` gives an empty value. For a `row.*` field, it is the value of the first row of the provider, else empty.
 - `file.*` and `list.*` have the values of page 1 of 1: `file.title` and `file.section` are empty,
   `file.minutes` is 0, and `list.empty` is false when a list of the BBS has a row.
@@ -256,8 +261,8 @@ rows = [
 - A field of `rows` that the provider of a list screen of the preview does not have,
   or a value of the wrong type, is an error of the preview. After an error of the preview,
   the command exits with status 1.
-- A value of `rows` that `select` gives to a file screen must be a content file
-  ([list-view](list-view.md), section 8). Else it is an error of the preview.
+- A value of `rows` that reaches a file screen must be a content file (section 3.2).
+  Else it is an error of the preview.
 
 ### 3.6. Layout warnings
 
@@ -277,9 +282,8 @@ and warns about layout mistakes that the host does not report.
   in each set, the screens in name order, the items in source order, then `select`
   with the first row of its list. The list of a screen with arguments needs the arguments
   of an action before its `select`.
-  `{arg.<name>}` gives the value of the argument of its own screen by this rule.
-  When that leads back to the same argument, the action gives no value, and the next action counts.
-  `{in}` gives an empty value.
+  `{arg.<name>}` and `{in}` give the sample values of section 3.4.
+  An action whose `{arg.<name>}` gives no value does not count.
   A screen with arguments that no action shows is not rendered.
 - It renders each page of the screen, as the cell dump has (section 3.3).
 

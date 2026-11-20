@@ -240,9 +240,8 @@ Positions:
 
 - An error of a key of the screen has the position of its key path
   ([screen-render](screen-render.md), section 3.1).
-- An error of a row of a provider value `{arg.<name>}` is an error of the item that gives the value,
-  as in [file-view](file-view.md), section 7.
-- An error of a value of `select` in a file screen is an error of the key `select`.
+- An error of a row of a provider value `{arg.<name>}` and an error of a value of `select`
+  in a file screen are errors at the origin of the value ([bbt-format](bbt-format.md), section 8.5).
 - An error of the list rectangle depends on `rows` of the screen. It starts with `screen "<name>": `
   ([screen-render](screen-render.md), section 3.1).
 

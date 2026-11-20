@@ -316,7 +316,7 @@ Positions:
 - An error of a file that a `goto` or a `gosub` gives is an error of its item:
   the position of the value `args.<name>` of the item,
   and the start `item "<KEY>": args: <name>: ` ([menu-nav](menu-nav.md), section 6).
-  For a value through `{arg.<name>}`, it is the item of the literal
+  For a value through `{arg.<name>}`, it is an error at the origin of the value
   ([bbt-format](bbt-format.md), section 8.5).
   This includes an error of `lines` and `numbers` for this file.
 

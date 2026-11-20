@@ -68,7 +68,7 @@ The front matter is TOML 1.1. An unknown key is an error.
 | `gutter` | integer | The cells that the render width leaves on each side of the screen area, from 0 to 100. Section 6.1. |
 | `file`, `lines`, `numbers`, `margin` | — | The file of a file screen: [file-view](file-view.md), section 3. |
 | `data`, `rows`, `select` | — | The list of a list screen: [list-view](list-view.md), section 3. |
-| `[[item]]` | array of tables | Menu items with `key`, `do`, an optional `when` and optional `args`. Section 8. An array of inline tables is the same: `item = [{ key = "G", do = "logoff" }]`. |
+| `[[item]]` | array of tables | Menu items with `key`, `do` and the optional keys of section 8.2. Section 8. An array of inline tables is the same: `item = [{ key = "G", do = "logoff" }]`. |
 
 Example:
 
@@ -365,7 +365,7 @@ attr   = "bold" | "underline" | "blink" ;
 ## 8. Items
 
 - A "menu" is the `[[item]]` list in the front matter of a screen (section 3.2).
-- An "item" is one choice: `key`, `do` and an optional `when`.
+- An "item" is one choice: `key`, `do` and the optional keys of section 8.2.
   An item has no position on the screen. The screen author writes the item text,
   for example `[A]bout`, into the body.
 
@@ -498,10 +498,12 @@ Values at load:
   So an argument that a screen uses in `file` or in `data` cannot have an open value,
   and an argument that a screen uses in `data` cannot have a value of `{row.<field>}`.
   So the rows of a provider never depend on the rows of another provider.
-- Such a value is an error of the `{in}` or the `{row.<field>}` that gives it,
+- The "origin" of a value is the literal, the `{row.<field>}` or the `{in}` that gives it,
   also through the `{arg.<name>}` of other screens.
-- An error of a content file or of a provider row of a value is an error of the literal
-  that gives the value, also through the `{arg.<name>}` of other screens.
+- An error of a value is an error at its origin: an open value or a `{row.<field>}` value
+  that reaches `file` or `data` as above, and an error of the content file or of the provider rows
+  of the value. It has the position of the value `args.<name>` of the origin and the start
+  `item "<KEY>": args: <name>: ` or `select: args: <name>: `.
 
 Example: `texts` gives `dir` to `parts`, and `parts` gives it on to `read`.
 So `dir` of `read` has the value `guide/bbt`, and `file` of `read` has the value
@@ -532,7 +534,7 @@ screens/texts.bbt:9:16: item "2": args: dir: directory "guide/bbtt" does not exi
 
 `ask` asks the user for one line before the action of the item.
 
-Example: `J` asks for a message number and shows the message.
+Example: `J` asks for a message number and gives it to the screen `msg`.
 
 ```
 [[item]]
