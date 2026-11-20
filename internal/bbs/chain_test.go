@@ -64,20 +64,21 @@ func TestChainErrors(t *testing.T) {
 			"\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{#each}{row.title}{/each}\n"
 	}
 	tests := []struct {
-		name string
-		more map[string]string
-		want []string
+		name  string
+		langs []string
+		more  map[string]string
+		want  []string
 	}{
-		{"file", map[string]string{
+		{"file", nil, map[string]string{
 			"screens/main.bbt": "+++\n[[item]]\nkey = \"H\"\ndo = \"gosub hub\"\nargs = { dir = \"docs\", file = \"nope.md\" }\n" +
 				"[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n",
 		}, []string{`screens/main.bbt:5:31: item "H": args: file: content file "nope.md" does not exist`}},
-		{"rows", map[string]string{
+		{"rows", nil, map[string]string{
 			"screens/main.bbt": "+++\n[[item]]\nkey = \"H\"\ndo = \"gosub hub\"\nargs = { dir = \"nope\", file = \"intro.md\" }\n" +
 				"[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n",
 		}, []string{`screens/main.bbt:5:16: item "H": args: dir: directory "nope" does not exist`}},
 		// A {row.<field>} value of a file screen through the screen mid.
-		{"select file", map[string]string{
+		{"select file", nil, map[string]string{
 			"screens/parts.bbt": parts(`select = { do = "gosub mid", args = { file = "{row.path}" } }`),
 			"screens/mid.bbt":   mid("file", "num"),
 			"screens/num.bbt":   "+++\nfile = \"{arg.file}\"\nnumbers = true\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{>file}\n",
@@ -86,15 +87,28 @@ func TestChainErrors(t *testing.T) {
 			`screens/parts.bbt:4:46: select: args: file: numbers: "docs/2.md" is a Markdown file`,
 		}},
 		// A {row.<field>} value cannot give rows, also through the screen mid.
-		{"select data", map[string]string{
+		{"select data", nil, map[string]string{
 			"screens/parts.bbt": parts(`select = { do = "gosub mid", args = { dir = "{row.path}" } }`),
 			"screens/mid.bbt":   mid("dir", "sub"),
 			"screens/sub.bbt":   strings.Replace(parts(""), "rows = 2\n", "rows = 1\n", 1),
 		}, []string{`screens/parts.bbt:4:45: select: args: dir: the value reaches the data of screen "sub"`}},
+		// Each set finds the error of a common select once (session-language, section 6).
+		{"select data in each set", []string{"en", "ru"}, map[string]string{
+			"screens/parts.bbt": parts(`select = { do = "gosub mid", args = { dir = "{row.path}" } }`),
+			"screens/mid.bbt":   mid("dir", "sub"),
+			"screens/sub.bbt":   strings.Replace(parts(""), "rows = 2\n", "rows = 1\n", 1),
+		}, []string{`screens/parts.bbt:4:45: select: args: dir: the value reaches the data of screen "sub"`}},
+		// Only the sub of ru has data: only the set ru finds the error.
+		{"select data in one set", []string{"en", "ru"}, map[string]string{
+			"screens/parts.bbt":  parts(`select = { do = "gosub mid", args = { dir = "{row.path}" } }`),
+			"screens/mid.bbt":    mid("dir", "sub"),
+			"screens/en/sub.bbt": "+++\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{arg.dir}\n",
+			"screens/ru/sub.bbt": strings.Replace(parts(""), "rows = 2\n", "rows = 1\n", 1),
+		}, []string{`screens/parts.bbt:4:45: select: args: dir: the value reaches the data of screen "sub" (language "ru")`}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, msgs := loadLangs(t, nil, chainFiles(tt.more))
+			_, msgs := loadLangs(t, tt.langs, chainFiles(tt.more))
 			slices.Sort(msgs)
 			if !slices.Equal(msgs, tt.want) {
 				t.Errorf("got\n%s\nwant\n%s", strings.Join(msgs, "\n"), strings.Join(tt.want, "\n"))

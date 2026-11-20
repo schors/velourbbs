@@ -307,8 +307,11 @@ select = { do = "gosub note", args = { dir = "{arg.dir}", file = "{row.path}" } 
   The name `dir` is an argument of `notes`, as in `data`.
 - A value can pass through more than one screen. The BBS follows each `goto` and `gosub`
   and loads the files and the rows of each value at the start.
-- An error of a value is an error at the text that gives it, also after other screens.
-  For example, `velourbbs check` reports a missing directory at `dir = "log"` of the item `1`.
+- An error of a value is an error at the text or at the field `{row.<field>}` that gives it,
+  also after other screens. For example, `velourbbs check` reports a missing directory
+  at `dir = "log"` of the item `1`.
+- A value of `{row.<field>}` cannot reach the `data` of a screen, also through other screens.
+  So the rows of a list never depend on the rows of another list.
 - In `args`, each other field is an error: an alias, a field with a width.
 
 Full rules: [bbt-format](../../../specs/bbt-format.md), section 8.5.

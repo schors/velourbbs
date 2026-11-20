@@ -66,7 +66,7 @@ func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
 	}
 	checkSets(cfg.Langs, sets, sd)
 	if !sd.All().HasErrors() {
-		sd.Add("", checkReach(cfg.Langs, sets))
+		checkReach(cfg.Langs, sets, sd)
 	}
 	if !sd.All().HasErrors() {
 		unreachable(cfg, sets, sd)
@@ -91,18 +91,14 @@ func checkSelect(sets bbt.Sets, lang string, sel *screen.Select, at tomlcheck.Pl
 	}
 }
 
-// checkReach reports each {row.<field>} value that reaches the data of a screen, also through
-// the {arg.<name>} values of other screens (bbt-format, section 8.5). It needs the screens
-// of all sets of langs and their checks without errors.
-func checkReach(langs []string, sets bbt.Sets) screen.Diags {
+// checkReach adds to sd each {row.<field>} value that reaches the data of a screen, also through
+// the {arg.<name>} values of other screens (bbt-format, section 8.5). The set of the screen
+// with data finds the error (session-language, section 6). It needs the screens of all sets of langs
+// and their checks without errors.
+func checkReach(langs []string, sets bbt.Sets, sd *bbt.SetDiags) {
 	r := bbt.Reach(sets, langs, nil)
-	var ds screen.Diags
-	type key struct {
-		o    bbt.Origin
-		name string
-	}
-	seen := map[key]bool{}
 	for _, lang := range langs {
+		var ds screen.Diags
 		for _, name := range slices.Sorted(maps.Keys(sets[lang])) {
 			ls := sets[lang][name].List
 			if ls == nil {
@@ -110,17 +106,15 @@ func checkReach(langs []string, sets bbt.Sets) screen.Diags {
 			}
 			for _, pa := range slices.Sorted(maps.Keys(ls.ArgRefs)) {
 				for _, o := range r[name][ls.ArgRefs[pa]] {
-					if o.Row == "" || seen[key{o, name}] {
-						continue
+					if o.Row != "" {
+						p := o.Pos()
+						ds.Errorf(p.File, p.Line, p.Col, "%s: args: %s: the value reaches the data of screen %q", o.Label, o.Arg, name)
 					}
-					seen[key{o, name}] = true
-					p := o.Pos()
-					ds.Errorf(p.File, p.Line, p.Col, "%s: args: %s: the value reaches the data of screen %q", o.Label, o.Arg, name)
 				}
 			}
 		}
+		sd.Add(lang, ds) // the merge gives an equal error once
 	}
-	return ds
 }
 
 // checkSets reports each screen name of a set that is not in the set of each other language,
