@@ -5,6 +5,20 @@
 В арте это номер строки и номер столбца арта.
 Эта задача показывает частые ошибки и их исправления.
 
+## Ошибка в `bbs.toml` или `screens/screens.toml`
+
+```
+screens/screens.toml:10:10: unexpected character U+0023 '#' at start of value
+```
+
+Строка 10 файла `screens/screens.toml` — это `title  = #f7c7a3 bold`.
+Текст в TOML пишется в двойных кавычках: `title  = "#f7c7a3 bold"`.
+
+Экраны используют настройки из `bbs.toml` и `screens/screens.toml`.
+Поэтому после ошибки в этих файлах `velourbbs check` останавливается до экранов
+и не выводит ошибки экранов.
+Исправь ошибки и снова запусти `velourbbs check`. Тогда она проверит экраны.
+
 ## `unknown style`
 
 ```
