@@ -190,25 +190,24 @@ of each language of the BBS ([session-language](session-language.md), section 6)
   ([bbt-format](bbt-format.md), section 8.5);
 - arguments of the start screen, of `goodbye` or of `shutdown`.
 
-- An error in an item has the position of the first line
-  of the front matter ([screen-render](screen-render.md), section 3.1).
+- An error in an item has the position of its key path ([screen-render](screen-render.md), section 3.1).
   It starts with `item "<KEY>"`, with the key in upper case.
   An item without a valid key gives `item <n>`, the 1-based number of the item.
 - An error of a screen without items has the position 1:1.
-- An error of the start screen has the position 1:1 in `screens/screens.toml`,
-  also when the file is missing.
+- An error of the start screen has the position of `menu.start` in `screens/screens.toml`.
+  Without the key or the file, it has the position 1:1.
 - The checks of a `goto` and a `gosub`, of a screen without items and of the start screen use all screens.
   `velourbbs check` does them only when the files have no other errors.
 
 Examples:
 
 ```
-screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"
-screens/main.bbt:2:1: item 2: key: invalid key "?"
-screens/main.bbt:2:1: item "S": key: duplicate key
-screens/main.bbt:2:1: item 3: key is missing
+screens/main.bbt:8:6: item "S": do: unknown screen "sysinf"
+screens/main.bbt:11:7: item 2: key: invalid key "?"
+screens/main.bbt:14:7: item "S": key: duplicate key
+screens/main.bbt:16:1: item 3: key is missing
 screens/about.bbt:1:1: screen has no items
-screens/screens.toml:1:1: menu: start: unknown screen "mian"
+screens/screens.toml:12:9: menu: start: unknown screen "mian"
 ```
 
 ### 6.1. Unreachable screen

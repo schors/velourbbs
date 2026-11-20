@@ -237,7 +237,8 @@ in each screen set:
 
 Positions:
 
-- An error of a key of the screen has the position of the first line of its front matter.
+- An error of a key of the screen has the position of its key path
+  ([screen-render](screen-render.md), section 3.1).
 - An error of a row of a provider value `{arg.<name>}` is an error of the item that gives the value,
   as in [file-view](file-view.md), section 7.
 - An error of a value of `select` in a file screen is an error of the key `select`.
@@ -247,9 +248,9 @@ Positions:
 Examples:
 
 ```
-screens/parts.bbt:2:1: data: from: unknown provider "file"
-screens/parts.bbt:2:1: data: args: dir: directory "guide/bbtt" does not exist
-screens/texts.bbt:2:1: item "2": args: dir: directory "guide/bbtt" does not exist
+screens/parts.bbt:4:8: data: from: unknown provider "file"
+screens/parts.bbt:5:16: data: args: dir: directory "guide/bbtt" does not exist
+screens/texts.bbt:9:16: item "2": args: dir: directory "guide/bbtt" does not exist
 screens/parts.bbt:5:3: field "row.size": provider "files" has no field "size"
 screens/parts.ans:4:3: screen "parts": list rectangle: cell is not a space
 ```

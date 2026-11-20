@@ -120,13 +120,13 @@ The item `R` runs `gosub ru/menu`: the session language is `ru`, and the host sh
 - The values of an argument of a file screen ([file-view](file-view.md), section 3.1) are the values
   of its `goto` and `gosub` in all screen sets. Each screen set loads and checks each value
   with its own search. An error is an error of the item, with the suffix of the set:
-  `screens/ru/texts.bbt:2:1: item "3": args: file: content file "x.md" does not exist (language "en")`.
+  `screens/ru/texts.bbt:12:17: item "3": args: file: content file "x.md" does not exist (language "en")`.
 - The check of a screen that a user cannot reach does not run for each screen set separately.
   It walks the screen sets of all languages together ([menu-nav](menu-nav.md), section 6.1).
 - The check reports an equal diagnostic once.
 - In a BBS with more than one language, an error of a common file that the check finds
   only in some screen sets ends with ` (language "<code>")`, one diagnostic for each screen set.
-  Example: `screens/about.bbt:2:1: item "M": do: unknown screen "menu" (language "de")`.
+  Example: `screens/about.bbt:6:6: item "M": do: unknown screen "menu" (language "de")`.
 - The warning `no screen uses this file` ([screen-render](screen-render.md), section 3.1)
   applies to a fragment, an art file and a common screen that no screen set uses.
   Example: `screens/menu.bbt` next to `screens/en/menu.bbt` and `screens/ru/menu.bbt`

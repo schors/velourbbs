@@ -47,6 +47,8 @@ The host renders a screen page by page. A session holds one page in memory.
   the warning can be false: the load does not read the rest of the screen.
 - It reports all errors and warnings, not only the first. A TOML document is an exception (below).
   It writes them to the standard error. It exits with status 1 after an error.
+- An error in `bbs.toml` or `screens/screens.toml` stops the check before the screens.
+  The screens depend on these settings, so their errors can be false.
 - One file gives at most 100 errors and warnings. Then it gives one error `too many diagnostics`.
   The loader drops the rest, and the load of the file goes on.
   The layout warnings of section 3.6 do not count.
@@ -56,16 +58,28 @@ The host renders a screen page by page. A session holds one page in memory.
   in place of `[[item]]` gives `item: must be an array of tables` with the unknown keys.
   If a key that differs only in case has a type error, the document gives only
   these two kinds of errors.
-- A syntax error has the position that go-toml gives. A type error and an unknown key
-  have the position of the key or value. The message of a type error starts with
+- A syntax error has the position that go-toml gives.
+- The message of each other error of a TOML document starts with a key path, for example
+  `theme.default.gold: ` or `item "S": do: `. The item label of [menu-nav](menu-nav.md),
+  section 6, names the table of the item. The message of a type error starts with
   the dotted key. In an inline table, the key ends at the table.
-- A key that differs only in case, `[item]` and a type error in a nested array
-  have the position of the first line of the document.
-- Each other error of a TOML document has the position of the first line of the document:
-  1:1 in `bbs.toml` and `screens/screens.toml`, 2:1 in a front matter. The message names the key.
+- The error has the position of the value at its key path. This includes an error
+  between keys, or between a key and another file or screen.
   Examples: an invalid style, item key, `do`, address or `width`, an integer out of its range,
-  an invalid alias or style name, an error of `when`, an error between keys, or between a key
-  and another file or screen.
+  an error of `when`, `lines: the screen has no file`.
+- An error of the name of a key has the position of the key: an unknown key, a key that differs
+  from a known key only in case, an invalid alias name, an invalid or unknown style name, `[item]`.
+- A table has the position of its header, of the `{` of an inline table,
+  or of the first dotted key that makes it.
+- A key path to a key that is not set has the position of the last table on the path
+  that the document sets. The root table has the position of the first line of the document:
+  1:1 in `bbs.toml` and `screens/screens.toml`, 2:1 in a front matter.
+  Examples: `item 3: key is missing` at the header of the third `[[item]]`,
+  `menu: start: unknown screen "main"` at 1:1 without the key `start`.
+- go-toml gives the positions of the keys and the values only through its parser
+  `unstable.Parser`: the decode gives no positions. This API does not promise
+  backward compatibility. `go.mod` pins the version, and the tests of the positions
+  find a change.
 - An error has the form `<file>:<row>:<col>: <message>`, with 1-based numbers.
   In a `.bbt` file, the column counts code points.
   For art, the row and the column are grid positions.
@@ -81,7 +95,8 @@ The host renders a screen page by page. A session holds one page in memory.
 Examples:
 
 ```
-screens/main.bbt:2:1: item "S": when: unknown field "term.colours"
+screens/main.bbt:9:8: item "S": when: unknown field "term.colours"
+screens/screens.toml:22:10: theme.default.gold: invalid style "#b8902g": invalid colour "#b8902g"
 screens/logo.ans:1:1: not in the flat form, convert it with velourbbs art import
 screens/main.ans:4:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16
 screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100

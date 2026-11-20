@@ -309,21 +309,21 @@ Each of these is an error of `velourbbs check` ([screen-render](screen-render.md
 
 Positions:
 
-- An error of a key of the screen has the position of the first line of its front matter
+- An error of a key of the screen has the position of its key path
   ([screen-render](screen-render.md), section 3.1).
 - An error of a whole content file (it does not exist, it is not a regular file, it is over 1 MB)
   is an error of the key `file`.
 - An error of a file that a `goto` or a `gosub` gives is an error of its item:
-  the position of the first line of the front matter of its screen,
+  the position of the value `args.<name>` of the item,
   and the start `item "<KEY>": args: <name>: ` ([menu-nav](menu-nav.md), section 6).
   This includes an error of `lines` and `numbers` for this file.
 
 Examples:
 
 ```
-screens/reader.bbt:2:1: file: content file "gold.md" does not exist
-screens/texts.bbt:2:1: item "1": args: file: content file "gild.md" does not exist
-screens/code.bbt:2:1: item "2": args: file: lines: "gold.md" is a Markdown file
+screens/reader.bbt:2:8: file: content file "gold.md" does not exist
+screens/texts.bbt:5:17: item "1": args: file: content file "gild.md" does not exist
+screens/code.bbt:9:17: item "2": args: file: lines: "gold.md" is a Markdown file
 content/gold.md:1:1: front matter: no end line "+++"
 ```
 
