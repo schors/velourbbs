@@ -46,3 +46,29 @@ func TestLayoutField(t *testing.T) {
 		t.Errorf("notes %+v, want %+v", log.Notes, want)
 	}
 }
+
+// A line that wraps over a More row gives the widest row of the first page where the cut drops text
+// (screen-render, section 3.6).
+func TestLayoutWidthPage(t *testing.T) {
+	long := strings.Repeat("X", 30) + " " + strings.Repeat("Y", 40) + " " + strings.Repeat("Z", 40)
+	body := "+++\nwidth = [40, 40]\n+++\n" + strings.Repeat("a\n", 8) + long + "\n"
+	fsys := fstest.MapFS{"screens/main.bbt": {Data: []byte(body)}}
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 40, Max: 80}}, Fields: aliases})
+	if ds.HasErrors() {
+		t.Fatalf("diags: %v", ds)
+	}
+	log := &screen.LayoutLog{}
+	env := &screen.Env{Term: screen.Term{Type: "ansi", Cols: 20, Rows: 10, Colors: 16}, Items: map[string]bool{}, Layout: log}
+	for range screen.Render(sets["en"]["main"], env, theme, "-- More --") {
+	}
+	// The rows of the line are 9 to 11; page 1 has the rows 1 to 9.
+	for _, n := range log.Notes {
+		if n.Kind == screen.LayoutWidth {
+			if n.N != 30 {
+				t.Errorf("Width %d, want 30", n.N)
+			}
+			return
+		}
+	}
+	t.Errorf("notes %+v, want Width", log.Notes)
+}

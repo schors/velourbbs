@@ -24,6 +24,7 @@ func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[P
 		}
 		r.more = r.row(moreCells)
 		r.walk(s.Body, r.normal)
+		r.noteWidths()
 		if r.stopped {
 			return
 		}
@@ -55,6 +56,7 @@ func FrameRows(s *Screen, env *Env, theme map[string]Style) int {
 // of file-view, section 3.1; a nil row is empty. The margin cells are spaces in normal.
 func RenderFile(s *Screen, env *Env, theme map[string]Style, file []Row, n int) Page {
 	r := renderFrame(s, env, theme)
+	r.noteWidths()
 	split := min(r.split, len(r.rows))
 	rows := make([]Row, 0, len(r.rows)+len(file))
 	rows = append(rows, r.rows[:split]...)
@@ -108,6 +110,7 @@ func ListRows(s *Screen, env *Env, theme map[string]Style, list []ListRow, rows 
 // has the vertical position of section 6.5.
 func RenderList(s *Screen, env *Env, theme map[string]Style, list []ListRow, n, p int) Page {
 	r := renderList(s, env, theme, list, p)
+	r.noteWidths()
 	if r.layout != nil && r.count > r.height {
 		r.layout.add(LayoutNote{Kind: LayoutHeight, Pos: r.start(), N: r.count, M: r.height})
 	}
@@ -278,11 +281,12 @@ type renderer struct {
 
 	// The layout warnings (screen-render, section 3.6): nil without Env.Layout and in the count pass.
 	layout   *LayoutLog
-	file     string // the screen file
-	widthMax int    // max of the width limits
-	filePos  Pos    // the position of the file area
-	lineRows int    // the rows of the wrap of the current source line
-	lineInk  int    // the widest row of the current source line before the cut, up to its last grapheme that is not a space
+	file     string     // the screen file
+	widthMax int        // max of the width limits
+	filePos  Pos        // the position of the file area
+	lineRows int        // the rows of the wrap of the current source line
+	lineCuts []wideRow  // the rows of the current source line that the cut makes shorter
+	cuts     []wideNote // the rows that the cut makes shorter, in row order
 
 	wrapper // the current source line
 }
@@ -344,7 +348,7 @@ func (r *renderer) lineEnd(e LineEnd) {
 		r.countRows(n)
 	case r.stretching:
 		cells := r.sl.row(r.w)
-		r.lineInk = max(r.lineInk, r.sl.ink(cells, r.w))
+		r.cut(r.count, r.sl.ink(cells, r.w))
 		r.addRow(cells)
 		r.sl.reset()
 	default:
@@ -354,10 +358,10 @@ func (r *renderer) lineEnd(e LineEnd) {
 		if r.lineRows > 1 {
 			r.layout.add(LayoutNote{Kind: LayoutWrap, Pos: e.Pos, N: r.lineRows})
 		}
-		if r.lineInk > r.area {
-			r.layout.add(LayoutNote{Kind: LayoutWidth, Pos: e.Pos, N: r.lineInk, M: r.area})
+		for _, c := range r.lineCuts {
+			r.cuts = append(r.cuts, wideNote{e.Pos, c})
 		}
-		r.lineRows, r.lineInk = 0, 0
+		r.lineRows, r.lineCuts = 0, r.lineCuts[:0]
 	}
 	r.line++
 	r.startLine()
@@ -505,12 +509,6 @@ func (r *renderer) listLine(l ListLine, cur Style) {
 	}
 	first := (r.env.List.Page - 1) * r.pageSize
 	var row stretchLine
-	widest := 0
-	defer func() {
-		if r.layout != nil && widest > r.area {
-			r.layout.add(LayoutNote{Kind: LayoutWidth, Pos: l.Pos, N: widest, M: r.area})
-		}
-	}()
 	for i := range r.pageSize {
 		if r.done {
 			return
@@ -524,7 +522,9 @@ func (r *renderer) listLine(l ListLine, cur Style) {
 		env.Row = &RowValues{Num: n + 1, Selected: n == r.env.List.Cursor, Row: r.list[n]}
 		r.rowText(l.Row, cur, &env, &row)
 		cells := row.row(r.w)
-		widest = max(widest, row.ink(cells, r.w))
+		if n := row.ink(cells, r.w); r.layout != nil && n > r.area {
+			r.cuts = append(r.cuts, wideNote{l.Pos, wideRow{r.count, n}})
+		}
 		r.addRow(cells)
 		row.reset()
 	}
@@ -596,7 +596,12 @@ func (r *renderer) field(f Field, style Style) {
 			r.sl.field(cut, n, f.Width, style, r.w)
 			return
 		}
-		r.lineInk = max(r.lineInk, n)
+		// The field starts a new row after other cells (section 6.3).
+		row := r.count
+		if r.col > 0 {
+			row++
+		}
+		r.cut(row, n)
 	}
 	for _, g := range cut {
 		if r.stretching {
@@ -742,9 +747,53 @@ func (r *renderer) addRow(cells []Cell) {
 func (r *renderer) textRow(cells []Cell) {
 	if r.layout != nil {
 		r.lineRows++
-		r.lineInk = max(r.lineInk, ink(cells))
+		r.cut(r.count, ink(cells))
 	}
 	r.addRow(cells)
+}
+
+// wideRow is the row number row, from 0, of a render, and its cells n before the cut,
+// up to its last grapheme that is not a space.
+type wideRow struct {
+	row, n int
+}
+
+// wideNote is a wideRow at the position pos.
+type wideNote struct {
+	pos Pos
+	wideRow
+}
+
+// cut adds the row number row with n cells to the current source line when the cut makes it shorter.
+func (r *renderer) cut(row, n int) {
+	if r.layout != nil && n > r.area {
+		r.lineCuts = append(r.lineCuts, wideRow{row, n})
+	}
+}
+
+// noteWidths adds the warnings Width of the render: for each position, the widest row
+// of the first page where the cut makes a row shorter (screen-render, section 3.6).
+// A render with a More row has pages of term.rows - 1 rows; each other render is one page.
+func (r *renderer) noteWidths() {
+	type key struct {
+		pos  Pos
+		page int
+	}
+	var order []key
+	widest := map[key]int{}
+	for _, c := range r.cuts {
+		k := key{c.pos, 0}
+		if r.shown {
+			k.page = c.row / (r.height - 1)
+		}
+		if _, ok := widest[k]; !ok {
+			order = append(order, k)
+		}
+		widest[k] = max(widest[k], c.n)
+	}
+	for _, k := range order { // the rows are in order, so the first page of a position comes first
+		r.layout.add(LayoutNote{Kind: LayoutWidth, Pos: k.pos, N: widest[k], M: r.area})
+	}
 }
 
 // start gives the position of the first line of the screen file.
