@@ -307,3 +307,97 @@ func TestReduceVGA16(t *testing.T) {
 		}
 	}
 }
+
+// TestAppendLinesExample is the example of screen-render, section 3.7.
+func TestAppendLinesExample(t *testing.T) {
+	normal := screen.Style{Fg: idx(7), Bg: idx(0)}
+	page := screen.Page{
+		Num: 1, Cols: 80, Height: 10, Normal: normal,
+		Rows: []screen.Row{
+			append(text("Welcome!", screen.Style{Fg: idx(15), Bg: idx(4), Attr: screen.Bold}), text(strings.Repeat(" ", 72), normal)...),
+			append(text("[G]oodbye", screen.Style{Fg: idx(14), Bg: idx(0)}), text(strings.Repeat(" ", 71), normal)...),
+		},
+	}
+	want := "page 1 80x10 fill none\n" +
+		"\x1b[0;1;97;44mWelcome!\x1b[0;37;40m" + strings.Repeat(" ", 72) + "\x1b[0m\n" +
+		"\x1b[0;96;40m[G]oodbye\x1b[0;37;40m" + strings.Repeat(" ", 71) + "\x1b[0m\n" +
+		strings.Repeat("\x1b[0m\n", 8)
+	if got := string(AppendLines(nil, page, screen.Colors256)); got != want {
+		t.Errorf("AppendLines =\n%q\nwant\n%q", got, want)
+	}
+}
+
+// text gives a cell for each rune of s in style st.
+func text(s string, st screen.Style) screen.Row {
+	var r screen.Row
+	for _, c := range s {
+		r = append(r, screen.Cell{Grapheme: string(c), Style: st})
+	}
+	return r
+}
+
+// TestAppendLinesFill: the fill rows above and below the rows for each fill.
+// Each row starts with default colours without attributes, so a row in normal
+// after a fill row in normal gets the SGR again.
+func TestAppendLinesFill(t *testing.T) {
+	normal := screen.Style{Fg: idx(7), Bg: idx(0)}
+	tests := []struct {
+		fill screen.Fill
+		row  string // a fill row
+	}{
+		{screen.FillNone, "\x1b[0m\n"},
+		{screen.FillSpaces, "\x1b[0;37;40m  \x1b[0m\n"},
+		{screen.FillErase, "\x1b[0;37;40m  \x1b[0m\n"},
+	}
+	for _, tt := range tests {
+		page := screen.Page{
+			Num: 2, Cols: 2, Height: 4, Top: 1, Normal: normal, Fill: tt.fill,
+			Rows: []screen.Row{text("ab", normal)},
+		}
+		want := "page 2 2x4 fill " + tt.fill.String() + "\n" +
+			tt.row + "\x1b[0;37;40mab\x1b[0m\n" + tt.row + tt.row
+		if got := string(AppendLines(nil, page, screen.Colors16)); got != want {
+			t.Errorf("fill %s: AppendLines =\n%q\nwant\n%q", tt.fill, got, want)
+		}
+	}
+}
+
+// TestAppendLinesResync: the re-sync moves to the column with ESC[<col>G (screen-render, section 3.7).
+func TestAppendLinesResync(t *testing.T) {
+	s := screen.Style{Fg: idx(9), Bg: idx(4)}
+	page := screen.Page{
+		Num: 1, Cols: 4, Height: 1,
+		Rows: []screen.Row{{{Grapheme: "a", Style: s}, {Grapheme: "❤️", Style: s}, {Grapheme: "", Style: s}, {Grapheme: "b", Style: s}}},
+	}
+	want := "page 1 4x1 fill none\n\x1b[0;91;44ma❤️ \x1b[4Gb\x1b[0m\n"
+	if got := string(AppendLines(nil, page, screen.Colors16)); got != want {
+		t.Errorf("AppendLines =\n%q\nwant\n%q", got, want)
+	}
+}
+
+// TestAppendLinesReduce: the colours have the reduction to term.colors,
+// and a VGA colour goes out as its RGB value (screen-render, section 3.7).
+func TestAppendLinesReduce(t *testing.T) {
+	page := screen.Page{
+		Num: 1, Cols: 3, Height: 1,
+		Rows: []screen.Row{{
+			cell("a", screen.VGAColour(3), def, 0),
+			cell("b", rgb(250, 250, 250), def, 0),
+			cell("c", idx(196), idx(4), 0),
+		}},
+	}
+	tests := []struct {
+		colors int
+		want   string
+	}{
+		{screen.ColorsTrue, "\x1b[0;38;2;170;85;0ma\x1b[0;38;2;250;250;250mb\x1b[0;38;5;196;44mc"},
+		{screen.Colors256, "\x1b[0;38;5;130ma\x1b[0;38;5;231mb\x1b[0;38;5;196;44mc"},
+		{screen.Colors16, "\x1b[0;33ma\x1b[0;97mb\x1b[0;31;44mc"},
+	}
+	for _, tt := range tests {
+		want := "page 1 3x1 fill none\n" + tt.want + "\x1b[0m\n"
+		if got := string(AppendLines(nil, page, tt.colors)); got != want {
+			t.Errorf("colors %d: AppendLines =\n%q\nwant\n%q", tt.colors, got, want)
+		}
+	}
+}

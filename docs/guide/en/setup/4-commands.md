@@ -31,6 +31,17 @@ velourbbs preview main
 Full rules: [screen-render](../../../specs/screen-render.md), section 3.2.
 Details: task 1 of the [BBT guide](../bbt/1-bbs-directory.md).
 
+`--view` shows the screen in colour in your terminal, in place of the text dump:
+
+```
+velourbbs preview main --view
+velourbbs preview main --view --set term.colors=16
+```
+
+It writes the pages one after another and does not wait for a key.
+Each page starts with its line `page`.
+Full rules: [screen-render](../../../specs/screen-render.md), section 3.7.
+
 ## `velourbbs preview --keys`
 
 It presses the keys and shows each screen. Use it to test the keys of a screen:
@@ -38,6 +49,8 @@ It presses the keys and shows each screen. Use it to test the keys of a screen:
 ```
 velourbbs preview main --keys A,ESC,G
 ```
+
+`--keys` and `--view` together show each page in colour.
 
 Details: task 4 of the [BBT guide](../bbt/4-menu.md).
 

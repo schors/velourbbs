@@ -1,0 +1,50 @@
+screen main
+page 1 40x10 fill none
+[0;37;40mTexts dark                              [0m
+[0;37;40m1 Gold  2 Notes  3 Plain  4 Source  5   [0m
+[0;37;40mCode  G Goodbye                         [0m
+[0m
+[0m
+[0m
+[0m
+[0m
+[0m
+[0m
+key 1
+screen reader
+page 1 40x10 fill none
+[0;93;40m■  [0;37;40mThe Gold-Bug                         [0m
+[0;1;97;40mThe Gold-Bug[0;37;40m                            [0m
+[0;90;40mEdgar Allan Poe  ∙  1 min[0;37;40m               [0m
+[0;1;97;40mThe Gold-Bug[0;37;40m                            [0m
+[0;37;40m                                        [0m
+[0;37;40mMany years ago, I contracted an intimacy[0m
+[0;37;40mwith a [0;96;40mMr. William Legrand[0;37;40m. He was of an[0m
+[0;1;97;40mancient Huguenot family[0;37;40m, and had once   [0m
+[0;90;40m──────────────   1/12   ──────────────[0;37;40m  [0m
+[0;93;40mSpace [0;37;40mNext    [0;93;40mEsc [0;37;40mList  dark            [0m
+key SPACE
+page 2 40x10 fill none
+[0;93;40m■  [0;37;40mThe Gold-Bug                         [0m
+[0;1;97;40mThe Gold-Bug[0;37;40m                            [0m
+[0;90;40mEdgar Allan Poe  ∙  1 min[0;37;40m               [0m
+[0;37;40mbeen wealthy.                           [0m
+[0;37;40mA hard break, a [0;92;40mcode span[0;37;40m, a [0;4;96;40mlink[0;90;40m[1][0;37;40m and[0m
+[0;37;40ma [0;4;96;40mlocal link[0;37;40m, an image [0;4;96;40mthe bug[0;90;40m[2][0;37;40m, an   [0m
+[0;37;40mautolink [0;4;96;40mhttps://example.org[0;37;40m, inline    [0m
+[0;37;40m<b>HTML</b> and a comment . A second    [0m
+[0;90;40m──────────────   2/12   ──────────────[0;37;40m  [0m
+[0;93;40mB [0;37;40mBack    [0;93;40mSpace [0;37;40mNext    [0;93;40mEsc [0;37;40mList  dark  [0m
+key ESC
+screen main
+page 1 40x10 fill none
+[0;37;40mTexts dark                              [0m
+[0;37;40m1 Gold  2 Notes  3 Plain  4 Source  5   [0m
+[0;37;40mCode  G Goodbye                         [0m
+[0m
+[0m
+[0m
+[0m
+[0m
+[0m
+[0m

@@ -48,7 +48,7 @@ func previewSession() screen.SessionValues {
 }
 
 // preview runs velourbbs preview (screen-render, section 3.2): it renders a screen and writes its cell dump
-// to stdout. With --keys, it runs a session (menu-nav, section 7).
+// to stdout, or with --view its line form (section 3.7). With --keys, it runs a session (menu-nav, section 7).
 // The flags can come before and after the name.
 func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	term := previewTerm()
@@ -79,6 +79,7 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		sampleName, sampleGiven = v, true
 		return nil
 	})
+	view := fl.Bool("view", false, "")
 	var keys []string
 	session := false
 	fl.Func("keys", "", func(v string) error {
@@ -173,18 +174,33 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 		return exitError
 	}
 	s = m.Sets[sv.Lang][name]
+	writePage := pageWriter(*view, term.Colors)
 	if session {
-		t := &keysTerm{term: term, keys: keys, w: stdout}
+		t := &keysTerm{term: term, keys: keys, w: stdout, write: writePage}
 		ss := menu.New(m, t, name, argVals, choice, sv.Lang, func(*menu.Session) screen.SessionValues { return sv })
 		return runKeys(t, ss, stderr)
 	}
 	cfg := m.Config
 	cfg.ThemeChoice = choice
-	if err := screen.WriteDump(stdout, menu.Pages(cfg, s, term, argVals, sv)); err != nil {
-		_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
-		return exitError
+	for p := range menu.Pages(cfg, s, term, argVals, sv) {
+		if err := writePage(stdout, p); err != nil {
+			_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
+			return exitError
+		}
 	}
 	return 0
+}
+
+// pageWriter gives the writer of a page of velourbbs preview: the cell dump (screen-render, section 3.3),
+// or with view the line form for term.colors = colors (section 3.7).
+func pageWriter(view bool, colors int) func(io.Writer, screen.Page) error {
+	if !view {
+		return screen.WritePage
+	}
+	return func(w io.Writer, p screen.Page) error {
+		_, err := w.Write(term.AppendLines(nil, p, colors))
+		return err
+	}
 }
 
 // argFiles loads the content file of the argument of the screen name in the screen set
@@ -591,11 +607,12 @@ func parseKeys(v string) ([]string, error) {
 var errNoKeys = errors.New("no more keys")
 
 // keysTerm is the terminal of velourbbs preview --keys. It takes the keys from a list
-// and writes the events of menu-nav, section 7, to w.
+// and writes the events of menu-nav, section 7, to w. write writes a page.
 type keysTerm struct {
-	term screen.Term
-	keys []string
-	w    io.Writer
+	term  screen.Term
+	keys  []string
+	w     io.Writer
+	write func(io.Writer, screen.Page) error
 }
 
 func (t *keysTerm) Term() screen.Term { return t.term }
@@ -611,12 +628,12 @@ func (t *keysTerm) Key(context.Context) (string, error) {
 }
 
 func (t *keysTerm) Page(p screen.Page) error {
-	return screen.WritePage(t.w, p)
+	return t.write(t.w, p)
 }
 
-// Update writes the whole page: the dump of menu-nav, section 7.
+// Update writes the whole page (menu-nav, section 7).
 func (t *keysTerm) Update(p screen.Page) error {
-	return screen.WritePage(t.w, p)
+	return t.write(t.w, p)
 }
 
 func (t *keysTerm) Screen(name string) error {

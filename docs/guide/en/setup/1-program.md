@@ -21,7 +21,8 @@ Full rules: [session-fields](../../../specs/session-fields.md), section 3.4.
 ```
 usage:
   velourbbs art import <input> <output>
-  velourbbs check
-  velourbbs preview <name> [--size <cols>x<rows>] [--set <path>=<value>]... [--keys <keys>]
+  velourbbs check [--size <cols>x<rows>]...
+  velourbbs fields [--sample]
+  velourbbs preview <name> [--size <cols>x<rows>] [--sample <set>] [--set <path>=<value>]... [--keys <keys>] [--view]
   velourbbs serve
 ```
