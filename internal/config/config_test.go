@@ -177,6 +177,128 @@ func TestNormalAttributes(t *testing.T) {
 	}
 }
 
+// A reference gives the style of its name in the same theme, with its attributes added
+// (screens-toml, section 3.2).
+func TestReferences(t *testing.T) {
+	data := strings.Join([]string{
+		`[theme.default]`,
+		`normal = "#c0c0c0/#101020"`,
+		`title  = "#60a0d0 bold"`,
+		`md_h1  = "title underline"`,
+		`md_h2  = "md_h1"`,
+		`md_h3  = "md_h2 blink"`,
+		`[theme.16]`,
+		`normal = "7/0"`,
+		`title  = "15 bold"`,
+		`[theme.256]`,
+		`md_dim = "title"`,
+		`[theme.light.default]`,
+		`normal = "#202020/#f0f0e8"`,
+		`title  = "#004080 bold"`,
+		`[theme.light.16]`,
+		`normal = "0/7"`,
+		`[theme.light.256]`,
+		`md_h2 = "normal"`,
+	}, "\n")
+	cfg, ds := parseScreens([]byte(data))
+	if len(ds) != 0 {
+		t.Fatalf("diags: %q", messages(ds))
+	}
+	tests := []struct {
+		theme map[string]screen.Style
+		name  string
+		want  string
+	}{
+		{cfg.Theme, "md_h1", "#60a0d0/#101020 bold underline"},
+		// The depth theme changes the style of the name.
+		{dark(cfg, 16), "md_h1", "15/0 bold underline"},
+		{dark(cfg, 16), "md_h2", "15/0 bold underline"},
+		{dark(cfg, 16), "md_h3", "15/0 bold underline blink"},
+		{dark(cfg, 256), "md_h3", "#60a0d0/#101020 bold underline blink"},
+		// A reference in a depth theme.
+		{dark(cfg, 256), "md_dim", "#60a0d0/#101020 bold"},
+		{dark(cfg, 16), "md_dim", "8/0"},
+		// The light tables change the style of the name.
+		{light(cfg, 16), "md_h1", "#004080/7 bold underline"},
+		{light(cfg, 16777216), "md_h3", "#004080/#f0f0e8 bold underline blink"},
+		// A light table changes a reference, and the chain after it.
+		{light(cfg, 256), "md_h2", "#202020/#f0f0e8"},
+		{light(cfg, 256), "md_h3", "#202020/#f0f0e8 blink"},
+		{light(cfg, 256), "md_dim", "#004080/#f0f0e8 bold"},
+	}
+	for _, tt := range tests {
+		if got := tt.theme[tt.name]; got != style(t, tt.want) {
+			t.Errorf("%s = %v, want %s", tt.name, got, tt.want)
+		}
+	}
+}
+
+// An unknown name and a cycle are errors at the position of the reference (screens-toml, section 3.2).
+func TestReferenceErrors(t *testing.T) {
+	data := strings.Join([]string{
+		`[theme.default]`,
+		`a = "b"`,
+		`b = "a"`,
+		`c = "a bold"`,
+		`d = "haed"`,
+		`e = "a bolt"`,
+		`f = "g"`,
+		`g = "7"`,
+		`h = "#x"`,
+		`i = "h underline"`,
+		`x = "y"`,
+		`y = "z"`,
+		`z = "x"`,
+		`[theme.16]`,
+		`g = "f"`,
+		`y = "x"`,
+		`[theme.light.default]`,
+		`f = "d"`,
+	}, "\n")
+	cfg, ds := parseScreens([]byte(data))
+	want := []string{
+		`screens/screens.toml:6:5: theme.default.e: invalid style "a bolt": unknown attribute "bolt"`,
+		`screens/screens.toml:9:5: theme.default.h: invalid style "#x": invalid colour "#x"`,
+		`screens/screens.toml:5:5: theme.default.d: unknown style "haed"`,
+		// The dark theme of 16 colours.
+		`screens/screens.toml:2:5: theme.default.a: cycle: a -> b -> a`,
+		`screens/screens.toml:3:5: theme.default.b: cycle: b -> a -> b`,
+		// A cycle across two tables.
+		`screens/screens.toml:7:5: theme.default.f: cycle: f -> g -> f`,
+		`screens/screens.toml:15:5: theme.16.g: cycle: g -> f -> g`,
+		// The path of x differs in the dark theme of 256 colours: the first theme gives it.
+		`screens/screens.toml:11:5: theme.default.x: cycle: x -> y -> x`,
+		`screens/screens.toml:16:5: theme.16.y: cycle: y -> x -> y`,
+		// The dark theme of 256 colours. With 16 colours, z leads into a cycle.
+		`screens/screens.toml:12:5: theme.default.y: cycle: y -> z -> x -> y`,
+		`screens/screens.toml:13:5: theme.default.z: cycle: z -> x -> y -> z`,
+	}
+	if got := messages(ds); !slices.Equal(got, want) {
+		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	tests := []struct {
+		theme map[string]screen.Style
+		name  string
+		want  string
+	}{
+		// A style in a cycle and a reference that leads into a cycle get the colours of normal.
+		{dark(cfg, 16), "c", "7/0 bold"},
+		{dark(cfg, 16), "g", "7/0"},
+		{dark(cfg, 16), "z", "7/0"},
+		// A reference to a name with an invalid style.
+		{dark(cfg, 256), "i", "7/0 underline"},
+		{light(cfg, 16), "f", "7/0"},
+	}
+	for _, tt := range tests {
+		if got := tt.theme[tt.name]; got != style(t, tt.want) {
+			t.Errorf("%s = %v, want %s", tt.name, got, tt.want)
+		}
+	}
+	if _, ok := cfg.Theme["d"]; ok {
+		t.Error("a reference with an unknown name is in the theme")
+	}
+}
+
 // Each other error has the position of its value, or of its key name (screen-render, section 3.1).
 func TestErrors(t *testing.T) {
 	data := strings.Join([]string{
@@ -192,7 +314,7 @@ func TestErrors(t *testing.T) {
 		`[theme.default]`,
 		`Title = "1"`,
 		`normal = "7/0"`,
-		`bad = "x"`,
+		`bad = "#x"`,
 		`[theme.16]`,
 		`Title = "1"`,
 		`title = "1"`,
@@ -222,7 +344,7 @@ func TestErrors(t *testing.T) {
 		`screens/screens.toml:8:9: screen.theme: invalid value "Dark", want "dark", "light" or "auto"`,
 		`screens/screens.toml:29:9: menu.start: invalid screen name "Main"`,
 		`screens/screens.toml:11:1: theme.default: invalid style name "Title"`,
-		`screens/screens.toml:13:7: theme.default.bad: invalid style "x": invalid colour "x"`,
+		`screens/screens.toml:13:7: theme.default.bad: invalid style "#x": invalid colour "#x"`,
 		// A name with an invalid style is a name of the theme: bad gives no error in theme.16.
 		`screens/screens.toml:15:1: theme.16: invalid style name "Title"`,
 		`screens/screens.toml:18:10: theme.16.normal: invalid style "1 bolt": unknown attribute "bolt"`,
@@ -285,11 +407,11 @@ func TestTOMLErrors(t *testing.T) {
 		{"[menu]\nstart = \"x\"\nSTART = \"y\"", []string{`3:1: unknown key "menu.START"`}},
 		{"\n[foo.bar]\nx = 1", []string{`2:2: unknown key "foo.bar"`}},
 		// A type error comes before an unknown key, an unknown key before an other error.
-		{"[theme.default]\nx = \"bad\"\ny = 1\nz = \"bad\"", []string{`3:5: theme.default.y: must be a string`}},
-		{"a = 1\n[theme.default]\nx = \"bad\"\nz = \"bad\"", []string{`1:1: unknown key "a"`}},
-		{"[theme.default]\nx = \"bad\"\nz = \"bad\"", []string{
-			`2:5: theme.default.x: invalid style "bad": invalid colour "bad"`,
-			`3:5: theme.default.z: invalid style "bad": invalid colour "bad"`,
+		{"[theme.default]\nx = \"#bad\"\ny = 1\nz = \"#bad\"", []string{`3:5: theme.default.y: must be a string`}},
+		{"a = 1\n[theme.default]\nx = \"#bad\"\nz = \"#bad\"", []string{`1:1: unknown key "a"`}},
+		{"[theme.default]\nx = \"#bad\"\nz = \"#bad\"", []string{
+			`2:5: theme.default.x: invalid style "#bad": invalid colour "#bad"`,
+			`3:5: theme.default.z: invalid style "#bad": invalid colour "#bad"`,
 		}},
 		{"a = 1\n[screen]\nb = 2\nwidth = [1, 1]", []string{`1:1: unknown key "a"`, `3:1: unknown key "screen.b"`}},
 		{"[fields]\nw = 1", []string{`2:5: fields.w: must be a string`}},

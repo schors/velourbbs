@@ -182,7 +182,7 @@ func langs(cfg *Config, d screensDoc, root tomlcheck.Place, errorf errorFunc) {
 // (screens-toml, section 3.2). A doc without themes gives no errors, so errorf can be nil.
 // root is the root of the document.
 func theme(cfg *Config, d screensDoc, root tomlcheck.Place, errorf errorFunc) {
-	base := baseSpecs()
+	base := baseValues()
 	// names is the names of the theme. A name with an invalid style stays a name:
 	// one key gives one error.
 	names := map[string]bool{}
@@ -191,36 +191,84 @@ func theme(cfg *Config, d screensDoc, root tomlcheck.Place, errorf errorFunc) {
 	}
 	th := root.At("theme")
 	styles(d.Theme.Default, th, "default", names, false, base, errorf)
-	cfg.Theme = resolve(base, defaultNormal)
 	// table parses a depth theme or a light table once: one key gives one error.
-	table := func(t map[string]string, key string) map[string]screen.StyleSpec {
-		specs := map[string]screen.StyleSpec{}
-		styles(t, th, key, names, true, specs, errorf)
-		return specs
+	table := func(t map[string]string, key string) map[string]value {
+		vs := map[string]value{}
+		styles(t, th, key, names, true, vs, errorf)
+		return vs
 	}
-	depth := map[int]map[string]screen.StyleSpec{
+	depth := map[int]map[string]value{
 		screen.Colors16: table(d.Theme.C16, "16"), screen.Colors256: table(d.Theme.C256, "256"),
 	}
 	lightDefault := table(d.Theme.Light.Default, "light.default")
-	light := map[int]map[string]screen.StyleSpec{
+	light := map[int]map[string]value{
 		screen.Colors16: table(d.Theme.Light.C16, "light.16"), screen.Colors256: table(d.Theme.Light.C256, "light.256"),
 	}
-	cfg.dark, cfg.light = map[int]map[string]screen.Style{}, map[int]map[string]screen.Style{}
-	for _, colors := range []int{screen.Colors16, screen.Colors256, screen.ColorsTrue} {
-		specs := maps.Clone(base)
-		maps.Copy(specs, depth[colors])
-		cfg.dark[colors] = resolve(specs, defaultNormal)
-		maps.Copy(specs, lightDefault)
-		maps.Copy(specs, light[colors])
-		cfg.light[colors] = resolve(specs, lightNormal)
+	// cycle reports each key of a cycle once, with the path of the first theme
+	// in the order of the loops below.
+	reported := map[string]bool{}
+	cycle := func(v value, path []string) {
+		if !reported[v.key] {
+			reported[v.key] = true
+			errorf(v.at, "%s: cycle: %s", v.key, strings.Join(path, " -> "))
+		}
 	}
+	all := []int{screen.Colors16, screen.Colors256, screen.ColorsTrue}
+	cfg.dark, cfg.light = map[int]map[string]screen.Style{}, map[int]map[string]screen.Style{}
+	darkValues := map[int]map[string]value{}
+	for _, colors := range all {
+		vs := maps.Clone(base)
+		maps.Copy(vs, depth[colors])
+		darkValues[colors] = vs
+		cfg.dark[colors] = resolve(refs(vs, cycle), defaultNormal)
+	}
+	for _, colors := range all {
+		vs := maps.Clone(darkValues[colors])
+		maps.Copy(vs, lightDefault)
+		maps.Copy(vs, light[colors])
+		cfg.light[colors] = resolve(refs(vs, cycle), lightNormal)
+	}
+	// There is no depth theme of 16777216 colours, so its dark theme is the base theme.
+	cfg.Theme = cfg.dark[screen.ColorsTrue]
 }
 
-// styles parses the styles of the table theme.<key> into specs. th is the place of the table theme.
+// value is a value of a theme table: a style or a reference (screens-toml, section 3.2).
+type value struct {
+	// spec is the style. For a reference, it has only the attributes of the reference.
+	spec screen.StyleSpec
+	// ref is the name of a reference, else "".
+	ref string
+	// key is the TOML path of the value, for example "theme.16.md_h1", and at is the position
+	// of the value. A default of the base theme has no key.
+	key string
+	at  tomlcheck.Pos
+}
+
+// parseValue parses a style or a reference. A value whose first word matches the name syntax
+// is a reference (screens-toml, section 3.2).
+func parseValue(text string) (value, error) {
+	name, attrs, hasAttrs := strings.Cut(text, " ")
+	if !screen.IsIdent(name) {
+		spec, err := screen.ParseStyle(text)
+		return value{spec: spec}, err
+	}
+	v := value{ref: name}
+	if hasAttrs {
+		var err error
+		if v.spec.Attr, err = screen.ParseAttrs(attrs); err != nil {
+			return value{}, err
+		}
+	}
+	return v, nil
+}
+
+// styles parses the values of the table theme.<key> into vs. th is the place of the table theme.
 // With known, each name must be in names. Else styles adds each valid name to names.
+// After the names of the table, the name of each reference must be in names.
 func styles(t map[string]string, th tomlcheck.Place, key string, names map[string]bool, known bool,
-	specs map[string]screen.StyleSpec, errorf errorFunc) {
+	vs map[string]value, errorf errorFunc) {
 	table := th.At(strings.Split(key, ".")...)
+	var withRef []string
 	for _, n := range slices.Sorted(maps.Keys(t)) {
 		at := table.At(n)
 		switch {
@@ -234,13 +282,54 @@ func styles(t map[string]string, th tomlcheck.Place, key string, names map[strin
 			continue
 		}
 		s := t[n]
-		spec, err := screen.ParseStyle(s)
+		v, err := parseValue(s)
 		if err != nil {
 			errorf(at.Value(), "theme.%s.%s: invalid style %q: %v", key, n, s, err)
 			continue
 		}
-		specs[n] = spec
+		v.key, v.at = "theme."+key+"."+n, at.Value()
+		vs[n] = v
+		if v.ref != "" {
+			withRef = append(withRef, n)
+		}
 	}
+	for _, n := range withRef {
+		if v := vs[n]; !names[v.ref] {
+			errorf(v.at, "%s: unknown style %q", v.key, v.ref)
+			delete(vs, n)
+		}
+	}
+}
+
+// refs gives the styles of the values vs of one theme with each reference resolved
+// (screens-toml, section 3.2): a reference gives the style of its name with the attributes
+// of the reference added. cycle gets each reference that leads back to its own style,
+// and the path from its name to its name.
+// A style in a cycle, a reference that leads into a cycle and a reference to a name
+// with an invalid style get only the attributes on the path: the colours of normal.
+func refs(vs map[string]value, cycle func(v value, path []string)) map[string]screen.StyleSpec {
+	specs := make(map[string]screen.StyleSpec, len(vs))
+	for _, name := range slices.Sorted(maps.Keys(vs)) {
+		v := vs[name]
+		path := []string{name}
+		var attr screen.Attr
+		for v.ref != "" {
+			attr |= v.spec.Attr
+			if i := slices.Index(path, v.ref); i >= 0 {
+				if i == 0 {
+					cycle(vs[name], append(path, name))
+				}
+				v = value{}
+				break
+			}
+			path = append(path, v.ref)
+			v = vs[v.ref]
+		}
+		spec := v.spec
+		spec.Attr |= attr
+		specs[name] = spec
+	}
+	return specs
 }
 
 // mdStyles is the md_* styles of the base theme (file-view, section 4).
@@ -249,19 +338,19 @@ var mdStyles = map[string]string{
 	"md_code": "10", "md_link": "14 underline", "md_mark": "11", "md_frame": "8", "md_dim": "8",
 }
 
-// baseSpecs gives the defaults of the base theme: normal, more, select and the md_* styles.
-func baseSpecs() map[string]screen.StyleSpec {
-	specs := map[string]screen.StyleSpec{
-		"normal": defaultNormalStyle, "more": defaultMoreStyle, "select": defaultSelectStyle,
+// baseValues gives the defaults of the base theme: normal, more, select and the md_* styles.
+func baseValues() map[string]value {
+	vs := map[string]value{
+		"normal": {spec: defaultNormalStyle}, "more": {spec: defaultMoreStyle}, "select": {spec: defaultSelectStyle},
 	}
 	for name, text := range mdStyles {
 		spec, err := screen.ParseStyle(text)
 		if err != nil {
 			panic("config: md style " + name + ": " + err.Error())
 		}
-		specs[name] = spec
+		vs[name] = value{spec: spec}
 	}
-	return specs
+	return vs
 }
 
 // resolve gives the theme of the styles specs. A style without a colour takes it from normal;

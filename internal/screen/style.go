@@ -48,17 +48,24 @@ func ParseStyle(text string) (StyleSpec, error) {
 		}
 		s.HasBg = true
 	}
-	if !hasAttrs {
-		return s, nil
+	if hasAttrs {
+		s.Attr, err = ParseAttrs(attrs)
 	}
-	for name := range strings.SplitSeq(attrs, " ") {
+	return s, err
+}
+
+// ParseAttrs parses the attributes of a style: the attr names of section 7.2 with one space
+// between them. Example: "bold underline".
+func ParseAttrs(text string) (Attr, error) {
+	var attr Attr
+	for name := range strings.SplitSeq(text, " ") {
 		a, err := parseAttr(name)
 		if err != nil {
-			return s, err
+			return 0, err
 		}
-		s.Attr |= a
+		attr |= a
 	}
-	return s, nil
+	return attr, nil
 }
 
 // parseColour parses one colour. With an explicit base, strconv.ParseUint
