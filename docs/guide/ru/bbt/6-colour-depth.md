@@ -47,6 +47,30 @@ title  = "15 bold"
 
 Полные правила: [screens-toml](../../../specs/screens-toml.md), раздел 3.2.
 
+## Ссылки на стили
+
+```toml
+[theme.default]
+dim   = "#9e8a7c"
+title = "#f7c7a3 bold"
+more  = "dim"
+md_h1 = "title underline"
+
+[theme.16]
+dim   = "8"
+title = "15 bold"
+```
+
+- Стиль может назвать другой стиль. Это «ссылка». `more = "dim"` даёт `more` стиль `dim`.
+- Ссылка может добавить атрибуты. `md_h1 = "title underline"` — это `title` с подчёркиванием.
+- Ссылка берёт стиль своего имени в той же теме.
+  При 16 цветах `more` — это `8`, а `md_h1` — `15 bold underline`.
+  Поэтому пиши каждый цвет один раз в каждой таблице, а в других стилях называй его.
+- Ссылка может назвать другую ссылку.
+  Ссылка, которая ведёт обратно к своему стилю, — ошибка: «цикл».
+
+Полные правила: [screens-toml](../../../specs/screens-toml.md), раздел 3.2.
+
 ## Строка More
 
 Если у экрана больше строк, чем у терминала, BBS показывает его по страницам. Каждая страница, кроме последней,
@@ -100,17 +124,17 @@ line   = "#8a6a5c"
 title  = "#f7c7a3 bold"
 key    = "#ffb088 bold"
 orn    = "#f2a27e"
-more   = "#9e8a7c"
-md_h1     = "#f7c7a3 bold"
+more   = "dim"
+md_h1     = "title"
 md_h2     = "#f2a27e"
 md_h3     = "#d9b99b"
-md_strong = "#f7c7a3 bold"
+md_strong = "title"
 md_em     = "#d9b99b"
 md_code   = "#c8b88a"
 md_link   = "#d9b99b underline"
-md_mark   = "#f2a27e"
-md_frame  = "#8a6a5c"
-md_dim    = "#9e8a7c"
+md_mark   = "orn"
+md_frame  = "line"
+md_dim    = "dim"
 
 [theme.256]
 normal = "223/235"
@@ -119,17 +143,11 @@ line   = "95"
 title  = "230 bold"
 key    = "216 bold"
 orn    = "216"
-more   = "137"
-md_h1     = "230 bold"
 md_h2     = "216"
 md_h3     = "180"
-md_strong = "230 bold"
 md_em     = "180"
 md_code   = "144"
 md_link   = "180 underline"
-md_mark   = "216"
-md_frame  = "95"
-md_dim    = "137"
 
 [theme.16]
 normal = "7/0"
@@ -138,23 +156,19 @@ line   = "8"
 title  = "15 bold"
 key    = "15 bold"
 orn    = "7"
-more   = "8"
-md_h1     = "15 bold"
 md_h2     = "15"
 md_h3     = "15"
-md_strong = "15 bold"
 md_em     = "7"
 md_code   = "15"
 md_link   = "15 underline"
-md_mark   = "7"
-md_frame  = "8"
-md_dim    = "8"
 ```
 
 - При 256 цветах фон тёмно-серый (235), текст кремовый (223), а не серый (253).
 - При 16 цветах экран серый: чёрный фон, светло-серый текст,
   тёмно-серые `dim` и `line`, белые `title` и `key`.
 - Стили `md_*` — стили текстов. Их использует задача 7.
+- `more`, `md_h1`, `md_strong`, `md_mark`, `md_frame` и `md_dim` — ссылки.
+  На каждой глубине они берут стили `dim`, `title`, `orn` и `line` этой глубины.
 
 ## Посмотри на каждую глубину
 

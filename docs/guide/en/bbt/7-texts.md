@@ -439,7 +439,8 @@ The `md_*` styles give the colours of a text. In Lamp, `screens/screens.toml` ha
 - `md_frame` is as `line`, and `md_dim` is as `dim`.
 
 A theme without `md_*` styles uses the default styles: white headings, a yellow list marker.
-`[theme.256]` and `[theme.16]` of Lamp give the `md_*` styles for each depth.
+`[theme.256]` and `[theme.16]` of Lamp give the other `md_*` styles for each depth.
+A reference takes the style of its name at the same depth.
 With 16 colours, the emphasis looks as the text.
 
 Full rules: [file-view](../../../specs/file-view.md), section 4.
