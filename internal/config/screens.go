@@ -268,7 +268,7 @@ func parseValue(text string) (value, error) {
 func styles(t map[string]string, th tomlcheck.Place, key string, names map[string]bool, known bool,
 	vs map[string]value, errorf errorFunc) {
 	table := th.At(strings.Split(key, ".")...)
-	var withRef []string
+	withRef := map[string]value{}
 	for _, n := range slices.Sorted(maps.Keys(t)) {
 		at := table.At(n)
 		switch {
@@ -288,16 +288,20 @@ func styles(t map[string]string, th tomlcheck.Place, key string, names map[strin
 			continue
 		}
 		v.key, v.at = "theme."+key+"."+n, at.Value()
-		vs[n] = v
 		if v.ref != "" {
-			withRef = append(withRef, n)
+			withRef[n] = v
+			continue
 		}
+		vs[n] = v
 	}
-	for _, n := range withRef {
-		if v := vs[n]; !names[v.ref] {
+	// A reference with an unknown name keeps the value before it, as an invalid style does.
+	for _, n := range slices.Sorted(maps.Keys(withRef)) {
+		v := withRef[n]
+		if !names[v.ref] {
 			errorf(v.at, "%s: unknown style %q", v.key, v.ref)
-			delete(vs, n)
+			continue
 		}
+		vs[n] = v
 	}
 }
 

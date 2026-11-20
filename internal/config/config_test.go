@@ -299,6 +299,21 @@ func TestReferenceErrors(t *testing.T) {
 	}
 }
 
+// A reference with an unknown name keeps the style before it, as an invalid style does.
+func TestUnknownReferenceKeepsDefault(t *testing.T) {
+	cfg, ds := parseScreens([]byte("[theme.default]\nnormal = \"haed\"\n[theme.16]\nmore = \"nope bold\"\n"))
+	want := []string{
+		`screens/screens.toml:2:10: theme.default.normal: unknown style "haed"`,
+		`screens/screens.toml:4:8: theme.16.more: unknown style "nope"`,
+	}
+	if got := messages(ds); !slices.Equal(got, want) {
+		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+	if cfg.Theme["normal"] != style(t, "7/0") || dark(cfg, 16)["more"] != style(t, "15/0") {
+		t.Errorf("normal = %v, more = %v", cfg.Theme["normal"], dark(cfg, 16)["more"])
+	}
+}
+
 // Each other error has the position of its value, or of its key name (screen-render, section 3.1).
 func TestErrors(t *testing.T) {
 	data := strings.Join([]string{
