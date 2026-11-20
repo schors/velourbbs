@@ -65,7 +65,7 @@ title = "15 bold"
 - A reference can add attributes: `md_h1 = "title underline"` is `title` with an underline.
 - A reference takes the style of its name in the same theme.
   At 16 colours, `more` is `8` and `md_h1` is `15 bold underline`.
-  So write each colour once in each table, and name it in the other styles.
+  So when a style is a copy of another style at each depth, write it as a reference to that style.
 - A reference can name another reference.
   A reference that leads back to its own style is an error: a "cycle".
 
