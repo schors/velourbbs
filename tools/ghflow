@@ -36,6 +36,7 @@ Text input (a body) comes from stdin. Each post starts with the line
   priority <n> <priority>     set the priority label (p1, p2, p3)
   close <n> <reason>          close an issue (completed, not_planned, duplicate) or a PR
   body <n>                    replace the body of an agent post (a marker line in stdin is dropped)
+  title <n> <title>           replace the title of an issue or a PR whose body is an agent post
   comment <n>                 add a comment to an issue or a PR
   pr <n> <title>              open a PR from the current branch; adds "Closes #<n>"
   review <pr>                 post a review from JSON:
@@ -326,6 +327,17 @@ cmd_body() {
   send PATCH "/issues/$n" '{body: $b}' --arg b "$body" >/dev/null
 }
 
+cmd_title() {
+  (($# == 2)) || die "usage: title <n> <title>"
+  local n=$1 title=$2
+  num "$n"
+  [[ -n $title && $title != *$'\n'* ]] || die "the title is empty or has a newline"
+  jq -e '(.body // "") | test("^Agent: ")' <<<"$(api GET "/issues/$n")" >/dev/null ||
+    die "#$n has no agent marker: an agent edits only an agent post"
+  scan "$title"
+  send PATCH "/issues/$n" '{title: $t}' --arg t "$title" >/dev/null
+}
+
 cmd_comment() {
   (($# == 1)) || die "usage: comment <n>"
   local n=$1 body
@@ -494,7 +506,7 @@ main() {
   case $c in
     -h | --help | help) usage ;;
     check) if [[ ${1:-} == --push ]]; then R=$(repo); fi; cmd_check "$@" ;;
-    new | list | show | status | priority | close | body | comment | pr | review | threads | reply | setup)
+    new | list | show | status | priority | close | body | title | comment | pr | review | threads | reply | setup)
       R=$(repo)
       "cmd_$c" "$@"
       ;;

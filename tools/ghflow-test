@@ -275,6 +275,35 @@ run body 4 <<<$'Agent: Other\n\nNew.'
 ok
 has "$LOG" '{"body":"Agent: Test Model 1\n\nNew."}'
 
+name="title refuses an issue with no marker"
+reset
+respond GET /issues/4 200 '{"body":"A post of a human."}'
+run title 4 "New title"
+refused
+hasnt "$LOG" "PATCH"
+
+name="title refuses private text"
+reset
+respond GET /issues/4 200 '{"body":"Agent: Other\n\nOld."}'
+run title 4 "Ask Jane Roe"
+refused
+has "$T/err" "private name"
+hasnt "$LOG" "PATCH"
+
+name="title refuses an empty title"
+reset
+run title 4 ""
+refused
+nocall
+
+name="title renames an agent issue"
+reset
+respond GET /issues/4 200 '{"body":"Agent: Other\n\nOld."}'
+respond PATCH /issues/4 200 '{}'
+run title 4 "New title"
+ok
+has "$LOG" '{"title":"New title"}'
+
 name="show --body prints the raw body"
 reset
 respond GET /issues/4 200 '{"body":"Agent: Other\n\nOld."}'
