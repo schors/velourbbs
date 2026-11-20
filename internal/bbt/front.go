@@ -108,12 +108,28 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 			if item.Do.Op != 0 && !item.Do.Op.HasTarget() { // Op 0: the do has an error
 				errorf(at.At("args").Value(), "%s: args: only goto and gosub take arguments", label)
 			}
+			item.Do.Args = map[string]string{}
 			for _, name := range slices.Sorted(maps.Keys(*it.Args)) {
-				if err := screen.CheckArg(name, (*it.Args)[name]); err != nil {
-					errorf(argPos(at.At("args"), name), "%s: args: %v", label, err)
+				v := (*it.Args)[name]
+				pos := argPos(at.At("args"), name)
+				kind, ref, token := tokenValue(v)
+				switch {
+				case !token:
+					if err := screen.CheckArg(name, v); err != nil {
+						errorf(pos, "%s: args: %v", label, err)
+					}
+					item.Do.Args[name] = v
+				case !screen.IsIdent(name):
+					errorf(pos, "%s: args: invalid argument name %q", label, name)
+				case kind != "arg":
+					errorf(pos, "%s: args: %s: invalid token %q, want a value or {arg.<name>}", label, name, v)
+				default:
+					if item.Do.ArgRefs == nil {
+						item.Do.ArgRefs = map[string]string{}
+					}
+					item.Do.ArgRefs[name] = ref
 				}
 			}
-			item.Do.Args = *it.Args
 		}
 		if it.When != nil {
 			when := at.At("when").Value()
@@ -172,8 +188,8 @@ func parseFileKeys(doc *frontDoc, root tomlcheck.Place, errorf errorFunc) *scree
 	}
 	f := &screen.FileSpec{Contents: map[string]*screen.Content{}}
 	v := *doc.File
-	if name, token := argToken(v); token {
-		if name == "" {
+	if kind, name, token := tokenValue(v); token {
+		if kind != "arg" {
 			errorf(root.At("file").Value(), "file: invalid token %q, want a content path or {arg.<name>}", v)
 		}
 		f.Arg = name
@@ -218,18 +234,24 @@ func rowField(c *screen.Cond) string {
 	return ""
 }
 
-// argToken reports whether the value v starts with "{": a token. name is the <name> of a value
-// that is exactly one token {arg.<name>}, else "" (bbt-format, section 8.5).
-func argToken(v string) (name string, token bool) {
+// tokenValue reports whether the value v starts with "{": a token. For a value that is exactly
+// one token {arg.<name>} or {row.<name>}, kind is "arg" or "row" and name is the <name>; else both are ""
+// (bbt-format, section 8.5).
+func tokenValue(v string) (kind, name string, token bool) {
 	t, ok := strings.CutPrefix(v, "{")
 	if !ok {
-		return "", false
+		return "", "", false
 	}
-	name, ok = strings.CutPrefix(strings.TrimSuffix(t, "}"), "arg.")
-	if !ok || !strings.HasSuffix(t, "}") || !screen.IsIdent(name) {
-		return "", true
+	t, ok = strings.CutSuffix(t, "}")
+	if !ok {
+		return "", "", true
 	}
-	return name, true
+	for _, k := range []string{"arg", "row"} {
+		if n, ok := strings.CutPrefix(t, k+"."); ok && screen.IsIdent(n) {
+			return k, n, true
+		}
+	}
+	return "", "", true
 }
 
 // The range of the key rows (list-view, section 3).
@@ -273,8 +295,8 @@ func parseListKeys(doc *frontDoc, root tomlcheck.Place, langs []string, errorf e
 	}
 	for _, name := range slices.Sorted(maps.Keys(args)) {
 		v := args[name]
-		if arg, token := argToken(v); token {
-			if arg == "" {
+		if kind, arg, token := tokenValue(v); token {
+			if kind != "arg" {
 				errorf(data.At("args", name).Value(), "data: args: %s: invalid token %q, want a value or {arg.<name>}", name, v)
 			}
 			l.ArgRefs[name] = arg
@@ -323,7 +345,7 @@ func parseSelect(do *string, args *map[string]string, at tomlcheck.Place, p *pro
 	for _, name := range slices.Sorted(maps.Keys(*args)) {
 		v := (*args)[name]
 		pos := argPos(at.At("args"), name)
-		field, token := rowToken(v)
+		kind, field, token := tokenValue(v)
 		switch {
 		case !token:
 			if err := screen.CheckArg(name, v); err != nil {
@@ -333,8 +355,15 @@ func parseSelect(do *string, args *map[string]string, at tomlcheck.Place, p *pro
 			continue
 		case !screen.IsIdent(name):
 			errorf(pos, "select: args: invalid argument name %q", name)
-		case field == "":
-			errorf(pos, "select: args: %s: invalid token %q, want a value or {row.<field>}", name, v)
+			continue
+		case kind == "arg":
+			if s.Do.ArgRefs == nil {
+				s.Do.ArgRefs = map[string]string{}
+			}
+			s.Do.ArgRefs[name] = field
+			continue
+		case kind != "row":
+			errorf(pos, "select: args: %s: invalid token %q, want a value, {arg.<name>} or {row.<field>}", name, v)
 		case field == screen.RowSelected:
 			errorf(pos, "select: args: %s: field %q is valid only in a condition", name, "row."+field)
 		case p != nil && !p.HasField(field):
@@ -343,20 +372,6 @@ func parseSelect(do *string, args *map[string]string, at tomlcheck.Place, p *pro
 		s.Refs[name] = field
 	}
 	return s
-}
-
-// rowToken reports whether the value v starts with "{": a token. field is the <field> of a value
-// that is exactly one token {row.<field>}, else "" (list-view, section 8).
-func rowToken(v string) (field string, token bool) {
-	t, ok := strings.CutPrefix(v, "{")
-	if !ok {
-		return "", false
-	}
-	field, ok = strings.CutPrefix(strings.TrimSuffix(t, "}"), "row.")
-	if !ok || !strings.HasSuffix(t, "}") || !screen.IsIdent(field) {
-		return "", true
-	}
-	return field, true
 }
 
 // parseAction parses the do of an item (section 8.3). langs is the languages of the BBS

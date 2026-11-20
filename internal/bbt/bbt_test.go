@@ -433,10 +433,19 @@ func TestItemErrors(t *testing.T) {
 			`screens/s.bbt:5:25: item "A": args: invalid argument name "2f"`,
 			`screens/s.bbt:5:35: item "A": args: invalid argument name "a-b"`,
 		}},
-		{[]string{`key = "A"`, `do = "goto r"`, `args = { a = "{arg.a}", b = "x\ty", c = "x\u0085" }`}, []string{
+		{[]string{`key = "A"`, `do = "goto r"`, `args = { a = "x{y", b = "x\ty", c = "x\u0085" }`}, []string{
 			`screens/s.bbt:5:14: item "A": args: a: value has "{"`,
-			`screens/s.bbt:5:29: item "A": args: b: value has a control character`,
-			`screens/s.bbt:5:41: item "A": args: c: value has a control character`,
+			`screens/s.bbt:5:25: item "A": args: b: value has a control character`,
+			`screens/s.bbt:5:37: item "A": args: c: value has a control character`,
+		}},
+		// A value is a literal or {arg.<name>}: each other token is an error (bbt-format, section 8.5).
+		{[]string{`key = "A"`, `do = "goto r"`, `args = { a = "{in}", b = "{row.path}", c = "{arg.x  }", d = "{t}", e = "{arg.x", F = "{arg.x}" }`}, []string{
+			`screens/s.bbt:5:14: item "A": args: a: invalid token "{in}", want a value or {arg.<name>}`,
+			`screens/s.bbt:5:26: item "A": args: b: invalid token "{row.path}", want a value or {arg.<name>}`,
+			`screens/s.bbt:5:44: item "A": args: c: invalid token "{arg.x  }", want a value or {arg.<name>}`,
+			`screens/s.bbt:5:61: item "A": args: d: invalid token "{t}", want a value or {arg.<name>}`,
+			`screens/s.bbt:5:72: item "A": args: e: invalid token "{arg.x", want a value or {arg.<name>}`,
+			`screens/s.bbt:5:82: item "A": args: invalid argument name "F"`,
 		}},
 		{[]string{`key = "A"`, `do = "goto r"`, `args = { file = 1 }`}, []string{
 			`screens/s.bbt:5:17: item.args: must be a table of strings`,

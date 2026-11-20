@@ -115,10 +115,12 @@ func (ss *Session) screen(name string) (*screen.Screen, bool) {
 // Call it once.
 func (ss *Session) Run(ctx context.Context) error {
 	for {
-		it, err := ss.run(ctx, ss.stack[len(ss.stack)-1])
+		top := ss.stack[len(ss.stack)-1]
+		it, err := ss.run(ctx, top)
 		if err != nil {
 			return err
 		}
+		it.Do = it.Do.Resolve(top.args) // before the stack changes (section 4.1)
 		switch it.Do.Op {
 		case screen.Goto, screen.Gosub, screen.Back, screen.Top:
 			if it.Do.Lang != "" {

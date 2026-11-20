@@ -134,7 +134,7 @@ func bbsFields(m *bbs.Model) []field {
 	}
 	// The lists of the screen set of [screen] lang give the first values.
 	setLists := slices.DeleteFunc(slices.Clone(lists), func(l listRows) bool { return l.lang != set })
-	argValues := firstArgs(m.Sets[set], names, setLists)
+	argValues := bbs.NewSamples(m).Fields()
 	for _, a := range slices.Sorted(maps.Keys(argNames)) {
 		out = append(out, field{ref: screen.ArgRef(a), width: -1, sample: argValues[a]})
 	}
@@ -196,38 +196,6 @@ func bbsLists(m *bbs.Model) []listRows {
 		}
 	}
 	return out
-}
-
-// firstArgs gives the first value of each argument that a goto or a gosub gives in the screen set
-// set: the screens names in this order, the items in source order, then select with the first row
-// of the screen.
-func firstArgs(set map[string]*screen.Screen, names []string, lists []listRows) map[string]string {
-	vals := map[string]string{}
-	add := func(a screen.Action) {
-		for _, name := range slices.Sorted(maps.Keys(a.Args)) {
-			if _, ok := vals[name]; !ok {
-				vals[name] = a.Args[name]
-			}
-		}
-	}
-	for _, name := range names {
-		s := set[name]
-		for _, it := range s.Items {
-			if it.Do.Op.HasTarget() {
-				add(it.Do)
-			}
-		}
-		if s.List == nil || s.List.Select == nil || !s.List.Select.Do.Op.HasTarget() {
-			continue
-		}
-		for _, l := range lists {
-			if l.screen == name && len(l.rows) > 0 {
-				add(s.List.Select.Action(l.rows[0], 1))
-				break
-			}
-		}
-	}
-	return vals
 }
 
 // digits gives the count of decimal digits of n >= 0.

@@ -276,7 +276,7 @@ func RowRef(field string) Ref { return Ref{kind: refRow, name: field} }
 type Fields map[string]Ref
 
 // reserved are the names that an alias cannot have (screens-toml, section 3.3).
-var reserved = []string{"term", "item", "arg", "file", "meta", "row", "list", "session", "bbs", "and", "or", "not"}
+var reserved = []string{"term", "item", "arg", "file", "meta", "row", "list", "session", "bbs", "in", "and", "or", "not"}
 
 // CheckAlias checks the alias name against screens-toml, section 3.3.
 func CheckAlias(name string) error {
