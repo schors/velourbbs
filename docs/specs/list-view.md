@@ -85,7 +85,7 @@ args = { dir = "guide/bbt" }
   ([bbt-format](bbt-format.md), section 8.5).
 - The host reads the rows of each provider at its load. They do not change until the next start.
 - For a value `{arg.<name>}`, the host reads the rows of each value of the argument
-  that a `goto` or a `gosub` to the screen gives, in each screen set
+  ([bbt-format](bbt-format.md), section 8.5), in each screen set
   ([session-language](session-language.md), section 6).
   `velourbbs preview` also reads the rows of a `--set` value ([screen-render](screen-render.md), section 3.2).
 
@@ -170,14 +170,15 @@ A "list line" is a source line of a BBS template that starts with `{#each}` and 
 | `do` | string | The action ([bbt-format](bbt-format.md), section 8.3). |
 | `args` | table | Optional. The arguments of a `goto` or a `gosub`. |
 
-- An `args` value is a literal or exactly one token `{row.<field>}`.
-  The host puts the value of the field of the selected row into the argument as it is.
+- An `args` value is a literal, `{arg.<name>}` or `{row.<field>}`
+  ([bbt-format](bbt-format.md), section 8.5).
+  For `{row.<field>}`, the host puts the value of the field of the selected row into the argument as it is.
   An integer gives its decimal form.
 - The other rules of `args` of an item apply ([bbt-format](bbt-format.md), section 8.5).
   The values of a `{row.<field>}` argument are the values of the field in each row of the list
   of each screen set. A file screen checks each value ([file-view](file-view.md), section 3.1).
-- A `{row.<field>}` value for an argument that the target screen uses in `data` is an error.
-  So the rows of a provider never depend on the rows of another provider.
+- A `{row.<field>}` value that reaches the `data` of a screen is an error
+  ([bbt-format](bbt-format.md), section 8.5).
 
 Keys:
 
@@ -239,9 +240,8 @@ Positions:
 
 - An error of a key of the screen has the position of its key path
   ([screen-render](screen-render.md), section 3.1).
-- An error of a row of a provider value `{arg.<name>}` is an error of the item that gives the value,
-  as in [file-view](file-view.md), section 7.
-- An error of a value of `select` in a file screen is an error of the key `select`.
+- An error of a row of a provider value `{arg.<name>}` and an error of a value of `select`
+  in a file screen are errors at the origin of the value ([bbt-format](bbt-format.md), section 8.5).
 - An error of the list rectangle depends on `rows` of the screen. It starts with `screen "<name>": `
   ([screen-render](screen-render.md), section 3.1).
 

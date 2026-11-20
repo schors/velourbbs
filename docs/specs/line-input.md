@@ -13,7 +13,7 @@ Without line input, the session reads only hotkeys ([menu-nav](menu-nav.md), sec
 - The "line" is the text that the user types. It has at most one row.
 - The "field" is the place of the line on the terminal screen.
 - The "caller" is the part of the host that asks for a line, for example `ask`
-  ([args](https://github.com/schors/velourbbs/issues/66)).
+  ([menu-nav](menu-nav.md), section 5.4).
 - The "cursor position" is a position in the line, from 0 (before the first character)
   to the length of the line (after the last character).
 - A "paste" and its marks: [telnet-term](telnet-term.md), section 8.4.
@@ -119,8 +119,8 @@ The line input takes the keys of [telnet-term](telnet-term.md), section 8, in th
 | `internal/line` | The field, the line, the keys of section 4, the characters of section 5, the keys of a paste (section 6) and the cells of a draw (section 7). It has no I/O. |
 | `internal/term` | The terminal of the line input: the keys with their paste mark, the bytes of a draw, the paste mode and the queue clear. |
 
-- The terminal interface of the session ([menu-nav](menu-nav.md), section 8) does not change.
-  The first caller adds the line input to it.
+- The terminal interface of the session ([menu-nav](menu-nav.md), section 8) reads a line
+  with the line input.
 
 ## 9. Acceptance
 
@@ -143,4 +143,3 @@ The line input takes the keys of [telnet-term](telnet-term.md), section 8, in th
 
 - A multi-line editor.
 - A first value of the line.
-- A caller in the screens: `ask` ([args](https://github.com/schors/velourbbs/issues/66)).

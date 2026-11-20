@@ -77,6 +77,7 @@ section 7.2, or to a reference (below). The style tokens use the theme:
   A "name of the theme" is a name of the base theme.
   The effect of `normal` and `more`: [bbt-format](bbt-format.md), sections 6.2, 6.4 and 7.3.
   The effect of `select`: [list-view](list-view.md), section 9.
+  The effect of `more` and `select` in the ask row: [menu-nav](menu-nav.md), section 5.4.
 - Each name of a depth theme and of a light table must be a name of the theme.
 - The "dark theme" of one `term.colors` is the base theme with each style of the depth theme
   of `term.colors` in place of the style with the same name.
@@ -141,7 +142,8 @@ with 16 colours, and `#004080/7 bold underline` in the light theme with 16 colou
 `[fields]` maps an alias to a registry path: [bbt-format](bbt-format.md), sections 4.1 and 4.2.
 
 - An alias matches `[a-z][a-z0-9_]*`. Each value is a string. The default `[fields]` is empty.
-- An alias cannot be `term`, `item`, `arg`, `file`, `meta`, `row`, `list`, `session`, `bbs`, `and`, `or` or `not`.
+- An alias cannot be `term`, `item`, `arg`, `file`, `meta`, `row`, `list`, `session`, `bbs`, `in`, `and`, `or` or `not`.
+  `in` is the value token of [bbt-format](bbt-format.md), section 8.5.
 - A field token with an alias is a field token with its path. So an alias to `arg.<name>`
   gives an argument of the screen ([bbt-format](bbt-format.md), section 8.5), an alias to a field
   of a file screen is valid only in a file screen ([file-view](file-view.md), section 3.4),
