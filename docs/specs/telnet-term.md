@@ -573,7 +573,7 @@ At SIGINT or SIGTERM, the host does these steps:
 | Package | Content |
 |---|---|
 | `internal/telnet` | The telnet parser, the option states and the subnegotiations. |
-| `internal/term` | The probe, the encoder, the colour reduction, the key decoder, the paste, the draw of the line input and the terminal of [menu-nav](menu-nav.md), section 8. |
+| `internal/term` | The probe, the encoder, the colour reduction, the key decoder, the paste, the draw of the line input, the terminal of [menu-nav](menu-nav.md), section 8, and the line form of [screen-render](screen-render.md), section 3.7. |
 | `internal/server` | The listener, the limits, the PROXY protocol header and the sessions. |
 
 - `cmd/velourbbs` loads the model ([session](session.md), section 3) and gives it to `internal/server`.
