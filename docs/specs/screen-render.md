@@ -75,6 +75,7 @@ The host renders a screen page by page. A session holds one page in memory.
   on its items, its width limits or its `rows` ([list-view](list-view.md), section 9).
   Such an error starts with `screen "<name>": `.
 - The host runs the same checks at start. An error stops the start.
+- `velourbbs check --size <cols>x<rows>` also gives the layout warnings of section 3.6.
 
 Examples:
 
@@ -233,6 +234,52 @@ rows = [
   the command exits with status 1.
 - A value of `rows` that `select` gives to a file screen must be a content file
   ([list-view](list-view.md), section 8). Else it is an error of the preview.
+
+### 3.6. Layout warnings
+
+`velourbbs check --size <cols>x<rows> [--size <cols>x<rows>]...` renders each screen at each size
+and warns about layout mistakes that the host does not report.
+
+- A size outside the ranges of [bbt-format](bbt-format.md), section 4.1, is an invalid argument.
+  A repeated size counts once.
+- The command renders only after the checks of section 3.1 give no error.
+  `velourbbs serve` does not render at start.
+- It renders each screen of each screen set ([session-language](session-language.md), section 6)
+  at each size. `session.lang` is the language of the screen set. The other fields have
+  the values of `velourbbs preview` without `--set` and `--sample` (section 3.2).
+  So the conditions and the `when` of the items see the size, as in a session.
+- The arguments of a screen are the arguments of the first action that shows the screen:
+  the screen sets in the order of the languages, the screens in name order,
+  the items in source order, then `select` with the first row of its list.
+  A screen with arguments that no action shows is not rendered.
+- It renders each page of the screen, as the cell dump has (section 3.3).
+
+The warnings:
+
+| Warning | When |
+|---|---|
+| `the line wraps to <n> rows` | A text line gives more than one row ([bbt-format](bbt-format.md), section 6.3). |
+| `<n> rows, the screen gets a More row` | A screen other than a file screen and a list screen has more rows than `term.rows` ([bbt-format](bbt-format.md), section 6.4). |
+| `<n> rows, the rows after <rows> are cut` | A page of a file screen or a list screen has more rows than `term.rows` ([file-view](file-view.md), section 3.2; [list-view](list-view.md), section 3). |
+| `the row is <n> cells wide, the screen shows <m>` | The host cuts a row of text, of a stretch line or of a list line, and the cut drops a grapheme other than a space. `<m>` is the smaller of W and `term.cols` ([bbt-format](bbt-format.md), section 6.1). |
+| `art "<name>.ans" is <n> cells wide, the screen shows <m>` | An art insert is wider than `<m>`. |
+
+- The message starts with `at <cols>x<rows>: `. In a fragment, `screen "<name>": `
+  comes before it (section 3.1).
+- The position of a row warning is its source line, at column 1. The position of
+  a rows warning is the first line of the screen file.
+- The command gives one warning for each position, size and kind.
+  The message has the values of the first page where it happens.
+- The file area of a file screen gives no warning. The text of a Markdown file wraps by design.
+- A warning does not change the exit status.
+
+Example at 80x24 with `width = [68, 108]` and `gutter = 6`:
+
+```
+screens/main.bbt:12:1: warning: at 80x24: the line wraps to 2 rows
+screens/_logo.bbt:3:1: warning: screen "main": at 80x24: the row is 75 cells wide, the screen shows 68
+screens/about.bbt:1:1: warning: at 80x24: 31 rows, the screen gets a More row
+```
 
 ## 4. Code
 
