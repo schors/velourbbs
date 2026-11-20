@@ -61,6 +61,8 @@ func (p Place) Elem(i int) Place {
 // Value gives the position of the value at p: its first byte, or the position of the table.
 // A table has the position of its header, of the { of an inline table, or of the first
 // dotted key that makes it. A path that is not set has the position of the last table on it.
+// An array in an array has the position of the outer array: the parser gives no range
+// of an array, and no key of the host has a nested array.
 func (p Place) Value() Pos {
 	if p.n == nil {
 		return p.last

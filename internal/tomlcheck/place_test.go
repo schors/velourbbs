@@ -21,6 +21,8 @@ key = "B"
   in = { k = { m = "D" }, l = [7] }
 [ map ]
 list = [{ k = "E" }, { k = "F" }]
+nest = [[1],
+ [2]]
 `)
 	root := Root(data)
 	tests := []struct {
@@ -32,6 +34,8 @@ list = [{ k = "E" }, { k = "F" }]
 		{"value", root.At("name"), Pos{2, 1}, Pos{2, 8}},
 		{"array", root.At("size"), Pos{3, 1}, Pos{3, 8}},
 		{"array element", root.At("size").Elem(1), Pos{3, 1}, Pos{3, 13}},
+		{"nested array", root.At("map", "nest").Elem(1), Pos{19, 1}, Pos{19, 8}},
+		{"element of a nested array", root.At("map", "nest").Elem(1).Elem(0), Pos{19, 1}, Pos{20, 3}},
 		{"quoted key", root.At("q.k"), Pos{4, 1}, Pos{4, 9}},
 		{"value in a table", root.At("table", "n"), Pos{6, 1}, Pos{6, 5}},
 		// A table at the [ of its header.
