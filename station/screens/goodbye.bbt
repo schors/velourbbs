@@ -1,37 +1,14 @@
-+++
-width = [80, 132]
-+++
+{~}
+  {!dim}До встречи  ∙  See you{!}
+
 {#if term.cols >= 132 and term.rows >= 43}
-
-
-
-
-
-
-
-
-
-
-              {!dim}До встречи  ∙  See you{!}
-
 {>_logo-132}
-
-              {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Вечер, текст и немного золота
-                       Evening, text and a little gold
-
-                       {!dim}https://github.com/schors/velourbbs{!}
 {#else}
-
-
-
-
-
-        {!dim}До встречи  ∙  See you{!}
-
-{>_logo-80-8}
-
-        {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Вечер, текст и немного золота
-                 Evening, text and a little gold
-
-                 {!dim}https://github.com/schors/velourbbs{!}
+{>_logo-80}
 {/if}
+
+  {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Вечер, текст и немного золота
+           Evening, text and a little gold
+
+           {!dim}https://github.com/schors/velourbbs{!}
+{~}

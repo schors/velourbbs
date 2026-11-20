@@ -43,30 +43,35 @@ func (s stationFS) Open(name string) (fs.File, error) {
 }
 
 // TestStation checks the home BBS of home-bbs, section 5: velourbbs check gives
-// no output, and the preview of each screen at 80x24 with 256 colours equals its golden dump.
+// no output, and the preview of each screen at 80x24 and 132x43 with 256 colours
+// equals its golden dump.
 func TestStation(t *testing.T) {
 	fsys := newStationFS()
 	var out, errOut bytes.Buffer
 	if status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
 		t.Errorf("check: stdout %q, stderr %q, status %d; want no output and status 0", out.String(), errOut.String(), status)
 	}
-	for _, screen := range []string{"main", "goodbye", "shutdown", "ru-menu", "en-menu", "ru-about", "en-about",
-		"ru-texts", "en-texts", "ru-setup", "en-setup", "ru-bbt", "en-bbt", "ru-read", "en-read"} {
-		out.Reset()
-		errOut.Reset()
-		args := []string{"preview", screen, "--size", "80x24", "--set", "term.colors=256"}
-		// A screen of a language is <lang>-<name> (home-bbs, section 5).
-		if lang, name, ok := strings.Cut(screen, "-"); ok {
-			args = []string{"preview", name, "--size", "80x24", "--set", "term.colors=256", "--set", "session.lang=" + lang}
+	for _, size := range []string{"80x24", "132x43"} {
+		for _, screen := range []string{"main", "main-ambiguous", "goodbye", "shutdown", "ru-menu", "en-menu", "ru-about", "en-about",
+			"ru-texts", "en-texts", "ru-setup", "en-setup", "ru-bbt", "en-bbt", "ru-read", "en-read"} {
+			out.Reset()
+			errOut.Reset()
+			args := []string{"preview", screen, "--size", size, "--set", "term.colors=256"}
+			// A screen of a language is <lang>-<name> (home-bbs, section 5).
+			if screen == "main-ambiguous" {
+				args = []string{"preview", "main", "--size", size, "--set", "term.colors=256", "--set", "term.ambiguous=2"}
+			} else if lang, name, ok := strings.Cut(screen, "-"); ok {
+				args = []string{"preview", name, "--size", size, "--set", "term.colors=256", "--set", "session.lang=" + lang}
+			}
+			if strings.HasSuffix(screen, "-read") {
+				args = append(args, "--set", "arg.file=guide/setup/README.md", "--set", "arg.title=Fixture guide")
+			}
+			status := run(args, t.TempDir(), fsys, &out, &errOut)
+			if errOut.Len() != 0 || status != 0 {
+				t.Errorf("%s %s: stderr %q, status %d", screen, size, errOut.String(), status)
+			}
+			golden(t, filepath.Join("testdata", "station", screen+"-"+size+"-256.dump"), out.String())
 		}
-		if strings.HasSuffix(screen, "-read") {
-			args = append(args, "--set", "arg.file=guide/setup/README.md", "--set", "arg.title=Fixture guide")
-		}
-		status := run(args, t.TempDir(), fsys, &out, &errOut)
-		if errOut.Len() != 0 || status != 0 {
-			t.Errorf("%s: stderr %q, status %d", screen, errOut.String(), status)
-		}
-		golden(t, filepath.Join("testdata", "station", screen+"-80x24-256.dump"), out.String())
 	}
 }
 

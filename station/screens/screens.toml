@@ -2,15 +2,16 @@
 # docs/brand/brandbook.md, section 3.
 
 [screen]
-width = [80, 80]
-align = "left"
+width = [68, 108]
+align = "center"
+gutter = 6
 fill = "spaces"
-more = "    Any key Next"
+more = "  Any key Next"
 time = "15:04 MST"
 zone = "UTC"
 
 [lang.ru]
-more = "    Любая клавиша Дальше"
+more = "  Любая клавиша Дальше"
 
 [theme.default]
 normal = "#aeaba4/#060a20"

@@ -1,73 +1,36 @@
 +++
-width = [80, 132]
 [[item]]
 key = "ESC"
 do = "back"
 +++
-{#if term.cols >= 132 and term.rows >= 43}
 
-              {!hi}V E L O U R{!}      {!dim}Texts{!}
-              {!gold}───────────{!frame}───────────────────────────────────────────────────────────────────────────────────────────{!} {!gold}■{!}
+  {!hi}V E L O U R{!}      {!dim}Texts{!}
+  {!gold}───────────{!frame}{~─}{!} {!gold}■{!}  
 
+{#if term.rows >= 43}
 
-              {!gold}■  About the station{!}
+{/if}
+  {!gold}■  About the station{!}
 
-              Velour is BBS software. Guests come in over telnet, and the screens
-              are text files of the sysop.
+  Velour is BBS software. This station runs on Velour and shows
+  its guides and features.
 
-              This is the home station of Velour. It runs on Velour and shows its
-              guides and features.
+  {!dim}Source code{!}         https://github.com/schors/velourbbs
+  {!dim}Your address{!}        {session.ip}
+  {!dim}Time online{!}         {session.online}
+  {!dim}Velour version{!}      {bbs.version}
+  {!dim}Open sessions{!}       {bbs.sessions}
+  {!dim}Station uptime{!}      {bbs.uptime}
 
-              {!dim}Source code{!}         https://github.com/schors/velourbbs
+  {!dim}Terminal{!}            {term.cols}x{term.rows}, {term.type                         }
+  {!dim}Program{!}             {#if term.name == ""}no reply{#else}{term.name                         }{/if}
+  {!dim}Colours{!}             {#if term.colors == 16777216}truecolor{#else}{term.colors}{/if}
+  {!dim}Background{!}          {#if term.background == ""}unknown{/if}{#if term.background == "dark"}dark, {term.bg_color}{/if}{#if term.background == "light"}light, {term.bg_color}{/if}
+  {!dim}Cyrillic width{!}      {#if term.ambiguous == 2}2 cells{#else}1 cell{/if}
+{~}
+  {!frame}{~─}{!}  
+  {!hi}Esc{!} {!ctl}To menu{!}
 
-              {!dim}Your address{!}        {session.ip}
-              {!dim}Time online{!}         {session.online}
-              {!dim}Velour version{!}      {bbs.version}
-              {!dim}Open sessions{!}       {bbs.sessions}
-              {!dim}Station uptime{!}      {bbs.uptime}
+{#if term.rows >= 25}
 
-              {!dim}Terminal{!}            {term.cols}x{term.rows}, {term.type                             }
-              {!dim}Program{!}             {#if term.name == ""}no reply{#else}{term.name                             }{/if}
-              {!dim}Colours{!}             {#if term.colors == 16777216}truecolor{#else}{term.colors}{/if}
-              {!dim}Background{!}          {#if term.background == ""}unknown{/if}{#if term.background == "dark"}dark, {term.bg_color}{/if}{#if term.background == "light"}light, {term.bg_color}{/if}
-              {!dim}Cyrillic width{!}      {#if term.ambiguous == 2}2 cells{#else}1 cell{/if}
-
-
-
-
-
-
-
-
-
-
-
-
-
-              {!frame}────────────────────────────────────────────────────────────────────────────────────────────────────────{!}
-              {!hi}Esc{!} {!ctl}To menu{!}
-{#else}
-
-    {!hi}V E L O U R{!}      {!dim}Texts{!}
-    {!gold}───────────{!frame}───────────────────────────────────────────────────{!} {!gold}■{!}
-
-    {!gold}■  About the station{!}
-
-    Velour is BBS software. This station runs on Velour and shows
-    its guides and features.
-
-    {!dim}Source code{!}         https://github.com/schors/velourbbs
-    {!dim}Your address{!}        {session.ip}
-    {!dim}Time online{!}         {session.online}
-    {!dim}Velour version{!}      {bbs.version}
-    {!dim}Open sessions{!}       {bbs.sessions}
-    {!dim}Station uptime{!}      {bbs.uptime}
-
-    {!dim}Terminal{!}            {term.cols}x{term.rows}, {term.type                             }
-    {!dim}Program{!}             {#if term.name == ""}no reply{#else}{term.name                             }{/if}
-    {!dim}Colours{!}             {#if term.colors == 16777216}truecolor{#else}{term.colors}{/if}
-    {!dim}Background{!}          {#if term.background == ""}unknown{/if}{#if term.background == "dark"}dark, {term.bg_color}{/if}{#if term.background == "light"}light, {term.bg_color}{/if}
-    {!dim}Cyrillic width{!}      {#if term.ambiguous == 2}2 cells{#else}1 cell{/if}
-    {!frame}────────────────────────────────────────────────────────────────{!}
-    {!hi}Esc{!} {!ctl}To menu{!}
 {/if}

@@ -1,73 +1,36 @@
 +++
-width = [80, 132]
 [[item]]
 key = "ESC"
 do = "back"
 +++
-{#if term.cols >= 132 and term.rows >= 43}
 
-              {!hi}V E L O U R{!}      {!dim}Тексты{!}
-              {!gold}───────────{!frame}───────────────────────────────────────────────────────────────────────────────────────────{!} {!gold}■{!}
+  {!hi}V E L O U R{!}      {!dim}Тексты{!}
+  {!gold}───────────{!frame}{~─}{!} {!gold}■{!}  
 
+{#if term.rows >= 43}
 
-              {!gold}■  О станции{!}
+{/if}
+  {!gold}■  О станции{!}
 
-              Velour - программа для BBS. Гости приходят по telnet, а экраны - это
-              текстовые файлы СисОпа.
+  Velour - программа для BBS. Эта станция работает на Velour
+  и показывает его руководства и возможности.
 
-              Это домашняя станция Velour. Она работает на нём и показывает его
-              руководства и возможности.
+  {!dim}Исходный код{!}        https://github.com/schors/velourbbs
+  {!dim}Ваш адрес{!}           {session.ip}
+  {!dim}Вы на связи{!}         {session.online}
+  {!dim}Версия Velour{!}       {bbs.version}
+  {!dim}Открытые сеансы{!}     {bbs.sessions}
+  {!dim}Станция работает{!}    {bbs.uptime}
 
-              {!dim}Исходный код{!}        https://github.com/schors/velourbbs
+  {!dim}Терминал{!}            {term.cols}x{term.rows}, {term.type                         }
+  {!dim}Программа{!}           {#if term.name == ""}нет ответа{#else}{term.name                         }{/if}
+  {!dim}Цвета{!}               {#if term.colors == 16777216}truecolor{#else}{term.colors}{/if}
+  {!dim}Фон{!}                 {#if term.background == ""}не определён{/if}{#if term.background == "dark"}тёмный, {term.bg_color}{/if}{#if term.background == "light"}светлый, {term.bg_color}{/if}
+  {!dim}Ширина кириллицы{!}    {#if term.ambiguous == 2}2 клетки{#else}1 клетка{/if}
+{~}
+  {!frame}{~─}{!}  
+  {!hi}Esc{!} {!ctl}В меню{!}
 
-              {!dim}Ваш адрес{!}           {session.ip}
-              {!dim}Вы на связи{!}         {session.online}
-              {!dim}Версия Velour{!}       {bbs.version}
-              {!dim}Открытые сеансы{!}     {bbs.sessions}
-              {!dim}Станция работает{!}    {bbs.uptime}
+{#if term.rows >= 25}
 
-              {!dim}Терминал{!}            {term.cols}x{term.rows}, {term.type                             }
-              {!dim}Программа{!}           {#if term.name == ""}нет ответа{#else}{term.name                             }{/if}
-              {!dim}Цвета{!}               {#if term.colors == 16777216}truecolor{#else}{term.colors}{/if}
-              {!dim}Фон{!}                 {#if term.background == ""}не определён{/if}{#if term.background == "dark"}тёмный, {term.bg_color}{/if}{#if term.background == "light"}светлый, {term.bg_color}{/if}
-              {!dim}Ширина кириллицы{!}    {#if term.ambiguous == 2}2 клетки{#else}1 клетка{/if}
-
-
-
-
-
-
-
-
-
-
-
-
-
-              {!frame}────────────────────────────────────────────────────────────────────────────────────────────────────────{!}
-              {!hi}Esc{!} {!ctl}В меню{!}
-{#else}
-
-    {!hi}V E L O U R{!}      {!dim}Тексты{!}
-    {!gold}───────────{!frame}───────────────────────────────────────────────────{!} {!gold}■{!}
-
-    {!gold}■  О станции{!}
-
-    Velour - программа для BBS. Эта станция работает на Velour
-    и показывает его руководства и возможности.
-
-    {!dim}Исходный код{!}        https://github.com/schors/velourbbs
-    {!dim}Ваш адрес{!}           {session.ip}
-    {!dim}Вы на связи{!}         {session.online}
-    {!dim}Версия Velour{!}       {bbs.version}
-    {!dim}Открытые сеансы{!}     {bbs.sessions}
-    {!dim}Станция работает{!}    {bbs.uptime}
-
-    {!dim}Терминал{!}            {term.cols}x{term.rows}, {term.type                             }
-    {!dim}Программа{!}           {#if term.name == ""}нет ответа{#else}{term.name                             }{/if}
-    {!dim}Цвета{!}               {#if term.colors == 16777216}truecolor{#else}{term.colors}{/if}
-    {!dim}Фон{!}                 {#if term.background == ""}не определён{/if}{#if term.background == "dark"}тёмный, {term.bg_color}{/if}{#if term.background == "light"}светлый, {term.bg_color}{/if}
-    {!dim}Ширина кириллицы{!}    {#if term.ambiguous == 2}2 клетки{#else}1 клетка{/if}
-    {!frame}────────────────────────────────────────────────────────────────{!}
-    {!hi}Esc{!} {!ctl}В меню{!}
 {/if}
