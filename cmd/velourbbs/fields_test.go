@@ -270,16 +270,15 @@ func TestValueWidth(t *testing.T) {
 }
 
 // bbsFS is a BBS in two languages: the list screen main selects into the screen read
-// of the set ru. notes is a list screen with {arg.<name>} and no goto to it.
+// of the set ru. The item E shows read in en with another file than the sample row.
 var bbsFS = fstest.MapFS{
 	"bbs.toml":             {Data: nil},
 	"screens/screens.toml": {Data: []byte("[lang.en]\n[lang.ru]\n")},
 	"screens/main.bbt": {Data: []byte("+++\ndata = { from = \"files\", args = { dir = \"log\" } }\nrows = 3\n" +
 		"select = { do = \"gosub ru/read\", args = { file = \"{row.path}\" } }\n" +
+		"[[item]]\nkey = \"E\"\ndo = \"gosub read\"\nargs = { file = \"log/a.md\" }\n" +
 		"[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{#each}{row.title}{/each}\n")},
 	"screens/read.bbt": {Data: []byte("+++\nfile = \"{arg.file}\"\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{>file}\n")},
-	"screens/notes.bbt": {Data: []byte("+++\ndata = { from = \"files\", args = { dir = \"{arg.dir}\" } }\nrows = 3\n" +
-		"[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{#each}{row.title}{/each}\n")},
 	"content/log/a.md": {Data: []byte("# A\n")},
 	"content/en/x.md":  {Data: []byte("# English\n")},
 	"content/ru/x.md":  {Data: []byte("# Russian\n")},
@@ -296,6 +295,8 @@ func TestPreviewSampleTargetLang(t *testing.T) {
 }
 
 // A list screen without lists gives the fields of its provider, with no width and no value.
+// notes is a list screen with {arg.<name>}. No goto gives it a value, so it has no lists.
+// So a user cannot reach it.
 func TestFieldsNoLists(t *testing.T) {
 	fsys := fstest.MapFS{}
 	for name, f := range bbsFS {
@@ -303,7 +304,10 @@ func TestFieldsNoLists(t *testing.T) {
 			fsys[name] = f
 		}
 	}
-	fsys["screens/main.bbt"] = &fstest.MapFile{Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\nHi\n")}
+	fsys["screens/main.bbt"] = &fstest.MapFile{Data: []byte("+++\n[[item]]\nkey = \"R\"\ndo = \"gosub read\"\n" +
+		"args = { file = \"x.md\" }\n[[item]]\nkey = \"L\"\ndo = \"lang ru\"\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\nHi\n")}
+	fsys["screens/notes.bbt"] = &fstest.MapFile{Data: []byte("+++\ndata = { from = \"files\", args = { dir = \"{arg.dir}\" } }\n" +
+		"rows = 3\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{#each}{row.title}{/each}\n")}
 	var out, errOut bytes.Buffer
 	status := run([]string{"fields"}, t.TempDir(), fsys, &out, &errOut)
 	got := out.String()
@@ -319,7 +323,7 @@ func TestFieldsNoLists(t *testing.T) {
 			t.Errorf("no line %q in\n%s", line, got)
 		}
 	}
-	if errOut.Len() != 0 || status != 0 {
-		t.Errorf("stderr %q, status %d", errOut.String(), status)
+	if want := "screens/notes.bbt:1:1: warning: a user cannot reach this screen\n"; errOut.String() != want || status != 0 {
+		t.Errorf("stderr %q, status %d; want stderr %q, status 0", errOut.String(), status, want)
 	}
 }

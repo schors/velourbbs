@@ -6,6 +6,9 @@ do = "gosub en/menu"
 key = "R"
 do = "gosub ru/menu"
 [[item]]
+key = "L"
+do = "gosub long"
+[[item]]
 key = "G"
 do = "logoff"
 +++

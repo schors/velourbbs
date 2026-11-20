@@ -71,6 +71,21 @@ func TestCheckValid(t *testing.T) {
 	}
 }
 
+// The warning of a screen that a user cannot reach does not change the exit status (menu-nav, section 6.1).
+func TestCheckUnreachable(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml":         {},
+		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n")},
+		"screens/old.bbt":  {Data: []byte("+++\n[[item]]\nkey = \"Q\"\ndo = \"goto main\"\n+++\n")},
+	}
+	want := "screens/old.bbt:1:1: warning: a user cannot reach this screen\n"
+	var out, errOut bytes.Buffer
+	status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut)
+	if out.String() != "" || errOut.String() != want || status != 0 {
+		t.Errorf("stdout %q, stderr %q, status %d; want stderr %q, status 0", out.String(), errOut.String(), status, want)
+	}
+}
+
 // velourbbs check reports the errors of [limits] (bbs-toml, section 3.3).
 func TestCheckLimits(t *testing.T) {
 	fsys := fstest.MapFS{

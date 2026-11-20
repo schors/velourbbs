@@ -25,6 +25,9 @@ do = "theme light"
 key = "D"
 do = "theme dark"
 [[item]]
+key = "M"
+do = "goto margin"
+[[item]]
 key = "G"
 do = "logoff"
 +++

@@ -165,7 +165,7 @@ func load(t *testing.T, change map[string]string) map[string]*screen.Screen {
 	theme := map[string]screen.Style{"normal": {}, "more": {}}
 	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}})
 	ss := sets["en"]
-	ds = bbs.Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
+	ds = bbs.Check(config.Config{Start: "main", Lang: "en", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -246,6 +246,8 @@ func TestRun(t *testing.T) {
 		// with other args shows it with the new values.
 		name: "arguments",
 		change: map[string]string{
+			"info": "",
+			"long": "",
 			"main": `+++
 [[item]]
 key = "1"
@@ -311,6 +313,8 @@ func TestRunStack(t *testing.T) {
 		"main": "+++\n" + item("1", "gosub a") + item("X", "goto a") + item("B", "back") + item("G", "logoff") + "+++\nMain\n",
 		"a":    "+++\n" + item("1", "gosub b") + item("B", "back") + item("T", "top") + "+++\nA\n",
 		"b":    "+++\n" + item("B", "back") + item("T", "top") + item("M", "goto main") + "+++\nB\n",
+		"info": "",
+		"long": "",
 	})
 	tests := []struct {
 		name string
@@ -529,7 +533,7 @@ do = "goto main"
 	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
 	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}})
 	ss := sets["en"]
-	ds = bbs.Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
+	ds = bbs.Check(config.Config{Start: "main", Lang: "en", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -586,7 +590,7 @@ do = "back"
 	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
 	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}})
 	ss := sets["en"]
-	ds = bbs.Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
+	ds = bbs.Check(config.Config{Start: "main", Lang: "en", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -644,7 +648,7 @@ read {bbs.sessions} {file.page}
 	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
 	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}})
 	ss := sets["en"]
-	ds = bbs.Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
+	ds = bbs.Check(config.Config{Start: "main", Lang: "en", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}
@@ -718,6 +722,9 @@ do = "theme dark"
 key = "R"
 do = "goto read"
 args = { file = "a.txt" }
+[[item]]
+key = "T"
+do = "goto tall"
 [[item]]
 key = "G"
 do = "logoff"
@@ -919,7 +926,7 @@ do = "back"
 	theme := map[string]screen.Style{"normal": {}, "more": {}, "md_code": {}, "md_dim": {}}
 	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 80}}})
 	ss := sets["en"]
-	ds = bbs.Check(config.Config{Start: "main", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
+	ds = bbs.Check(config.Config{Start: "main", Lang: "en", Langs: []string{"en"}}, bbt.Sets{"en": ss}, ds)
 	if len(ds) > 0 {
 		t.Fatalf("load: %v", ds)
 	}

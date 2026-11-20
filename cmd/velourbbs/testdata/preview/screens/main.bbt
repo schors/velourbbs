@@ -1,5 +1,14 @@
 +++
 [[item]]
+key = "C"
+do = "goto colours"
+[[item]]
+key = "F"
+do = "goto fields"
+[[item]]
+key = "T"
+do = "goto term"
+[[item]]
 key = "G"
 do = "logoff"
 +++

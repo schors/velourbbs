@@ -13,7 +13,8 @@ import (
 // Check does the checks of menu-nav, section 6, between files in the screen set of each language:
 // the goto and gosub actions and their args, the screens without items, the start screen
 // and the arguments of goodbye and shutdown. It also checks that each set has the screen names
-// and the arguments of each other set (session-language, section 6).
+// and the arguments of each other set (session-language, section 6). Without an error, it warns
+// about each screen that a user cannot reach (menu-nav, section 6.1).
 // sets is the result of a load without errors. Check merges the diagnostics of the sets with ds
 // (bbt.SetDiags) and gives the sorted diagnostics.
 func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
@@ -59,6 +60,9 @@ func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
 		sd.Add(lang, ls)
 	}
 	checkSets(cfg.Langs, sets, sd)
+	if !sd.All().HasErrors() {
+		unreachable(cfg, sets, sd)
+	}
 	return sd.Diags()
 }
 
