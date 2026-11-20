@@ -78,7 +78,6 @@ section 7.2, or to a reference (below). The style tokens use the theme:
   The effect of `normal` and `more`: [bbt-format](bbt-format.md), sections 6.2, 6.4 and 7.3.
   The effect of `select`: [list-view](list-view.md), section 9.
 - Each name of a depth theme and of a light table must be a name of the theme.
-  The name of each reference must be a name of the theme.
 - The "dark theme" of one `term.colors` is the base theme with each style of the depth theme
   of `term.colors` in place of the style with the same name.
   When `term.colors` has no depth theme, the dark theme is the base theme.
@@ -91,6 +90,15 @@ section 7.2, or to a reference (below). The style tokens use the theme:
   When that style is also a reference, the same rule applies to it.
   A reference that leads back to its own style is an error: a "cycle".
   The host checks the dark theme and the light theme of 16, 256 and 16777216 colours.
+- Errors of a reference have the position of its value
+  ([screen-render](screen-render.md), section 3.1):
+  - A name that is not a name of the theme: `theme.default.md_h1: unknown style "haed"`.
+  - A cycle: `theme.16.md_h1: cycle: md_h1 -> head -> md_h1`. Each key of a cycle gives
+    one error, also when the cycle is in more than one theme. The path starts and ends
+    with the name of the key. When the path differs between themes, the first theme
+    in this order gives it: the dark theme of 16, 256 and 16777216 colours, then the light theme
+    of 16, 256 and 16777216 colours. A reference that leads into a cycle and not back
+    to its own style gives no error.
 - The "theme choice" of a session is `dark`, `light` or `auto`. It starts as `[screen] theme`.
   The action `theme` changes it ([menu-nav](menu-nav.md), section 4).
   The field `session.theme` gives it ([session-fields](session-fields.md), section 2).
