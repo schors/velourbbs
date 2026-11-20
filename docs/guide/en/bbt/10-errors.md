@@ -5,6 +5,20 @@ Each line gives the file, the line number, the column and the message (task 1).
 In art, the line and the column are the row and the column of the art.
 This task gives frequent errors and their fixes.
 
+## An error in `bbs.toml` or `screens/screens.toml`
+
+```
+screens/screens.toml:10:10: unexpected character U+0023 '#' at start of value
+```
+
+Line 10 of `screens/screens.toml` is `title  = #f7c7a3 bold`.
+A text value in TOML needs double quotes: `title  = "#f7c7a3 bold"`.
+
+The screens use the settings of `bbs.toml` and `screens/screens.toml`.
+So after an error in these files, `velourbbs check` stops before the screens
+and gives only the errors of these files.
+Correct them, then run `velourbbs check` again. Then it checks the screens.
+
 ## `unknown style`
 
 ```

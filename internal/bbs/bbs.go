@@ -22,9 +22,14 @@ type Model struct {
 // Load reads bbs.toml, screens/screens.toml and the screens of the BBS directory fsys
 // and does the checks between files (session, section 3). It gives the model
 // and the sorted diagnostics. The model is nil when the diagnostics have an error.
+// An error of bbs.toml or screens/screens.toml stops the load before the screens
+// (screen-render, section 3.1).
 func Load(fsys fs.FS) (*Model, screen.Diags) {
-	// config.Load also gives the defaults after an error, so the screens load with them.
 	cfg, ds := config.Load(fsys)
+	if ds.HasErrors() {
+		ds.Sort()
+		return nil, ds
+	}
 	sets, sds := bbt.Load(fsys, Settings(cfg))
 	ds = append(ds, sds...)
 	ds.Sort()

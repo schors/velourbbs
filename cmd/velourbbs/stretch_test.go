@@ -24,20 +24,27 @@ func TestStretch(t *testing.T) {
 }
 
 // velourbbs check gives the errors of a wrong stretch token and of a gutter out of 0 to 100.
+// An error of screens/screens.toml stops the check before the screens (screen-render, section 3.1),
+// so each case is one run.
 func TestCheckStretch(t *testing.T) {
-	fsys := fstest.MapFS{
-		"bbs.toml":             {},
-		"screens/screens.toml": {Data: []byte("[screen]\ngutter = 101\n")},
-		"screens/main.bbt":     {Data: []byte("+++\ngutter = -1\n+++\n")},
-		"screens/about.bbt":    {Data: []byte("a {~..} b\n")},
-	}
-	want := `screens/about.bbt:1:3: invalid stretch token "{~..}", want {~} or {~<c>} with one character of width 1
+	tests := []struct{ config, want string }{
+		{"[screen]\ngutter = 101\n", `screens/screens.toml:1:1: screen.gutter: 101, must be from 0 to 100
+`},
+		{"", `screens/about.bbt:1:3: invalid stretch token "{~..}", want {~} or {~<c>} with one character of width 1
 screens/main.bbt:2:1: gutter: -1, must be from 0 to 100
-screens/screens.toml:1:1: screen.gutter: 101, must be from 0 to 100
-`
-	var out, errOut bytes.Buffer
-	status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut)
-	if out.Len() != 0 || errOut.String() != want || status != exitError {
-		t.Errorf("stdout %q, stderr\n%s\nstatus %d; want stderr\n%s", out.String(), errOut.String(), status, want)
+`},
+	}
+	for _, tt := range tests {
+		fsys := fstest.MapFS{
+			"bbs.toml":             {},
+			"screens/screens.toml": {Data: []byte(tt.config)},
+			"screens/main.bbt":     {Data: []byte("+++\ngutter = -1\n+++\n")},
+			"screens/about.bbt":    {Data: []byte("a {~..} b\n")},
+		}
+		var out, errOut bytes.Buffer
+		status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut)
+		if out.Len() != 0 || errOut.String() != tt.want || status != exitError {
+			t.Errorf("%q: stdout %q, stderr\n%s\nstatus %d; want stderr\n%s", tt.config, out.String(), errOut.String(), status, tt.want)
+		}
 	}
 }

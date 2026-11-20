@@ -102,17 +102,14 @@ bbs.toml:1:1: limits.allow: invalid address or prefix "x"
 	}
 }
 
-// The aliases of screens/screens.toml are valid in each screen. After a TOML error in the file,
-// each use of a lost alias gives an unknown field (bbt-format, section 4.2).
+// The aliases of screens/screens.toml are valid in each screen (bbt-format, section 4.2).
+// An error of an alias stops the check before the screens (screen-render, section 3.1).
 func TestCheckAliases(t *testing.T) {
 	tests := []struct{ config, want string }{
 		{"[fields]\nw = \"term.cols\"\nr = \"term.rows\"\n", ""},
-		{"[fields]\nw = \"term.cols\"\nr = \"item.A\"\n", `screens/_f.bbt:1:5: unknown field "r"
-screens/screens.toml:1:1: fields: alias "r": "item.A" is valid only in {#if}
+		{"[fields]\nw = \"term.cols\"\nr = \"item.A\"\n", `screens/screens.toml:1:1: fields: alias "r": "item.A" is valid only in {#if}
 `},
-		{"[fields]\nw = \"term.cols\"\nr = 1\n", `screens/_f.bbt:1:1: unknown field "w"
-screens/_f.bbt:1:5: unknown field "r"
-screens/screens.toml:3:5: fields.r: must be a string
+		{"[fields]\nw = \"term.cols\"\nr = 1\n", `screens/screens.toml:3:5: fields.r: must be a string
 `},
 	}
 	for _, tt := range tests {

@@ -33,3 +33,17 @@ func TestLoad(t *testing.T) {
 		}
 	}
 }
+
+// An error of bbs.toml or screens/screens.toml stops the load before the screens
+// (screen-render, section 3.1): the screen errors and the checks between files do not run.
+func TestLoadSettingsError(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml":             {Data: []byte("[bbs\n")},
+		"screens/screens.toml": {Data: []byte("[theme.default]\ngold = #b8902f\n")},
+		"screens/main.bbt":     {Data: []byte("{!gold}Main{x\n")},
+	}
+	m, ds := Load(fsys)
+	if m != nil || len(ds) != 2 || ds[0].File != "bbs.toml" || ds[1].File != "screens/screens.toml" {
+		t.Errorf("model %v, diagnostics %v; want no model and one error of each settings file", m, ds)
+	}
+}

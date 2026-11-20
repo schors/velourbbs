@@ -5,6 +5,8 @@
 Run it after each change of a file and before each restart of the BBS.
 It checks `bbs.toml`, the screens and the data file. It reads the data file only when the file exists.
 It never writes the data file. When the files are correct, it gives no output.
+An error in `bbs.toml` or `screens/screens.toml` stops the check before the screens.
+Correct it, then run the check again.
 Else it gives one line for each error or warning:
 
 ```
