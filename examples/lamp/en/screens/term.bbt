@@ -12,16 +12,8 @@ do = "back"
        {!dim}Type{!}     {term.type}
 
        This is how the station sees you.
-
-
-
-
-
-
-
-
-
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+{~}
+  {!line}{~─}{!}  
 
     {!key}Esc Enter{!}  {!dim}back{!}
+

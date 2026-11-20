@@ -15,11 +15,11 @@ do = "back"
 +++
 {>_head}
        {!title}{file.title}{!}
-       {!dim}{#if meta.author != ""}{meta.author}  ∙  {/if}{file.minutes} мин  ∙  стр. {file.page}/{file.pages}{!}
+       {!dim}{#if meta.author != ""}{meta.author}  ∙  {/if}{file.minutes} мин{!}
 
 {>file}
 
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+  {!line}{~─} {!dim}{file.page}/{file.pages}{!line} {~─}{!}  
 
     {#if item.SPACE}{!key}Space{!}  {!dim}дальше{!}   {/if}{#if item.B}{!key}B{!}  {!dim}пред.{!}   {/if}{!key}Esc{!}  {!dim}список{!}
 

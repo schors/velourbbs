@@ -195,19 +195,11 @@ do = "back"
        {!dim}Type{!}     {term.type}
 
        This is how the station sees you.
-
-
-
-
-
-
-
-
-
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+{~}
+  {!line}{~─}{!}  
 
     {!key}Esc Enter{!}  {!dim}back{!}
+
 ```
 
 The screen at 80 columns and 24 rows:
@@ -251,15 +243,15 @@ do = "gosub term"
 ```
 
 In the body, add the row of `T` between the rows of `A` and `G`.
-Remove two empty lines below the row of `G`: the closing line stays on row 19.
+The spacer line gives 2 empty rows less, so the closing line stays on row 19.
 Add `T` to the key row:
 
 ```
-         {!key}A{!}   About                                   {!dim}who we are{!}
+         {!key}A{!}   About {!line}{~.}{!} {!dim}who we are{!}  
 
-         {!key}T{!}   Your terminal                           {!dim}size and colours{!}
+         {!key}T{!}   Your terminal {!line}{~.}{!} {!dim}size and colours{!}  
 
-         {!key}G{!}   Goodbye                                 {!dim}the lamp will wait{!}
+         {!key}G{!}   Goodbye {!line}{~.}{!} {!dim}the lamp will wait{!}  
 ```
 
 ```
@@ -273,6 +265,6 @@ Add `T` to the key row:
 - `velourbbs preview term` gives the rows `Size     80×24`, `Colours  256` and `Type     xterm`.
 - `velourbbs preview term --set term.type=ansi` gives `Colours  16` and `Type     ansi`.
 - `velourbbs preview term --set term.colors=16777216` gives `Colours  16 million`.
-- In the telnet client, `T` shows the size of the window. Change the width of the window,
-  keep at least 24 rows, and press `Esc` and `T` again: the screen shows the new size.
-  With fewer rows, the screen comes in pages (task 6), and a key only shows the next page.
+- In the telnet client, `T` shows the size of the window. Change the size of the window
+  and press `Esc` and `T` again: the screen shows the new size, and the key row stays at the bottom.
+  With fewer than 14 rows, the screen comes in pages (task 6), and a key only shows the next page.

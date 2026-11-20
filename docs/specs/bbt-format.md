@@ -207,8 +207,8 @@ string  = '"' { any character except '"' and '}' } '"' ;
   with `"center"`, and `min(gutter, F)` cells with `"left"`.
 - Example: `width = [68, 108]`, `align = "center"` and `gutter = 6` give W = 68 and a margin
   of 6 at 80 columns, and W = 108 and a margin of 12 at 132 columns.
-  Source lines that start with 2 spaces then start at the columns 8 and 14,
-  and a mark 2 cells left of them is in the screen area.
+  The text of a source line that starts with 2 spaces is then at the columns 9 and 15,
+  counted from 1, and a mark 2 cells left of the text is in the screen area.
 - When `term.cols` < `min`, the host renders at W = `min` and cuts each row at `term.cols`.
 - A screen with art of width `a` for smaller terminals has `width = [40, a]`, `gutter = 0` and this body:
 

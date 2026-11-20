@@ -53,21 +53,21 @@ do = "logoff"
        Pull up a chair by the lamp.
 
 
-         {!key}A{!}   About                                   {!dim}who we are{!}
+         {!key}A{!}   About {!line}{~.}{!} {!dim}who we are{!}  
 
-         {!key}G{!}   Goodbye                                 {!dim}the lamp will wait{!}
-
-
-
-
-
-
+         {!key}G{!}   Goodbye {!line}{~.}{!} {!dim}the lamp will wait{!}  
+{~}
        {!dim}The light stays on till morning.{!}
 
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+  {!line}{~─}{!}  
 
     {!key}A G{!}  {!dim}choose{!}
+
 ```
+
+- `{~.}` between the label and the note is a "dot leader" (task 2). It fills the cells
+  between them with dots in the brown `line`.
+- Each item line ends with 2 spaces. So each note ends at column 78, under the end of the hairline.
 
 The screen:
 
@@ -81,9 +81,9 @@ The screen:
        Pull up a chair by the lamp.
 
 
-         A   About                                   who we are
+         A   About ................................................ who we are
 
-         G   Goodbye                                 the lamp will wait
+         G   Goodbye ...................................... the lamp will wait
 
 
 
@@ -125,19 +125,11 @@ do = "back"
 
        The station runs on Velour BBS.
        Its screens are plain text files.
-
-
-
-
-
-
-
-
-
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+{~}
+  {!line}{~─}{!}  
 
     {!key}Esc Enter{!}  {!dim}back{!}
+
 ```
 
 The screen:
@@ -208,23 +200,14 @@ After `logoff`, the BBS shows the screen `goodbye` and ends the session.
 {>_head}
        {!title}See you soon.{!}
        The lamp stays on for you.
+{~}
+  {!line}{~─}{!}  
 
 
 
-
-
-
-
-
-
-
-
-
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
 ```
 
-The screen has 21 rows:
+The 3 empty lines at the end of the file keep the hairline at row 21. The screen has 24 rows:
 
 ```text
 
@@ -318,5 +301,5 @@ Full rules: [menu-nav](../../../specs/menu-nav.md), section 7.
 
 - `velourbbs check` gives no output.
 - `velourbbs preview main --keys A,ESC,G` gives the event lines above.
-- `velourbbs preview goodbye` gives the 21 rows above.
+- `velourbbs preview goodbye` gives the 24 rows above.
 - In the telnet client, `A` shows `about`, `Esc` goes back, `G` shows `goodbye` and ends the session.

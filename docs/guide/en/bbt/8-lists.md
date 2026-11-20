@@ -153,16 +153,11 @@ do = "back"
        {!dim}notes of the nights  ∙  page {list.page}/{list.pages}{!}
 
 {#each}{#if row.selected}       {!orn}☼{!} {#else}         {/if}{!dim}{row.num}{!}   {#if row.selected}{!title}{/if}{row.title                             }{!dim}{row.minutes} min{/each}
-
-
-
-
-
-
-
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+{~}
+  {!line}{~─}{!}  
 
     {!key}↑↓{!}  {!dim}choose{!}   {!key}Enter{!}  {!dim}read{!}   {#if item.SPACE}{!key}Space{!}  {!dim}next{!}   {/if}{#if item.B}{!key}B{!}  {!dim}prev{!}   {/if}{!key}Esc{!}  {!dim}back{!}
+
 ```
 
 The screen:
@@ -193,10 +188,10 @@ The screen:
     ↑↓  choose   Enter  read   Space  next   Esc  back
 ```
 
-- The rows of the list are the rows 9–13. The empty lines below the list line
-  keep the hairline on row 21.
+- The rows of the list are the rows 9–13. The spacer line below the list line
+  keeps the hairline on row 21.
 - `{row.title                             }` is a fixed-width field of 40 cells (task 5).
-  So the reading time starts at column 54, as the notes of the menu items.
+  So the reading time starts at column 54.
 
 ## Pages
 
@@ -207,16 +202,20 @@ The list has 7 rows, and a page has 5 rows. So page 2 has two notes and three em
 
 When the screen does not fit the terminal, a page has fewer rows.
 The BBS renders page 1 and counts its rows. When the screen is longer than the terminal
-by `n` rows, a page has `rows - n` rows, at least 1. At 80x20 the screen `log` has 23 rows,
-so a page has 2 rows, and the list has 4 pages:
+by `n` rows, a page has `rows - n` rows, at least 1. The BBS counts the rows
+without the spacer line. At 80x15 the screen `log` has 17 rows,
+so a page has 3 rows, and the list has 3 pages:
 
 ```text
        The keeper's log
-       notes of the nights  ∙  page 1/4
+       notes of the nights  ∙  page 1/3
 
        ☼ 1   The first night                         1 min
          2   Rain on the roof                        1 min
+         3   A caller from the north                 1 min
 ```
+
+The spacer line gives the free rows after the page size. At 80x15 it gives no rows.
 
 A list screen has no More row.
 
@@ -232,7 +231,7 @@ and [menu-nav](../../../specs/menu-nav.md), section 5.3.
 ## The screen `main`
 
 The item `L` goes to the screen `log`. Its row is between the rows of `R` and `T`.
-Remove one empty line above the row of `A` and one below the row of `G`.
+Remove one empty line above the row of `A`. The spacer line gives one empty row less.
 
 `examples/lamp/en/screens/main.bbt`:
 ```
@@ -257,21 +256,22 @@ do = "logoff"
        Good evening. It's quiet and warm here.
        Pull up a chair by the lamp.
 
-         {!key}A{!}   About                                   {!dim}who we are{!}
+         {!key}A{!}   About {!line}{~.}{!} {!dim}who we are{!}  
 
-         {!key}R{!}   Reading room                            {!dim}stories by the lamp{!}
+         {!key}R{!}   Reading room {!line}{~.}{!} {!dim}stories by the lamp{!}  
 
-         {!key}L{!}   Keeper's log                            {!dim}notes of the nights{!}
+         {!key}L{!}   Keeper's log {!line}{~.}{!} {!dim}notes of the nights{!}  
 
-         {!key}T{!}   Your terminal                           {!dim}size and colours{!}
+         {!key}T{!}   Your terminal {!line}{~.}{!} {!dim}size and colours{!}  
 
-         {!key}G{!}   Goodbye                                 {!dim}the lamp will wait{!}
-
+         {!key}G{!}   Goodbye {!line}{~.}{!} {!dim}the lamp will wait{!}  
+{~}
        {!dim}The light stays on till morning.{!}
 
-  {!line}────────────────────────────────────────────────────────────────────────────{!}
+  {!line}{~─}{!}  
 
     {!key}A R L T G{!}  {!dim}choose{!}
+
 ```
 
 ## A list with an argument
