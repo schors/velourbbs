@@ -151,3 +151,11 @@ func TestDecodeFront(t *testing.T) {
 		}
 	}
 }
+
+// MapFront gives the positions in the file of the front matter, as DecodeFront does.
+func TestMapFront(t *testing.T) {
+	want := []Error{{3, 15, "expected ',' or '}' after inline table key-value"}}
+	if _, errs := MapFront([]byte("\nt = { a = \"я\" b")); !slices.Equal(errs, want) {
+		t.Errorf("errors %v, want %v", errs, want)
+	}
+}

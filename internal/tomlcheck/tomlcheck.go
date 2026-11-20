@@ -44,7 +44,12 @@ func (e Error) RuneCol(data []byte) int {
 	if i := bytes.IndexByte(line, '\n'); i >= 0 {
 		line = line[:i]
 	}
-	return utf8.RuneCount(line[:min(max(e.Col-1, 0), len(line))]) + 1
+	return runeCol(line, e.Col)
+}
+
+// runeCol gives the column in code points of the byte column col in line.
+func runeCol(line []byte, col int) int {
+	return utf8.RuneCount(line[:min(max(col-1, 0), len(line))]) + 1
 }
 
 // lineStart gives the offset of the 1-based line in data.
@@ -112,6 +117,13 @@ func (ix *index) fileErrors(errs []Error) []Error {
 		errs[i].Line, errs[i].Col = p.Line, p.Col
 	}
 	return errs
+}
+
+// MapFront decodes the front matter data of a file as Map does.
+// The errors give positions in the file (DecodeFront).
+func MapFront(data []byte) (map[string]any, []Error) {
+	m, errs := Map(data)
+	return m, newIndex(data, true).fileErrors(errs)
 }
 
 // Map decodes data into a map. It gives the error of the size or of the syntax.

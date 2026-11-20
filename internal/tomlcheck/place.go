@@ -2,7 +2,6 @@ package tomlcheck
 
 import (
 	"sort"
-	"unicode/utf8"
 
 	"github.com/pelletier/go-toml/v2/unstable"
 )
@@ -155,7 +154,7 @@ func (ix *index) file(p Pos) Pos {
 	if p.Line < len(ix.lines) {
 		line = line[:ix.lines[p.Line]-ix.lines[p.Line-1]]
 	}
-	return Pos{p.Line + 1, utf8.RuneCount(line[:min(max(p.Col-1, 0), len(line))]) + 1}
+	return Pos{p.Line + 1, runeCol(line, p.Col)}
 }
 
 func newTable(key, value Pos) *node {
