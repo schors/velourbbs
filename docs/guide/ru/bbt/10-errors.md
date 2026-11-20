@@ -97,7 +97,8 @@ screens/old.bbt:1:1: warning: a user cannot reach this screen
 
 `velourbbs check` проходит по каждому `goto`, `gosub`, `select` и `lang` от первого экрана `main`.
 Ни один путь не ведёт на экран `old`.
-Добавь пункт, который открывает экран, например `do = "gosub old"` в `main`. Или удали файл.
+Добавь пункт, который открывает экран, например `do = "gosub old"` в `main`.
+Или удали файл и каждый пункт, который его открывает.
 
 - Экраны, которые открывают только друг друга, тоже получают предупреждение.
 - Пункт с `when` — это путь.
@@ -106,6 +107,7 @@ screens/old.bbt:1:1: warning: a user cannot reach this screen
   В `screens/en/menu.bbt` есть пункт `gosub news`, а в `screens/ru/menu.bbt` его нет.
   Тогда общий файл `screens/news.bbt` получает предупреждение для `ru`:
   `screens/news.bbt:1:1: warning: a user cannot reach this screen (language "ru")`.
+  Добавь пункт `gosub news` в `screens/ru/menu.bbt`.
 - Предупреждение не останавливает BBS.
 
 ## `content file ... does not exist`

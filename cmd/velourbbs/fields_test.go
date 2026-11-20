@@ -270,13 +270,13 @@ func TestValueWidth(t *testing.T) {
 }
 
 // bbsFS is a BBS in two languages: the list screen main selects into the screen read
-// of the set ru. The item E shows read in en.
+// of the set ru. The item E shows read in en with another file than the sample row.
 var bbsFS = fstest.MapFS{
 	"bbs.toml":             {Data: nil},
 	"screens/screens.toml": {Data: []byte("[lang.en]\n[lang.ru]\n")},
 	"screens/main.bbt": {Data: []byte("+++\ndata = { from = \"files\", args = { dir = \"log\" } }\nrows = 3\n" +
 		"select = { do = \"gosub ru/read\", args = { file = \"{row.path}\" } }\n" +
-		"[[item]]\nkey = \"E\"\ndo = \"gosub read\"\nargs = { file = \"x.md\" }\n" +
+		"[[item]]\nkey = \"E\"\ndo = \"gosub read\"\nargs = { file = \"log/a.md\" }\n" +
 		"[[item]]\nkey = \"G\"\ndo = \"logoff\"\n+++\n{#each}{row.title}{/each}\n")},
 	"screens/read.bbt": {Data: []byte("+++\nfile = \"{arg.file}\"\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{>file}\n")},
 	"content/log/a.md": {Data: []byte("# A\n")},

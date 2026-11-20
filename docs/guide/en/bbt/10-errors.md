@@ -97,7 +97,8 @@ screens/old.bbt:1:1: warning: a user cannot reach this screen
 
 `velourbbs check` follows each `goto`, `gosub`, `select` and `lang` from the first screen `main`.
 No path goes to the screen `old`.
-Add an item that opens the screen, for example `do = "gosub old"` in `main`. Or delete the file.
+Add an item that opens the screen, for example `do = "gosub old"` in `main`.
+Or delete the file and each item that opens it.
 
 - Screens that only open each other also get the warning.
 - An item with `when` is a path.
@@ -106,6 +107,7 @@ Add an item that opens the screen, for example `do = "gosub old"` in `main`. Or 
   `screens/en/menu.bbt` has an item `gosub news`, and `screens/ru/menu.bbt` does not.
   Then the common file `screens/news.bbt` gets the warning for `ru`:
   `screens/news.bbt:1:1: warning: a user cannot reach this screen (language "ru")`.
+  Add the item `gosub news` to `screens/ru/menu.bbt`.
 - A warning does not stop the BBS.
 
 ## `content file ... does not exist`
