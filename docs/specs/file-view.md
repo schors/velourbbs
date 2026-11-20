@@ -104,7 +104,7 @@ args = { file = "gold.md" }
   in them, W is A.
 - The margin cells of a file row are spaces in `normal`.
 - The host can show each file that `file` names: the path of `file`, or each value
-  of the argument `<name>` that a `goto` or a `gosub` to the screen gives ([bbt-format](bbt-format.md), section 8.5).
+  of the argument `<name>` ([bbt-format](bbt-format.md), section 8.5).
 
 ### 3.2. Pages
 
@@ -316,6 +316,8 @@ Positions:
 - An error of a file that a `goto` or a `gosub` gives is an error of its item:
   the position of the value `args.<name>` of the item,
   and the start `item "<KEY>": args: <name>: ` ([menu-nav](menu-nav.md), section 6).
+  For a value through `{arg.<name>}`, it is the item of the literal
+  ([bbt-format](bbt-format.md), section 8.5).
   This includes an error of `lines` and `numbers` for this file.
 
 Examples:

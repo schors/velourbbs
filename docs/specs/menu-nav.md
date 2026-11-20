@@ -59,6 +59,8 @@ When a key arrives at the current screen, the host:
 4. else runs the enabled `ANY` item, if there is one;
 5. else ignores the key.
 
+An item with `ask` first reads a line (section 5.4).
+
 ESC has no implicit action.
 
 ## 4. Actions
@@ -88,9 +90,12 @@ The host runs the actions of [bbt-format](bbt-format.md), section 8.3:
 
 - The stack has 16 frames at most.
 - `goto <name>` replaces the top frame with a new frame: the screen `<name>`,
-  the `args` of the item, page 1 and the cursor on the first row.
-- `gosub <name>` adds a new frame on top: the screen `<name>`, the `args` of the item, page 1
+  the values of the `args` of the item, page 1 and the cursor on the first row.
+- `gosub <name>` adds a new frame on top: the screen `<name>`, the values of the `args` of the item, page 1
   and the cursor on the first row.
+- The host takes the values of `args` before it changes the stack
+  ([bbt-format](bbt-format.md), section 8.5): `{arg.<name>}` from the top frame,
+  `{in}` from the line of `ask`, `{row.<field>}` from the selected row.
   When the stack has 16 frames, the host first removes the second frame:
   the oldest frame above the first frame.
 - `back` removes the top frame. On the first frame, it removes nothing.
@@ -172,6 +177,34 @@ The current list page and the cursor are the page and the cursor of the top fram
    - A cursor move on the same list page renders the page with the values of step 3
      and updates it ([telnet-term](telnet-term.md), section 7.1). Continue at step 4.
    - Each other action leaves the screen.
+
+### 5.4. Ask
+
+When an item with `ask` ([bbt-format](bbt-format.md), section 8.6) runs, the host:
+
+1. Takes the "ask row": the last row of the shown page that the terminal shows.
+   A page cut at `term.rows` has the row `term.rows`.
+2. Shows the page with the ask row in place of that row.
+   The ask row has the cells of the row outside the screen area. In the screen area,
+   it has the prompt in the theme style `more`, then M + 1 spaces in the theme style `select`,
+   then spaces in `normal`. The host cuts the row at `term.cols`.
+3. Reads a line with the line input ([line-input](line-input.md)): the field is the M + 1 spaces
+   of step 2, in `select`, not masked.
+4. After `ENTER` with a line that is not empty, runs the action of the item
+   with the line as `{in}`.
+5. After `ESC` or `ENTER` with an empty line, shows the page again and waits for keys:
+   step 6 of section 5, step 3 of section 5.1, step 4 of section 5.3.
+
+- M is the free cells of the prompt ([bbt-format](bbt-format.md), section 8.6),
+  in the screen area that the terminal shows, and at most `ask_max`.
+- When `term.cols` < `min`, M can be less than 1. Then the host cuts the end of the prompt
+  at a grapheme boundary until M is 1.
+- The key of the item does not go into the line. The keys after it in the input queue do.
+- The line input clears the key queue at its end ([line-input](line-input.md), section 6).
+
+Example: the screen `area` at 80x25 ends with an empty row 24. `J` shows
+`Message number: ` and 6 cells of the field on row 24. The user types `12` and `ENTER`.
+The host runs `gosub msg` with `n = "12"`.
 
 ## 6. `velourbbs check`
 
@@ -266,10 +299,16 @@ It is the test harness for the navigation.
   - the cell dump of the page, after a `page` action or a `theme` action in a file screen
     or a list screen, and after a cursor move in a list screen;
   - `key <key>` before each key. `key <key> ignored` for an ignored key;
-  - `logoff` when an item runs `logoff`. The pages of `goodbye` follow it.
+  - `logoff` when an item runs `logoff`. The pages of `goodbye` follow it;
+  - `ask` and the cell dump of the page with the ask row, when an item with `ask` runs
+    (section 5.4);
+  - `key <key>` before each key of the line input, with the key as it is, without the map of section 3.2;
+  - `line "<line>"` after `ENTER` with a line, and `line cancelled` after `ESC`
+    or `ENTER` with an empty line. Before `"` and `\` in `<line>`, the output has a `\`.
+    After `line cancelled`, the cell dump of the page follows.
 - With `--view`, each page is in the line form ([screen-render](screen-render.md), section 3.7)
   in place of the cell dump. The other lines stay as they are.
-- The output gives a key after the map of section 3.2. A letter, a digit or a key name
+- Outside the line input, the output gives a key after the map of section 3.2. A letter, a digit or a key name
   is in upper case. Each other character is as it is. Example: `ы` gives `key S`.
 - When the list ends, `velourbbs preview` stops after the current page and exits with status 0.
 - A key after the end of the session at `logoff` (section 4) is an error.
@@ -312,8 +351,10 @@ page 1 80x25 fill none
   (section 5.3).
   The wait for a key takes the context of the session ([session](session.md), section 6).
   `velourbbs preview` and telnet-term give its implementations.
+- The terminal interface also reads a line with the line input (section 5.4,
+  [line-input](line-input.md), section 8).
 - A terminal can also take the other events of section 7: the screen name, a key,
-  an ignored key and `logoff`. The session sends them only to a terminal that implements
+  an ignored key, `logoff`, `ask` and the end of a line. The session sends them only to a terminal that implements
   this second interface. `velourbbs preview` implements it.
 
 ## 9. Not in the MVP

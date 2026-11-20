@@ -205,7 +205,9 @@ styles
   [session-fields](session-fields.md), section 4). The screen set of `[screen] lang` gives the first
   values, with the screens in name order. For `arg.<name>`, it is the first value
   that a `goto` or a `gosub` gives: the items in source order, then `select` with the first row
-  of the screen. For a `row.*` field, it is the value of the first row of the provider, else empty.
+  of the screen. `{arg.<name>}` gives the sample value of the argument of its own screen.
+  When that leads back to the same argument, the action gives no value, and the next action counts.
+  `{in}` gives an empty value. For a `row.*` field, it is the value of the first row of the provider, else empty.
 - `file.*` and `list.*` have the values of page 1 of 1: `file.title` and `file.section` are empty,
   `file.minutes` is 0, and `list.empty` is false when a list of the BBS has a row.
 
@@ -275,6 +277,9 @@ and warns about layout mistakes that the host does not report.
   in each set, the screens in name order, the items in source order, then `select`
   with the first row of its list. The list of a screen with arguments needs the arguments
   of an action before its `select`.
+  `{arg.<name>}` gives the value of the argument of its own screen by this rule.
+  When that leads back to the same argument, the action gives no value, and the next action counts.
+  `{in}` gives an empty value.
   A screen with arguments that no action shows is not rendered.
 - It renders each page of the screen, as the cell dump has (section 3.3).
 

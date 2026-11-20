@@ -419,6 +419,8 @@ are the same keys.
 | `do` | string | The action. Section 8.3. |
 | `when` | string | Optional. A condition (section 5). |
 | `args` | table | Optional. The arguments of a `goto` or a `gosub` (section 8.5). |
+| `ask` | string | Optional. The prompt of a line that the host asks for before the action (section 8.6). |
+| `ask_max` | integer | Optional. The most characters of the line of `ask` (section 8.6). |
 
 - An item is "enabled" when it has no `when` or its `when` is true.
   A disabled item counts as absent.
@@ -454,7 +456,8 @@ Each of these is an error in a screen:
 - a duplicate key in a menu, also `ANY`;
 - an invalid `do`: an unknown action, or a wrong argument of the action;
 - an `item.<KEY>` path without an item in the screen;
-- `args` with an action other than `goto` or `gosub`, an invalid argument name or an invalid value (section 8.5).
+- `args` with an action other than `goto` or `gosub`, an invalid argument name or an invalid value (section 8.5);
+- an error of `ask` or `ask_max` (section 8.6).
 
 [menu-nav](menu-nav.md), section 6, has the other menu errors: the `goto` and `gosub` targets, the screens
 without items, the items of `goodbye` and `shutdown`, and the start screen. It also has the form of the item errors.
@@ -463,15 +466,91 @@ without items, the items of `goodbye` and `shutdown`, and the start screen. It a
 
 - `args` is a table of strings: an inline table or the table `[item.args]`.
   Example: `args = { file = "gold.md" }`.
-- A name matches `[a-z][a-z0-9_]*`. A value cannot have a control character or `{`.
-  `select` of a list screen is an exception ([list-view](list-view.md), section 8).
+- A name matches `[a-z][a-z0-9_]*`.
+- A value is a literal or exactly one "value token":
+  - `{arg.<name>}`: the value of the argument `<name>` of the current screen;
+  - `{in}`: the line of `ask` (section 8.6). It is valid only in an item with `ask`;
+  - `{row.<field>}`: a field of the selected row. It is valid only in `select`
+    of a list screen ([list-view](list-view.md), section 8).
+- A literal cannot have a control character or `{`. Each other token is an error,
+  also an alias and a field with a width.
+- The host puts the value into the argument as one string. It does not parse the value again.
 - The "arguments of a screen" are the names of the `arg.<name>` fields of the screen:
   in its body, its fragments, its art, its `when`, its `file`
-  ([file-view](file-view.md), section 3) and its `data` ([list-view](list-view.md), section 4).
+  ([file-view](file-view.md), section 3), its `data` ([list-view](list-view.md), section 4)
+  and the `args` values of its items and of its `select`.
 - A `goto` or a `gosub` gives exactly the arguments of its target screen. A missing argument
   or another argument is an error.
 - The field `arg.<name>` gives the value of the `goto` or the `gosub` that shows the screen.
   `back` and `top` show a screen with the same values.
+
+Values at load:
+
+- The "values" of an argument of a screen are the values that each `goto` and `gosub`
+  to the screen can give it, in all screen sets:
+  - a literal gives itself;
+  - `{arg.<name>}` gives each value of the argument `<name>` of its own screen.
+    A cycle of screens gives no new values;
+  - `{row.<field>}` gives the field of each row of each list of its screen;
+  - `{in}` gives each line that the user can type: an "open" value.
+- The host loads the content files of `file` and the rows of `data` for each value at load
+  ([file-view](file-view.md), section 3.1, [list-view](list-view.md), section 4).
+  So an argument that a screen uses in `file` or in `data` cannot have an open value,
+  and an argument that a screen uses in `data` cannot have a value of `{row.<field>}`.
+  So the rows of a provider never depend on the rows of another provider.
+- Such a value is an error of the `{in}` or the `{row.<field>}` that gives it,
+  also through the `{arg.<name>}` of other screens.
+- An error of a content file or of a provider row of a value is an error of the literal
+  that gives the value, also through the `{arg.<name>}` of other screens.
+
+Example: `texts` gives `dir` to `parts`, and `parts` gives it on to `read`.
+So `dir` of `read` has the value `guide/bbt`, and `file` of `read` has the value
+of `row.path` of each row of the list of `parts`:
+
+```
+# screens/texts.bbt
+[[item]]
+key = "2"
+do = "gosub parts"
+args = { dir = "guide/bbt" }
+
+# screens/parts.bbt
+data = { from = "files", args = { dir = "{arg.dir}" } }
+rows = 12
+select = { do = "gosub read", args = { dir = "{arg.dir}", file = "{row.path}" } }
+```
+
+Examples of errors:
+
+```
+screens/area.bbt:14:34: item "J": args: n: the value reaches the file of screen "msg"
+screens/dirs.bbt:3:50: select: args: dir: the value reaches the data of screen "parts"
+screens/texts.bbt:9:16: item "2": args: dir: directory "guide/bbtt" does not exist
+```
+
+### 8.6. Ask
+
+`ask` asks the user for one line before the action of the item.
+
+Example: `J` asks for a message number and shows the message.
+
+```
+[[item]]
+key = "J"
+ask = "Message number: "
+ask_max = 5
+do = "gosub msg"
+args = { area = "{arg.area}", n = "{in}" }
+```
+
+- `ask` is the "prompt": text without tokens. `{` in it is a plain character.
+  It has the rules of section 2.1 and no control character.
+- `ask_max` is at least 1. It is valid only with `ask`.
+- An item with `ask` must have the action `goto` or `gosub` and a value `{in}` in `args`.
+  Else the line has no use.
+- The "free cells" of the prompt are the cells of the screen area after the prompt, minus 1.
+  At W = `min` of the width limits (section 6.1), the free cells must be at least 1.
+- [menu-nav](menu-nav.md), section 5.4, shows the prompt and reads the line.
 
 ## 9. Limits
 
@@ -493,7 +572,6 @@ without items, the items of `goodbye` and `shutdown`, and the start screen. It a
 - Marks and arrow-key selection of items: [marks](https://github.com/schors/velourbbs/issues/67).
   Items have hotkeys only. A list screen selects a row with the arrow keys ([list-view](list-view.md), section 8).
 - `require` (access checks). It needs users.
-- `ask`, and a field token in an `args` value of an item: [args](https://github.com/schors/velourbbs/issues/66).
 - Punctuation keys, for example `?`.
 - A `label` for an item. The host does not print item text.
 

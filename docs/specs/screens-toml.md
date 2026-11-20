@@ -141,7 +141,8 @@ with 16 colours, and `#004080/7 bold underline` in the light theme with 16 colou
 `[fields]` maps an alias to a registry path: [bbt-format](bbt-format.md), sections 4.1 and 4.2.
 
 - An alias matches `[a-z][a-z0-9_]*`. Each value is a string. The default `[fields]` is empty.
-- An alias cannot be `term`, `item`, `arg`, `file`, `meta`, `row`, `list`, `session`, `bbs`, `and`, `or` or `not`.
+- An alias cannot be `term`, `item`, `arg`, `file`, `meta`, `row`, `list`, `session`, `bbs`, `in`, `and`, `or` or `not`.
+  `in` is the value token of [bbt-format](bbt-format.md), section 8.5.
 - A field token with an alias is a field token with its path. So an alias to `arg.<name>`
   gives an argument of the screen ([bbt-format](bbt-format.md), section 8.5), an alias to a field
   of a file screen is valid only in a file screen ([file-view](file-view.md), section 3.4),
