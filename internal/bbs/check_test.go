@@ -2,6 +2,7 @@ package bbs
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -13,7 +14,7 @@ import (
 )
 
 // screens makes screens from specs. A spec is a list of items "<KEY> <do>".
-// The do of the n-th item is on line n+3.
+// Each screen has the front matter of withFront.
 func screens(specs map[string][]string) map[string]*screen.Screen {
 	ss := map[string]*screen.Screen{}
 	for name := range specs {
@@ -32,8 +33,39 @@ func screens(specs map[string][]string) map[string]*screen.Screen {
 			}
 			s.Items = append(s.Items, screen.Item{Key: k, Do: act})
 		}
+		withFront(s)
 	}
 	return ss
+}
+
+// withFront gives s a front matter with its items. In the file, the n-th item has
+// its [[item]] header at (4n-2):1, its do at 4n:6 and its args at (4n+1):8.
+func withFront(s *screen.Screen) *screen.Screen {
+	var b strings.Builder
+	for _, it := range s.Items {
+		fmt.Fprintf(&b, "[[item]]\nkey = %q\ndo = \"x\"\n", it.Key)
+		if it.Do.Args != nil {
+			var args []string
+			for _, k := range slices.Sorted(maps.Keys(it.Do.Args)) {
+				args = append(args, fmt.Sprintf("%q = %q", k, it.Do.Args[k]))
+			}
+			fmt.Fprintf(&b, "args = { %s }", strings.Join(args, ", "))
+		}
+		b.WriteString("\n")
+	}
+	var doc struct {
+		Item []struct {
+			Key  string            `toml:"key"`
+			Do   string            `toml:"do"`
+			Args map[string]string `toml:"args"`
+		} `toml:"item"`
+	}
+	root, errs := tomlcheck.DecodeFront([]byte(b.String()), &doc)
+	if errs != nil {
+		panic(fmt.Sprint(errs))
+	}
+	s.Front = root
+	return s
 }
 
 func messages(ds screen.Diags) []string {
@@ -62,27 +94,28 @@ func TestCheck(t *testing.T) {
 		want   []string
 	}{
 		{name: "valid"},
+		// An item error has the position of the do of the item.
 		{name: "unknown screen", change: map[string][]string{"main": {"S goto sysinf", "G logoff"}}, want: []string{
-			`screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"`,
+			`screens/main.bbt:4:6: item "S": do: unknown screen "sysinf"`,
 		}},
 		{name: "gosub unknown screen", change: map[string][]string{"main": {"S gosub sysinf", "G logoff"}}, want: []string{
-			`screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"`,
+			`screens/main.bbt:4:6: item "S": do: unknown screen "sysinf"`,
 		}},
 		{name: "gosub goodbye", change: map[string][]string{"main": {"S gosub goodbye", "G logoff"}}, want: []string{
-			`screens/main.bbt:2:1: item "S": do: screen "goodbye" has no items`,
+			`screens/main.bbt:4:6: item "S": do: screen "goodbye" has no items`,
 		}},
 		{name: "goto goodbye", change: map[string][]string{"sysinfo": {"ESC goto main", "ANY goto goodbye"}}, want: []string{
-			`screens/sysinfo.bbt:2:1: item "ANY": do: screen "goodbye" has no items`,
+			`screens/sysinfo.bbt:8:6: item "ANY": do: screen "goodbye" has no items`,
 		}},
 		{name: "goto shutdown", change: map[string][]string{"sysinfo": {"ESC goto main", "ANY goto shutdown"}}, want: []string{
-			`screens/sysinfo.bbt:2:1: item "ANY": do: screen "shutdown" has no items`,
+			`screens/sysinfo.bbt:8:6: item "ANY": do: screen "shutdown" has no items`,
 		}},
 		{name: "no items", change: map[string][]string{"about": {}}, want: []string{
 			`screens/about.bbt:1:1: screen has no items`,
 		}},
 		{name: "no main", change: map[string][]string{"main": nil}, want: []string{
 			`screens/screens.toml:12:9: menu: start: unknown screen "main"`,
-			`screens/sysinfo.bbt:2:1: item "ANY": do: unknown screen "main"`,
+			`screens/sysinfo.bbt:4:6: item "ANY": do: unknown screen "main"`,
 		}},
 		{name: "start unknown", start: "mian", want: []string{
 			`screens/screens.toml:12:9: menu: start: unknown screen "mian"`,
@@ -135,7 +168,7 @@ func TestCheckLimit(t *testing.T) {
 		t.Fatalf("%d diagnostics, want %d", len(got), screen.MaxFileDiags+2)
 	}
 	if got[0] != "screens/main.bbt:1:1: warning: w" || got[len(got)-1] != "screens/x.ans:1:1: warning: w" ||
-		!slices.Contains(got, "screens/main.bbt:2:1: too many diagnostics") {
+		!slices.Contains(got, "screens/main.bbt:400:6: too many diagnostics") {
 		t.Errorf("first %q, last %q, no limit error", got[0], got[len(got)-1])
 	}
 }
@@ -150,7 +183,7 @@ func TestCheckArgs(t *testing.T) {
 		return screen.Item{Key: key, Do: screen.Action{Op: screen.Gosub, Screen: target, Args: args}}
 	}
 	ss := map[string]*screen.Screen{
-		"main": {Name: "main", File: "screens/main.bbt", Items: []screen.Item{
+		"main": withFront(&screen.Screen{Name: "main", File: "screens/main.bbt", Items: []screen.Item{
 			goto_("1", "view", map[string]string{"f": "a", "n": "1"}),
 			goto_("2", "view", map[string]string{"f": "a"}),
 			goto_("3", "view", nil),
@@ -159,22 +192,23 @@ func TestCheckArgs(t *testing.T) {
 			goto_("6", "none", map[string]string{"x": "y"}),
 			gosub("7", "view", map[string]string{"f": "a", "n": "1"}),
 			gosub("8", "view", map[string]string{"f": "a", "x": "y"}),
-		}},
-		"view": {Name: "view", File: "screens/view.bbt", Args: []string{"f", "n"},
-			Items: []screen.Item{goto_("Q", "main", map[string]string{})}},
+		}}),
+		"view": withFront(&screen.Screen{Name: "view", File: "screens/view.bbt", Args: []string{"f", "n"},
+			Items: []screen.Item{goto_("Q", "main", map[string]string{})}}),
 		"goodbye":  {Name: "goodbye", File: "screens/goodbye.bbt", Args: []string{"x"}},
 		"shutdown": {Name: "shutdown", File: "screens/shutdown.bbt", Args: []string{"x"}},
 	}
 	want := []string{
 		`screens/goodbye.bbt:1:1: the goodbye screen cannot have arguments`,
-		`screens/main.bbt:2:1: item "2": args: missing argument "n" of screen "view"`,
-		`screens/main.bbt:2:1: item "3": args: missing argument "f" of screen "view"`,
-		`screens/main.bbt:2:1: item "3": args: missing argument "n" of screen "view"`,
-		`screens/main.bbt:2:1: item "4": args: screen "view" has no argument "x"`,
-		`screens/main.bbt:2:1: item "5": args: screen "main" has no argument "x"`,
-		`screens/main.bbt:2:1: item "6": do: unknown screen "none"`,
-		`screens/main.bbt:2:1: item "8": args: missing argument "n" of screen "view"`,
-		`screens/main.bbt:2:1: item "8": args: screen "view" has no argument "x"`,
+		// An args error at the value of args, else at the [[item]] header.
+		`screens/main.bbt:9:8: item "2": args: missing argument "n" of screen "view"`,
+		`screens/main.bbt:10:1: item "3": args: missing argument "f" of screen "view"`,
+		`screens/main.bbt:10:1: item "3": args: missing argument "n" of screen "view"`,
+		`screens/main.bbt:17:8: item "4": args: screen "view" has no argument "x"`,
+		`screens/main.bbt:21:8: item "5": args: screen "main" has no argument "x"`,
+		`screens/main.bbt:24:6: item "6": do: unknown screen "none"`,
+		`screens/main.bbt:33:8: item "8": args: missing argument "n" of screen "view"`,
+		`screens/main.bbt:33:8: item "8": args: screen "view" has no argument "x"`,
 		`screens/shutdown.bbt:1:1: the shutdown screen cannot have arguments`,
 	}
 	got := messages(Check(config.Config{Start: "main", Lang: "en", Langs: []string{"en"}}, bbt.Sets{"en": ss}, nil))

@@ -17,6 +17,7 @@ import (
 	"github.com/schors/velourbbs/internal/content"
 	"github.com/schors/velourbbs/internal/provider"
 	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
 // MaxBodyLines is the line limit of the body of a screen after includes (section 9).
@@ -279,11 +280,11 @@ func (l *loader) content(p string) (*screen.Content, error) {
 }
 
 // literalFile loads the content file of the key file of the screen u (file-view, section 7).
+// An error of lines or numbers has the position of its key.
 func (l *loader) literalFile(u *unit, f *screen.FileSpec) {
-	pos := screen.Pos{File: u.f.name, Line: 2, Col: 1}
 	c, err := l.content(f.Path)
 	if err != nil {
-		l.errorf(u, pos, false, "file: %v", err)
+		l.errorf(u, u.keyPos("file"), false, "file: %v", err)
 		return
 	}
 	if c == nil { // the errors are in the content file
@@ -291,7 +292,7 @@ func (l *loader) literalFile(u *unit, f *screen.FileSpec) {
 	}
 	errs := f.Check(f.Path, c)
 	for _, err := range errs {
-		l.errorf(u, pos, false, "%v", err)
+		l.errorf(u, u.keyPos(keyOf(err)), false, "%v", err)
 	}
 	if len(errs) == 0 {
 		f.Contents[f.Path] = c
@@ -299,11 +300,20 @@ func (l *loader) literalFile(u *unit, f *screen.FileSpec) {
 }
 
 // literalRows reads the rows of the list screen u whose data has no {arg.<name>} value
-// (list-view, section 4). An error is an error of the key data.
+// (list-view, section 4). An error is an error of the key data, at the value of its argument.
 func (l *loader) literalRows(u *unit, ls *screen.ListSpec) {
 	for _, err := range l.rows(ls, ls.Args) {
-		l.errorf(u, screen.Pos{File: u.f.name, Line: 2, Col: 1}, false, "data: args: %v", err)
+		l.errorf(u, u.keyPos("data", "args", keyOf(err)), false, "data: args: %v", err)
 	}
+}
+
+// keyOf gives the key of a screen.KeyError, else "".
+func keyOf(err error) string {
+	var ke screen.KeyError
+	if errors.As(err, &ke) {
+		return ke.Key
+	}
+	return ""
 }
 
 // rows reads the rows of the provider of ls for the provider arguments values into ls.Lists
@@ -335,18 +345,18 @@ func targetFiles(loaders []*loader) {
 			if !u.done {
 				continue
 			}
-			for _, it := range u.s.Items {
+			for i, it := range u.s.Items {
 				// A common screen is in more than one set: its item is one value.
 				k := u.f.name + "\x00" + it.Key
 				if it.Do.Op.HasTarget() && !seen[k] {
 					seen[k] = true
-					items = append(items, target{u, fmt.Sprintf("item %q", it.Key), it.Do})
+					items = append(items, target{u, fmt.Sprintf("item %q", it.Key), ItemPlace(u.s.Front, i), it.Do})
 				}
 			}
 			// The literal values of select: a {row.<field>} value cannot give rows.
 			if ls := u.s.List; ls != nil && ls.Select != nil && ls.Select.Do.Op.HasTarget() && !seen[u.f.name] {
 				seen[u.f.name] = true
-				selects = append(selects, target{u, "select", ls.Select.Do})
+				selects = append(selects, target{u, "select", u.s.Front.At("select"), ls.Select.Do})
 			}
 		}
 	}
@@ -370,11 +380,19 @@ func targetFiles(loaders []*loader) {
 }
 
 // target is a goto or a gosub a of the screen u, with the values of its args.
-// label names the item or select in the errors.
+// label names the item or select in the errors. at is the place of the item or of select.
 type target struct {
 	u     *unit
 	label string
+	at    tomlcheck.Place
 	a     screen.Action
+}
+
+// argError reports the error of the argument name of the target v
+// at the value args.<name> of v (file-view, section 7).
+func (l *loader) argError(v target, name string, err error) {
+	p := v.at.At("args", name).Value()
+	l.fd(v.u.f.name).Errorf(p.Line, p.Col, "%s: args: %s: %v", v.label, name, err)
 }
 
 // byName gives the screens of the set by name.
@@ -404,7 +422,7 @@ func selectValues(loaders []*loader) []target {
 					k := u.f.name + "\x00" + screen.ListKey(a.Args)
 					if !seen[k] {
 						seen[k] = true
-						values = append(values, target{u, "select", a})
+						values = append(values, target{u, "select", u.s.Front.At("select"), a})
 					}
 				}
 			}
@@ -431,7 +449,7 @@ func (l *loader) targetFile(v target, f *screen.FileSpec) {
 		errs = f.Check(p, c)
 	}
 	for _, err := range errs {
-		l.fd(v.u.f.name).Errorf(2, 1, "%s: args: %s: %v", v.label, f.Arg, err)
+		l.argError(v, f.Arg, err)
 	}
 	if c != nil && len(errs) == 0 {
 		f.Contents[p] = c
@@ -439,8 +457,8 @@ func (l *loader) targetFile(v target, f *screen.FileSpec) {
 }
 
 // targetRows reads the rows of the list screen ls for the args of the item v
-// (list-view, section 4). An error is an error of the item. A missing argument gives no rows:
-// the menu checks report it.
+// (list-view, section 4). An error of a provider argument with {arg.<name>} is an error
+// of the argument <name> of the item. A missing argument gives no rows: the menu checks report it.
 func (l *loader) targetRows(v target, ls *screen.ListSpec) {
 	if len(ls.ArgRefs) == 0 || ls.From == "" {
 		return
@@ -451,6 +469,13 @@ func (l *loader) targetRows(v target, ls *screen.ListSpec) {
 		}
 	}
 	for _, err := range l.rows(ls, ls.Values(v.a.Args)) {
-		l.fd(v.u.f.name).Errorf(2, 1, "%s: args: %v", v.label, err)
+		var ke screen.KeyError
+		if errors.As(err, &ke) && ls.ArgRefs[ke.Key] != "" {
+			l.argError(v, ls.ArgRefs[ke.Key], ke.Err)
+			continue
+		}
+		// An error of a literal value of data.
+		p := v.at.At("args").Value()
+		l.fd(v.u.f.name).Errorf(p.Line, p.Col, "%s: args: %v", v.label, err)
 	}
 }

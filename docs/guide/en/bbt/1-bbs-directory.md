@@ -34,11 +34,11 @@ Else it gives one line for each error or warning:
 
 ```
 screens/_x.bbt:1:1: warning: no screen uses this file
-screens/main.bbt:2:1: item "G": do: unknown action "logof"
+screens/main.bbt:4:6: item "G": do: unknown action "logof"
 ```
 
 The line gives the file, the line number, the column and the message.
-An error in an item gives line 2: the first line of the front matter.
+An error in an item gives the position of the wrong value: here `"logof"` on line 4.
 A warning has `warning:` before the message. A warning does not stop the BBS. An error stops it.
 Full rules: [screen-render](../../../specs/screen-render.md), section 3.1.
 

@@ -604,7 +604,7 @@ do = "lang en"
   `velourbbs check` проверяет экраны каждого языка.
   Пример: `screens/ru/news.bbt:1:1: no screen "news" (language "en")`.
 - Ошибка общего файла, которую находят не все языки, кончается языком.
-  Пример: `screens/about.bbt:2:1: item "M": do: unknown screen "menu" (language "de")`.
+  Пример: `screens/about.bbt:6:6: item "M": do: unknown screen "menu" (language "de")`.
 - `velourbbs preview menu --set session.lang=ru` показывает экран `menu` на русском.
 
 Полные правила: [session-language](../../../specs/session-language.md), разделы 2–6,

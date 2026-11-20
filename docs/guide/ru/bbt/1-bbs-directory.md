@@ -34,11 +34,11 @@ velourbbs check
 
 ```
 screens/_x.bbt:1:1: warning: no screen uses this file
-screens/main.bbt:2:1: item "G": do: unknown action "logof"
+screens/main.bbt:4:6: item "G": do: unknown action "logof"
 ```
 
 Строка содержит файл, номер строки, номер столбца и сообщение.
-Ошибка в пункте указывает строку 2: первую строку front matter.
+Ошибка в пункте указывает на неверное значение: здесь `"logof"` в строке 4.
 У предупреждения перед сообщением стоит `warning:`. Предупреждение не останавливает BBS. Ошибка останавливает.
 Полные правила: [screen-render](../../../specs/screen-render.md), раздел 3.1.
 

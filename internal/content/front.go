@@ -56,16 +56,11 @@ func findDelim(lines []string, delims ...string) int {
 	return -1
 }
 
-// frontErrorf reports an error at the line of the front matter data. Line 1 of data is line 2 of the file.
-func frontErrorf(d *screen.FileDiags, line, col int, format string, args ...any) {
-	d.Errorf(line+1, col, "front matter: "+format, args...)
-}
-
 // parseTOML parses a TOML front matter. Each top-level key with a scalar value gives a meta field.
 func parseTOML(d *screen.FileDiags, data []byte) (map[string]string, bool) {
-	m, errs := tomlcheck.Map(data)
+	m, errs := tomlcheck.MapFront(data)
 	for _, e := range errs {
-		frontErrorf(d, e.Line, e.RuneCol(data), "%s", e.Msg)
+		d.Errorf(e.Line, e.Col, "front matter: %s", e.Msg)
 	}
 	if errs != nil {
 		return nil, false

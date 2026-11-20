@@ -23,7 +23,7 @@ func TestCheck(t *testing.T) {
 	// a width in the front matter puts the art insert after line 3.
 	want := `screens/about.bbt:4:1: warning: art "logo.ans" is 132 cells wide, max width is 100
 screens/main.ans:4:15: token "{w}" changes the foreground: 11 at col 15, 15 at col 16
-screens/main.bbt:2:1: item "S": when: unknown field "term.colours"
+screens/main.bbt:7:8: item "S": when: unknown field "term.colours"
 `
 	out, errOut, status := runIn(t, "check", "check")
 	if out != "" || errOut != want || status != exitError {
@@ -40,13 +40,13 @@ func TestCheckMenu(t *testing.T) {
 		want string
 	}{
 		{"[[item]]\nkey = \"s\"\ndo = \"goto sysinf\"\n", `screens/about.bbt:1:1: screen has no items
-screens/main.bbt:2:1: item "S": do: unknown screen "sysinf"
+screens/main.bbt:4:6: item "S": do: unknown screen "sysinf"
 screens/screens.toml:2:9: menu: start: unknown screen "mian"
 `},
-		{"[[item]]\nkey = \"s\"\ndo = \"logoff\"\n[[item]]\ndo = \"logoff\"\nkey = \"?\"\n", `screens/main.bbt:2:1: item 2: key: invalid key "?"
+		{"[[item]]\nkey = \"s\"\ndo = \"logoff\"\n[[item]]\ndo = \"logoff\"\nkey = \"?\"\n", `screens/main.bbt:7:7: item 2: key: invalid key "?"
 `},
-		{"[[item]]\nkey = \"s\"\ndo = \"logoff\"\n[[item]]\nkey = \"S\"\ndo = \"logoff\"\n[[item]]\ndo = \"logoff\"\n", `screens/main.bbt:2:1: item "S": key: duplicate key
-screens/main.bbt:2:1: item 3: key is missing
+		{"[[item]]\nkey = \"s\"\ndo = \"logoff\"\n[[item]]\nkey = \"S\"\ndo = \"logoff\"\n[[item]]\ndo = \"logoff\"\n", `screens/main.bbt:6:7: item "S": key: duplicate key
+screens/main.bbt:8:1: item 3: key is missing
 `},
 	}
 	for _, tt := range tests {

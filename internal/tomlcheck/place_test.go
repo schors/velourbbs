@@ -1,6 +1,10 @@
 package tomlcheck
 
-import "testing"
+import (
+	"slices"
+	"strings"
+	"testing"
+)
 
 func TestPlace(t *testing.T) {
 	data := []byte(`# a comment
@@ -102,5 +106,56 @@ func TestDecodeRoot(t *testing.T) {
 	}
 	if root, _ := Decode([]byte("x = "), &d); root != (Place{}) {
 		t.Errorf("syntax error: root %+v, want the zero Place", root)
+	}
+}
+
+// A front matter gives the positions in its file: the line plus 1 and the column in code points.
+func TestDecodeFront(t *testing.T) {
+	var d struct {
+		T    map[string]string `toml:"t"`
+		Item []struct {
+			Key string `toml:"key"`
+		} `toml:"item"`
+	}
+	root, errs := DecodeFront([]byte("t = { a = \"я\", b = \"x\" }\n[[item]]\nkey = \"ы\"\nKey = \"z\"\n"), &d)
+	if want := []Error{{5, 1, `unknown key "item.Key"`}}; !slices.Equal(errs, want) {
+		t.Errorf("errors %v, want %v", errs, want)
+	}
+	tests := []struct {
+		name string
+		got  Pos
+		want Pos
+	}{
+		{"value after a character that is not ASCII", root.At("t", "b").Value(), Pos{2, 20}},
+		{"key after a character that is not ASCII", root.At("t", "b").Key(), Pos{2, 16}},
+		{"table of an array", root.At("item").Elem(0).Value(), Pos{3, 1}},
+		{"value", root.At("item").Elem(0).At("key").Value(), Pos{4, 7}},
+		{"root", root.At("rows").Value(), Pos{2, 1}},
+	}
+	for _, tt := range tests {
+		if tt.got != tt.want {
+			t.Errorf("%s: %v, want %v", tt.name, tt.got, tt.want)
+		}
+	}
+	// The errors of go-toml: a syntax error, a type error and the size limit.
+	for _, tt := range []struct {
+		data string
+		want Error
+	}{
+		{"\nt = { a = \"я\" b", Error{3, 15, "expected ',' or '}' after inline table key-value"}},
+		{"t = { a = \"я\", b = 1 }", Error{2, 20, "t: invalid type"}},
+		{strings.Repeat("#\n", 33<<10), Error{2, 1, "TOML document is over 65536 bytes"}},
+	} {
+		if _, errs := DecodeFront([]byte(tt.data), &d); !slices.Equal(errs, []Error{tt.want}) {
+			t.Errorf("%.20q: %v, want %v", tt.data, errs, tt.want)
+		}
+	}
+}
+
+// MapFront gives the positions in the file of the front matter, as DecodeFront does.
+func TestMapFront(t *testing.T) {
+	want := []Error{{3, 15, "expected ',' or '}' after inline table key-value"}}
+	if _, errs := MapFront([]byte("\nt = { a = \"я\" b")); !slices.Equal(errs, want) {
+		t.Errorf("errors %v, want %v", errs, want)
 	}
 }

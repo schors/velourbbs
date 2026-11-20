@@ -121,7 +121,7 @@ func TestUnreachable(t *testing.T) {
 			"screens/main.bbt": front("A gosub nope", "G logoff"),
 			"screens/old.bbt":  front("ESC back"),
 		},
-		want: []string{`screens/main.bbt:2:1: item "A": do: unknown screen "nope"`},
+		want: []string{`screens/main.bbt:4:6: item "A": do: unknown screen "nope"`},
 	}, {
 		name:  "error of the sets",
 		langs: []string{"en", "ru"},

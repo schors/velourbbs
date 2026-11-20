@@ -44,7 +44,12 @@ func (e Error) RuneCol(data []byte) int {
 	if i := bytes.IndexByte(line, '\n'); i >= 0 {
 		line = line[:i]
 	}
-	return utf8.RuneCount(line[:min(max(e.Col-1, 0), len(line))]) + 1
+	return runeCol(line, e.Col)
+}
+
+// runeCol gives the column in code points of the byte column col in line.
+func runeCol(line []byte, col int) int {
+	return utf8.RuneCount(line[:min(max(col-1, 0), len(line))]) + 1
 }
 
 // lineStart gives the offset of the 1-based line in data.
@@ -67,17 +72,29 @@ func lineStart(data []byte, line int) (int, bool) {
 // The message of a type error starts with the dotted key path.
 // Without an error of the size or of the syntax, it also gives the root of data (Root).
 func Decode(data []byte, shape any) (Place, []Error) {
+	return decodeDoc(newIndex(data, false), shape)
+}
+
+// DecodeFront decodes the front matter data of a file as Decode does.
+// The errors and the places give positions in the file: line 1 of data is line 2 of the file,
+// and a column counts code points (screen-render, section 3.1).
+func DecodeFront(data []byte, shape any) (Place, []Error) {
+	return decodeDoc(newIndex(data, true), shape)
+}
+
+func decodeDoc(ix *index, shape any) (Place, []Error) {
+	data := ix.data
 	m, errs := Map(data)
 	if errs != nil {
-		return Place{}, errs
+		return Place{}, ix.fileErrors(errs)
 	}
-	root := Root(data)
+	root := ix.root()
 	t := reflect.TypeOf(shape)
 	err := toml.NewDecoder(bytes.NewReader(data)).DisallowUnknownFields().Decode(shape)
 	var unknown *toml.StrictMissingError
 	if err != nil && !errors.As(err, &unknown) {
 		if e, ok := typeError(err, t, m); ok {
-			return root, []Error{e}
+			return root, ix.fileErrors([]Error{e})
 		}
 		// The key of the error matches a field only without case: exact reports it.
 	}
@@ -87,8 +104,26 @@ func Decode(data []byte, shape any) (Place, []Error) {
 			errs = append(errs, Error{line, col, fmt.Sprintf("unknown key %q", strings.Join(e.Key(), "."))})
 		}
 	}
+	errs = ix.fileErrors(errs)
+	// The places of root give positions in the file.
 	exact(t, m, root, nil, &errs)
 	return root, errs
+}
+
+// fileErrors gives the errors with their positions in the file (index.file).
+func (ix *index) fileErrors(errs []Error) []Error {
+	for i, e := range errs {
+		p := ix.file(Pos{e.Line, e.Col})
+		errs[i].Line, errs[i].Col = p.Line, p.Col
+	}
+	return errs
+}
+
+// MapFront decodes the front matter data of a file as Map does.
+// The errors give positions in the file (DecodeFront).
+func MapFront(data []byte) (map[string]any, []Error) {
+	m, errs := Map(data)
+	return m, newIndex(data, true).fileErrors(errs)
 }
 
 // Map decodes data into a map. It gives the error of the size or of the syntax.

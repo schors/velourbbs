@@ -6,6 +6,8 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+
+	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
 // Pos is the position of a token in a file. Line and Col are 1-based.
@@ -30,6 +32,9 @@ type Screen struct {
 	FileScreen *FileSpec
 	// List is the list of a list screen (list-view, section 3), else nil.
 	List *ListSpec
+	// Front is the root table of the front matter. It gives the positions of the errors
+	// of its keys in File (screen-render, section 3.1).
+	Front tomlcheck.Place
 }
 
 // ListSpec is the list of a list screen: the keys data and rows (list-view, sections 3 and 4).
@@ -146,19 +151,31 @@ func (f *FileSpec) Content(args map[string]string) *Content {
 
 // Check checks the keys lines and numbers against the content c of the file p (file-view, section 3).
 // It gives each error.
+// Each error is a KeyError of the key lines or numbers.
 func (f *FileSpec) Check(p string, c *Content) []error {
 	var errs []error
 	switch {
 	case c.Kind == Markdown && f.First > 0:
-		errs = append(errs, fmt.Errorf("lines: %q is a Markdown file", p))
+		errs = append(errs, KeyError{"lines", fmt.Errorf("%q is a Markdown file", p)})
 	case f.Last > len(c.Lines):
-		errs = append(errs, fmt.Errorf("lines: last line %d is after the end of %q (%d lines)", f.Last, p, len(c.Lines)))
+		errs = append(errs, KeyError{"lines", fmt.Errorf("last line %d is after the end of %q (%d lines)", f.Last, p, len(c.Lines))})
 	}
 	if c.Kind == Markdown && f.NumbersKey {
-		errs = append(errs, fmt.Errorf("numbers: %q is a Markdown file", p))
+		errs = append(errs, KeyError{"numbers", fmt.Errorf("%q is a Markdown file", p)})
 	}
 	return errs
 }
+
+// KeyError is an error of the value of a key or of an argument. The error gives the position
+// of the value (screen-render, section 3.1).
+type KeyError struct {
+	Key string
+	Err error
+}
+
+func (e KeyError) Error() string { return e.Key + ": " + e.Err.Error() }
+
+func (e KeyError) Unwrap() error { return e.Err }
 
 // Item is a menu item of the front matter. When is nil when the item has no when.
 type Item struct {

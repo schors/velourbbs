@@ -8,6 +8,7 @@ import (
 )
 
 // front gives a screen with the items "<KEY> <do>" and no body.
+// In the file, the do of the n-th item is at (3n+1):6.
 func front(items ...string) string {
 	var b strings.Builder
 	b.WriteString("+++\n")
@@ -80,9 +81,9 @@ func TestCheckSets(t *testing.T) {
 			"screens/ru/menu.bbt": front("ESC back"),
 		},
 		want: []string{
-			`screens/about.bbt:2:1: item "M": do: unknown screen "menu" (language "de")`,
+			`screens/about.bbt:4:6: item "M": do: unknown screen "menu" (language "de")`,
 			`screens/en/menu.bbt:1:1: no screen "menu" (language "de")`,
-			`screens/main.bbt:2:1: item "D": do: unknown screen "de/menu"`,
+			`screens/main.bbt:10:6: item "D": do: unknown screen "de/menu"`,
 		},
 	}, {
 		// The reference set of a common screen is the first set that holds it.
@@ -104,7 +105,7 @@ func TestCheckSets(t *testing.T) {
 			"screens/main.bbt": front("G gosub nope"),
 		},
 		want: []string{
-			`screens/main.bbt:2:1: item "G": do: unknown screen "nope"`,
+			`screens/main.bbt:4:6: item "G": do: unknown screen "nope"`,
 		},
 	}, {
 		// The start screen is in each set.
@@ -129,8 +130,8 @@ func TestCheckSets(t *testing.T) {
 			"screens/read.bbt": front("ESC back") + "{arg.a}\n",
 		},
 		want: []string{
-			`screens/main.bbt:2:1: item "R": args: missing argument "a" of screen "ru/read"`,
-			`screens/main.bbt:2:1: item "R": args: screen "ru/read" has no argument "b"`,
+			`screens/main.bbt:5:8: item "R": args: missing argument "a" of screen "ru/read"`,
+			`screens/main.bbt:5:8: item "R": args: screen "ru/read" has no argument "b"`,
 		},
 	}}
 	for _, tt := range tests {

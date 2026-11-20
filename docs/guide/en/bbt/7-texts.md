@@ -605,7 +605,7 @@ The field `session.lang` gives the language of the session:
   `velourbbs check` checks the screens of each language.
   Example: `screens/ru/news.bbt:1:1: no screen "news" (language "en")`.
 - An error of a common file that only some languages find ends with the language.
-  Example: `screens/about.bbt:2:1: item "M": do: unknown screen "menu" (language "de")`.
+  Example: `screens/about.bbt:6:6: item "M": do: unknown screen "menu" (language "de")`.
 - `velourbbs preview menu --set session.lang=ru` shows the screen `menu` in Russian.
 
 Full rules: [session-language](../../../specs/session-language.md), sections 2 to 6,

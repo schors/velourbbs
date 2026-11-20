@@ -7,6 +7,7 @@ import (
 
 	"github.com/schors/velourbbs/internal/provider"
 	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
 // unit is a screen during the load.
@@ -39,6 +40,17 @@ type fragment struct {
 type condAt struct {
 	cond *screen.Cond
 	pos  screen.Pos
+}
+
+// keyPos gives the position of the value of the key path in the front matter of u
+// (screen-render, section 3.1).
+func (u *unit) keyPos(path ...string) screen.Pos {
+	return filePos(u.f.name, u.s.Front.At(path...).Value())
+}
+
+// filePos gives the position p in the file name.
+func filePos(name string, p tomlcheck.Pos) screen.Pos {
+	return screen.Pos{File: name, Line: p.Line, Col: p.Col}
 }
 
 // errorf reports an error at pos. A position in another file than the screen
@@ -75,6 +87,7 @@ func (l *loader) screen(u *unit) {
 	u.s.Layout = u.fr.layout.Over(l.st.Layout)
 	u.s.FileScreen = u.fr.file
 	u.s.List = u.fr.list
+	u.s.Front = u.fr.at
 	u.s.Body = l.resolve(u, u.f.body, true)
 	if u.over { // the body of a screen over the limit is not kept
 		u.s.Body, u.frags = nil, nil
@@ -82,10 +95,10 @@ func (l *loader) screen(u *unit) {
 	}
 	if f := u.s.FileScreen; f != nil {
 		if !u.area {
-			l.errorf(u, screen.Pos{File: u.f.name, Line: 2, Col: 1}, false, "file: the body has no {>file}")
+			l.errorf(u, u.keyPos("file"), false, "file: the body has no {>file}")
 		}
 		if err := f.CheckMargin(u.s.Width.Min); err != nil {
-			l.errorf(u, screen.Pos{File: u.f.name, Line: 2, Col: 1}, false, "%v", err)
+			l.errorf(u, u.keyPos("margin"), false, "%v", err)
 		}
 		u.addArgs(f.Arg)
 		if f.Path != "" {
@@ -94,7 +107,7 @@ func (l *loader) screen(u *unit) {
 	}
 	if ls := u.s.List; ls != nil {
 		if !u.each {
-			l.errorf(u, screen.Pos{File: u.f.name, Line: 2, Col: 1}, false, "data: the screen has no list line and no list row in art")
+			l.errorf(u, u.keyPos("data"), false, "data: the screen has no list line and no list row in art")
 		}
 		for _, arg := range ls.ArgRefs {
 			u.addArgs(arg)
@@ -335,13 +348,13 @@ func (l *loader) checkItems(units []*unit) {
 		}
 		end := u.s.Name == "goodbye" || u.s.Name == "shutdown"
 		if end && len(u.s.Items) > 0 {
-			l.fd(u.f.name).Errorf(2, 1, "the %s screen cannot have items", u.s.Name)
+			l.errorf(u, u.keyPos("item"), false, "item: the %s screen cannot have items", u.s.Name)
 		}
 		if end && u.s.FileScreen != nil {
-			l.fd(u.f.name).Errorf(2, 1, "file: the %s screen cannot be a file screen", u.s.Name)
+			l.errorf(u, u.keyPos("file"), false, "file: the %s screen cannot be a file screen", u.s.Name)
 		}
 		if end && u.s.List != nil {
-			l.fd(u.f.name).Errorf(2, 1, "data: the %s screen cannot be a list screen", u.s.Name)
+			l.errorf(u, u.keyPos("data"), false, "data: the %s screen cannot be a list screen", u.s.Name)
 		}
 		keys := map[string]bool{}
 		for _, it := range u.s.Items {

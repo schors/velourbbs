@@ -44,20 +44,21 @@ func TestSelectFileErrors(t *testing.T) {
 			"[[item]]\nkey = \"DOWN\"\ndo = \"back\"\n[[item]]\nkey = \"Enter\"\ndo = \"back\""),
 		"content/parts/1.md": "# One\n",
 	})
+	// Each error has the position of its key path (screen-render, section 3.1).
 	want := []string{
-		`screens/a.bbt:2:1: select: the screen has no data`,
-		`screens/b.bbt:2:1: select: do is missing`,
-		`screens/c.bbt:2:1: select: do: unknown action "jump"`,
-		`screens/d.bbt:2:1: select: args: only goto and gosub take arguments`,
-		`screens/e.bbt:2:1: select: args: a: invalid token "{row.path", want a value or {row.<field>}`,
-		`screens/e.bbt:2:1: select: args: b: provider "files" has no field "size"`,
-		`screens/e.bbt:2:1: select: args: c: field "row.selected" is valid only in a condition`,
-		`screens/e.bbt:2:1: select: args: d: invalid token "{arg.dir}", want a value or {row.<field>}`,
-		`screens/e.bbt:2:1: select: args: e: value has a control character`,
-		`screens/e.bbt:2:1: select: args: invalid argument name "X"`,
-		`screens/f.bbt:2:1: item "DOWN": key: "DOWN" is a key of select`,
-		`screens/f.bbt:2:1: item "ENTER": key: "ENTER" is a key of select`,
-		`screens/f.bbt:2:1: item "UP": key: "UP" is a key of select`,
+		`screens/a.bbt:2:10: select: the screen has no data`,
+		`screens/b.bbt:4:10: select: do is missing`,
+		`screens/c.bbt:4:17: select: do: unknown action "jump"`,
+		`screens/d.bbt:4:32: select: args: only goto and gosub take arguments`,
+		`screens/e.bbt:4:101: select: args: d: invalid token "{arg.dir}", want a value or {row.<field>}`,
+		`screens/e.bbt:4:114: select: args: invalid argument name "X"`,
+		`screens/e.bbt:4:136: select: args: e: value has a control character`,
+		`screens/e.bbt:4:44: select: args: a: invalid token "{row.path", want a value or {row.<field>}`,
+		`screens/e.bbt:4:61: select: args: b: provider "files" has no field "size"`,
+		`screens/e.bbt:4:79: select: args: c: field "row.selected" is valid only in a condition`,
+		`screens/f.bbt:12:7: item "ENTER": key: "ENTER" is a key of select`,
+		`screens/f.bbt:6:7: item "UP": key: "UP" is a key of select`,
+		`screens/f.bbt:9:7: item "DOWN": key: "DOWN" is a key of select`,
 	}
 	slices.Sort(msgs)
 	if !slices.Equal(msgs, want) {
@@ -76,30 +77,30 @@ func TestSelectTargetErrors(t *testing.T) {
 		want      []string
 	}{
 		{"target", `select = { do = "gosub nope" }`, nil,
-			[]string{`screens/sel.bbt:2:1: select: do: unknown screen "nope"`}},
+			[]string{`screens/sel.bbt:4:17: select: do: unknown screen "nope"`}},
 		{"args", `select = { do = "gosub read", args = { x = "{row.path}" } }`, nil, []string{
-			`screens/sel.bbt:2:1: select: args: missing argument "file" of screen "read"`,
-			`screens/sel.bbt:2:1: select: args: screen "read" has no argument "x"`,
+			`screens/sel.bbt:4:38: select: args: missing argument "file" of screen "read"`,
+			`screens/sel.bbt:4:38: select: args: screen "read" has no argument "x"`,
 		}},
 		{"data", `select = { do = "gosub sub", args = { dir = "{row.path}" } }`, map[string]string{"screens/sub.bbt": sub},
-			[]string{`screens/sel.bbt:2:1: select: args: dir: screen "sub" uses the argument in data`}},
+			[]string{`screens/sel.bbt:4:45: select: args: dir: screen "sub" uses the argument in data`}},
 		{"file", `select = { do = "gosub read", args = { file = "{row.title}" } }`, nil, []string{
-			`screens/sel.bbt:2:1: select: args: file: content file "One" does not exist`,
-			`screens/sel.bbt:2:1: select: args: file: content file "Three" does not exist`,
-			`screens/sel.bbt:2:1: select: args: file: content file "Two" does not exist`,
+			`screens/sel.bbt:4:47: select: args: file: content file "One" does not exist`,
+			`screens/sel.bbt:4:47: select: args: file: content file "Three" does not exist`,
+			`screens/sel.bbt:4:47: select: args: file: content file "Two" does not exist`,
 		}},
 		// A literal value is checked also when the list has no rows.
 		{"literal", `select = { do = "gosub read", args = { file = "missing.md" } }`, map[string]string{
 			"screens/sel.bbt": strings.Replace(listScreen(`select = { do = "gosub read", args = { file = "missing.md" } }`),
 				`dir = "parts"`, `dir = "empty"`, 1),
 			"content/empty/.keep": "",
-		}, []string{`screens/sel.bbt:2:1: select: args: file: content file "missing.md" does not exist`}},
+		}, []string{`screens/sel.bbt:4:47: select: args: file: content file "missing.md" does not exist`}},
 		{"numbers", `select = { do = "gosub num", args = { file = "{row.path}" } }`, map[string]string{
 			"screens/num.bbt": "+++\nfile = \"{arg.file}\"\nnumbers = true\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{>file}\n",
 		}, []string{
-			`screens/sel.bbt:2:1: select: args: file: numbers: "parts/1.md" is a Markdown file`,
-			`screens/sel.bbt:2:1: select: args: file: numbers: "parts/2.md" is a Markdown file`,
-			`screens/sel.bbt:2:1: select: args: file: numbers: "parts/3.md" is a Markdown file`,
+			`screens/sel.bbt:4:46: select: args: file: numbers: "parts/1.md" is a Markdown file`,
+			`screens/sel.bbt:4:46: select: args: file: numbers: "parts/2.md" is a Markdown file`,
+			`screens/sel.bbt:4:46: select: args: file: numbers: "parts/3.md" is a Markdown file`,
 		}},
 	}
 	for _, tt := range tests {
