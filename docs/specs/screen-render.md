@@ -49,6 +49,7 @@ The host renders a screen page by page. A session holds one page in memory.
   It writes them to the standard error. It exits with status 1 after an error.
 - One file gives at most 100 errors and warnings. Then it gives one error `too many diagnostics`.
   The loader drops the rest, and the load of the file goes on.
+  The layout warnings of section 3.6 do not count.
 - A TOML document (`bbs.toml`, `screens/screens.toml` or a front matter) gives one syntax
   or type error; else all unknown keys. Only a document without these gives its other errors.
 - A key that differs from a known key only in case is an unknown key. A table `[item]`
@@ -249,29 +250,36 @@ and warns about layout mistakes that the host does not report.
   the values of `velourbbs preview` without `--set` and `--sample` (section 3.2).
   So the conditions and the `when` of the items see the size, as in a session.
 - The arguments of a screen are the arguments of the first action that shows the screen:
-  the screen sets in the order of the languages, the screens in name order,
-  the items in source order, then `select` with the first row of its list.
+  the screen set of `[screen] lang` first, then the other screen sets in the order of the codes;
+  in each set, the screens in name order, the items in source order, then `select`
+  with the first row of its list.
   A screen with arguments that no action shows is not rendered.
 - It renders each page of the screen, as the cell dump has (section 3.3).
 
-The warnings:
+The warnings. Each row of the table is one "kind".
 
-| Warning | When |
-|---|---|
-| `the line wraps to <n> rows` | A text line gives more than one row ([bbt-format](bbt-format.md), section 6.3). |
-| `<n> rows, the screen gets a More row` | A screen other than a file screen and a list screen has more rows than `term.rows` ([bbt-format](bbt-format.md), section 6.4). |
-| `<n> rows, the rows after <rows> are cut` | A page of a file screen or a list screen has more rows than `term.rows` ([file-view](file-view.md), section 3.2; [list-view](list-view.md), section 3). |
-| `the row is <n> cells wide, the screen shows <m>` | The host cuts a row of text, of a stretch line or of a list line, and the cut drops a grapheme other than a space. `<m>` is the smaller of W and `term.cols` ([bbt-format](bbt-format.md), section 6.1). |
-| `art "<name>.ans" is <n> cells wide, the screen shows <m>` | An art insert is wider than `<m>`. |
+| Kind | Warning | When | Position |
+|---|---|---|---|
+| Wrap | `the line wraps to <n> rows` | A text line gives more than one row ([bbt-format](bbt-format.md), section 6.3). | The source line. |
+| More | `<n> rows, the screen gets a More row` | A screen other than a file screen and a list screen has more rows than `term.rows` ([bbt-format](bbt-format.md), section 6.4). | The first line of the screen file. |
+| Height | `<n> rows, the rows after <rows> are cut` | A page of a file screen or a list screen has more rows than `term.rows` ([file-view](file-view.md), section 3.2; [list-view](list-view.md), section 3). | The first line of the screen file. |
+| Width | `the row is <n> cells wide, the screen shows <m>` | The host cuts a row, and the cut drops a grapheme other than a space. Rows: a row of text, a fixed-width field wider than W, a stretch line, a list line and a row of the file area. | The source line; for the file area, the line of `{>file}`. |
+| Art | `art "<name>.ans" is <n> cells wide, the screen shows <m>` | An art insert is wider than `<m>`, and `<m>` is less than `max` of the width limits. Section 3.1 already warns about art wider than `max`. | The line of the art insert. |
 
+- `<m>` is the smaller of W and `term.cols` ([bbt-format](bbt-format.md), section 6.1).
+- The column of each position is 1.
 - The message starts with `at <cols>x<rows>: `. In a fragment, `screen "<name>": `
   comes before it (section 3.1).
-- The position of a row warning is its source line, at column 1. The position of
-  a rows warning is the first line of the screen file.
-- The command gives one warning for each position, size and kind.
-  The message has the values of the first page where it happens.
-- The file area of a file screen gives no warning. The text of a Markdown file wraps by design.
+- Each position, screen, size, kind and screen set gives at most one warning,
+  with the values of the first page where it happens.
+  Then the rules of [session-language](session-language.md), section 6, apply:
+  an equal warning appears once, and a warning of a common file that only some screen sets give
+  ends with ` (language "<code>")`.
 - A warning does not change the exit status.
+- The file area of a file screen gives only the warning Width at a cut at `term.cols`.
+  The text of a Markdown file wraps by design, and its code rows have a cut mark.
+- The More row gives no warning of its own. The host cuts its text at the screen area,
+  and the warning More already names the screen.
 
 Example at 80x24 with `width = [68, 108]` and `gutter = 6`:
 
