@@ -100,6 +100,10 @@ func show(segs []screen.Seg) string {
 			} else {
 				out = append(out, "!"+s.Spec.Over(base).String())
 			}
+		case screen.Stretch:
+			out = append(out, fmt.Sprintf("~%q", s.Fill.Text))
+		case screen.Spacer:
+			out = append(out, "~~")
 		case screen.If:
 			out = append(out, "if("+show(s.Then)+")else("+show(s.Else)+")")
 		case screen.Include:
@@ -170,8 +174,20 @@ func TestTokens(t *testing.T) {
 		{"a{{b}", `"a{b}" /`},
 		{"{{{term.cols}", `"{" {term.cols} /`},
 		{"{1} {} {Ж} {", `"{1} {} {Ж} {" /`},
+		// Stretch tokens and spacer lines (section 6.6).
+		{"{~.}", `~"." /`},
+		{"{~ }", `~" " /`},
+		{"a{~}b{~─}", `"a" ~" " "b" ~"─" /`},
+		{"{~}}", `~" " "}" /`},
+		{"{~e\u0301}", "~\"e\u0301\" /"},
+		{"{~}\n {~}\n{~}x", `~~ " " ~" " / ~" " "x" /`},
+		{"{#if term.cols > 1}\n{~}\n{/if}", `if(/b ~~)else() /b`},
+		{"{#if term.cols > 1}{~.}{/if}", `if(~".")else() /b`},
+		{"ab{~..}", `screens/s.bbt:1:3: invalid stretch token "{~..}", want {~} or {~<c>} with one character of width 1`},
+		{"{~世}", `screens/s.bbt:1:1: invalid stretch token "{~世}", want {~} or {~<c>} with one character of width 1`},
+		{"{~\t}", `screens/s.bbt:1:3: control character U+0009`},
+		{"{~\u0301}", "screens/s.bbt:1:1: invalid stretch token \"{~\u0301}\", want {~} or {~<c>} with one character of width 1"},
 		{"a {-}", `screens/s.bbt:1:3: unknown token "{-}"`},
-		{"{~.}", `screens/s.bbt:1:1: unknown token "{~.}"`},
 		{"{%x", `screens/s.bbt:1:1: token has no "}"`},
 		{"a}b", `"a}b" /`},
 		{"", ``},
@@ -246,6 +262,9 @@ func TestFrontMatter(t *testing.T) {
 			`screens/s.bbt:2:1: fill: invalid value "clear", want "none", "spaces" or "erase"`,
 		}},
 		{map[string]string{"s.bbt": "+++\nfill = 1\n+++\n"}, []string{`screens/s.bbt:2:8: fill: must be a string`}},
+		{map[string]string{"s.bbt": "+++\ngutter = 101\n+++\n"}, []string{`screens/s.bbt:2:1: gutter: 101, must be from 0 to 100`}},
+		{map[string]string{"s.bbt": "+++\ngutter = -1\n+++\n"}, []string{`screens/s.bbt:2:1: gutter: -1, must be from 0 to 100`}},
+		{map[string]string{"s.bbt": "+++\ngutter = \"6\"\n+++\n"}, []string{`screens/s.bbt:2:10: gutter: must be an integer`}},
 		// The column counts code points.
 		{map[string]string{"s.bbt": "+++\nitem = [{ key = \"яя\", do = 1 }]\n+++\n"}, []string{`screens/s.bbt:2:28: item: invalid type`}},
 		// An alias of screens/screens.toml in when: a type error at 2:1.
@@ -538,6 +557,12 @@ func TestLimits(t *testing.T) {
 		t.Errorf("fan-out: %q", msgs)
 	}
 
+	// A spacer line counts its line.
+	_, msgs = load(map[string]string{"s.bbt": strings.Repeat("{~}\n", bbt.MaxBodyLines+1)})
+	if want := []string{`screens/s.bbt:10001:1: body is over 10000 lines after includes`}; !slices.Equal(msgs, want) {
+		t.Errorf("spacer lines: %q", msgs)
+	}
+
 	// Art counts its line and its rows.
 	_, msgs = load(map[string]string{"s.bbt": strings.Repeat("{>a.ans}\n", 11), "a.ans": sauceArt(strings.Repeat("x\n", 999)+"x", 80)})
 	if want := []string{`screens/s.bbt:10:1: body is over 10000 lines after includes`}; !slices.Equal(msgs, want) {
@@ -586,7 +611,7 @@ func TestLimits(t *testing.T) {
 // Each value of align, valign and fill in the front matter overrides the key of [screen].
 // A screen without the keys takes the keys of [screen] (section 3.2).
 func TestLayout(t *testing.T) {
-	base := screen.Layout{Width: defaultWidth, Align: screen.AlignRight, VAlign: screen.VAlignBottom, Fill: screen.FillErase}
+	base := screen.Layout{Width: defaultWidth, Align: screen.AlignRight, VAlign: screen.VAlignBottom, Fill: screen.FillErase, Gutter: 6}
 	tests := []struct {
 		front string
 		want  func(*screen.Layout)
@@ -601,6 +626,8 @@ func TestLayout(t *testing.T) {
 		{`fill = "none"`, func(l *screen.Layout) { l.Fill = screen.FillNone }},
 		{`fill = "spaces"`, func(l *screen.Layout) { l.Fill = screen.FillSpaces }},
 		{`fill = "erase"`, func(l *screen.Layout) { l.Fill = screen.FillErase }},
+		{`gutter = 0`, func(l *screen.Layout) { l.Gutter = 0 }},
+		{`gutter = 100`, func(l *screen.Layout) { l.Gutter = 100 }},
 	}
 	for _, tt := range tests {
 		fsys := fstest.MapFS{"screens/s.bbt": {Data: []byte("+++\n" + tt.front + "\n+++\nx\n")}}

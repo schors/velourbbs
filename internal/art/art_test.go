@@ -283,6 +283,8 @@ func TestFields(t *testing.T) {
 		{"right", "{  w}", "[{1 1 5 term.cols true 7/0}]", ""},
 		{"spaces on both sides", "{ term.cols }", "[{1 1 13 term.cols true 7/0}]", ""},
 		{"plain", "{ BBS } {a {} {{w} {@x}", "[{1 16 3 term.cols false 7/0}]", ""},
+		// Art has no stretch token (bbt-format, section 6.6).
+		{"stretch is plain", "{~} {~.}", "[]", ""},
 		{"style of the first cell", "\x1b[33;44m{w}", "[{1 1 3 term.cols false 3/4}]", ""},
 		{"space with another foreground", "\x1b[31m{\x1b[32m \x1b[31mw}", "[{1 1 4 term.cols true 1/0}]", ""},
 		{"two foregrounds", "\n\n              \x1b[93m{\x1b[97mw}", "[]",

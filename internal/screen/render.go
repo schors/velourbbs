@@ -13,6 +13,10 @@ const MaxRenderRows = 10000
 func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[Page] {
 	return func(yield func(Page) bool) {
 		r := newRenderer(s, env, theme)
+		if hasStretch(s.Body) {
+			p := countPass(s, env, theme, nil, 0)
+			r.use(p, r.height-p.count)
+		}
 		r.yield = yield
 		var moreCells []Cell
 		for g, gw := range Graphemes(more) {
@@ -39,7 +43,7 @@ func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[P
 // FrameRows gives the count of the rows above and below the file area of the file screen s
 // (file-view, section 3.2). The count stops at MaxRenderRows.
 func FrameRows(s *Screen, env *Env, theme map[string]Style) int {
-	return renderFrame(s, env, theme).count
+	return countPass(s, env, theme, nil, 0).count
 }
 
 // RenderFile renders the page n of the file screen s (file-view, section 3.2): the rows above
@@ -65,9 +69,12 @@ func RenderFile(s *Screen, env *Env, theme map[string]Style, file []Row, n int) 
 }
 
 // renderFrame renders the rows of the body of the file screen s without pages.
-// It keeps the first term.rows rows and counts all rows.
+// It keeps the first term.rows rows and counts all rows. A spacer line gives 0 rows (section 6.6).
 func renderFrame(s *Screen, env *Env, theme map[string]Style) *renderer {
 	r := newRenderer(s, env, theme)
+	if hasStretch(s.Body) {
+		r.use(countPass(s, env, theme, nil, 0), 0)
+	}
 	r.frame = true
 	// A render that stops at MaxRenderRows before the file area puts the file rows after the kept rows.
 	r.split = MaxRenderRows
@@ -79,7 +86,7 @@ func renderFrame(s *Screen, env *Env, theme map[string]Style) *renderer {
 // (list-view, section 7). env has the list values of page 1 with this page size.
 // The count stops at MaxRenderRows.
 func ListRows(s *Screen, env *Env, theme map[string]Style, list []ListRow, rows int) int {
-	return renderList(s, env, theme, list, rows).count
+	return countPass(s, env, theme, list, rows).count
 }
 
 // RenderList renders the list page n of the list screen s with the page size p (list-view, section 7).
@@ -99,9 +106,14 @@ func RenderList(s *Screen, env *Env, theme map[string]Style, list []ListRow, n, 
 }
 
 // renderList renders the rows of the list screen s with the page size p, without pages.
-// It keeps the first term.rows rows and counts all rows.
+// It keeps the first term.rows rows and counts all rows. The spacer lines take the free rows
+// after the page size (section 6.6).
 func renderList(s *Screen, env *Env, theme map[string]Style, list []ListRow, p int) *renderer {
 	r := newRenderer(s, env, theme)
+	if hasStretch(s.Body) {
+		c := countPass(s, env, theme, list, p)
+		r.use(c, r.height-c.count)
+	}
 	r.frame = true
 	r.list, r.pageSize = list, p
 	r.walk(s.Body, r.normal)
@@ -110,20 +122,79 @@ func renderList(s *Screen, env *Env, theme map[string]Style, list []ListRow, p i
 
 // RenderWidth gives the render width W for cols columns (section 6.1).
 func (l Layout) RenderWidth(cols int) int {
-	return min(max(cols, l.Width.Min), l.Width.Max)
+	return min(max(cols-2*l.Gutter, l.Width.Min), l.Width.Max)
+}
+
+// Margin gives the left margin of the screen area for cols columns (section 6.1).
+func (l Layout) Margin(cols int) int {
+	f := cols - l.RenderWidth(cols)
+	if f <= 0 {
+		return 0
+	}
+	switch g := min(l.Gutter, f); l.Align {
+	case AlignLeft:
+		return g
+	case AlignRight:
+		return f - g
+	}
+	return f / 2
+}
+
+// hasStretch reports whether segs have a stretch token or a spacer line (section 6.6).
+func hasStretch(segs []Seg) bool {
+	for _, seg := range segs {
+		switch seg := seg.(type) {
+		case Stretch, Spacer:
+			return true
+		case If:
+			if hasStretch(seg.Then) || hasStretch(seg.Else) {
+				return true
+			}
+		case Include:
+			if hasStretch(seg.Body) {
+				return true
+			}
+		case ListLine:
+			if hasStretch(seg.Row) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// plan is the result of the count pass of a screen (section 6.6).
+type plan struct {
+	count   int    // the rows without the spacer lines, at most MaxRenderRows
+	stretch []bool // for each render line: the render reaches a stretch token in it
+	spacers int    // the spacer lines that the render reaches
+	values  map[Ref][]Grapheme
+}
+
+// countPass counts the rows of s without the spacer lines and finds the render lines
+// with a stretch token. The list and the page size p are for a list screen.
+// A render line ends at each LineEnd that the render reaches: a false block can join source lines.
+func countPass(s *Screen, env *Env, theme map[string]Style, list []ListRow, p int) *plan {
+	r := newRenderer(s, env, theme)
+	r.counting = &plan{values: r.values}
+	r.list, r.pageSize = list, p
+	r.wrapper = newWrapper(r.w, func([]Cell) { r.pending++ })
+	r.walk(s.Body, r.normal)
+	r.counting.count = r.count
+	return r.counting
+}
+
+// use makes the render use the count pass p: the stretch lines of p, and free rows for the spacer lines.
+func (r *renderer) use(p *plan, free int) {
+	r.plan, r.free, r.values = p, max(free, 0), p.values
+	r.startLine()
 }
 
 // newRenderer gives a renderer of s for the terminal of env.
 func newRenderer(s *Screen, env *Env, theme map[string]Style) *renderer {
 	cols := env.Term.Cols
 	w := s.RenderWidth(cols)
-	margin := max(cols-w, 0) // align = "right" (section 6.1)
-	switch s.Align {
-	case AlignCenter:
-		margin /= 2
-	case AlignLeft:
-		margin = 0
-	}
+	margin := s.Margin(cols)
 	r := &renderer{
 		env: env, theme: theme, normal: theme["normal"], w: w, cols: cols,
 		area: min(w, cols), margin: margin, height: env.Term.Rows, fill: s.Fill,
@@ -172,6 +243,21 @@ type renderer struct {
 	rectRows   int
 	selectable bool
 
+	// The count pass (section 6.6). counting is the result in progress, else nil.
+	// pending is the rows of the wrap of the current line, and reached is true when the line has a stretch token.
+	counting *plan
+	pending  int
+	reached  bool
+
+	// The render after a count pass: the stretch lines and the free rows of the spacer lines.
+	// plan is nil when the screen has no stretch token and no spacer line.
+	plan       *plan
+	free       int
+	spacer     int  // the spacer lines so far
+	line       int  // the render line
+	stretching bool // the render line has a stretch token: it does not wrap
+	sl         stretchLine
+
 	wrapper // the current source line
 }
 
@@ -188,6 +274,15 @@ func (r *renderer) walk(segs []Seg, cur Style) Style {
 			r.field(seg, cur)
 		case SetStyle:
 			cur = seg.Apply(cur, r.theme)
+		case Stretch:
+			switch {
+			case r.counting != nil:
+				r.reached = true
+			case r.stretching:
+				r.sl.stretch(seg.Fill, cur)
+			}
+		case Spacer:
+			r.spacerLine()
 		case If:
 			if seg.Cond.Eval(r.env) {
 				cur = r.walk(seg.Then, cur)
@@ -203,10 +298,120 @@ func (r *renderer) walk(segs []Seg, cur Style) Style {
 		case ListLine:
 			r.listLine(seg, cur)
 		case LineEnd:
-			r.endLine(seg.Block)
+			r.lineEnd(seg.Block)
 		}
 	}
 	return cur
+}
+
+// lineEnd ends the render line. A line with a stretch token gives one row (section 6.6).
+func (r *renderer) lineEnd(block bool) {
+	switch {
+	case r.counting != nil:
+		r.endLine(block)
+		n := r.pending
+		if r.reached {
+			n = 1
+		}
+		r.counting.stretch = append(r.counting.stretch, r.reached)
+		r.pending, r.reached = 0, false
+		r.countRows(n)
+	case r.stretching:
+		r.addRow(r.sl.row(r.w))
+		r.sl.reset()
+	default:
+		r.endLine(block)
+	}
+	r.line++
+	r.startLine()
+}
+
+// startLine starts the render line r.line.
+func (r *renderer) startLine() {
+	r.stretching = r.plan != nil && r.line < len(r.plan.stretch) && r.plan.stretch[r.line]
+}
+
+// spacerLine adds the rows of a spacer line: its share of the free rows (section 6.6).
+func (r *renderer) spacerLine() {
+	if r.counting != nil {
+		r.counting.spacers++
+		return
+	}
+	if r.plan == nil {
+		return
+	}
+	n := share(r.free, r.plan.spacers, r.spacer)
+	r.spacer++
+	for range n {
+		r.addRow(nil)
+	}
+}
+
+// share gives the share of the item i, from 0, of n items in free units:
+// free / n, rounded down, and one more for each of the last free mod n items (section 6.6).
+func share(free, n, i int) int {
+	k := free / n
+	if i >= n-free%n {
+		k++
+	}
+	return k
+}
+
+// countRows adds n rows to the count. The count stops at MaxRenderRows.
+func (r *renderer) countRows(n int) {
+	r.count = min(r.count+n, MaxRenderRows)
+	r.done = r.count == MaxRenderRows
+}
+
+// stretchLine is a row with stretch tokens before the share of its free cells (section 6.6).
+// It keeps at most w + 1 cells: the row cuts the rest.
+type stretchLine struct {
+	cells []Cell
+	width int // the cells of the row without its stretch tokens
+	toks  []stretchTok
+}
+
+// stretchTok is a stretch token at the position at of the cells, with its fill cell.
+type stretchTok struct {
+	at   int
+	cell Cell
+}
+
+// add adds the grapheme g in style to the row of the width w.
+func (l *stretchLine) add(g Grapheme, style Style, w int) {
+	l.width += g.Width
+	if len(l.cells) <= w {
+		l.cells = appendCell(l.cells, g, style)
+	}
+}
+
+// stretch adds a stretch token with the fill g in style.
+func (l *stretchLine) stretch(g Grapheme, style Style) {
+	l.toks = append(l.toks, stretchTok{len(l.cells), Cell{g.Text, style}})
+}
+
+// row gives the cells of the row of the width w: the stretch tokens share the free cells.
+// The cells are valid until the next reset.
+func (l *stretchLine) row(w int) []Cell {
+	free := w - l.width
+	if free <= 0 || len(l.toks) == 0 {
+		return l.cells
+	}
+	out := make([]Cell, 0, w)
+	prev := 0
+	for i, t := range l.toks {
+		out = append(out, l.cells[prev:t.at]...)
+		for range share(free, len(l.toks), i) {
+			out = append(out, t.cell)
+		}
+		prev = t.at
+	}
+	return append(out, l.cells[prev:]...)
+}
+
+// reset empties the row.
+func (l *stretchLine) reset() {
+	l.cells, l.width, l.toks = l.cells[:0], 0, l.toks[:0]
 }
 
 // value gives the graphemes of the field r, once for each render.
@@ -223,7 +428,12 @@ func (r *renderer) value(ref Ref) []Grapheme {
 // then empty rows up to P (list-view, section 5). A row does not wrap: row cuts it.
 // Each row starts with the style cur; the list line does not change the style after it.
 func (r *renderer) listLine(l ListLine, cur Style) {
+	if r.counting != nil {
+		r.countRows(r.pageSize)
+		return
+	}
 	first := (r.env.List.Page - 1) * r.pageSize
+	var row stretchLine
 	for i := range r.pageSize {
 		if r.done {
 			return
@@ -235,22 +445,23 @@ func (r *renderer) listLine(l ListLine, cur Style) {
 		}
 		env := *r.env
 		env.Row = &RowValues{Num: n + 1, Selected: n == r.env.List.Cursor, Row: r.list[n]}
-		cells, _ := r.rowText(l.Row, cur, &env, nil)
-		r.addRow(cells)
+		r.rowText(l.Row, cur, &env, &row)
+		r.addRow(row.row(r.w))
+		row.reset()
 	}
 }
 
-// rowText appends the cells of the row text segs with the style cur and the values of env
-// to cells. It stops after W cells. It gives the cells and the style after them.
-func (r *renderer) rowText(segs []Seg, cur Style, env *Env, cells []Cell) ([]Cell, Style) {
+// rowText adds the cells of the row text segs with the style cur and the values of env
+// to the row l. It stops after W cells. It gives the style after them.
+func (r *renderer) rowText(segs []Seg, cur Style, env *Env, l *stretchLine) Style {
 	for _, seg := range segs {
-		if len(cells) > r.w {
+		if len(l.cells) > r.w {
 			break
 		}
 		switch seg := seg.(type) {
 		case Text:
 			for _, g := range seg.Graphemes {
-				cells = appendCell(cells, g, cur)
+				l.add(g, cur, r.w)
 			}
 		case Field:
 			gs := r.fieldText(seg.Ref, env)
@@ -258,25 +469,31 @@ func (r *renderer) rowText(segs []Seg, cur Style, env *Env, cells []Cell) ([]Cel
 				gs = FitValue(gs, min(seg.Width, r.w), seg.Right)
 			}
 			for _, g := range gs {
-				cells = appendCell(cells, g, cur)
+				l.add(g, cur, r.w)
 			}
 		case SetStyle:
 			cur = seg.Apply(cur, r.theme)
+		case Stretch:
+			l.stretch(seg.Fill, cur)
 		case If:
 			if seg.Cond.Eval(env) {
-				cells, cur = r.rowText(seg.Then, cur, env, cells)
+				cur = r.rowText(seg.Then, cur, env, l)
 			} else {
-				cells, cur = r.rowText(seg.Else, cur, env, cells)
+				cur = r.rowText(seg.Else, cur, env, l)
 			}
 		}
 	}
-	return cells, cur
+	return cur
 }
 
 // text adds graphemes to the line. A space is a break.
 func (r *renderer) text(gs []Grapheme, style Style) {
 	for _, g := range gs {
-		r.add(lineCell{g, style, g.Text == " "})
+		if r.stretching {
+			r.sl.add(g, style, r.w)
+		} else {
+			r.add(lineCell{g, style, g.Text == " "})
+		}
 	}
 }
 
@@ -289,13 +506,21 @@ func (r *renderer) field(f Field, style Style) {
 		return
 	}
 	for _, g := range FitValue(gs, min(f.Width, r.w), f.Right) {
-		r.add(lineCell{g, style, false})
+		if r.stretching {
+			r.sl.add(g, style, r.w)
+		} else {
+			r.add(lineCell{g, style, false})
+		}
 	}
 }
 
 // art adds the rows of an art insert with the values of its fields (section 6.2 and art-format, section 4).
 // In a list render, the list rectangle shows the list page (list-view, section 9).
 func (r *renderer) art(a ArtInsert) {
+	if r.counting != nil {
+		r.countRows(len(a.Art.Rows))
+		return
+	}
 	ls := a.Art.List
 	if r.env.List == nil {
 		ls = nil
@@ -387,6 +612,10 @@ func (r *renderer) fieldText(ref Ref, env *Env) []Grapheme {
 // term.rows - 1 rows and the More row, and the last page has the rest (section 6.4).
 func (r *renderer) addRow(cells []Cell) {
 	if r.done {
+		return
+	}
+	if r.counting != nil {
+		r.countRows(1)
 		return
 	}
 	if r.frame {

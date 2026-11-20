@@ -145,6 +145,8 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 			segs = append(segs, n)
 		case screen.SetStyle:
 			segs = append(segs, n)
+		case screen.Stretch:
+			segs = append(segs, n)
 		case field:
 			l.checkField(u, n.pos, n.f.Ref)
 			u.addArgs(n.f.Ref.Arg())
@@ -174,6 +176,12 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 			}
 			l.add(u, 1)
 			segs = append(segs, screen.LineEnd{Block: n.block})
+		case spacerLine:
+			if top {
+				u.at = screen.Pos{File: u.f.name, Line: n.row, Col: 1}
+			}
+			l.add(u, 1)
+			segs = append(segs, screen.Spacer{})
 		case *ifNode:
 			if n.cond != nil {
 				u.conds = append(u.conds, condAt{n.cond, n.pos})
