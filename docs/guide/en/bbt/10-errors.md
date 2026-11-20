@@ -137,6 +137,36 @@ screens/size.ans:1:7: token "{w}" changes the foreground: 11 at col 7, 14 at col
 The characters of the token have two colours: 11 in column 7 and 14 in column 9.
 In the art editor, draw the whole token in one colour. Then convert the art again.
 
+## Layout at a terminal size
+
+`velourbbs check --size <cols>x<rows>` renders each screen at this size and warns about layout mistakes.
+Give `--size` for each terminal size that you expect:
+
+```
+velourbbs check --size 80x24 --size 132x43
+```
+
+Lamp gives no warning at these sizes. Its screens have `width = [80, 80]`,
+so a terminal of 40 columns cuts their rows:
+
+```
+screens/about.bbt:10:1: warning: at 40x24: the row is 43 cells wide, the screen shows 40
+screens/_head.bbt:2:1: warning: screen "main": at 40x24: the row is 78 cells wide, the screen shows 40
+```
+
+The warnings and their fixes:
+
+| Warning | Problem | Fix |
+|---|---|---|
+| `the line wraps to 2 rows` | The text line is wider than the screen. | Make the line shorter. |
+| `31 rows, the screen gets a More row` | The screen has more rows than the terminal. | Remove rows, or split the screen. |
+| `25 rows, the rows after 24 are cut` | A file screen or a list screen does not fit the terminal. | Remove rows above or below the file area or the list. |
+| `the row is 43 cells wide, the screen shows 40` | The BBS cuts the row. | Make the row shorter, or make `min` of `width` smaller. |
+| `art "logo.ans" is 100 cells wide, the screen shows 80` | The BBS cuts the art. | Show smaller art on a small terminal (task 9). |
+
+- A warning in a fragment starts with the screen that includes it: `screen "main": `.
+- A warning does not stop the BBS.
+
 ## Result
 
 1. In `screens/about.bbt` of Lamp, line 10, put `{!titel}` before `Lamp`.
@@ -148,7 +178,7 @@ screens/about.bbt:10:8: unknown style "titel"
 
 3. Remove `{!titel}`. `velourbbs check` gives no output.
 
-Full rules: [screen-render](../../../specs/screen-render.md), section 3.1,
+Full rules: [screen-render](../../../specs/screen-render.md), sections 3.1 and 3.6,
 [menu-nav](../../../specs/menu-nav.md), section 6,
 [file-view](../../../specs/file-view.md), section 7,
 and [list-view](../../../specs/list-view.md), section 10.

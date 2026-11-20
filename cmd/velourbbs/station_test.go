@@ -51,6 +51,11 @@ func TestStation(t *testing.T) {
 	if status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
 		t.Errorf("check: stdout %q, stderr %q, status %d; want no output and status 0", out.String(), errOut.String(), status)
 	}
+	// The station has no layout warning at its sizes (screen-render, section 3.6).
+	args := []string{"check", "--size", "80x24", "--size", "132x43"}
+	if status := run(args, t.TempDir(), fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
+		t.Errorf("%q: stdout %q, stderr %q, status %d; want no output and status 0", args, out.String(), errOut.String(), status)
+	}
 	for _, size := range []string{"80x24", "132x43"} {
 		for _, screen := range []string{"main", "main-ambiguous", "goodbye", "shutdown", "ru-menu", "en-menu", "ru-about", "en-about",
 			"ru-texts", "en-texts", "ru-setup", "en-setup", "ru-bbt", "en-bbt", "ru-read", "en-read"} {

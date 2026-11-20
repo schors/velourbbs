@@ -581,6 +581,9 @@ func TestUsage(t *testing.T) {
 		{[]string{"-h"}, `velourbbs: unknown command "-h"`},
 		{[]string{"frob"}, `velourbbs: unknown command "frob"`},
 		{[]string{"check", "extra"}, "velourbbs check: no arguments expected"},
+		{[]string{"check", "--size", "10x10"}, `invalid value "10x10" for flag -size: term.cols is 10, must be from 20 to 255`},
+		{[]string{"check", "--size", "80x101"}, `invalid value "80x101" for flag -size: term.rows is 101, must be from 10 to 100`},
+		{[]string{"check", "--size", "80"}, `invalid value "80" for flag -size: rows: "" is not a decimal number`},
 		{[]string{"serve", "extra"}, "velourbbs serve: no arguments expected"},
 	}
 	for _, tt := range tests {

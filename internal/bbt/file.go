@@ -40,7 +40,7 @@ type eachNode struct {
 }
 
 type lineEnd struct {
-	row   int
+	pos   screen.Pos // the start of the line
 	block bool
 }
 
@@ -216,7 +216,7 @@ func (s *scanner) line(row int, line string) {
 		s.listLine(row, ps)
 		return
 	}
-	s.add(lineEnd{row: row, block: s.tokens(row, ps)})
+	s.add(lineEnd{pos: screen.Pos{File: s.d.File, Line: row, Col: 1}, block: s.tokens(row, ps)})
 }
 
 // listLine reads a list line: ps starts with {#each} (list-view, section 5).

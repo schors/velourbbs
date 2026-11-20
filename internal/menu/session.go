@@ -345,16 +345,24 @@ func (ss *Session) show(ctx context.Context, s *screen.Screen, args map[string]s
 // velourbbs preview uses it.
 func Pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[string]string,
 	sv screen.SessionValues) iter.Seq[screen.Page] {
+	return pages(cfg, s, term, args, sv, nil)
+}
+
+// pages is Pages with the layout log log of the renders, or nil.
+func pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[string]string,
+	sv screen.SessionValues, log *screen.LayoutLog) iter.Seq[screen.Page] {
 	theme := cfg.SessionTheme(cfg.ThemeChoice, term)
 	sv.Theme = string(cfg.ThemeChoice)
 	if s.FileScreen == nil && s.List == nil {
 		env, _ := Enabled(s, screen.Env{Term: term, Args: args, Session: sv})
+		env.Layout = log
 		return screen.Render(s, env, theme, cfg.MoreText(sv.Lang))
 	}
 	values := func() screen.SessionValues { return sv }
 	return func(yield func(screen.Page) bool) {
 		if s.List != nil { // the cursor on the first row of each list page
 			v := newListView(s, term, args, theme, values)
+			v.log = log
 			for n := 1; n <= v.count(); n++ {
 				if p, _ := v.page(n, v.first(n)); !yield(p) {
 					return
@@ -363,6 +371,7 @@ func Pages(cfg config.Config, s *screen.Screen, term screen.Term, args map[strin
 			return
 		}
 		v := newFileView(s, term, args, theme, values)
+		v.log = log
 		for n := 1; n <= v.count(); n++ {
 			if p, _ := v.page(n); !yield(p) {
 				return
@@ -382,7 +391,8 @@ type fileView struct {
 	sv     func() screen.SessionValues
 	layout screen.FileLayout
 	pages  []screen.FilePage
-	h      int // the area height H
+	h      int               // the area height H
+	log    *screen.LayoutLog // the layout log of the renders, else nil
 }
 
 // newFileView lays out the file of the file screen s into file pages.
@@ -417,7 +427,7 @@ func (v *fileView) page(n int) (screen.Page, map[string]screen.Item) {
 	p := v.pages[n-1]
 	values := v.values
 	values.Page, values.Pages, values.Section = n, len(v.pages), p.Section
-	env, items := Enabled(v.s, screen.Env{Term: v.term, Args: v.args, File: &values, Session: v.sv()})
+	env, items := Enabled(v.s, screen.Env{Term: v.term, Args: v.args, File: &values, Session: v.sv(), Layout: v.log})
 	return screen.RenderFile(v.s, env, v.theme, screen.PageRows(v.layout, p, v.h), n), items
 }
 
@@ -430,8 +440,9 @@ type listView struct {
 	theme map[string]screen.Style
 	sv    func() screen.SessionValues
 	list  []screen.ListRow
-	size  int         // the page size P
-	env   *screen.Env // the field values of the page that page rendered last
+	size  int               // the page size P
+	env   *screen.Env       // the field values of the page that page rendered last
+	log   *screen.LayoutLog // the layout log of the renders, else nil
 }
 
 // newListView finds the page size of the list screen s: it renders page 1 with P = rows.
@@ -477,7 +488,7 @@ func (v *listView) setTheme(theme map[string]screen.Style) { v.theme = theme }
 func (v *listView) page(n, c int) (screen.Page, map[string]screen.Item) {
 	values := v.values(n)
 	values.Cursor = c
-	env, items := Enabled(v.s, screen.Env{Term: v.term, Args: v.args, List: &values, Session: v.sv()})
+	env, items := Enabled(v.s, screen.Env{Term: v.term, Args: v.args, List: &values, Session: v.sv(), Layout: v.log})
 	v.env = env
 	return screen.RenderList(v.s, env, v.theme, v.list, n, v.size), items
 }

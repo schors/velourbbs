@@ -160,7 +160,7 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 				l.errorf(u, n.pos, false, "list line in a screen without data")
 			}
 			u.each = true
-			segs = append(segs, screen.ListLine{Row: l.resolve(u, n.body, top)})
+			segs = append(segs, screen.ListLine{Row: l.resolve(u, n.body, top), Pos: n.pos})
 		case fileArea:
 			u.at = n.pos
 			l.add(u, 1)
@@ -169,13 +169,13 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 				continue
 			}
 			u.area = true
-			segs = append(segs, screen.FileArea{})
+			segs = append(segs, screen.FileArea{Pos: n.pos})
 		case lineEnd:
 			if top {
-				u.at = screen.Pos{File: u.f.name, Line: n.row, Col: 1}
+				u.at = n.pos
 			}
 			l.add(u, 1)
-			segs = append(segs, screen.LineEnd{Block: n.block})
+			segs = append(segs, screen.LineEnd{Block: n.block, Pos: n.pos})
 		case spacerLine:
 			if top {
 				u.at = screen.Pos{File: u.f.name, Line: n.row, Col: 1}
@@ -240,7 +240,7 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 				u.each = true
 				l.checkRect(u, name, a)
 			}
-			segs = append(segs, screen.ArtInsert{Art: a})
+			segs = append(segs, screen.ArtInsert{Art: a, Name: n.file, Pos: n.pos})
 		}
 	}
 	return segs
