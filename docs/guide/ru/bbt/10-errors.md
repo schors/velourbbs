@@ -16,8 +16,8 @@ screens/screens.toml:10:10: unexpected character U+0023 '#' at start of value
 
 Экраны используют настройки из `bbs.toml` и `screens/screens.toml`.
 Поэтому после ошибки в этих файлах `velourbbs check` останавливается до экранов
-и выводит только ошибки этих файлов.
-Исправь их и снова запусти `velourbbs check`. Тогда она проверит экраны.
+и не выводит ошибки экранов.
+Исправь ошибки и снова запусти `velourbbs check`. Тогда она проверит экраны.
 
 ## `unknown style`
 

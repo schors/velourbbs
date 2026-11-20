@@ -16,8 +16,8 @@ A text value in TOML needs double quotes: `title  = "#f7c7a3 bold"`.
 
 The screens use the settings of `bbs.toml` and `screens/screens.toml`.
 So after an error in these files, `velourbbs check` stops before the screens
-and gives only the errors of these files.
-Correct them, then run `velourbbs check` again. Then it checks the screens.
+and gives no errors of the screens.
+Correct the errors, then run `velourbbs check` again. Then it checks the screens.
 
 ## `unknown style`
 
