@@ -194,8 +194,8 @@ of each language of the BBS ([session-language](session-language.md), section 6)
   It starts with `item "<KEY>"`, with the key in upper case.
   An item without a valid key gives `item <n>`, the 1-based number of the item.
 - An error of a screen without items has the position 1:1.
-- An error of the start screen has the position of `menu.start` in `screens/screens.toml`.
-  Without the key or the file, it has the position 1:1.
+- An error of the start screen is an error of the key `menu.start` of `screens/screens.toml`,
+  also when the file is missing.
 - The checks of a `goto` and a `gosub`, of a screen without items and of the start screen use all screens.
   `velourbbs check` does them only when the files have no other errors.
 
@@ -205,7 +205,7 @@ Examples:
 screens/main.bbt:8:6: item "S": do: unknown screen "sysinf"
 screens/main.bbt:11:7: item 2: key: invalid key "?"
 screens/main.bbt:14:7: item "S": key: duplicate key
-screens/main.bbt:16:1: item 3: key is missing
+screens/main.bbt:16:1: item 4: key is missing
 screens/about.bbt:1:1: screen has no items
 screens/screens.toml:12:9: menu: start: unknown screen "mian"
 ```

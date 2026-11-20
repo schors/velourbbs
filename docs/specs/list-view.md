@@ -251,7 +251,7 @@ Examples:
 screens/parts.bbt:4:8: data: from: unknown provider "file"
 screens/parts.bbt:5:16: data: args: dir: directory "guide/bbtt" does not exist
 screens/texts.bbt:9:16: item "2": args: dir: directory "guide/bbtt" does not exist
-screens/parts.bbt:5:3: field "row.size": provider "files" has no field "size"
+screens/parts.bbt:9:3: field "row.size": provider "files" has no field "size"
 screens/parts.ans:4:3: screen "parts": list rectangle: cell is not a space
 ```
 
