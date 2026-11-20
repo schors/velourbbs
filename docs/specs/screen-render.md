@@ -252,7 +252,8 @@ and warns about layout mistakes that the host does not report.
 - The arguments of a screen are the arguments of the first action that shows the screen:
   the screen set of `[screen] lang` first, then the other screen sets in the order of the codes;
   in each set, the screens in name order, the items in source order, then `select`
-  with the first row of its list.
+  with the first row of its list. The list of a screen with arguments needs the arguments
+  of an action before its `select`.
   A screen with arguments that no action shows is not rendered.
 - It renders each page of the screen, as the cell dump has (section 3.3).
 
@@ -267,6 +268,9 @@ The warnings. Each row of the table is one "kind".
 | Art | `art "<name>.ans" is <n> cells wide, the screen shows <m>` | An art insert is wider than `<m>`, and `<m>` is less than `max` of the width limits. Section 3.1 already warns about art wider than `max`. | The line of the art insert. |
 
 - `<m>` is the smaller of W and `term.cols` ([bbt-format](bbt-format.md), section 6.1).
+- `<n>` of Width is the cells of the row before the cut, up to its last grapheme other than a space.
+  A fixed-width field wider than W has its own width in it. A position with more than one row
+  on a page gives the widest row.
 - The column of each position is 1.
 - The message starts with `at <cols>x<rows>: `. In a fragment, `screen "<name>": `
   comes before it (section 3.1).

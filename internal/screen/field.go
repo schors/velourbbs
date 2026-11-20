@@ -465,6 +465,8 @@ type Env struct {
 	List    *ListValues       // the values of a list screen, else nil
 	Row     *RowValues        // the values of the row of a row text, else nil
 	Session SessionValues
+	// Layout collects the layout warnings of the render (screen-render, section 3.6), else nil.
+	Layout *LayoutLog
 }
 
 // ListValues holds the values of the list.* fields for one list page (list-view, section 6).

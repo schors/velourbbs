@@ -24,8 +24,12 @@ func Render(s *Screen, env *Env, theme map[string]Style, more string) iter.Seq[P
 		}
 		r.more = r.row(moreCells)
 		r.walk(s.Body, r.normal)
+		r.noteWidths()
 		if r.stopped {
 			return
+		}
+		if r.shown && r.layout != nil {
+			r.layout.add(LayoutNote{Kind: LayoutMore, Pos: r.start(), N: r.count})
 		}
 		p := r.page(r.rows)
 		if !r.shown { // the only page (section 6.5)
@@ -52,6 +56,7 @@ func FrameRows(s *Screen, env *Env, theme map[string]Style) int {
 // of file-view, section 3.1; a nil row is empty. The margin cells are spaces in normal.
 func RenderFile(s *Screen, env *Env, theme map[string]Style, file []Row, n int) Page {
 	r := renderFrame(s, env, theme)
+	r.noteWidths()
 	split := min(r.split, len(r.rows))
 	rows := make([]Row, 0, len(r.rows)+len(file))
 	rows = append(rows, r.rows[:split]...)
@@ -59,10 +64,21 @@ func RenderFile(s *Screen, env *Env, theme map[string]Style, file []Row, n int) 
 	for i := range left {
 		left[i] = Cell{" ", r.normal}
 	}
+	widest := 0
 	for _, cells := range file {
-		rows = append(rows, r.row(append(left[:len(left):len(left)], cells...)))
+		cells = append(left[:len(left):len(left)], cells...)
+		widest = max(widest, ink(cells))
+		rows = append(rows, r.row(cells))
 	}
 	rows = append(rows, r.rows[split:]...)
+	if r.layout != nil {
+		if widest > r.area {
+			r.layout.add(LayoutNote{Kind: LayoutWidth, Pos: r.filePos, N: widest, M: r.area})
+		}
+		if n := r.count + len(file); n > r.height {
+			r.layout.add(LayoutNote{Kind: LayoutHeight, Pos: r.start(), N: n, M: r.height})
+		}
+	}
 	p := r.page(rows[:min(len(rows), r.height)])
 	p.Num = n
 	return p
@@ -94,6 +110,10 @@ func ListRows(s *Screen, env *Env, theme map[string]Style, list []ListRow, rows 
 // has the vertical position of section 6.5.
 func RenderList(s *Screen, env *Env, theme map[string]Style, list []ListRow, n, p int) Page {
 	r := renderList(s, env, theme, list, p)
+	r.noteWidths()
+	if r.layout != nil && r.count > r.height {
+		r.layout.add(LayoutNote{Kind: LayoutHeight, Pos: r.start(), N: r.count, M: r.height})
+	}
 	pg := r.page(r.rows)
 	pg.Num = n
 	switch s.VAlign {
@@ -177,6 +197,7 @@ type plan struct {
 func countPass(s *Screen, env *Env, theme map[string]Style, list []ListRow, p int) *plan {
 	r := newRenderer(s, env, theme)
 	r.counting = &plan{values: r.values}
+	r.layout = nil
 	r.list, r.pageSize = list, p
 	r.wrapper = newWrapper(r.w, func([]Cell) { r.pending++ })
 	r.walk(s.Body, r.normal)
@@ -198,12 +219,12 @@ func newRenderer(s *Screen, env *Env, theme map[string]Style) *renderer {
 	r := &renderer{
 		env: env, theme: theme, normal: theme["normal"], w: w, cols: cols,
 		area: min(w, cols), margin: margin, height: env.Term.Rows, fill: s.Fill,
-		values: map[Ref][]Grapheme{},
+		values: map[Ref][]Grapheme{}, file: s.File, widthMax: s.Width.Max, layout: env.Layout,
 	}
 	if s.List != nil {
 		r.rectRows, r.selectable = s.List.Rows, s.List.Select != nil
 	}
-	r.wrapper = newWrapper(w, r.addRow)
+	r.wrapper = newWrapper(w, r.textRow)
 	return r
 }
 
@@ -258,6 +279,15 @@ type renderer struct {
 	stretching bool // the render line has a stretch token: it does not wrap
 	sl         stretchLine
 
+	// The layout warnings (screen-render, section 3.6): nil without Env.Layout and in the count pass.
+	layout   *LayoutLog
+	file     string     // the screen file
+	widthMax int        // max of the width limits
+	filePos  Pos        // the position of the file area
+	lineRows int        // the rows of the wrap of the current source line
+	lineCuts []wideRow  // the rows of the current source line that the cut makes shorter
+	cuts     []wideNote // the rows that the cut makes shorter, in row order
+
 	wrapper // the current source line
 }
 
@@ -294,21 +324,21 @@ func (r *renderer) walk(segs []Seg, cur Style) Style {
 		case ArtInsert:
 			r.art(seg) // the art does not change the style of the text (section 7.3)
 		case FileArea:
-			r.split = r.count
+			r.split, r.filePos = r.count, seg.Pos
 		case ListLine:
 			r.listLine(seg, cur)
 		case LineEnd:
-			r.lineEnd(seg.Block)
+			r.lineEnd(seg)
 		}
 	}
 	return cur
 }
 
 // lineEnd ends the render line. A line with a stretch token gives one row (section 6.6).
-func (r *renderer) lineEnd(block bool) {
+func (r *renderer) lineEnd(e LineEnd) {
 	switch {
 	case r.counting != nil:
-		r.endLine(block)
+		r.endLine(e.Block)
 		n := r.pending
 		if r.reached {
 			n = 1
@@ -317,10 +347,21 @@ func (r *renderer) lineEnd(block bool) {
 		r.pending, r.reached = 0, false
 		r.countRows(n)
 	case r.stretching:
-		r.addRow(r.sl.row(r.w))
+		cells := r.sl.row(r.w)
+		r.cut(r.count, r.sl.ink(cells, r.w))
+		r.addRow(cells)
 		r.sl.reset()
 	default:
-		r.endLine(block)
+		r.endLine(e.Block)
+	}
+	if r.layout != nil {
+		if r.lineRows > 1 {
+			r.layout.add(LayoutNote{Kind: LayoutWrap, Pos: e.Pos, N: r.lineRows})
+		}
+		for _, c := range r.lineCuts {
+			r.cuts = append(r.cuts, wideNote{e.Pos, c})
+		}
+		r.lineRows, r.lineCuts = 0, r.lineCuts[:0]
 	}
 	r.line++
 	r.startLine()
@@ -369,6 +410,7 @@ func (r *renderer) countRows(n int) {
 type stretchLine struct {
 	cells []Cell
 	width int // the cells of the row without its stretch tokens
+	full  int // the cells of the row up to its last grapheme that is not a space, without its stretch tokens
 	toks  []stretchTok
 	n     int // the stretch tokens of the row
 }
@@ -382,9 +424,35 @@ type stretchTok struct {
 // add adds the grapheme g in style to the row of the width w.
 func (l *stretchLine) add(g Grapheme, style Style, w int) {
 	l.width += g.Width
+	if g.Text != " " {
+		l.full = l.width
+	}
 	if len(l.cells) <= w {
 		l.cells = appendCell(l.cells, g, style)
 	}
+}
+
+// field adds a fixed-width field to the row of the width w: the graphemes gs of the cut field
+// and the cells n of the field before the cut, up to its last grapheme that is not a space.
+// The field before the cut is wider than gs.
+func (l *stretchLine) field(gs []Grapheme, n, cells int, style Style, w int) {
+	start := l.width
+	for _, g := range gs {
+		l.add(g, style, w)
+	}
+	l.width = start + cells
+	if n > 0 {
+		l.full = start + n
+	}
+}
+
+// ink gives the cells of the row before the cut, up to its last grapheme that is not a space.
+// cells is the row of the width w. When the row is wider than w, the stretch tokens have 0 cells.
+func (l *stretchLine) ink(cells []Cell, w int) int {
+	if l.width > w {
+		return l.full
+	}
+	return ink(cells)
 }
 
 // stretch adds a stretch token with the fill g in style to the row of the width w.
@@ -418,7 +486,7 @@ func (l *stretchLine) row(w int) []Cell {
 
 // reset empties the row.
 func (l *stretchLine) reset() {
-	l.cells, l.width, l.toks, l.n = l.cells[:0], 0, l.toks[:0], 0
+	l.cells, l.width, l.full, l.toks, l.n = l.cells[:0], 0, 0, l.toks[:0], 0
 }
 
 // value gives the graphemes of the field r, once for each render.
@@ -453,7 +521,11 @@ func (r *renderer) listLine(l ListLine, cur Style) {
 		env := *r.env
 		env.Row = &RowValues{Num: n + 1, Selected: n == r.env.List.Cursor, Row: r.list[n]}
 		r.rowText(l.Row, cur, &env, &row)
-		r.addRow(row.row(r.w))
+		cells := row.row(r.w)
+		if n := row.ink(cells, r.w); r.layout != nil && n > r.area {
+			r.cuts = append(r.cuts, wideNote{l.Pos, wideRow{r.count, n}})
+		}
+		r.addRow(cells)
 		row.reset()
 	}
 }
@@ -462,7 +534,7 @@ func (r *renderer) listLine(l ListLine, cur Style) {
 // to the row l. It stops after W cells. It gives the style after them.
 func (r *renderer) rowText(segs []Seg, cur Style, env *Env, l *stretchLine) Style {
 	for _, seg := range segs {
-		if len(l.cells) > r.w {
+		if len(l.cells) > r.w && r.layout == nil { // the layout warnings measure the whole row
 			break
 		}
 		switch seg := seg.(type) {
@@ -472,8 +544,13 @@ func (r *renderer) rowText(segs []Seg, cur Style, env *Env, l *stretchLine) Styl
 			}
 		case Field:
 			gs := r.fieldText(seg.Ref, env)
+			if seg.Width > r.w {
+				full := FitValue(gs, seg.Width, seg.Right)
+				l.field(FitValue(gs, r.w, seg.Right), inkGraphemes(full), seg.Width, cur, r.w)
+				continue
+			}
 			if seg.Width > 0 {
-				gs = FitValue(gs, min(seg.Width, r.w), seg.Right)
+				gs = FitValue(gs, seg.Width, seg.Right)
 			}
 			for _, g := range gs {
 				l.add(g, cur, r.w)
@@ -512,7 +589,21 @@ func (r *renderer) field(f Field, style Style) {
 		r.text(gs, style)
 		return
 	}
-	for _, g := range FitValue(gs, min(f.Width, r.w), f.Right) {
+	cut := FitValue(gs, min(f.Width, r.w), f.Right)
+	if f.Width > r.w { // the field is one word of W cells: its row is the field (section 6.3)
+		n := inkGraphemes(FitValue(gs, f.Width, f.Right))
+		if r.stretching {
+			r.sl.field(cut, n, f.Width, style, r.w)
+			return
+		}
+		// The field starts a new row after other cells (section 6.3).
+		row := r.count
+		if r.col > 0 {
+			row++
+		}
+		r.cut(row, n)
+	}
+	for _, g := range cut {
 		if r.stretching {
 			r.sl.add(g, style, r.w)
 		} else {
@@ -527,6 +618,9 @@ func (r *renderer) art(a ArtInsert) {
 	if r.counting != nil {
 		r.countRows(len(a.Art.Rows))
 		return
+	}
+	if r.layout != nil && a.Art.Width > r.area && r.area < r.widthMax {
+		r.layout.add(LayoutNote{Kind: LayoutArt, Pos: a.Pos, N: a.Art.Width, M: r.area, Art: a.Name})
 	}
 	ls := a.Art.List
 	if r.env.List == nil {
@@ -647,6 +741,64 @@ func (r *renderer) addRow(cells []Cell) {
 		return
 	}
 	r.rows = r.rows[:copy(r.rows, r.rows[h:])]
+}
+
+// textRow adds a row of the wrap of a text line. It counts the row for the layout warnings.
+func (r *renderer) textRow(cells []Cell) {
+	if r.layout != nil {
+		r.lineRows++
+		r.cut(r.count, ink(cells))
+	}
+	r.addRow(cells)
+}
+
+// wideRow is the row number row, from 0, of a render, and its cells n before the cut,
+// up to its last grapheme that is not a space.
+type wideRow struct {
+	row, n int
+}
+
+// wideNote is a wideRow at the position pos.
+type wideNote struct {
+	pos Pos
+	wideRow
+}
+
+// cut adds the row number row with n cells to the current source line when the cut makes it shorter.
+func (r *renderer) cut(row, n int) {
+	if r.layout != nil && n > r.area {
+		r.lineCuts = append(r.lineCuts, wideRow{row, n})
+	}
+}
+
+// noteWidths adds the warnings Width of the render: for each position, the widest row
+// of the first page where the cut makes a row shorter (screen-render, section 3.6).
+// A render with a More row has pages of term.rows - 1 rows; each other render is one page.
+func (r *renderer) noteWidths() {
+	type key struct {
+		pos  Pos
+		page int
+	}
+	var order []key
+	widest := map[key]int{}
+	for _, c := range r.cuts {
+		k := key{c.pos, 0}
+		if r.shown {
+			k.page = c.row / (r.height - 1)
+		}
+		if _, ok := widest[k]; !ok {
+			order = append(order, k)
+		}
+		widest[k] = max(widest[k], c.n)
+	}
+	for _, k := range order { // the rows are in order, so the first page of a position comes first
+		r.layout.add(LayoutNote{Kind: LayoutWidth, Pos: k.pos, N: widest[k], M: r.area})
+	}
+}
+
+// start gives the position of the first line of the screen file.
+func (r *renderer) start() Pos {
+	return Pos{File: r.file, Line: 1, Col: 1}
 }
 
 // page gives the next page with rows.

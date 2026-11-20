@@ -36,6 +36,36 @@ func (sd *SetDiags) Add(lang string, ds screen.Diags) {
 // The sets of a file in screens/<code>/ or content/<code>/ are the set of <code>;
 // the sets of each other file are all sets. With one language, there is no suffix.
 func (sd *SetDiags) Diags() screen.Diags {
+	files := map[string]*screen.FileDiags{}
+	for _, d := range sd.merge() {
+		fd, ok := files[d.File]
+		if !ok {
+			fd = &screen.FileDiags{File: d.File}
+			files[d.File] = fd
+		}
+		if d.Warning {
+			fd.Warnf(d.Row, d.Col, "%s", d.Msg)
+		} else {
+			fd.Errorf(d.Row, d.Col, "%s", d.Msg)
+		}
+	}
+	var out screen.Diags
+	for _, fd := range files {
+		out = append(out, fd.Diags...)
+	}
+	out.Sort()
+	return out
+}
+
+// All gives the diagnostics as Diags does, without the limit.
+func (sd *SetDiags) All() screen.Diags {
+	out := sd.merge()
+	out.Sort()
+	return out
+}
+
+// merge gives the diagnostics of all sets, then the merged diagnostics of each set, in the order they came.
+func (sd *SetDiags) merge() screen.Diags {
 	var order []screen.Diag
 	found := map[screen.Diag][]string{}
 	for _, lang := range sd.langs {
@@ -48,40 +78,20 @@ func (sd *SetDiags) Diags() screen.Diags {
 			}
 		}
 	}
-	files := map[string]*screen.FileDiags{}
-	add := func(d screen.Diag) {
-		fd, ok := files[d.File]
-		if !ok {
-			fd = &screen.FileDiags{File: d.File}
-			files[d.File] = fd
-		}
-		if d.Warning {
-			fd.Warnf(d.Row, d.Col, "%s", d.Msg)
-		} else {
-			fd.Errorf(d.Row, d.Col, "%s", d.Msg)
-		}
-	}
-	for _, d := range sd.all {
-		add(d)
-	}
+	out := slices.Clone(sd.all)
 	for _, d := range order {
 		in := found[d]
 		own := sd.fileLangs(d.File)
 		if len(sd.langs) == 1 || !slices.ContainsFunc(own, func(l string) bool { return !slices.Contains(in, l) }) {
-			add(d)
+			out = append(out, d)
 			continue
 		}
 		for _, lang := range in {
 			s := d
 			s.Msg = fmt.Sprintf("%s (language %q)", d.Msg, lang)
-			add(s)
+			out = append(out, s)
 		}
 	}
-	var out screen.Diags
-	for _, fd := range files {
-		out = append(out, fd.Diags...)
-	}
-	out.Sort()
 	return out
 }
 

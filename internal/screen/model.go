@@ -271,25 +271,33 @@ type Include struct {
 	Body []Seg
 }
 
-// ArtInsert is an art insert.
+// ArtInsert is an art insert. Name is the art name of the token.
+// Pos is the position of the token, for the layout warnings (screen-render, section 3.6).
 type ArtInsert struct {
-	Art *Art
+	Art  *Art
+	Name string
+	Pos  Pos
 }
 
 // FileArea is the file area {>file} of a file screen (file-view, section 3.1).
-// It is a segment of the body of the screen file, outside the blocks.
-type FileArea struct{}
+// It is a segment of the body of the screen file, outside the blocks. Pos is the position of the token.
+type FileArea struct {
+	Pos Pos
+}
 
 // ListLine is a list line {#each}...{/each} (list-view, section 5). Row is the row text.
-// It ends its source line: no LineEnd follows it.
+// It ends its source line: no LineEnd follows it. Pos is the position of {#each}.
 type ListLine struct {
 	Row []Seg
+	Pos Pos
 }
 
 // LineEnd ends a source line. Block is true when the line has a block token:
 // such a line gives no row when it has only spaces after the evaluation (section 6.2).
+// Pos is the start of the source line.
 type LineEnd struct {
 	Block bool
+	Pos   Pos
 }
 
 func (Text) seg()      {}

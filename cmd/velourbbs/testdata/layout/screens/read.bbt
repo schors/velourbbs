@@ -1,0 +1,8 @@
++++
+file = "{arg.file}"
+[[item]]
+key = "ESC"
+do = "back"
++++
+Read
+{>file}

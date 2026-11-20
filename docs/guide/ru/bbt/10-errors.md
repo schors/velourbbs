@@ -137,6 +137,36 @@ screens/size.ans:1:7: token "{w}" changes the foreground: 11 at col 7, 14 at col
 У символов токена два цвета: 11 в столбце 7 и 14 в столбце 9.
 В редакторе арта нарисуй весь токен одним цветом. Потом снова переведи арт.
 
+## Раскладка при размере терминала
+
+`velourbbs check --size <cols>x<rows>` отрисовывает каждый экран при этом размере и предупреждает об ошибках раскладки.
+Укажи `--size` для каждого размера терминала, который ты ждёшь:
+
+```
+velourbbs check --size 80x24 --size 132x43
+```
+
+При этих размерах «Лампа» не даёт предупреждений. У её экранов `width = [80, 80]`,
+поэтому терминал в 40 столбцов обрезает их строки:
+
+```
+screens/about.bbt:10:1: warning: at 40x24: the row is 46 cells wide, the screen shows 40
+screens/_head.bbt:2:1: warning: screen "main": at 40x24: the row is 78 cells wide, the screen shows 40
+```
+
+Предупреждения и их исправления:
+
+| Предупреждение | Проблема | Исправление |
+|---|---|---|
+| `the line wraps to 2 rows` | Строка текста шире экрана. | Сократи строку. |
+| `31 rows, the screen gets a More row` | На экране больше строк, чем в терминале. | Убери строки или раздели экран. |
+| `25 rows, the rows after 24 are cut` | Экран файла или экран списка не помещается в терминал. | Убери строки над или под областью файла или списком. |
+| `the row is 43 cells wide, the screen shows 40` | BBS обрезает строку. | Сократи строку или уменьши `min` в `width`. |
+| `art "logo.ans" is 100 cells wide, the screen shows 80` | BBS обрезает арт. | Покажи арт меньше на маленьком терминале (задача 9). |
+
+- Предупреждение во фрагменте начинается с экрана, который его включает: `screen "main": `.
+- Предупреждение не останавливает BBS.
+
 ## Результат
 
 1. В строке 10 файла `screens/about.bbt` «Лампы» поставь `{!titel}` перед `«Лампа»`.
@@ -148,7 +178,7 @@ screens/about.bbt:10:8: unknown style "titel"
 
 3. Удали `{!titel}`. `velourbbs check` ничего не выводит.
 
-Полные правила: [screen-render](../../../specs/screen-render.md), раздел 3.1,
+Полные правила: [screen-render](../../../specs/screen-render.md), разделы 3.1 и 3.6,
 [menu-nav](../../../specs/menu-nav.md), раздел 6,
 [file-view](../../../specs/file-view.md), раздел 7,
 и [list-view](../../../specs/list-view.md), раздел 10.

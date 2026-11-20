@@ -1,0 +1,17 @@
++++
+[[item]]
+key = "1"
+do = "gosub parts"
+[[item]]
+key = "2"
+do = "gosub tall"
+[[item]]
+key = "G"
+do = "logoff"
++++
+{>_head}
+Main menu: a text line that wraps at forty columns of the screen.
+{#if session.lang == "ru"}Строка только в наборе ru, она длиннее сорока колонок.{/if}
+{>logo.ans}
+{bbs.name                                              }
+1 Parts  2 Tall  G Bye
