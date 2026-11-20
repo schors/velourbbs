@@ -103,7 +103,8 @@ select = { do = "gosub reader", args = { file = "{row.path}" } }
 ```
 
 - `do` is an action, as the `do` of an item (task 4).
-- A value of `args` is a text or exactly one field `{row.<field>}`.
+- A value of `args` is a text, exactly one field `{row.<field>}`
+  or exactly one field `{arg.<name>}` (section "A list with an argument").
   Enter puts the value of the selected row into the argument.
   Here `{row.path}` gives the screen `reader` of task 7 the file of the note.
 - The BBS loads the file of each row for `reader` at the start.
@@ -292,6 +293,25 @@ args = { dir = "log" }
 
 - The BBS reads the rows of each value of `dir` that a `goto` or a `gosub` gives.
 - `velourbbs preview notes --set arg.dir=log` shows the rows of this value.
+
+A screen can pass its argument on to the next screen. A value of `args` of an item
+or of `select` can be exactly one field `{arg.<name>}`. Here `notes` gives its `dir`
+and the file of the row to the screen `note`:
+
+```
+select = { do = "gosub note", args = { dir = "{arg.dir}", file = "{row.path}" } }
+```
+
+- `{arg.dir}` gives the value of the argument `dir` of the current screen.
+  After the item `1`, `note` gets `dir = "log"`.
+  The name `dir` is an argument of `notes`, as in `data`.
+- A value can pass through more than one screen. The BBS follows each `goto` and `gosub`
+  and loads the files and the rows of each value at the start.
+- An error of a value is an error at the text that gives it, also after other screens.
+  For example, `velourbbs check` reports a missing directory at `dir = "log"` of the item `1`.
+- In `args`, each other field is an error: an alias, a field with a width.
+
+Full rules: [bbt-format](../../../specs/bbt-format.md), section 8.5.
 
 ## Sample data
 

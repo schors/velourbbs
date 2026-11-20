@@ -121,6 +121,10 @@ func (l *loader) screen(u *unit) {
 		if it.When != nil {
 			u.addArgs(it.When.Args()...)
 		}
+		u.addArgs(slices.Collect(maps.Values(it.Do.ArgRefs))...)
+	}
+	if ls := u.s.List; ls != nil && ls.Select != nil {
+		u.addArgs(slices.Collect(maps.Values(ls.Select.Do.ArgRefs))...)
 	}
 	u.s.Args = slices.Sorted(maps.Keys(u.args))
 	u.done = !u.f.skip

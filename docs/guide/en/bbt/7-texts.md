@@ -110,7 +110,8 @@ args = { file = "lamp.md" }
 - The screen `reader` gets the argument `file` with the value `lamp.md`.
   The field `{arg.file}` gives this value.
 - An argument name has lower case Latin letters, digits and `_`, and starts with a letter.
-  A value cannot have `{` or a control character.
+  A text value cannot have `{` or a control character.
+  A value can also pass an argument of the current screen on (task 8).
 - A `gosub` or a `goto` gives exactly the arguments that its screen uses.
   A missing argument or another argument is an error.
 

@@ -92,6 +92,7 @@ func TestNewAlias(t *testing.T) {
 		{name: "meta", path: "term.cols", err: `alias "meta" is a reserved word`},
 		{name: "session", path: "term.cols", err: `alias "session" is a reserved word`},
 		{name: "bbs", path: "term.cols", err: `alias "bbs" is a reserved word`},
+		{name: "in", path: "term.cols", err: `alias "in" is a reserved word`}, // the value token {in}
 		{name: "s", path: "bbs.sessions"},
 		{name: "f", path: "arg.file"},
 		{name: "p", path: "file.page"},

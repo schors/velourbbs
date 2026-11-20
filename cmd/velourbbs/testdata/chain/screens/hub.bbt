@@ -1,0 +1,11 @@
++++
+[[item]]
+key = "S"
+do = "gosub side"
+args = { dir = "{arg.dir}", file = "{arg.file}" }
+[[item]]
+key = "ESC"
+do = "back"
++++
+Hub: {arg.dir} {arg.file}
+[S] Side  [Esc] Back

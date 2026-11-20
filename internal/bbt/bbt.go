@@ -17,7 +17,6 @@ import (
 	"github.com/schors/velourbbs/internal/content"
 	"github.com/schors/velourbbs/internal/provider"
 	"github.com/schors/velourbbs/internal/screen"
-	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
 // MaxBodyLines is the line limit of the body of a screen after includes (section 9).
@@ -60,7 +59,7 @@ func Load(fsys fs.FS, st Settings) (Sets, screen.Diags) {
 		l.load(used)
 		loaders = append(loaders, l)
 	}
-	targetFiles(loaders)
+	loadValues(fsys, loaders, st.Langs)
 	for _, l := range loaders {
 		l.checkItems(l.units)
 		var ds screen.Diags
@@ -327,155 +326,32 @@ func (l *loader) rows(ls *screen.ListSpec, values map[string]string) []error {
 	return errs
 }
 
-// targetFiles loads the content file of each value of an argument of a file screen with {arg.<name>},
-// and the rows of each value of an argument of data of a list screen.
-// The values are the values of the goto and gosub actions to the screen in all screen sets:
-// of the items and of select with the values of each row (list-view, section 8).
-// Each set loads and checks each value with its own search. An error is an error of the item
-// or of select in the set that finds it (file-view, section 7, list-view, section 10,
-// and session-language, section 6).
-// The rows come first: the values of select need them, and a select value cannot give rows.
-// The menu checks report a target screen that does not exist, a missing argument
-// and a {row.<field>} value for an argument of data.
-func targetFiles(loaders []*loader) {
-	var items, selects []target // in the order of the sets, the screens and the items
-	seen := map[string]bool{}
+// loadValues loads the content file of each value of an argument of a file screen with {arg.<name>},
+// and the rows of each value of an argument of data of a list screen (bbt-format, section 8.5).
+// Each set loads and checks each value with its own search. An error is an error at the origin
+// of the value in the set that finds it (session-language, section 6).
+// The rows come first: the {row.<field>} values of select need them.
+// The checks between the screens report a target screen that does not exist, a missing argument
+// and a {row.<field>} value that reaches data.
+func loadValues(fsys fs.FS, loaders []*loader, langs []string) {
+	sets := Sets{}
+	byLang := map[string]*loader{}
 	for _, l := range loaders {
+		byLang[l.lang] = l
+		screens := map[string]*screen.Screen{}
 		for _, u := range l.units {
-			if !u.done {
-				continue
-			}
-			for i, it := range u.s.Items {
-				// A common screen is in more than one set: its item is one value.
-				k := u.f.name + "\x00" + it.Key
-				if it.Do.Op.HasTarget() && !seen[k] {
-					seen[k] = true
-					items = append(items, target{u, fmt.Sprintf("item %q", it.Key), ItemPlace(u.s.Front, i), it.Do})
-				}
-			}
-			// The literal values of select: a {row.<field>} value cannot give rows.
-			if ls := u.s.List; ls != nil && ls.Select != nil && ls.Select.Do.Op.HasTarget() && !seen[u.f.name] {
-				seen[u.f.name] = true
-				selects = append(selects, target{u, "select", u.s.Front.At("select"), ls.Select.Do})
+			if u.done {
+				screens[u.s.Name] = u.s
 			}
 		}
+		sets[l.lang] = screens
 	}
-	for _, l := range loaders {
-		byName := l.byName()
-		for _, v := range slices.Concat(items, selects) {
-			if t := byName[v.a.Screen]; t != nil && t.done && t.s.List != nil {
-				l.targetRows(v, t.s.List)
-			}
-		}
-	}
-	values := slices.Concat(items, selects, selectValues(loaders))
-	for _, l := range loaders {
-		byName := l.byName()
-		for _, v := range values {
-			if t := byName[v.a.Screen]; t != nil && t.done && t.s.FileScreen != nil {
-				l.targetFile(v, t.s.FileScreen)
-			}
-		}
-	}
-}
-
-// target is a goto or a gosub a of the screen u, with the values of its args.
-// label names the item or select in the errors. at is the place of the item or of select.
-type target struct {
-	u     *unit
-	label string
-	at    tomlcheck.Place
-	a     screen.Action
-}
-
-// argError reports the error of the argument name of the target v
-// at the value args.<name> of v (file-view, section 7).
-func (l *loader) argError(v target, name string, err error) {
-	p := v.at.At("args", name).Value()
-	l.fd(v.u.f.name).Errorf(p.Line, p.Col, "%s: args: %s: %v", v.label, name, err)
-}
-
-// byName gives the screens of the set by name.
-func (l *loader) byName() map[string]*unit {
-	m := map[string]*unit{}
-	for _, u := range l.units {
-		m[u.s.Name] = u
-	}
-	return m
-}
-
-// selectValues gives the goto or the gosub of select with {row.<field>} values of each list screen with the values of each row
-// of each list of the screen, in each set. A value with the same arguments appears once for each screen file.
-func selectValues(loaders []*loader) []target {
-	var values []target
-	seen := map[string]bool{}
-	for _, l := range loaders {
-		for _, u := range l.units {
-			ls := u.s.List
-			// A select without {row.<field>} values is one value of the literal values.
-			if !u.done || ls == nil || ls.Select == nil || !ls.Select.Do.Op.HasTarget() || len(ls.Select.Refs) == 0 {
-				continue
-			}
-			for _, key := range slices.Sorted(maps.Keys(ls.Lists)) {
-				for i, r := range ls.Lists[key] {
-					a := ls.Select.Action(r, i+1)
-					k := u.f.name + "\x00" + screen.ListKey(a.Args)
-					if !seen[k] {
-						seen[k] = true
-						values = append(values, target{u, "select", u.s.Front.At("select"), a})
-					}
-				}
-			}
-		}
-	}
-	return values
-}
-
-// targetFile loads and checks the content file of the file screen f for the args of v.
-// A missing argument gives no file: the menu checks report it.
-func (l *loader) targetFile(v target, f *screen.FileSpec) {
-	if f.Arg == "" {
-		return
-	}
-	p, ok := v.a.Args[f.Arg]
-	if !ok {
-		return
-	}
-	c, err := l.content(p)
-	var errs []error
-	if err != nil {
-		errs = []error{err}
-	} else if c != nil {
-		errs = f.Check(p, c)
-	}
-	for _, err := range errs {
-		l.argError(v, f.Arg, err)
-	}
-	if c != nil && len(errs) == 0 {
-		f.Contents[p] = c
-	}
-}
-
-// targetRows reads the rows of the list screen ls for the args of the item v
-// (list-view, section 4). An error of a provider argument with {arg.<name>} is an error
-// of the argument <name> of the item. A missing argument gives no rows: the menu checks report it.
-func (l *loader) targetRows(v target, ls *screen.ListSpec) {
-	if len(ls.ArgRefs) == 0 || ls.From == "" {
-		return
-	}
-	for _, arg := range ls.ArgRefs {
-		if _, ok := v.a.Args[arg]; !ok {
-			return
-		}
-	}
-	for _, err := range l.rows(ls, ls.Values(v.a.Args)) {
-		var ke screen.KeyError
-		if errors.As(err, &ke) && ls.ArgRefs[ke.Key] != "" {
-			l.argError(v, ls.ArgRefs[ke.Key], ke.Err)
-			continue
-		}
-		// An error of a literal value of data.
-		p := v.at.At("args").Value()
-		l.fd(v.u.f.name).Errorf(p.Line, p.Col, "%s: args: %v", v.label, err)
+	content := func(lang, p string) (*screen.Content, error) { return byLang[lang].content(p) }
+	r := Reach(sets, langs, nil)
+	errs := LoadRows(fsys, sets, langs, r, content)
+	errs = append(errs, LoadFiles(sets, langs, r, content)...)
+	for _, e := range errs {
+		p := e.Origin.Pos()
+		byLang[e.Lang].fd(p.File).Errorf(p.Line, p.Col, "%s: args: %s: %v", e.Origin.Label, e.Origin.Arg, e.Err)
 	}
 }

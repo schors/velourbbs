@@ -12,8 +12,8 @@ import (
 )
 
 // Check does the checks of menu-nav, section 6, between files in the screen set of each language:
-// the goto and gosub actions and their args, the screens without items, the start screen
-// and the arguments of goodbye and shutdown. It also checks that each set has the screen names
+// the goto and gosub actions and their args, the values of the args, the screens without items,
+// the start screen and the arguments of goodbye and shutdown. It also checks that each set has the screen names
 // and the arguments of each other set (session-language, section 6). Without an error, it warns
 // about each screen that a user cannot reach (menu-nav, section 6.1).
 // sets is the result of a load without errors. Check merges the diagnostics of the sets with ds
@@ -48,7 +48,7 @@ func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
 					errorf(at.At("do"), "item %q: do: %v", it.Key, err)
 					continue
 				}
-				for _, err := range CheckArgs(Target(sets, lang, it.Do), it.Do.Target(), it.Do.Args) {
+				for _, err := range CheckArgs(Target(sets, lang, it.Do), it.Do.Target(), it.Do.Names()) {
 					errorf(at.At("args"), "item %q: args: %v", it.Key, err)
 				}
 			}
@@ -66,14 +66,16 @@ func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
 	}
 	checkSets(cfg.Langs, sets, sd)
 	if !sd.All().HasErrors() {
+		sd.Add("", checkReach(cfg.Langs, sets))
+	}
+	if !sd.All().HasErrors() {
 		unreachable(cfg, sets, sd)
 	}
 	return sd.Diags()
 }
 
-// checkSelect checks the goto or the gosub of select in a screen of the set lang: its target,
-// its arguments and each {row.<field>} value for an argument that the target uses in data
-// (list-view, section 8). at is the place of select.
+// checkSelect checks the goto or the gosub of select in a screen of the set lang: its target
+// and its arguments (list-view, section 8). at is the place of select.
 func checkSelect(sets bbt.Sets, lang string, sel *screen.Select, at tomlcheck.Place,
 	errorf func(at tomlcheck.Place, format string, args ...any)) {
 	a := sel.Action(nil, 1) // each argument with a value
@@ -84,18 +86,41 @@ func checkSelect(sets bbt.Sets, lang string, sel *screen.Select, at tomlcheck.Pl
 		errorf(at.At("do"), "select: do: %v", err)
 		return
 	}
-	t := Target(sets, lang, a)
-	for _, err := range CheckArgs(t, a.Target(), a.Args) {
+	for _, err := range CheckArgs(Target(sets, lang, a), a.Target(), a.Names()) {
 		errorf(at.At("args"), "select: args: %v", err)
 	}
-	if t.List == nil {
-		return
+}
+
+// checkReach reports each {row.<field>} value that reaches the data of a screen, also through
+// the {arg.<name>} values of other screens (bbt-format, section 8.5). It needs the screens
+// of all sets of langs and their checks without errors.
+func checkReach(langs []string, sets bbt.Sets) screen.Diags {
+	r := bbt.Reach(sets, langs, nil)
+	var ds screen.Diags
+	type key struct {
+		o    bbt.Origin
+		name string
 	}
-	for _, name := range slices.Sorted(maps.Keys(sel.Refs)) {
-		if slices.Contains(slices.Collect(maps.Values(t.List.ArgRefs)), name) {
-			errorf(at.At("args", name), "select: args: %s: screen %q uses the argument in data", name, a.Target())
+	seen := map[key]bool{}
+	for _, lang := range langs {
+		for _, name := range slices.Sorted(maps.Keys(sets[lang])) {
+			ls := sets[lang][name].List
+			if ls == nil {
+				continue
+			}
+			for _, pa := range slices.Sorted(maps.Keys(ls.ArgRefs)) {
+				for _, o := range r[name][ls.ArgRefs[pa]] {
+					if o.Row == "" || seen[key{o, name}] {
+						continue
+					}
+					seen[key{o, name}] = true
+					p := o.Pos()
+					ds.Errorf(p.File, p.Line, p.Col, "%s: args: %s: the value reaches the data of screen %q", o.Label, o.Arg, name)
+				}
+			}
 		}
 	}
+	return ds
 }
 
 // checkSets reports each screen name of a set that is not in the set of each other language,
@@ -127,17 +152,17 @@ func checkSets(langs []string, sets bbt.Sets, sd *bbt.SetDiags) {
 	}
 }
 
-// CheckArgs reports each argument of s that args does not give
-// and each name of args that is not an argument of s (bbt-format, section 8.5).
+// CheckArgs reports each argument of s that the sorted names do not give
+// and each name that is not an argument of s (bbt-format, section 8.5).
 // The errors name s as target: "<name>" or "<code>/<name>" (session-language, section 6).
-func CheckArgs(s *screen.Screen, target string, args map[string]string) []error {
+func CheckArgs(s *screen.Screen, target string, names []string) []error {
 	var errs []error
 	for _, name := range s.Args {
-		if _, ok := args[name]; !ok {
+		if !slices.Contains(names, name) {
 			errs = append(errs, fmt.Errorf("missing argument %q of screen %q", name, target))
 		}
 	}
-	for _, name := range slices.Sorted(maps.Keys(args)) {
+	for _, name := range names {
 		if !slices.Contains(s.Args, name) {
 			errs = append(errs, fmt.Errorf("screen %q has no argument %q", target, name))
 		}

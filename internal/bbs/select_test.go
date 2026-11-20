@@ -39,7 +39,7 @@ func TestSelectFileErrors(t *testing.T) {
 		"screens/c.bbt":    listScreen("select = { do = \"jump\" }"),
 		"screens/d.bbt":    listScreen("select = { do = \"back\", args = { file = \"{row.path}\" } }"),
 		"screens/e.bbt": listScreen("select = { do = \"gosub read\", args = { " +
-			"a = \"{row.path\", b = \"{row.size}\", c = \"{row.selected}\", d = \"{arg.dir}\", X = \"{row.path}\", e = \"x\ty\" } }"),
+			"a = \"{row.path\", b = \"{row.size}\", c = \"{row.selected}\", d = \"{in}\", X = \"{row.path}\", e = \"x\ty\" } }"),
 		"screens/f.bbt": listScreen("select = { do = \"back\" }\n[[item]]\nkey = \"up\"\ndo = \"back\"\n" +
 			"[[item]]\nkey = \"DOWN\"\ndo = \"back\"\n[[item]]\nkey = \"Enter\"\ndo = \"back\""),
 		"content/parts/1.md": "# One\n",
@@ -50,10 +50,10 @@ func TestSelectFileErrors(t *testing.T) {
 		`screens/b.bbt:4:10: select: do is missing`,
 		`screens/c.bbt:4:17: select: do: unknown action "jump"`,
 		`screens/d.bbt:4:32: select: args: only goto and gosub take arguments`,
-		`screens/e.bbt:4:101: select: args: d: invalid token "{arg.dir}", want a value or {row.<field>}`,
-		`screens/e.bbt:4:114: select: args: invalid argument name "X"`,
-		`screens/e.bbt:4:136: select: args: e: value has a control character`,
-		`screens/e.bbt:4:44: select: args: a: invalid token "{row.path", want a value or {row.<field>}`,
+		`screens/e.bbt:4:101: select: args: d: invalid token "{in}", want a value, {arg.<name>} or {row.<field>}`,
+		`screens/e.bbt:4:109: select: args: invalid argument name "X"`,
+		`screens/e.bbt:4:131: select: args: e: value has a control character`,
+		`screens/e.bbt:4:44: select: args: a: invalid token "{row.path", want a value, {arg.<name>} or {row.<field>}`,
 		`screens/e.bbt:4:61: select: args: b: provider "files" has no field "size"`,
 		`screens/e.bbt:4:79: select: args: c: field "row.selected" is valid only in a condition`,
 		`screens/f.bbt:12:7: item "ENTER": key: "ENTER" is a key of select`,
@@ -83,7 +83,7 @@ func TestSelectTargetErrors(t *testing.T) {
 			`screens/sel.bbt:4:38: select: args: screen "read" has no argument "x"`,
 		}},
 		{"data", `select = { do = "gosub sub", args = { dir = "{row.path}" } }`, map[string]string{"screens/sub.bbt": sub},
-			[]string{`screens/sel.bbt:4:45: select: args: dir: screen "sub" uses the argument in data`}},
+			[]string{`screens/sel.bbt:4:45: select: args: dir: the value reaches the data of screen "sub"`}},
 		{"file", `select = { do = "gosub read", args = { file = "{row.title}" } }`, nil, []string{
 			`screens/sel.bbt:4:47: select: args: file: content file "One" does not exist`,
 			`screens/sel.bbt:4:47: select: args: file: content file "Three" does not exist`,

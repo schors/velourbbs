@@ -68,12 +68,28 @@ func screenLayout(m *bbs.Model, s *screen.Screen, term screen.Term, args map[str
 // of [screen] lang, then the other sets in the order of the codes; in each set, the screens
 // in name order, the items in source order, then select with the first row of the list.
 // A list screen with arguments has a list only after an action shows it.
+// A {arg.<name>} value gives the sample value of the argument (bbs.Samples).
+// An action whose {arg.<name>} gives no value does not count.
 func screenArgs(m *bbs.Model) map[string]map[string]string {
 	out := map[string]map[string]string{}
+	samples := bbs.NewSamples(m)
+	var from string // the screen of the action
 	add := func(a screen.Action) {
-		if _, ok := out[a.Screen]; !ok {
-			out[a.Screen] = a.Args
+		if _, ok := out[a.Screen]; ok {
+			return
 		}
+		args := maps.Clone(a.Args)
+		for name, src := range a.ArgRefs {
+			v, ok := samples.Arg(from, src)
+			if !ok {
+				return
+			}
+			if args == nil {
+				args = map[string]string{}
+			}
+			args[name] = v
+		}
+		out[a.Screen] = args
 	}
 	langs := []string{m.Config.Lang}
 	for _, lang := range m.Config.Langs {
@@ -85,6 +101,7 @@ func screenArgs(m *bbs.Model) map[string]map[string]string {
 		set := m.Sets[lang]
 		for _, name := range slices.Sorted(maps.Keys(set)) {
 			s := set[name]
+			from = name
 			for _, it := range s.Items {
 				if it.Do.Op.HasTarget() {
 					add(it.Do)

@@ -1,0 +1,11 @@
++++
+data = { from = "files", args = { dir = "{arg.dir}" } }
+rows = 3
+select = { do = "gosub read", args = { file = "{row.path}" } }
+[[item]]
+key = "ESC"
+do = "back"
++++
+Parts: {arg.dir}
+{#each}{#if row.selected}>{#else} {/if}{row.title}{/each}
+[Esc] Back

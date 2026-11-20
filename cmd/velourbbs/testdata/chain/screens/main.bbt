@@ -1,0 +1,11 @@
++++
+[[item]]
+key = "1"
+do = "gosub hub"
+args = { dir = "docs", file = "intro.md" }
+[[item]]
+key = "G"
+do = "logoff"
++++
+Main
+[1] Hub  [G] Goodbye

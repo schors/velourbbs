@@ -1,0 +1,19 @@
++++
+[[item]]
+key = "R"
+do = "gosub read"
+args = { file = "{arg.file}" }
+[[item]]
+key = "P"
+do = "gosub parts"
+args = { dir = "{arg.dir}" }
+[[item]]
+key = "H"
+do = "goto hub"
+args = { dir = "{arg.dir}", file = "{arg.file}" }
+[[item]]
+key = "ESC"
+do = "back"
++++
+Side: {arg.dir} {arg.file}
+[R] Read  [P] Parts  [H] Hub  [Esc] Back

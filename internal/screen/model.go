@@ -50,7 +50,7 @@ type ListSpec struct {
 }
 
 // Select is the action of a row: the key select of a list screen (list-view, section 8).
-// Do.Args holds the literal values.
+// Do.Args holds the literal values and Do.ArgRefs the values {arg.<name>}.
 type Select struct {
 	Do   Action
 	Refs map[string]string // the row field of each value "{row.<field>}" by argument name
@@ -192,7 +192,37 @@ type Action struct {
 	// Lang is the language code of Lang, and of Goto and Gosub with a code; else ""
 	// (session-language, section 5).
 	Lang string
-	Args map[string]string // the args of Goto and Gosub (section 8.5); nil without args
+	// Args holds the literal values of the args of Goto and Gosub (section 8.5); nil without args.
+	Args map[string]string
+	// ArgRefs holds the <name> of each value {arg.<name>} by argument name; nil without such values.
+	ArgRefs map[string]string
+}
+
+// Names gives the sorted names of the args of a.
+func (a Action) Names() []string {
+	names := slices.Collect(maps.Keys(a.Args))
+	for name := range a.ArgRefs {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	return names
+}
+
+// Resolve gives a with the value of each {arg.<name>} from the arguments args of the current screen
+// (menu-nav, section 4.1).
+func (a Action) Resolve(args map[string]string) Action {
+	if len(a.ArgRefs) == 0 {
+		return a
+	}
+	vals := maps.Clone(a.Args)
+	if vals == nil {
+		vals = map[string]string{}
+	}
+	for name, arg := range a.ArgRefs {
+		vals[name] = args[arg]
+	}
+	a.Args, a.ArgRefs = vals, nil
+	return a
 }
 
 // Op is an action word of do.

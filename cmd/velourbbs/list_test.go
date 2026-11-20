@@ -70,7 +70,7 @@ func TestPreviewList(t *testing.T) {
 // An error of the provider for a --set value is an invalid argument (screen-render, section 3.2).
 func TestPreviewListArg(t *testing.T) {
 	out, errOut, status := runIn(t, "list", "preview", "parts", "--set", "arg.dir=nope")
-	want := "velourbbs preview: data: args: dir: directory \"nope\" does not exist\n"
+	want := "velourbbs preview: arg.dir: directory \"nope\" does not exist\n"
 	if out != "" || errOut != want || status != exitError {
 		t.Errorf("stdout %q, stderr %q, status %d; want stderr %q, status %d", out, errOut, status, want, exitError)
 	}
