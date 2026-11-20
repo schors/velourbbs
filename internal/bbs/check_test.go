@@ -9,6 +9,7 @@ import (
 	"github.com/schors/velourbbs/internal/bbt"
 	"github.com/schors/velourbbs/internal/config"
 	"github.com/schors/velourbbs/internal/screen"
+	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
 // screens makes screens from specs. A spec is a list of items "<KEY> <do>".
@@ -52,7 +53,8 @@ var valid = map[string][]string{
 }
 
 func TestCheck(t *testing.T) {
-	start := config.Config{Start: "main", Lang: "en", Langs: []string{"en"}}
+	// The start screen error has the position of menu.start (menu-nav, section 6).
+	start := config.Config{Start: "main", StartPos: tomlcheck.Pos{Line: 12, Col: 9}, Lang: "en", Langs: []string{"en"}}
 	tests := []struct {
 		name   string
 		change map[string][]string // the screens to add or replace; nil deletes a screen
@@ -79,17 +81,17 @@ func TestCheck(t *testing.T) {
 			`screens/about.bbt:1:1: screen has no items`,
 		}},
 		{name: "no main", change: map[string][]string{"main": nil}, want: []string{
-			`screens/screens.toml:1:1: menu: start: unknown screen "main"`,
+			`screens/screens.toml:12:9: menu: start: unknown screen "main"`,
 			`screens/sysinfo.bbt:2:1: item "ANY": do: unknown screen "main"`,
 		}},
 		{name: "start unknown", start: "mian", want: []string{
-			`screens/screens.toml:1:1: menu: start: unknown screen "mian"`,
+			`screens/screens.toml:12:9: menu: start: unknown screen "mian"`,
 		}},
 		{name: "start without items", start: "goodbye", want: []string{
-			`screens/screens.toml:1:1: menu: start: screen "goodbye" has no items`,
+			`screens/screens.toml:12:9: menu: start: screen "goodbye" has no items`,
 		}},
 		{name: "start shutdown", start: "shutdown", want: []string{
-			`screens/screens.toml:1:1: menu: start: screen "shutdown" has no items`,
+			`screens/screens.toml:12:9: menu: start: screen "shutdown" has no items`,
 		}},
 		{name: "start valid", start: "sysinfo"},
 	}
@@ -180,8 +182,9 @@ func TestCheckArgs(t *testing.T) {
 		t.Errorf("got\n%s\nwant\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 
-	got = messages(Check(config.Config{Start: "view", Lang: "en", Langs: []string{"en"}}, bbt.Sets{"en": ss}, nil))
-	if !slices.Contains(got, `screens/screens.toml:1:1: menu: start: screen "view" has arguments`) {
+	got = messages(Check(config.Config{Start: "view", StartPos: tomlcheck.Pos{Line: 12, Col: 9}, Lang: "en", Langs: []string{"en"}},
+		bbt.Sets{"en": ss}, nil))
+	if !slices.Contains(got, `screens/screens.toml:12:9: menu: start: screen "view" has arguments`) {
 		t.Errorf("start view: got\n%s", strings.Join(got, "\n"))
 	}
 }

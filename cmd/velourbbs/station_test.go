@@ -80,7 +80,7 @@ func TestStation(t *testing.T) {
 	}
 }
 
-// A syntax error in screens/screens.toml of the home BBS gives one error:
+// An error in screens/screens.toml of the home BBS gives one error at the position of the value:
 // the check stops before the screens (screen-render, section 3.1).
 func TestStationSettingsError(t *testing.T) {
 	base := newStationFS()
@@ -88,16 +88,22 @@ func TestStationSettingsError(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	bad := strings.Replace(string(data), `gold   = "#b8902f"`, `gold   = #b8902f`, 1)
-	if bad == string(data) {
-		t.Fatal(`screens/screens.toml has no line gold = "#b8902f"`)
+	tests := []struct{ line, want string }{
+		{`gold   = #b8902f`, "screens/screens.toml:22:10: unexpected character U+0023 '#' at start of value\n"},
+		{`gold   = "#b8902g"`, `screens/screens.toml:22:10: theme.default.gold: invalid style "#b8902g": invalid colour "#b8902g"` + "\n"},
 	}
-	fsys := overlay{base, fstest.MapFS{"screens/screens.toml": {Data: []byte(bad)}}}
-	want := "screens/screens.toml:22:10: unexpected character U+0023 '#' at start of value\n"
-	var out, errOut bytes.Buffer
-	status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut)
-	if out.Len() != 0 || errOut.String() != want || status != exitError {
-		t.Errorf("stdout %q, stderr:\n%s\nstatus %d; want stderr:\n%s\nstatus 1", out.String(), errOut.String(), status, want)
+	for _, tt := range tests {
+		bad := strings.Replace(string(data), `gold   = "#b8902f"`, tt.line, 1)
+		if bad == string(data) {
+			t.Fatal(`screens/screens.toml has no line gold = "#b8902f"`)
+		}
+		fsys := overlay{base, fstest.MapFS{"screens/screens.toml": {Data: []byte(bad)}}}
+		var out, errOut bytes.Buffer
+		status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut)
+		if out.Len() != 0 || errOut.String() != tt.want || status != exitError {
+			t.Errorf("%s: stdout %q, stderr:\n%s\nstatus %d; want stderr:\n%s\nstatus 1",
+				tt.line, out.String(), errOut.String(), status, tt.want)
+		}
 	}
 }
 

@@ -28,7 +28,7 @@ func TestStretch(t *testing.T) {
 // so each case is one run.
 func TestCheckStretch(t *testing.T) {
 	tests := []struct{ config, want string }{
-		{"[screen]\ngutter = 101\n", `screens/screens.toml:1:1: screen.gutter: 101, must be from 0 to 100
+		{"[screen]\ngutter = 101\n", `screens/screens.toml:2:10: screen.gutter: 101, must be from 0 to 100
 `},
 		{"", `screens/about.bbt:1:3: invalid stretch token "{~..}", want {~} or {~<c>} with one character of width 1
 screens/main.bbt:2:1: gutter: -1, must be from 0 to 100

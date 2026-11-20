@@ -6,7 +6,7 @@
 //   - A key matches a field also without case, and DisallowUnknownFields does not stop it.
 //   - A table header [x] fills a slice of structs as one element.
 //
-// So a decode into map[string]any finds them. It gives no positions.
+// So a decode into map[string]any finds them, and Root gives their positions.
 // The same decode finds the syntax errors before the strict decode.
 package tomlcheck
 
@@ -65,17 +65,19 @@ func lineStart(data []byte, line int) (int, bool) {
 // Decode gives the first of these: an error of the size, of the syntax or of a type;
 // all unknown keys and tables in place of an array of tables.
 // The message of a type error starts with the dotted key path.
-func Decode(data []byte, shape any) []Error {
+// Without an error of the size or of the syntax, it also gives the root of data (Root).
+func Decode(data []byte, shape any) (Place, []Error) {
 	m, errs := Map(data)
 	if errs != nil {
-		return errs
+		return Place{}, errs
 	}
+	root := Root(data)
 	t := reflect.TypeOf(shape)
 	err := toml.NewDecoder(bytes.NewReader(data)).DisallowUnknownFields().Decode(shape)
 	var unknown *toml.StrictMissingError
 	if err != nil && !errors.As(err, &unknown) {
 		if e, ok := typeError(err, t, m); ok {
-			return []Error{e}
+			return root, []Error{e}
 		}
 		// The key of the error matches a field only without case: exact reports it.
 	}
@@ -85,8 +87,8 @@ func Decode(data []byte, shape any) []Error {
 			errs = append(errs, Error{line, col, fmt.Sprintf("unknown key %q", strings.Join(e.Key(), "."))})
 		}
 	}
-	exact(t, m, nil, &errs)
-	return errs
+	exact(t, m, root, nil, &errs)
+	return root, errs
 }
 
 // Map decodes data into a map. It gives the error of the size or of the syntax.
@@ -103,15 +105,20 @@ func Map(data []byte) (map[string]any, []Error) {
 
 // exact reports each key of the table m that matches a field of the struct type t
 // only without case, and each table in place of an array of tables.
+// at is the place of m. Each error has the position of the key name.
 // go-toml reports the other unknown keys.
-func exact(t reflect.Type, m map[string]any, path []string, errs *[]Error) {
+func exact(t reflect.Type, m map[string]any, at Place, path []string, errs *[]Error) {
 	t = deref(t)
+	errorf := func(at Place, format string, args ...any) {
+		pos := at.Key()
+		*errs = append(*errs, Error{pos.Line, pos.Col, fmt.Sprintf(format, args...)})
+	}
 	for _, k := range slices.Sorted(maps.Keys(m)) {
 		p := append(slices.Clip(path), k)
 		f, ok := field(t, k)
 		if !ok {
 			if foldField(t, k) {
-				*errs = append(*errs, Error{1, 1, fmt.Sprintf("unknown key %q", strings.Join(p, "."))})
+				errorf(at.At(k), "unknown key %q", strings.Join(p, "."))
 			}
 			continue
 		}
@@ -120,15 +127,15 @@ func exact(t reflect.Type, m map[string]any, path []string, errs *[]Error) {
 		case map[string]any:
 			switch {
 			case ft.Kind() == reflect.Struct:
-				exact(ft, v, p, errs)
+				exact(ft, v, at.At(k), p, errs)
 			case isTables(ft):
-				*errs = append(*errs, Error{1, 1, strings.Join(p, ".") + ": must be an array of tables"})
+				errorf(at.At(k), "%s: must be an array of tables", strings.Join(p, "."))
 			}
 		case []any:
 			if isTables(ft) {
-				for _, el := range v {
+				for i, el := range v {
 					if el, ok := el.(map[string]any); ok {
-						exact(ft.Elem(), el, p, errs)
+						exact(ft.Elem(), el, at.At(k).Elem(i), p, errs)
 					}
 				}
 			}

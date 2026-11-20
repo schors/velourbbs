@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"maps"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/schors/velourbbs/internal/screen"
@@ -72,31 +73,32 @@ type screensDoc struct {
 func parseScreens(data []byte) (Config, screen.Diags) {
 	cfg := Config{
 		Layout: defaultLayout, Lang: defaultLang, Time: defaultTime, Zone: time.Local, Fields: screen.Fields{}, Start: "main",
-		ThemeChoice: ThemeDark, Telnet: defaultTelnet, Limits: defaultLimits, Name: defaultName,
+		StartPos: tomlcheck.Pos{Line: 1, Col: 1}, ThemeChoice: ThemeDark, Telnet: defaultTelnet, Limits: defaultLimits,
+		Name: defaultName,
 	}
 	fd := screen.FileDiags{File: ScreensFile}
 	var d screensDoc
-	errs := tomlcheck.Decode(bytes.TrimPrefix(data, screen.BOM), &d)
+	root, errs := tomlcheck.Decode(bytes.TrimPrefix(data, screen.BOM), &d)
 	for _, e := range errs {
 		fd.Errorf(e.Line, e.Col, "%s", e.Msg)
 	}
 	if len(errs) > 0 {
-		theme(&cfg, screensDoc{}, nil)
-		langs(&cfg, screensDoc{}, nil)
+		theme(&cfg, screensDoc{}, root, nil)
+		langs(&cfg, screensDoc{}, root, nil)
 		return cfg, fd.Diags
 	}
-	// Each other error has the position 1:1 (screen-render, section 3.1).
-	errorf := func(format string, args ...any) { fd.Errorf(1, 1, format, args...) }
+	errorf := func(at tomlcheck.Pos, format string, args ...any) { fd.Errorf(at.Line, at.Col, format, args...) }
+	scr := root.At("screen")
 	cfg.Layout = screen.ParseLayoutKeys(d.Screen.Width, d.Screen.Align, d.Screen.VAlign, d.Screen.Fill, d.Screen.Gutter,
-		func(key string, err error) { errorf("screen.%s: %v", key, err) }).Over(defaultLayout)
-	cfg.More = more(d.Screen.More, "screen.more", errorf)
+		func(key string, err error) { errorf(scr.At(key).Value(), "screen.%s: %v", key, err) }).Over(defaultLayout)
+	cfg.More = more(d.Screen.More, scr.At("more"), "screen.more", errorf)
 	if p := d.Screen.Time; p != nil {
 		cfg.Time = *p
 	}
 	if p := d.Screen.Zone; p != nil {
 		// LoadLocation gives UTC for an empty name: the key wants a name.
 		if loc, err := time.LoadLocation(*p); err != nil || *p == "" {
-			errorf("screen.zone: unknown time zone %q", *p)
+			errorf(scr.At("zone").Value(), "screen.zone: unknown time zone %q", *p)
 		} else {
 			cfg.Zone = loc
 		}
@@ -106,29 +108,35 @@ func parseScreens(data []byte) (Config, screen.Diags) {
 		case ThemeDark, ThemeLight, ThemeAuto:
 			cfg.ThemeChoice = c
 		default:
-			errorf("screen.theme: invalid value %q, want \"dark\", \"light\" or \"auto\"", *p)
+			errorf(scr.At("theme").Value(), "screen.theme: invalid value %q, want \"dark\", \"light\" or \"auto\"", *p)
 		}
 	}
 	if p := d.Screen.Lang; p != nil {
 		if !screen.IsLang(*p) {
-			errorf("screen.lang: invalid language code %q", *p)
+			errorf(scr.At("lang").Value(), "screen.lang: invalid language code %q", *p)
 		} else {
 			cfg.Lang = *p
 		}
 	}
-	langs(&cfg, d, errorf)
+	langs(&cfg, d, root, errorf)
+	cfg.StartPos = root.At("menu", "start").Value()
 	if p := d.Menu.Start; p != nil {
 		if !screen.IsName(*p) {
-			errorf("menu.start: invalid screen name %q", *p)
+			errorf(cfg.StartPos, "menu.start: invalid screen name %q", *p)
 		} else {
 			cfg.Start = *p
 		}
 	}
-	theme(&cfg, d, errorf)
+	theme(&cfg, d, root, errorf)
 	for _, name := range slices.Sorted(maps.Keys(d.Fields)) {
+		at := root.At("fields", name)
+		if err := screen.CheckAlias(name); err != nil {
+			errorf(at.Key(), "fields: %v", err)
+			continue
+		}
 		ref, err := screen.NewAlias(name, d.Fields[name])
 		if err != nil {
-			errorf("fields: %v", err)
+			errorf(at.Value(), "fields: %v", err)
 			continue
 		}
 		cfg.Fields[name] = ref
@@ -136,14 +144,17 @@ func parseScreens(data []byte) (Config, screen.Diags) {
 	return cfg, fd.Diags
 }
 
+// errorFunc reports an error at a position of the document.
+type errorFunc func(at tomlcheck.Pos, format string, args ...any)
+
 // more checks the key more at the TOML path key: its text has the rules of a text (screens-toml, section 3.1).
-// It gives the text, else nil without the key or after an error.
-func more(p *string, key string, errorf func(format string, args ...any)) *string {
+// at is the place of the key. It gives the text, else nil without the key or after an error.
+func more(p *string, at tomlcheck.Place, key string, errorf errorFunc) *string {
 	if p == nil {
 		return nil
 	}
 	if err := screen.CheckText(*p); err != nil {
-		errorf("%s: %v", key, err)
+		errorf(at.Value(), "%s: %v", key, err)
 		return nil
 	}
 	return p
@@ -151,16 +162,17 @@ func more(p *string, key string, errorf func(format string, args ...any)) *strin
 
 // langs sets the tables [lang.<code>] and the languages of the BBS: [screen] lang
 // and the codes of the tables, sorted (screens-toml, section 3.5). A doc without tables
-// gives no errors, so errorf can be nil.
-func langs(cfg *Config, d screensDoc, errorf func(format string, args ...any)) {
+// gives no errors, so errorf can be nil. root is the root of the document.
+func langs(cfg *Config, d screensDoc, root tomlcheck.Place, errorf errorFunc) {
 	cfg.LangMore = map[string]*string{}
 	codes := map[string]bool{cfg.Lang: true}
 	for _, code := range slices.Sorted(maps.Keys(d.Lang)) {
+		at := root.At("lang", code)
 		if !screen.IsLang(code) {
-			errorf("lang: invalid language code %q", code)
+			errorf(at.Key(), "lang: invalid language code %q", code)
 			continue
 		}
-		cfg.LangMore[code] = more(d.Lang[code].More, "lang."+code+".more", errorf)
+		cfg.LangMore[code] = more(d.Lang[code].More, at.At("more"), "lang."+code+".more", errorf)
 		codes[code] = true
 	}
 	cfg.Langs = slices.Sorted(maps.Keys(codes))
@@ -168,7 +180,8 @@ func langs(cfg *Config, d screensDoc, errorf func(format string, args ...any)) {
 
 // theme sets the base theme, and the dark theme and the light theme of each term.colors of d
 // (screens-toml, section 3.2). A doc without themes gives no errors, so errorf can be nil.
-func theme(cfg *Config, d screensDoc, errorf func(format string, args ...any)) {
+// root is the root of the document.
+func theme(cfg *Config, d screensDoc, root tomlcheck.Place, errorf errorFunc) {
 	base := baseSpecs()
 	// names is the names of the theme. A name with an invalid style stays a name:
 	// one key gives one error.
@@ -176,12 +189,13 @@ func theme(cfg *Config, d screensDoc, errorf func(format string, args ...any)) {
 	for name := range base {
 		names[name] = true
 	}
-	styles(d.Theme.Default, "default", names, false, base, errorf)
+	th := root.At("theme")
+	styles(d.Theme.Default, th, "default", names, false, base, errorf)
 	cfg.Theme = resolve(base, defaultNormal)
 	// table parses a depth theme or a light table once: one key gives one error.
 	table := func(t map[string]string, key string) map[string]screen.StyleSpec {
 		specs := map[string]screen.StyleSpec{}
-		styles(t, key, names, true, specs, errorf)
+		styles(t, th, key, names, true, specs, errorf)
 		return specs
 	}
 	depth := map[int]map[string]screen.StyleSpec{
@@ -202,25 +216,27 @@ func theme(cfg *Config, d screensDoc, errorf func(format string, args ...any)) {
 	}
 }
 
-// styles parses the styles of the table theme.<key> into specs.
+// styles parses the styles of the table theme.<key> into specs. th is the place of the table theme.
 // With known, each name must be in names. Else styles adds each valid name to names.
-func styles(t map[string]string, key string, names map[string]bool, known bool,
-	specs map[string]screen.StyleSpec, errorf func(format string, args ...any)) {
+func styles(t map[string]string, th tomlcheck.Place, key string, names map[string]bool, known bool,
+	specs map[string]screen.StyleSpec, errorf errorFunc) {
+	table := th.At(strings.Split(key, ".")...)
 	for _, n := range slices.Sorted(maps.Keys(t)) {
+		at := table.At(n)
 		switch {
 		case !screen.IsIdent(n):
-			errorf("theme.%s: invalid style name %q", key, n)
+			errorf(at.Key(), "theme.%s: invalid style name %q", key, n)
 			continue
 		case !known:
 			names[n] = true
 		case !names[n]:
-			errorf("theme.%s: unknown style %q", key, n)
+			errorf(at.Key(), "theme.%s: unknown style %q", key, n)
 			continue
 		}
 		s := t[n]
 		spec, err := screen.ParseStyle(s)
 		if err != nil {
-			errorf("theme.%s.%s: invalid style %q: %v", key, n, s, err)
+			errorf(at.Value(), "theme.%s.%s: invalid style %q: %v", key, n, s, err)
 			continue
 		}
 		specs[n] = spec

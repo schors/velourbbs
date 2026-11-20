@@ -53,9 +53,9 @@ func Check(cfg config.Config, sets bbt.Sets, ds screen.Diags) screen.Diags {
 		}
 		start := screen.Action{Screen: cfg.Start}
 		if err := CheckTarget(sets, lang, start); err != nil {
-			ls.Errorf(config.ScreensFile, 1, 1, "menu: start: %v", err)
+			ls.Errorf(config.ScreensFile, cfg.StartPos.Line, cfg.StartPos.Col, "menu: start: %v", err)
 		} else if len(Target(sets, lang, start).Args) > 0 {
-			ls.Errorf(config.ScreensFile, 1, 1, "menu: start: screen %q has arguments", cfg.Start)
+			ls.Errorf(config.ScreensFile, cfg.StartPos.Line, cfg.StartPos.Col, "menu: start: screen %q has arguments", cfg.Start)
 		}
 		sd.Add(lang, ls)
 	}

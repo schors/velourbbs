@@ -24,7 +24,8 @@ type doc struct {
 func decode(data string) (doc, []string) {
 	var d doc
 	var msgs []string
-	for _, e := range Decode([]byte(data), &d) {
+	_, errs := Decode([]byte(data), &d)
+	for _, e := range errs {
 		msgs = append(msgs, fmt.Sprintf("%d:%d: %s", e.Line, e.Col, e.Msg))
 	}
 	return d, msgs
@@ -73,20 +74,20 @@ func TestErrors(t *testing.T) {
 			`1:1: unknown key "x"`, `3:1: unknown key "table.y"`, `4:2: unknown key "z"`, `6:1: unknown key "item.w"`,
 		}},
 		// go-toml matches a key also without case and takes [x] as one table of an array:
-		// such keys and tables have no position.
+		// Decode finds such keys and tables at the key name.
 		{"NAME = \"A\"", []string{`1:1: unknown key "NAME"`}},
-		{"name = \"A\"\nName = \"B\"", []string{`1:1: unknown key "Name"`}},
-		{"[TABLE]\nn = 1", []string{`1:1: unknown key "TABLE"`}},
-		{"[table]\nN = 1", []string{`1:1: unknown key "table.N"`}},
-		{"[[ITEM]]", []string{`1:1: unknown key "ITEM"`}},
-		{"[[item]]\nKEY = \"A\"\n[[item]]\nkey = \"B\"\nKey = \"C\"", []string{`1:1: unknown key "item.KEY"`, `1:1: unknown key "item.Key"`}},
-		{"x = 1\n[item]\nkey = \"A\"", []string{`1:1: unknown key "x"`, `1:1: item: must be an array of tables`}},
+		{"name = \"A\"\nName = \"B\"", []string{`2:1: unknown key "Name"`}},
+		{"[TABLE]\nn = 1", []string{`1:2: unknown key "TABLE"`}},
+		{"[table]\nN = 1", []string{`2:1: unknown key "table.N"`}},
+		{"[[ITEM]]", []string{`1:3: unknown key "ITEM"`}},
+		{"[[item]]\nKEY = \"A\"\n[[item]]\nkey = \"B\"\nKey = \"C\"", []string{`2:1: unknown key "item.KEY"`, `5:1: unknown key "item.Key"`}},
+		{"x = 1\n[item]\nkey = \"A\"", []string{`1:1: unknown key "x"`, `2:2: item: must be an array of tables`}},
 		// A type error at such a key is an unknown key.
 		{"NAME = 5", []string{`1:1: unknown key "NAME"`}},
 		{"Table = {n = \"1\"}", []string{`1:1: unknown key "Table"`}},
-		{"[table]\nN = \"x\"", []string{`1:1: unknown key "table.N"`}},
-		{"[[ITEM]]\nkey = 1", []string{`1:1: unknown key "ITEM"`}},
-		{"[[item]]\nKEY = 1", []string{`1:1: unknown key "item.KEY"`}},
+		{"[table]\nN = \"x\"", []string{`2:1: unknown key "table.N"`}},
+		{"[[ITEM]]\nkey = 1", []string{`1:3: unknown key "ITEM"`}},
+		{"[[item]]\nKEY = 1", []string{`2:1: unknown key "item.KEY"`}},
 		// In an inline table the key path ends at the table.
 		{"item = [{key = 5}]", []string{`1:16: item: invalid type`}},
 		{"item = {key = 5}", []string{`1:8: item: invalid type`}},

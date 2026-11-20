@@ -105,30 +105,30 @@ func TestHostValueErrors(t *testing.T) {
 		{"[telnet]\nmax_conns = 1", `2:1: unknown key "telnet.max_conns"`},
 		{"[limits]\nlisten = \":1\"", `2:1: unknown key "limits.listen"`},
 		{"[telnet]\nlisten = 2323", `2:10: telnet.listen: must be a string`},
-		{"[telnet]\nlisten = \"2323\"", `1:1: telnet.listen: invalid address "2323": must be <host>:<port>`},
-		{"[telnet]\nlisten = \":0\"", `1:1: telnet.listen: invalid port "0": must be from 1 to 65535`},
-		{"[telnet]\nlisten = \":65536\"", `1:1: telnet.listen: invalid port "65536": must be from 1 to 65535`},
-		{"[telnet]\nlisten = \":telnet\"", `1:1: telnet.listen: invalid port "telnet": must be from 1 to 65535`},
-		{"[telnet]\nlisten = \"::1:23\"", `1:1: telnet.listen: invalid address "::1:23": must be <host>:<port>`},
+		{"[telnet]\nlisten = \"2323\"", `2:10: telnet.listen: invalid address "2323": must be <host>:<port>`},
+		{"[telnet]\nlisten = \":0\"", `2:10: telnet.listen: invalid port "0": must be from 1 to 65535`},
+		{"[telnet]\nlisten = \":65536\"", `2:10: telnet.listen: invalid port "65536": must be from 1 to 65535`},
+		{"[telnet]\nlisten = \":telnet\"", `2:10: telnet.listen: invalid port "telnet": must be from 1 to 65535`},
+		{"[telnet]\nlisten = \"::1:23\"", `2:10: telnet.listen: invalid address "::1:23": must be <host>:<port>`},
 		{"[limits]\nallow = \"192.0.2.1\"", `2:9: limits.allow: must be an array of strings`},
 		{"[limits]\nallow = [1]", `2:10: limits.allow: must be an array of strings`},
-		{"[limits]\nallow = [\"192.0.2.300\"]", `1:1: limits.allow: invalid address or prefix "192.0.2.300"`},
-		{"[telnet]\nproxy = [\"192.0.2.0/33\"]", `1:1: telnet.proxy: invalid address or prefix "192.0.2.0/33"`},
-		{"[telnet]\nproxy = [\"host\"]", `1:1: telnet.proxy: invalid address or prefix "host"`},
-		{"[store]\npath = \"\"", `1:1: store.path: must not be empty`},
+		{"[limits]\nallow = [\"192.0.2.300\"]", `2:9: limits.allow: invalid address or prefix "192.0.2.300"`},
+		{"[telnet]\nproxy = [\"192.0.2.0/33\"]", `2:9: telnet.proxy: invalid address or prefix "192.0.2.0/33"`},
+		{"[telnet]\nproxy = [\"host\"]", `2:9: telnet.proxy: invalid address or prefix "host"`},
+		{"[store]\npath = \"\"", `2:8: store.path: must not be empty`},
 		{"[store]\npath = 1", `2:8: store.path: must be a string`},
-		{"[store]\nPath = \"x\"", `1:1: unknown key "store.Path"`},
+		{"[store]\nPath = \"x\"", `2:1: unknown key "store.Path"`},
 	}
 	keys := []string{"telnet.probe_timeout", "limits.max_conns", "limits.max_conns_per_addr",
 		"limits.max_connects_per_min", "limits.idle_timeout", "limits.output_timeout"}
 	for _, full := range keys {
 		table, key, _ := strings.Cut(full, ".")
-		// An integer out of its range is an other error at 1:1; a type error has the position of the value.
+		// Each error has the position of the value.
 		col := fmt.Sprintf("2:%d: ", len(key)+4)
 		head := "[" + table + "]\n" + key
 		tests = append(tests,
-			struct{ data, want string }{head + " = 0", "1:1: " + full + ": 0 is not from 1 to 1000000"},
-			struct{ data, want string }{head + " = 1000001", "1:1: " + full + ": 1000001 is not from 1 to 1000000"},
+			struct{ data, want string }{head + " = 0", col + full + ": 0 is not from 1 to 1000000"},
+			struct{ data, want string }{head + " = 1000001", col + full + ": 1000001 is not from 1 to 1000000"},
 			struct{ data, want string }{head + " = 1.5", col + full + ": must be an integer"},
 			struct{ data, want string }{head + " = \"5\"", col + full + ": must be an integer"},
 		)

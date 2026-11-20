@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
 // Telnet is the table [telnet] (bbs-toml, section 3.1).
@@ -78,42 +80,40 @@ type storeDoc struct {
 	Path *string `toml:"path"`
 }
 
-// errorFunc reports an error of a value.
-type errorFunc func(format string, args ...any)
-
-// telnet gives the settings of [telnet]. An invalid value keeps its default.
-func telnet(d telnetDoc, errorf errorFunc) Telnet {
+// telnet gives the settings of [telnet]. at is the place of the table. An invalid value keeps its default.
+func telnet(d telnetDoc, at tomlcheck.Place, errorf errorFunc) Telnet {
 	c := defaultTelnet
 	if d.Listen != nil {
 		if err := checkListen(*d.Listen); err != nil {
-			errorf("telnet.listen: %v", err)
+			errorf(at.At("listen").Value(), "telnet.listen: %v", err)
 		} else {
 			c.Listen = *d.Listen
 		}
 	}
-	setPrefixes("telnet.proxy", d.Proxy, &c.Proxy, errorf)
-	setSeconds("telnet.probe_timeout", d.ProbeTimeout, &c.ProbeTimeout, errorf)
+	setPrefixes("telnet.proxy", at.At("proxy"), d.Proxy, &c.Proxy, errorf)
+	setSeconds("telnet.probe_timeout", at.At("probe_timeout"), d.ProbeTimeout, &c.ProbeTimeout, errorf)
 	return c
 }
 
-// limits gives the settings of [limits]. An invalid value keeps its default.
-func limits(d limitsDoc, errorf errorFunc) Limits {
+// limits gives the settings of [limits]. at is the place of the table. An invalid value keeps its default.
+func limits(d limitsDoc, at tomlcheck.Place, errorf errorFunc) Limits {
 	c := defaultLimits
-	setInt("limits.max_conns", d.MaxConns, &c.MaxConns, errorf)
-	setInt("limits.max_conns_per_addr", d.MaxConnsPerAddr, &c.MaxConnsPerAddr, errorf)
-	setInt("limits.max_connects_per_min", d.MaxConnectsPerMin, &c.MaxConnectsPerMin, errorf)
-	setPrefixes("limits.allow", d.Allow, &c.Allow, errorf)
-	setSeconds("limits.idle_timeout", d.IdleTimeout, &c.IdleTimeout, errorf)
-	setSeconds("limits.output_timeout", d.OutputTimeout, &c.OutputTimeout, errorf)
+	setInt("limits.max_conns", at.At("max_conns"), d.MaxConns, &c.MaxConns, errorf)
+	setInt("limits.max_conns_per_addr", at.At("max_conns_per_addr"), d.MaxConnsPerAddr, &c.MaxConnsPerAddr, errorf)
+	setInt("limits.max_connects_per_min", at.At("max_connects_per_min"), d.MaxConnectsPerMin,
+		&c.MaxConnectsPerMin, errorf)
+	setPrefixes("limits.allow", at.At("allow"), d.Allow, &c.Allow, errorf)
+	setSeconds("limits.idle_timeout", at.At("idle_timeout"), d.IdleTimeout, &c.IdleTimeout, errorf)
+	setSeconds("limits.output_timeout", at.At("output_timeout"), d.OutputTimeout, &c.OutputTimeout, errorf)
 	return c
 }
 
-// store gives the settings of [store]. An invalid value keeps its default.
-func store(d storeDoc, errorf errorFunc) Store {
+// store gives the settings of [store]. at is the place of the table. An invalid value keeps its default.
+func store(d storeDoc, at tomlcheck.Place, errorf errorFunc) Store {
 	c := defaultStore
 	if d.Path != nil {
 		if *d.Path == "" {
-			errorf("store.path: must not be empty")
+			errorf(at.At("path").Value(), "store.path: must not be empty")
 		} else {
 			c.Path = *d.Path
 		}
@@ -121,46 +121,47 @@ func store(d storeDoc, errorf errorFunc) Store {
 	return c
 }
 
-// checkInt reports whether the integer n of key is from 1 to maxInt.
-func checkInt(key string, n int64, errorf errorFunc) bool {
+// checkInt reports whether the integer n of key is from 1 to maxInt. at is the place of key.
+func checkInt(key string, at tomlcheck.Place, n int64, errorf errorFunc) bool {
 	if n < 1 || n > maxInt {
-		errorf("%s: %d is not from 1 to %d", key, n, maxInt)
+		errorf(at.Value(), "%s: %d is not from 1 to %d", key, n, maxInt)
 		return false
 	}
 	return true
 }
 
-// setInt sets dst to src when src is set and valid.
-func setInt(key string, src *int64, dst *int, errorf errorFunc) {
-	if src != nil && checkInt(key, *src, errorf) {
+// setInt sets dst to src when src is set and valid. at is the place of key.
+func setInt(key string, at tomlcheck.Place, src *int64, dst *int, errorf errorFunc) {
+	if src != nil && checkInt(key, at, *src, errorf) {
 		*dst = int(*src)
 	}
 }
 
-// setSeconds sets dst to src seconds when src is set and valid.
-func setSeconds(key string, src *int64, dst *time.Duration, errorf errorFunc) {
-	if src != nil && checkInt(key, *src, errorf) {
+// setSeconds sets dst to src seconds when src is set and valid. at is the place of key.
+func setSeconds(key string, at tomlcheck.Place, src *int64, dst *time.Duration, errorf errorFunc) {
+	if src != nil && checkInt(key, at, *src, errorf) {
 		*dst = time.Duration(*src) * time.Second
 	}
 }
 
 // setPrefixes sets dst to the prefixes of src when src is set and each entry is valid.
-func setPrefixes(key string, src *[]string, dst *[]netip.Prefix, errorf errorFunc) {
+// at is the place of key.
+func setPrefixes(key string, at tomlcheck.Place, src *[]string, dst *[]netip.Prefix, errorf errorFunc) {
 	if src != nil {
-		if ps, ok := prefixes(key, *src, errorf); ok {
+		if ps, ok := prefixes(key, at, *src, errorf); ok {
 			*dst = ps
 		}
 	}
 }
 
-// prefixes parses the entries of the list key. ok is false after an error.
-func prefixes(key string, entries []string, errorf errorFunc) (ps []netip.Prefix, ok bool) {
+// prefixes parses the entries of the list key. at is the place of key. ok is false after an error.
+func prefixes(key string, at tomlcheck.Place, entries []string, errorf errorFunc) (ps []netip.Prefix, ok bool) {
 	ok = true
 	ps = make([]netip.Prefix, 0, len(entries))
 	for _, s := range entries {
 		p, err := parsePrefix(s)
 		if err != nil {
-			errorf("%s: invalid address or prefix %q", key, s)
+			errorf(at.Value(), "%s: invalid address or prefix %q", key, s)
 			ok = false
 			continue
 		}
