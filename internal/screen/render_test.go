@@ -34,7 +34,7 @@ var theme = map[string]screen.Style{
 // aliases is the [fields] of screens/screens.toml in the tests.
 var aliases = screen.Fields{"w": alias("w", "term.cols"), "t": alias("t", "term.type")}
 
-func alias(name, path string) screen.Ref {
+func alias(name, path string) screen.Alias {
 	r, err := screen.NewAlias(name, path)
 	if err != nil {
 		panic(err)

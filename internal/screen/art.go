@@ -16,6 +16,9 @@ type ArtField struct {
 	Ref      Ref
 	Right    bool // the path follows spaces
 	Style    Style
+	// Live and Layout are the live mark of a field with a slot, as in Field (live-screen, section 3).
+	Live   bool
+	Layout string
 }
 
 // ArtList is the list row of art: the art row with row.* fields (list-view, section 9).

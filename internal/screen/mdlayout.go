@@ -243,14 +243,14 @@ func headingStyle(level int) string {
 
 // bar gives the cells of a bar in the style: "│" and a space (file-view, section 5.2).
 func (r *mdRun) bar(style string) []Cell {
-	return []Cell{{"│", r.style(style)}, {" ", r.style("normal")}}
+	return []Cell{{Grapheme: "│", Style: r.style(style)}, {Grapheme: " ", Style: r.style("normal")}}
 }
 
 // spaces gives n spaces in normal.
 func (r *mdRun) spaces(n int) []Cell {
 	cells := make([]Cell, n)
 	for i := range cells {
-		cells[i] = Cell{" ", r.style("normal")}
+		cells[i] = Cell{Grapheme: " ", Style: r.style("normal")}
 	}
 	return cells
 }
@@ -276,9 +276,9 @@ func (r *mdRun) list(n *ast.List, base string, level int) {
 		}
 		first := r.spaces(2 + width - utf8.RuneCountInString(mark))
 		for _, c := range mark {
-			first = append(first, Cell{string(c), markStyle})
+			first = append(first, Cell{Grapheme: string(c), Style: markStyle})
 		}
-		first = append(first, Cell{" ", r.style("normal")})
+		first = append(first, Cell{Grapheme: " ", Style: r.style("normal")})
 		n0 := r.count
 		r.push(first, r.spaces(len(first)))
 		r.children(item, base, level, n.IsTight)
@@ -324,7 +324,7 @@ func (r *mdRun) text(n ast.Node, base string, level int) {
 			wr.endLine(false)
 		}
 		if soft && hards == 0 {
-			wr.add(lineCell{space, softS, true})
+			wr.add(lineCell{g: space, style: softS, brk: true})
 		}
 		soft, hards, gave = false, 0, true
 		for _, c := range lcs {
@@ -393,7 +393,7 @@ func (r *mdRun) code(n *ast.CodeBlock) {
 func (r *mdRun) thematicBreak() {
 	var cells []Cell
 	for _, c := range []rune("∙   ∙   ∙")[:min(9, r.space())] {
-		cells = append(cells, Cell{string(c), r.style("md_mark")})
+		cells = append(cells, Cell{Grapheme: string(c), Style: r.style("md_mark")})
 	}
 	r.emit(cells, FileRow{})
 }
@@ -441,7 +441,7 @@ func (r *mdRun) table(n *east.Table, base string) {
 				case inlineText:
 					lcs = appendValue(lcs, text, cs)
 				case inlineSoft, inlineHard:
-					lcs = append(lcs, lineCell{space, cs, true})
+					lcs = append(lcs, lineCell{g: space, style: cs, brk: true})
 				case inlineLinkEnd:
 					if k := r.noteOf[text]; k > 0 {
 						lcs = appendValue(lcs, "["+strconv.Itoa(k)+"]", r.style("md_dim"))
@@ -487,7 +487,7 @@ func (r *mdRun) table(n *east.Table, base string) {
 	dim := r.style("md_dim")
 	for i, row := range rows {
 		lcs = lcs[:0]
-		pad := lineCell{space, styles[i], true}
+		pad := lineCell{g: space, style: styles[i], brk: true}
 		for j, w := range widths {
 			if j > 0 {
 				lcs = append(lcs, pad, pad)
@@ -521,7 +521,7 @@ func (r *mdRun) table(n *east.Table, base string) {
 			// The rule under the header row.
 			lcs = lcs[:0]
 			for range total {
-				lcs = append(lcs, lineCell{Grapheme{"─", 1}, r.style("md_frame"), false})
+				lcs = append(lcs, lineCell{g: Grapheme{"─", 1}, style: r.style("md_frame"), brk: false})
 			}
 			cells = cutRow(cells[:0], lcs, r.space(), dim)
 			r.emit(cells, FileRow{})
@@ -533,7 +533,7 @@ func (r *mdRun) table(n *east.Table, base string) {
 // A TAB is a space.
 func appendValue(lcs []lineCell, s string, st Style) []lineCell {
 	for _, g := range CleanValue(strings.ReplaceAll(s, "\t", " ")) {
-		lcs = append(lcs, lineCell{g, st, g.Text == " "})
+		lcs = append(lcs, lineCell{g: g, style: st, brk: g.Text == " "})
 	}
 	return lcs
 }
@@ -554,7 +554,7 @@ func (r *mdRun) notesRows() {
 		if indent {
 			var first []Cell
 			for _, c := range num {
-				first = append(first, Cell{string(c), dim})
+				first = append(first, Cell{Grapheme: string(c), Style: dim})
 			}
 			r.push(first, r.spaces(len(first)))
 		}

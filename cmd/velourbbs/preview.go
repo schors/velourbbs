@@ -35,6 +35,19 @@ func previewTime(zone *time.Location) time.Time {
 	return time.Date(2006, 1, 2, 15, 4, 5, 0, zone)
 }
 
+// previewClock sets bbs.time and the values of the live fields in sv from cfg (session-fields, section 4,
+// and live-screen, section 3.1). With set, bbs.time has a value of --set: Time stays, and Clock
+// has a zero instant in the zone.
+func previewClock(sv *screen.SessionValues, cfg config.Config, set bool) {
+	t := previewTime(cfg.Zone)
+	sv.Layout, sv.MaxConns = cfg.Time, cfg.Limits.MaxConns
+	if set {
+		sv.Clock = time.Time{}.In(t.Location())
+		return
+	}
+	sv.Time, sv.Clock = t.Format(cfg.Time), t
+}
+
 // previewTerm gives the term.* values of velourbbs preview without --size and --set
 // (screen-render, section 3.2).
 func previewTerm() screen.Term {
@@ -141,9 +154,7 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	if !svSet["bbs.name"] {
 		sv.Name = m.Config.Name
 	}
-	if !svSet["bbs.time"] {
-		sv.Time = previewTime(m.Config.Zone).Format(m.Config.Time)
-	}
+	previewClock(&sv, m.Config, svSet["bbs.time"])
 	choice := m.Config.ThemeChoice
 	if svSet["session.theme"] { // the theme choice at the start
 		choice = config.ThemeChoice(sv.Theme)

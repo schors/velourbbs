@@ -50,7 +50,8 @@ func check(args []string, dir string, fsys fs.FS, stderr io.Writer) int {
 	}
 	if len(terms) > 0 && !ds.HasErrors() {
 		sv := previewSession()
-		sv.Name, sv.Time = m.Config.Name, previewTime(m.Config.Zone).Format(m.Config.Time)
+		sv.Name = m.Config.Name
+		previewClock(&sv, m.Config, false)
 		ds = append(ds, menu.Layout(m, terms, sv)...)
 		ds.Sort()
 	}

@@ -10,13 +10,13 @@ import (
 func row(width int, text string, s, pad Style) Row {
 	var r Row
 	for g, w := range Graphemes(text) {
-		r = append(r, Cell{g, s})
+		r = append(r, Cell{Grapheme: g, Style: s})
 		if w == 2 {
-			r = append(r, Cell{"", s})
+			r = append(r, Cell{Grapheme: "", Style: s})
 		}
 	}
 	for len(r) < width {
-		r = append(r, Cell{" ", pad})
+		r = append(r, Cell{Grapheme: " ", Style: pad})
 	}
 	return r
 }

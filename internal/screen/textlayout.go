@@ -88,12 +88,12 @@ func (t textLayout) number(cells []Cell, i int, first bool) []Cell {
 		n = strconv.Itoa(t.start + i)
 	}
 	for range t.nw - 1 - len(n) {
-		cells = append(cells, Cell{" ", t.dim})
+		cells = append(cells, Cell{Grapheme: " ", Style: t.dim})
 	}
 	for _, d := range n {
-		cells = append(cells, Cell{string(d), t.dim})
+		cells = append(cells, Cell{Grapheme: string(d), Style: t.dim})
 	}
-	return append(cells, Cell{" ", t.dim})
+	return append(cells, Cell{Grapheme: " ", Style: t.dim})
 }
 
 // expandTabs appends the graphemes of line in style to lcs. A TAB becomes spaces up to the next
@@ -105,10 +105,10 @@ func expandTabs(lcs []lineCell, line string, style Style) []lineCell {
 		if g == "\t" {
 			w = TabWidth - col%TabWidth
 			for range w {
-				lcs = append(lcs, lineCell{space, style, true})
+				lcs = append(lcs, lineCell{g: space, style: style, brk: true})
 			}
 		} else {
-			lcs = append(lcs, lineCell{Grapheme{g, w}, style, g == " "})
+			lcs = append(lcs, lineCell{g: Grapheme{g, w}, style: style, brk: g == " "})
 		}
 		col += w
 	}
@@ -138,10 +138,10 @@ func cutRow(cells []Cell, lcs []lineCell, width int, dim Style) []Cell {
 	}
 	// A cut wide grapheme leaves a space in its style.
 	for ; used < keep; used++ {
-		cells = append(cells, Cell{" ", lcs[i].style})
+		cells = append(cells, Cell{Grapheme: " ", Style: lcs[i].style})
 	}
 	for range width - keep {
-		cells = append(cells, Cell{".", dim})
+		cells = append(cells, Cell{Grapheme: ".", Style: dim})
 	}
 	return cells
 }

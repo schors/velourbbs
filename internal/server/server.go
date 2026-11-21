@@ -316,6 +316,7 @@ func (s *Server) values(ss *menu.Session) screen.SessionValues {
 		IP: ss.Addr.WithZone("").String(), Online: screen.FormatDuration(now.Sub(ss.Accepted)),
 		Name: cfg.Name, Version: s.version, Sessions: s.openSessions(),
 		Time: now.In(cfg.Zone).Format(cfg.Time), Uptime: screen.FormatDuration(now.Sub(s.started)),
+		Clock: now.In(cfg.Zone), Layout: cfg.Time, MaxConns: cfg.Limits.MaxConns,
 	}
 }
 

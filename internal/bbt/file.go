@@ -399,7 +399,7 @@ func (s *scanner) field(pos screen.Pos, c string) {
 		s.d.Errorf(pos.Line, pos.Col, "field token %q has spaces on both sides", "{"+c+"}")
 		return
 	}
-	ref, err := screen.LookupField(strings.Trim(c, " "), s.fields)
+	ref, m, err := screen.LookupField(strings.Trim(c, " "), s.fields)
 	if err != nil {
 		s.d.Errorf(pos.Line, pos.Col, "%v", err)
 		return
@@ -409,6 +409,9 @@ func (s *scanner) field(pos screen.Pos, c string) {
 		return
 	}
 	f := screen.Field{Ref: ref, Right: lead > 0}
+	if m.Live && ref.Ticks() { // the mark on another field gives no slot (live-screen, section 3)
+		f.Live, f.Layout = true, m.Layout
+	}
 	if lead+trail > 0 {
 		f.Width = utf8.RuneCountInString(c) + 2
 	}

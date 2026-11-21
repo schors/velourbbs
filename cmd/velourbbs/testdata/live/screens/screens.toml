@@ -1,0 +1,5 @@
+[screen]
+zone = "Europe/Berlin"
+
+[fields]
+clock = 'bbs.time live "15:04 MST"'

@@ -20,7 +20,8 @@ type wrapper struct {
 type lineCell struct {
 	g     Grapheme
 	style Style
-	brk   bool // a space where the line can break
+	brk   bool  // a space where the line can break
+	slot  int32 // the slot of the cell, else 0 (Cell.Slot)
 }
 
 // newWrapper gives a wrapper of the width w at the start of a line.
@@ -115,7 +116,7 @@ func (r *wrapper) place(c lineCell) {
 			c.g = space
 		}
 	}
-	r.cells = appendCell(r.cells, c.g, c.style)
+	r.cells = appendSlot(r.cells, c.g, c.style, c.slot)
 	r.col += c.g.Width
 }
 

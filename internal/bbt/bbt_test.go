@@ -29,10 +29,14 @@ var (
 	}
 	defaultWidth = screen.WidthLimits{Min: 40, Max: 80}
 	// aliases is the [fields] of screens/screens.toml in the tests.
-	aliases = screen.Fields{"w": alias("w", "term.cols"), "t": alias("t", "term.type")}
+	aliases = screen.Fields{
+		"w": alias("w", "term.cols"), "t": alias("t", "term.type"),
+		"clock": alias("clock", `bbs.time live "15:04:05"`), "up": alias("up", "bbs.uptime live"),
+		"name": alias("name", "bbs.name live"),
+	}
 )
 
-func alias(name, path string) screen.Ref {
+func alias(name, path string) screen.Alias {
 	r, err := screen.NewAlias(name, path)
 	if err != nil {
 		panic(err)
@@ -92,6 +96,12 @@ func show(segs []screen.Seg) string {
 				if s.Right {
 					w += "R"
 				}
+			}
+			if s.Live {
+				w += " live"
+			}
+			if s.Layout != "" {
+				w += fmt.Sprintf(" %q", s.Layout)
 			}
 			out = append(out, "{"+s.Ref.String()+w+"}")
 		case screen.SetStyle:
