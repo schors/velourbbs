@@ -36,8 +36,8 @@ create an issue. If not, ask the operator.
 ## Open
 
 1. Run `ghflow show <n>`. Stop and tell the operator if the issue
-   has no work label or has a PR from a fork. If the issue is closed and its PR is merged,
-   run `/ticket-cleanup <n>`. Stop for another closed issue.
+   has no work label or has a PR from a fork. If the issue is closed,
+   run `/ticket-cleanup <n>`. Stop.
 2. Read the file of the type.
 3. For a `dev` issue, do the parent steps of `type-dev.md`. Stop.
    For an `idea`, do the steps of `type-idea.md`. Stop.
