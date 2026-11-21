@@ -53,13 +53,21 @@ layout = '"' { any character except '"' and '}' } '"'
 - `layout` is a layout of the Go package `time`. It is valid only with `live` on `bbs.time`.
   Without it, `bbs.time` has the layout `[screen] time` ([screens-toml](screens-toml.md), section 3.1).
 - An alias can hold the mark: `clock = 'bbs.time live "15:04:05"'` ([screens-toml](screens-toml.md), section 3.3).
-  Then `{clock}` and `{clock   }` are live fields. A token with an alias takes no mark.
+  Then `{clock}` and `{clock   }` are live fields. The mark goes only after a path of the registry:
+  a token with an alias takes no mark.
 - In art, a field token has the same form ([art-format](art-format.md), section 4).
   A layout makes the token long, so an alias is the short form in art.
 - These fields change while a page is shown: `bbs.time`, `session.online`, `bbs.uptime` and `bbs.sessions`.
   The mark on each other field is valid and gives no slot: the field shows its value of the show.
 - The mark is not a part of the path. A condition ([bbt-format](bbt-format.md), section 5) cannot have it.
   `{#if}` and `when` use the values of the show.
+
+`velourbbs check` ([screen-render](screen-render.md), section 3.1) reports these errors:
+
+- A token content after the path that is not the mark of the grammar above.
+- The mark on a token with an alias.
+- A layout without `live`, on a field other than `bbs.time`, empty or with a control character.
+- An alias with the mark in a condition.
 
 ### 3.1. Slot
 
@@ -68,13 +76,16 @@ layout = '"' { any character except '"' and '}' } '"'
   ([list-view](list-view.md), sections 5 and 9).
 - The width of the slot is the width of the token for a fixed-width field and for a field in art.
   Else it is the "largest width" of the value:
-  - `bbs.time`: the largest width of the layout in `[screen] zone` at the times 22:59:59.999999999
-    of the days 22–28 of each month of the year 2006. These times give each weekday, each month,
-    2 digits in each number and the zone of winter and of summer;
-  - `session.online` and `bbs.uptime`: 12 cells, the width of `99d 23:59:59`;
+  - `bbs.time`: the sum of the largest widths of the elements of the layout. An element of the Go package `time`
+    has its largest width: `January` and `Monday` 9; `1`, `2`, `3`, `4`, `5` 2; `.9…` the count of its digits plus 1;
+    a `Z07…` form the width of its numeric form (`Z07:00` gives 6); `MST` the widest abbreviation
+    of `[screen] zone` from 2000 to 2100 (the Go method `time.Time.ZoneBounds` gives the periods of the zone).
+    Each other element and each other character has the width of its value;
+  - `session.online` and `bbs.uptime`: 14 cells, the width of `9999d 23:59:59`;
   - `bbs.sessions`: the digits of `max_conns` ([bbs-toml](bbs-toml.md), section 3.3).
 - A slot of the natural width aligns left. A value pads with spaces or cuts at the end
   by the rule of a fixed-width field ([bbt-format](bbt-format.md), section 4.3).
+- A value wider than its slot, for example a value of `--set` in `velourbbs preview`, is cut.
 - A slot is one word ([bbt-format](bbt-format.md), section 6.3). A slot wider than W has the width W.
 - The cells of a slot have the style of the field.
 - A cut of the row at W or at `term.cols` cuts the slot too. A tick writes only the cells of the page.
@@ -98,6 +109,8 @@ layout = '"' { any character except '"' and '}' } '"'
 ## 5. Frames
 
 - The layer is a function of the time from the show time and of the random source of the session (section 6).
+- Directly after the show, the host makes a frame at the show time: it sends the layer of the time 0.
+  A cell dump of the show in `velourbbs preview` is the base (section 7).
 - The host makes a frame at each tick and at each time when the layer changes: the start of an event
   of an effect, each 50 ms while an event runs, and the end of an event (section 6).
 - Two frames are at least 50 ms apart. A frame that comes earlier waits until 50 ms after the frame before.
@@ -148,8 +161,8 @@ Each effect has these keys:
 | `in` | string | None: the page. | The name of an art insert: `<name>.ans` (section 6.2). |
 | `at` | array | None: the whole art or grid. | A point, a rectangle or an array of points (section 6.2). |
 | `delay` | number, seconds | `0` | 0–3600. |
-| `every` | number, seconds | Of the effect. | 0.05–3600. |
-| `spread` | number, seconds | Of the effect. | 0 or more. |
+| `every` | number, seconds | Of the effect (sections 6.4–6.9). | 0.05–3600. |
+| `spread` | number, seconds | Half of `every`, except `sweep`. | 0 or more. |
 
 The tables of sections 6.4–6.9 give the other keys of each effect.
 
@@ -164,13 +177,13 @@ The tables of sections 6.4–6.9 give the other keys of each effect.
 - More than 16 effects.
 - A missing or unknown `do`, or a key that the effect does not have.
 - A value outside its range, an invalid grapheme string or an invalid colour value.
-- `spread` with `every - spread < 0.05`, and `spread` of a `sweep` without `every`.
+- A written `spread` with `every - spread < 0.05`, and `spread` of a `sweep` without `every`.
 - An `at` that is not a point, a rectangle or an array of 1–64 points; a coordinate 0;
-  a width or a height less than 1.
+  a width or a height less than 1. The coordinates are integers.
 - `at` of the kind that the effect does not take (sections 6.4–6.9).
 - `in` with an art that the screen and its fragments do not insert, in a screen set
   ([session-language](session-language.md), section 6).
-- With `in`, a place that is not in the art grid, in a screen set.
+- With `in`, a cell of the place that is not in the art grid, in a screen set.
 
 The errors have the positions of [screen-render](screen-render.md), section 3.1.
 The message starts with `effect <n>: `, the 1-based number of the effect.
@@ -183,11 +196,13 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
   of that art on the shown page. The place moves with the art.
 - Without `in`, the coordinates are in the shown page after the layout. Column 1 is the left edge
   of the screen area ([bbt-format](bbt-format.md), section 6.1). Row 1 is the first row of the page.
+  A place can reach the margins and the fill rows: the host cuts it to the cells of the grid.
   These coordinates do not follow a text that wraps at another width. Use them on rows that do not wrap:
   a header, a corner or the key row.
 - A negative coordinate counts from the end: -1 is the last column or row of the art grid,
   or of the screen area and of the page.
 - Without `at`, the place is the whole art of `in`, else all cells of the grid.
+- The "rectangle of a place" is the rectangle of `at`, the art grid or the grid, cut to the cells of the grid.
 - A cell of a place that the page does not show is not in the place: a cut at W or at `term.cols`,
   an art in a false block or on a page before a More row. A place without cells gives no events.
 - Each point of an array of points is a place with its own events (section 6.3).
@@ -197,12 +212,18 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
 
 - An effect has "events" in each place. An event starts at a time and can run for a time.
 - The first event starts at the show time plus `delay` plus d. Each next event starts at the start
-  of the event before plus d. d is `every` plus a random value from `-spread` to `spread`.
+  of the event before plus d. d is `every` plus a random value from `-spread` to `spread`,
+  with the same chance for each value. An effect without `every` (a `sweep`) has one event
+  at the show time plus `delay`.
 - The events of one place can overlap. On a cell of two events, the event that started later wins.
   At the end of an event, its cells show the other events or the cell before the effect.
 - An event that finds no cell changes nothing and takes no random values.
   The next events start as before.
 - Each effect takes the cell after the earlier effects: its grapheme, and its foreground for the mix.
+  An event takes its cells at its start, from the grid after the earlier effects.
+  The stars of a `twinkle` rectangle are the exception: they come from the base at the show.
+- A new base (a cursor move) does not start the effects again. The layer keeps its state.
+- "Rounded" is rounded half up. The host takes the random cells of one event as different cells.
 - Each session has its own random source: the generator PCG of the Go package `math/rand/v2`
   with a random seed. `velourbbs preview` takes a fixed seed (section 7).
 
@@ -235,7 +256,7 @@ A star that is always visible and changes its grapheme.
 | `at` | — | Required. | A point, a rectangle or an array of points. |
 | `chars` | string | Required. | A grapheme string with 2 different graphemes or more. |
 | `colors` | array of strings | None. | 1–16 colour values. |
-| `every`, `spread` | — | `1`, `0.5`. | Section 6.1. |
+| `every` | number, seconds | `1` | Section 6.1. |
 | `share` | number | `0.1` | More than 0, at most 1. |
 
 ### 6.5. `sparkle`
@@ -244,8 +265,9 @@ A star that appears and goes.
 
 - A point: at each event, the cell shows a random grapheme of `chars` for `time`.
 - A rectangle, or the whole art or grid without `at`: at each event, `count` random cells of the place
-  show a random grapheme of `chars` for `time` each.
-- With `over = false`, only an empty cell takes a star. With `over = true`, each cell of the place takes it.
+  show a random grapheme of `chars` for `time` each. When fewer cells can take a star, all of them take one.
+- With `over = false`, only an empty cell can take a star. With `over = true`, each cell of the place can.
+  A cell with a star of this effect cannot take another.
 
 | Key | Type | Default | Range |
 |---|---|---|---|
@@ -255,7 +277,7 @@ A star that appears and goes.
 | `over` | boolean | `false` | — |
 | `count` | integer | `1` | 1–100. Not with an array of points or a point. |
 | `time` | number, seconds | `2` | 0.05–60. |
-| `every`, `spread` | — | `1`, `0.5`. | Section 6.1. |
+| `every` | number, seconds | `1` | Section 6.1. |
 
 ### 6.6. `candle`
 
@@ -271,7 +293,7 @@ A flame that flickers.
 | `at` | — | Required. | A point, a rectangle or an array of points. |
 | `chars` | string | Required. | A grapheme string. |
 | `colors` | array of strings | Required. | 1–16 colour values. |
-| `every`, `spread` | — | `0.2`, `0.1`. | Section 6.1. |
+| `every` | number, seconds | `0.2` | Section 6.1. |
 | `share` | number | `0.3` | More than 0, at most 1. |
 
 ### 6.7. `glint`
@@ -288,7 +310,7 @@ A cell becomes bright and fades.
 | `at` | — | None. | A point, a rectangle or an array of points. |
 | `peak` | string | `#ffffff` | A colour value. |
 | `time` | number, seconds | `0.6` | 0.05–10. |
-| `every`, `spread` | — | `3`, `1`. | Section 6.1. |
+| `every` | number, seconds | `3` | Section 6.1. |
 
 ### 6.8. `sweep`
 
@@ -299,7 +321,9 @@ A bright spot runs from left to right over the cells of the place that are not s
   L is the first column and R the last column with a lit cell, over all rows. It moves `speed` columns each second.
 - A lit cell at the distance x from the centre, with x < `width`, is the mix with `peak`
   at the amount `1 - x / width`.
-- When the centre passes the last lit cell of a row, that cell starts a glint (section 6.7) with `peak` and `time`.
+- When the centre is at the column of the last lit cell of a row, that cell starts a glint (section 6.7)
+  with `peak` and `time`. The host takes this time from `speed`, not from a frame.
+  The amount of the cell is the larger amount of the band and of the glint.
 - The event runs until the centre stops and the last glint ends.
 - Without `every`, the effect has one event.
 
@@ -317,12 +341,15 @@ A bright spot runs from left to right over the cells of the place that are not s
 
 Each event draws a bolt in the place for `time`.
 
-- The main bolt starts at a random column of the first row of the place. It goes down one row
+- The bolt runs in the rectangle of the place (section 6.2). A cell of the bolt that is not in the place
+  is not drawn.
+- The main bolt starts at a random column of the first row of the rectangle. It goes down one row
   at each step, with a random column step of -1, 0 or +1, for a random count of rows from h / 2,
-  rounded down, to h. h is the height of the place. A step out of the place is a step 0.
+  rounded down, but at least 1, to h. h is the height of the rectangle. A step out of the rectangle is a step 0.
 - The bolt has 1–3 branches, a random count. A branch starts at a random cell of the main bolt
   below its first row. Its first cell is in the next row. It goes down with one column step, -1 or +1 at random,
-  for 2–6 rows, a random count. A step out of the place ends the branch.
+  for 2–6 rows, a random count. A step out of the rectangle ends the branch.
+  A main bolt of one row, or a branch without a cell in the next row, gives no branch.
 - Where two parts cross, the later part wins: the branches come after the main bolt, in their order.
 - The grapheme of a cell shows the step to the next row: `chars` has the graphemes
   of the steps +1, 0 and -1. The last cell of a part has the grapheme of the step 0.
@@ -338,7 +365,7 @@ Each event draws a bolt in the place for `time`.
 | `peak` | string | `#ffffff` | A colour value. |
 | `over` | boolean | `false` | — |
 | `time` | number, seconds | `0.3` | 0.05–10. |
-| `every`, `spread` | — | `30`, `15`. | Section 6.1. |
+| `every` | number, seconds | `30` | Section 6.1. |
 
 - `╲`, `│` and `╱` are East Asian Ambiguous. The layout already uses 1 cell for them
   ([telnet-term](telnet-term.md), section 6). `chars = "\\|/"` gives ASCII.
@@ -355,7 +382,9 @@ Each event draws a bolt in the place for `time`.
 - During a wait, the session makes the ticks and the frames of sections 4 and 5 in order, with the fixed clock.
 - The output of a wait is the line `wait <duration>`, with the duration as the element gives it,
   then the "grid dump" of the grid at the end of the wait.
-- In the line input of `ask`, a wait moves the clock with no frame. Its output is only the line `wait <duration>`.
+- A tick or an event at the end of a wait is in the wait.
+- In the line input of `ask` and on a More row, a wait moves the clock with no frame.
+  Its output is only the line `wait <duration>`.
 - A wait after the end of the session at `logoff` is an error, as a key is.
 - The grid dump is the cell dump of [screen-render](screen-render.md), section 3.3, for all terminal rows:
   the first line is `grid <cols>x<rows>`, then one row between two `|` for each terminal row,

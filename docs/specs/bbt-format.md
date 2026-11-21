@@ -154,7 +154,8 @@ In art, only [art-format](art-format.md), sections 4 and 5, defines the tokens.
 | `session.*`, `bbs.*` | — | The fields of the session and of the BBS: [session-fields](session-fields.md), section 2. |
 
 - A path matches `[a-z][a-z0-9_]*(\.[A-Za-z0-9_]+)?`. A path without a dot is an alias.
-  A field token can have the live mark after the path ([live-screen](live-screen.md), section 3).
+  A field token with a path of the registry can have the live mark after the path
+  ([live-screen](live-screen.md), section 3).
 - [telnet-term](telnet-term.md) gives the `term.*` values.
   `term.cols` is from 20 to 255. `term.rows` is from 10 to 100.
 - `item.<KEY>` is valid only in `{#if}`. Section 8.1 defines `<KEY>`.
@@ -256,7 +257,8 @@ The body gives rows in source order:
 - A word that is wider than W starts on a new row and breaks at a grapheme boundary.
 - A wide grapheme that does not fit at the end of a row goes to the next row.
   When W is 1, a wide grapheme becomes a space.
-- A fixed-width field and a live field are one word. If it is wider than W, it has the width W.
+- A fixed-width field and a slot ([live-screen](live-screen.md), section 3.1) are one word.
+  If it is wider than W, it has the width W.
 - The style continues on the next row.
 
 ### 6.4. Height
