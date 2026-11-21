@@ -2,8 +2,8 @@ package bbt
 
 import (
 	"fmt"
-	"maps"
 	"math"
+	"reflect"
 	"slices"
 	"strings"
 	"time"
@@ -14,6 +14,38 @@ import (
 
 // MaxEffects is the most effects of a screen (live-screen, section 6.1).
 const MaxEffects = 16
+
+// effectDoc is the plain decode of one [[effect]] table: the keys of all effects.
+// The decode of the document checks their types. A nil pointer is a key that is not set.
+type effectDoc struct {
+	Do     *string   `toml:"do"`
+	In     *string   `toml:"in"`
+	At     any       `toml:"at"`
+	Delay  *float64  `toml:"delay"`
+	Every  *float64  `toml:"every"`
+	Spread *float64  `toml:"spread"`
+	Chars  *string   `toml:"chars"`
+	Colors *[]string `toml:"colors"`
+	Peak   *string   `toml:"peak"`
+	Share  *float64  `toml:"share"`
+	Over   *bool     `toml:"over"`
+	Count  *int64    `toml:"count"`
+	Time   *float64  `toml:"time"`
+	Width  *int64    `toml:"width"`
+	Speed  *float64  `toml:"speed"`
+}
+
+// keys gives the keys that the table sets, in the order of effectDoc.
+func (d *effectDoc) keys() []string {
+	var out []string
+	v := reflect.ValueOf(d).Elem()
+	for i := range v.NumField() {
+		if !v.Field(i).IsNil() {
+			out = append(out, v.Type().Field(i).Tag.Get("toml"))
+		}
+	}
+	return out
+}
 
 // effectKinds maps a value of do to its effect.
 var effectKinds = map[string]screen.EffectKind{
@@ -42,35 +74,37 @@ const (
 	maxChars  = 32
 )
 
-// effectParser parses one [[effect]] table: the 1-based effect n at the place at.
+// effectParser parses one [[effect]] table d at the place at.
 type effectParser struct {
-	t      map[string]any
+	d      *effectDoc
 	at     tomlcheck.Place
-	label  string
+	label  string // "effect <n>", the 1-based number of the effect
 	theme  map[string]screen.Style
 	errorf errorFunc
+	ok     bool // no error so far
 }
 
 // parseEffects parses the array of tables effect of the front matter (live-screen, section 6.1).
-// v is its plain decode, root the place of the root table, theme the base theme.
-func parseEffects(v []map[string]any, root tomlcheck.Place, theme map[string]screen.Style,
+// root is the place of the root table, theme the base theme.
+func parseEffects(docs []effectDoc, root tomlcheck.Place, theme map[string]screen.Style,
 	errorf errorFunc) []screen.Effect {
-	if len(v) > MaxEffects {
-		errorf(root.At("effect").Elem(MaxEffects).Value(), "effect: more than %d effects", MaxEffects)
+	if len(docs) > MaxEffects {
+		errorf(root.At("effect").Elem(MaxEffects).Value(), "effect %d: more than %d effects", MaxEffects+1, MaxEffects)
 	}
 	var out []screen.Effect
-	for i, t := range v {
-		p := &effectParser{t: t, at: root.At("effect").Elem(i), label: fmt.Sprintf("effect %d", i+1),
-			theme: theme, errorf: errorf}
-		if e, ok := p.parse(); ok {
+	for i := range docs {
+		p := &effectParser{d: &docs[i], at: root.At("effect").Elem(i), label: fmt.Sprintf("effect %d", i+1),
+			theme: theme, errorf: errorf, ok: true}
+		if e := p.parse(); p.ok {
 			out = append(out, e)
 		}
 	}
 	return out
 }
 
-// fail reports an error of the key key, or of the table when key is "".
+// fail reports an error at the value of the key key, or at the table when key is "".
 func (p *effectParser) fail(key string, format string, args ...any) {
+	p.ok = false
 	msg := fmt.Sprintf(format, args...)
 	if key == "" {
 		p.errorf(p.at.Value(), "%s: %s", p.label, msg)
@@ -79,50 +113,35 @@ func (p *effectParser) fail(key string, format string, args ...any) {
 	p.errorf(p.at.At(key).Value(), "%s: %s: %s", p.label, key, msg)
 }
 
-// parse gives the effect of the table. ok is false after an error.
-func (p *effectParser) parse() (e screen.Effect, ok bool) {
-	ok = true
-	fail := func(key, format string, args ...any) {
-		p.fail(key, format, args...)
-		ok = false
+// parse gives the effect of the table. p.ok is false after an error.
+func (p *effectParser) parse() (e screen.Effect) {
+	d := p.d
+	if d.Do == nil {
+		p.fail("", "do is missing")
+		return e
 	}
-	do, has, valid := p.str("do")
-	if !has {
-		fail("", "do is missing")
-		return e, false
-	}
-	if !valid {
-		return e, false
-	}
-	e.Do = effectKinds[do]
+	e.Do = effectKinds[*d.Do]
 	if e.Do == 0 {
-		fail("do", "unknown effect %q", do)
-		return e, false
+		p.fail("do", "unknown effect %q", *d.Do)
+		return e
 	}
 	keys := append(slices.Clone(commonKeys), effectKeys[e.Do]...)
-	for _, k := range slices.Sorted(maps.Keys(p.t)) {
-		if !slices.Contains(keys, k) {
-			fail(k, "%s has no key %s", do, k)
+	for _, k := range d.keys() {
+		if !slices.Contains(keys, k) { // an error of the name of a key: at the key
+			p.ok = false
+			p.errorf(p.at.At(k).Key(), "%s: %s: %s has no key %s", p.label, k, *d.Do, k)
 		}
 	}
-	if in, has, valid := p.str("in"); valid {
-		if !screen.IsName(strings.TrimSuffix(in, ".ans")) || !strings.HasSuffix(in, ".ans") {
-			fail("in", "%q is not the name of an art insert", in)
+	if d.In != nil {
+		if !strings.HasSuffix(*d.In, ".ans") || !screen.IsName(strings.TrimSuffix(*d.In, ".ans")) {
+			p.fail("in", "%q is not the name of an art insert", *d.In)
 		}
-		e.In = in
-	} else if has {
-		ok = false
+		e.In = *d.In
 	}
-	if !p.parseAt(&e) {
-		ok = false
-	}
-	if !p.parseTimes(&e) {
-		ok = false
-	}
-	if !p.parseKeys(&e) {
-		ok = false
-	}
-	return e, ok
+	p.parseAt(&e)
+	p.parseTimes(&e)
+	p.parseKeys(&e)
+	return e
 }
 
 // takes gives the kinds of at of each effect and whether it needs at (live-screen, sections 6.4–6.9).
@@ -141,38 +160,25 @@ var atKindNames = map[screen.AtKind]string{
 	screen.AtPoint: "a point", screen.AtRect: "a rectangle", screen.AtPoints: "an array of points",
 }
 
-// parseAt parses the key at (live-screen, section 6.2). It reports false after an error.
-func (p *effectParser) parseAt(e *screen.Effect) bool {
+// parseAt parses the key at (live-screen, section 6.2).
+func (p *effectParser) parseAt(e *screen.Effect) {
 	kinds, required := takes(e.Do)
-	v, has := p.t["at"]
-	if !has {
+	if p.d.At == nil {
 		if required {
 			p.fail("", "at is missing")
-			return false
 		}
-		return true
+		return
 	}
-	at, err := parseAtValue(v)
+	at, err := parseAtValue(p.d.At)
 	if err != "" {
 		p.fail("at", "%s", err)
-		return false
+		return
 	}
 	if !slices.Contains(kinds, at.Kind) {
-		p.fail("at", "%s cannot take %s", effectName(e.Do), atKindNames[at.Kind])
-		return false
+		p.fail("at", "%s cannot take %s", *p.d.Do, atKindNames[at.Kind])
+		return
 	}
 	e.At = at
-	return true
-}
-
-// effectName gives the value of do of the effect k.
-func effectName(k screen.EffectKind) string {
-	for name, v := range effectKinds {
-		if v == k {
-			return name
-		}
-	}
-	return ""
 }
 
 // parseAtValue parses the value v of at. It gives a message after an error.
@@ -216,8 +222,9 @@ func parseAtValue(v any) (screen.At, string) {
 	return screen.At{Kind: screen.AtRect, Points: []screen.Point{{Col: c[0], Row: c[1]}}, Width: c[2], Height: c[3]}, ""
 }
 
-// maxCoord is the largest coordinate and size of a place: no grid or art is larger.
-const maxCoord = 1 << 16
+// maxCoord bounds the coordinates and the sizes of a place, so that their sums do not overflow.
+// It is far larger than each grid and art, so the cut of a place to the grid stays the same.
+const maxCoord = 1 << 60
 
 // coords gives the integers of a: the coordinates of a point and the size of a rectangle.
 func coords(a []any) ([]int, string) {
@@ -251,23 +258,19 @@ var defaultEvery = map[screen.EffectKind]float64{
 func seconds(s float64) time.Duration { return time.Duration(math.Round(s * float64(time.Second))) }
 
 // parseTimes parses the keys delay, every and spread (live-screen, sections 6.1 and 6.3).
-// It reports false after an error.
-func (p *effectParser) parseTimes(e *screen.Effect) bool {
-	ok := true
+func (p *effectParser) parseTimes(e *screen.Effect) {
+	d := p.d
 	delay := 0.0
 	if e.Do == screen.Sweep {
 		delay = 0.5
 	}
-	if !p.number("delay", &delay, 0, maxDelay) {
-		ok = false
-	}
+	p.number("delay", d.Delay, &delay, 0, maxDelay)
 	e.Delay = seconds(delay)
 	every, hasEvery := defaultEvery[e.Do]
-	if _, set := p.t["every"]; set {
+	everyOK := true
+	if d.Every != nil {
 		hasEvery = true
-	}
-	if !p.number("every", &every, minEvery, maxEvery) {
-		ok = false
+		everyOK = p.number("every", d.Every, &every, minEvery, maxEvery)
 	}
 	if hasEvery {
 		e.Every = seconds(every)
@@ -276,21 +279,20 @@ func (p *effectParser) parseTimes(e *screen.Effect) bool {
 	if e.Do == screen.Sweep {
 		spread = 0
 	}
-	if _, set := p.t["spread"]; set {
-		if !p.number("spread", &spread, 0, math.Inf(1)) {
-			return false
+	if d.Spread != nil {
+		if !p.number("spread", d.Spread, &spread, 0, math.Inf(1)) {
+			return
 		}
 		switch {
 		case !hasEvery:
 			p.fail("spread", "a sweep without every has no spread")
-			return false
-		case ok && seconds(every)-seconds(spread) < seconds(minEvery):
+			return
+		case everyOK && seconds(every)-seconds(spread) < seconds(minEvery):
 			p.fail("spread", "every - spread is %g, must be at least %g", (seconds(every) - seconds(spread)).Seconds(), minEvery)
-			return false
+			return
 		}
 	}
 	e.Spread = seconds(spread)
-	return ok
 }
 
 // The ranges of the other keys (live-screen, sections 6.4–6.9).
@@ -305,24 +307,14 @@ const (
 )
 
 // parseKeys parses the keys of each effect (live-screen, sections 6.4–6.9).
-// It reports false after an error.
-func (p *effectParser) parseKeys(e *screen.Effect) bool {
-	ok := true
-	check := func(valid bool) {
-		if !valid {
-			ok = false
-		}
-	}
+func (p *effectParser) parseKeys(e *screen.Effect) {
+	d := p.d
 	switch e.Do {
 	case screen.Twinkle, screen.Sparkle, screen.Candle:
-		need := 1
-		if e.Do == screen.Twinkle {
-			need = 2
-		}
-		check(p.chars(e, "", need))
-		check(p.colors(e, e.Do == screen.Candle))
+		p.chars(e, "")
+		p.colors(e, e.Do == screen.Candle)
 	case screen.Lightning:
-		check(p.chars(e, "╲│╱", 3))
+		p.chars(e, "╲│╱")
 	}
 	switch e.Do {
 	case screen.Twinkle, screen.Candle:
@@ -330,29 +322,23 @@ func (p *effectParser) parseKeys(e *screen.Effect) bool {
 		if e.Do == screen.Candle {
 			e.Share = 0.3
 		}
-		if v, has := p.t["share"]; has {
-			if s, isNum := asNumber(v); !isNum {
-				p.fail("share", "must be a number")
-				ok = false
-			} else if s <= 0 || s > 1 {
-				p.fail("share", "%g, must be more than 0 and at most 1", s)
-				ok = false
+		if s := d.Share; s != nil {
+			if math.IsNaN(*s) || *s <= 0 || *s > 1 {
+				p.fail("share", "%g, must be more than 0 and at most 1", *s)
 			} else {
-				e.Share = s
+				e.Share = *s
 			}
 		}
 	}
-	switch e.Do {
-	case screen.Sparkle, screen.Lightning:
-		check(p.boolean("over", &e.Over))
+	if d.Over != nil {
+		e.Over = *d.Over
 	}
 	if e.Do == screen.Sparkle {
 		e.Count = 1
-		if _, has := p.t["count"]; has && (e.At.Kind == screen.AtPoint || e.At.Kind == screen.AtPoints) {
+		if d.Count != nil && (e.At.Kind == screen.AtPoint || e.At.Kind == screen.AtPoints) {
 			p.fail("count", "a point or an array of points has no count")
-			ok = false
 		}
-		check(p.integer("count", &e.Count, 1, maxCount))
+		p.integer("count", d.Count, &e.Count, 1, maxCount)
 	}
 	t, maxT := 0.0, float64(maxTime)
 	switch e.Do {
@@ -364,102 +350,81 @@ func (p *effectParser) parseKeys(e *screen.Effect) bool {
 		t = 0.3
 	}
 	if t > 0 {
-		check(p.number("time", &t, minTime, maxT))
+		p.number("time", d.Time, &t, minTime, maxT)
 		e.Time = seconds(t)
 	}
 	switch e.Do {
 	case screen.Glint, screen.Sweep, screen.Lightning:
 		e.Peak = "#ffffff"
-		if v, has, valid := p.str("peak"); valid {
-			if msg := p.colourValue(v); msg != "" {
+		if d.Peak != nil {
+			if msg := p.colourValue(*d.Peak); msg != "" {
 				p.fail("peak", "%s", msg)
-				ok = false
 			}
-			e.Peak = v
-		} else if has {
-			ok = false
+			e.Peak = *d.Peak
 		}
 	}
 	if e.Do == screen.Sweep {
 		e.Width, e.Speed = 3, 40
-		check(p.integer("width", &e.Width, 1, maxWidth))
-		check(p.number("speed", &e.Speed, minSpeed, maxSpeed))
+		p.integer("width", d.Width, &e.Width, 1, maxWidth)
+		p.number("speed", d.Speed, &e.Speed, minSpeed, maxSpeed)
 	}
-	return ok
 }
 
-// chars parses the key chars: a grapheme string with at least need graphemes, or exactly 3 for a lightning.
-// def is the default; without a default, chars is required. A twinkle needs 2 different graphemes.
-func (p *effectParser) chars(e *screen.Effect, def string, need int) bool {
-	v, has, valid := p.str("chars")
+// chars parses the key chars: a grapheme string (live-screen, section 6.1). def is the default;
+// without a default, chars is required. A twinkle needs 2 different graphemes, a lightning 3 graphemes.
+func (p *effectParser) chars(e *screen.Effect, def string) {
+	v := def
 	switch {
-	case !has && def == "":
+	case p.d.Chars != nil:
+		v = *p.d.Chars
+	case def == "":
 		p.fail("", "chars is missing")
-		return false
-	case !has:
-		v = def
-	case !valid:
-		return false
+		return
 	}
 	var gs []string
 	for g, w := range screen.Graphemes(v) {
 		if err := screen.CheckGrapheme(g, w); err != nil {
 			p.fail("chars", "%v", err)
-			return false
+			return
 		}
 		if w != 1 {
 			p.fail("chars", "grapheme %q is %d cells wide, must be 1", g, w)
-			return false
+			return
 		}
 		gs = append(gs, g)
 	}
 	switch {
 	case len(gs) == 0 || len(gs) > maxChars:
 		p.fail("chars", "has %d graphemes, must have 1–%d", len(gs), maxChars)
-		return false
 	case e.Do == screen.Lightning && len(gs) != 3:
 		p.fail("chars", "has %d graphemes, must have 3", len(gs))
-		return false
-	case e.Do == screen.Twinkle && len(slices.Compact(slices.Sorted(slices.Values(gs)))) < need:
-		p.fail("chars", "must have %d different graphemes or more", need)
-		return false
+	case e.Do == screen.Twinkle && len(slices.Compact(slices.Sorted(slices.Values(gs)))) < 2:
+		p.fail("chars", "must have 2 different graphemes or more")
+	default:
+		e.Chars = gs
 	}
-	e.Chars = gs
-	return true
 }
 
 // colors parses the key colors: 1–16 colour values. required is true for a candle.
-func (p *effectParser) colors(e *screen.Effect, required bool) bool {
-	v, has := p.t["colors"]
-	if !has {
+func (p *effectParser) colors(e *screen.Effect, required bool) {
+	if p.d.Colors == nil {
 		if required {
 			p.fail("", "colors is missing")
-			return false
 		}
-		return true
+		return
 	}
-	a, ok := v.([]any)
-	if !ok {
-		p.fail("colors", "must be an array of strings")
-		return false
-	}
+	a := *p.d.Colors
 	if len(a) == 0 || len(a) > maxColors {
 		p.fail("colors", "has %d values, must have 1–%d", len(a), maxColors)
-		return false
+		return
 	}
-	for _, el := range a {
-		s, ok := el.(string)
-		if !ok {
-			p.fail("colors", "must be an array of strings")
-			return false
-		}
+	for _, s := range a {
 		if msg := p.colourValue(s); msg != "" {
 			p.fail("colors", "%s", msg)
-			return false
+			return
 		}
-		e.Colors = append(e.Colors, s)
 	}
-	return true
+	e.Colors = a
 }
 
 // colourValue checks the colour value v: a style with a foreground or the name of a theme style
@@ -481,85 +446,32 @@ func (p *effectParser) colourValue(v string) string {
 	return ""
 }
 
-// str gives the string of the key k. has is false when the table does not set k;
-// valid is false when k is not a string: str reports it.
-func (p *effectParser) str(k string) (v string, has, valid bool) {
-	raw, has := p.t[k]
-	if !has {
-		return "", false, false
-	}
-	v, valid = raw.(string)
-	if !valid {
-		p.fail(k, "must be a string")
-	}
-	return v, true, valid
-}
-
-// asNumber gives the value of a TOML integer or float.
-func asNumber(v any) (float64, bool) {
-	switch v := v.(type) {
-	case int64:
-		return float64(v), true
-	case float64:
-		return v, true
-	}
-	return 0, false
-}
-
-// number sets *v to the number of the key k in [lo, hi] when the table sets k.
+// number sets *v to the value n of the key k when it is set and in [lo, hi].
 // It reports false after an error.
-func (p *effectParser) number(k string, v *float64, lo, hi float64) bool {
-	raw, has := p.t[k]
-	if !has {
+func (p *effectParser) number(k string, n *float64, v *float64, lo, hi float64) bool {
+	if n == nil {
 		return true
 	}
-	n, ok := asNumber(raw)
-	switch {
-	case !ok || math.IsNaN(n):
-		p.fail(k, "must be a number")
-		return false
-	case n < lo || n > hi:
+	if math.IsNaN(*n) || *n < lo || *n > hi {
 		if math.IsInf(hi, 1) {
-			p.fail(k, "%g, must be at least %g", n, lo)
+			p.fail(k, "%g, must be at least %g", *n, lo)
 		} else {
-			p.fail(k, "%g, must be %g–%g", n, lo, hi)
+			p.fail(k, "%g, must be %g–%g", *n, lo, hi)
 		}
 		return false
 	}
-	*v = n
+	*v = *n
 	return true
 }
 
-// integer sets *v to the integer of the key k in [lo, hi] when the table sets k.
-func (p *effectParser) integer(k string, v *int, lo, hi int) bool {
-	raw, has := p.t[k]
-	if !has {
-		return true
+// integer sets *v to the value n of the key k when it is set and in [lo, hi].
+func (p *effectParser) integer(k string, n *int64, v *int, lo, hi int) {
+	if n == nil {
+		return
 	}
-	n, ok := raw.(int64)
-	switch {
-	case !ok:
-		p.fail(k, "must be an integer")
-		return false
-	case n < int64(lo) || n > int64(hi):
-		p.fail(k, "%d, must be %d–%d", n, lo, hi)
-		return false
+	if *n < int64(lo) || *n > int64(hi) {
+		p.fail(k, "%d, must be %d–%d", *n, lo, hi)
+		return
 	}
-	*v = int(n)
-	return true
-}
-
-// boolean sets *v to the boolean of the key k when the table sets k.
-func (p *effectParser) boolean(k string, v *bool) bool {
-	raw, has := p.t[k]
-	if !has {
-		return true
-	}
-	b, ok := raw.(bool)
-	if !ok {
-		p.fail(k, "must be a boolean")
-		return false
-	}
-	*v = b
-	return true
+	*v = int(*n)
 }

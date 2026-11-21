@@ -194,3 +194,39 @@ func TestEvents(t *testing.T) {
 		t.Errorf("layers differ:\n%s\n%s", a, b)
 	}
 }
+
+// The layer draws over the current base: after a new base (a cursor move), a drawn cell takes
+// the background of the new cell, and a cell that is now a slot or a part of a wide grapheme
+// is not drawn (live-screen, sections 4, 6.2 and 6.3).
+func TestNewBase(t *testing.T) {
+	s, p := page(t, map[string]string{"s.bbt": candle("[1, 1, 3, 1]", "") + "abc"}, 40, 24)
+	l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(1, 2)))
+	grid := p.Grid()
+	grid[0][0].Style.Bg = screen.IndexColour(4)
+	grid[0][1].Slot = 1
+	grid[0][2].Grapheme, grid[0][3].Grapheme = "語", ""
+	var got []string
+	for _, c := range l.Cells(0, grid) {
+		got = append(got, fmt.Sprintf("%d:%d %s %s", c.Row, c.Col, c.Cell.Grapheme, c.Cell.Style))
+	}
+	if want := "0:0 ^ 11/4"; strings.Join(got, "; ") != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// A twinkle point with a grapheme of chars keeps it over the effects before it until its first change
+// (live-screen, section 6.4). A twinkle rectangle without stars keeps its events: they find no cell.
+func TestTwinkleStars(t *testing.T) {
+	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"candle\"\nchars = \"b\"\ncolors = [\"1\", \"2\"]\nat = [1, 1]\n" +
+		"[[effect]]\ndo = \"twinkle\"\nchars = \"bc\"\nat = [1, 1]\ndelay = 100\n" +
+		"[[effect]]\ndo = \"twinkle\"\nchars = \"xy\"\nat = [2, 1, 3, 1]\n+++\nabcd"}
+	s, p := page(t, files, 40, 24)
+	if got, want := cells(s, p, 5*time.Second), "0:0 b 2/0; 0:0 b 1/0"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+	files["s.bbt"] = "+++\n[[effect]]\ndo = \"twinkle\"\nchars = \"xy\"\nat = [1, 1, 3, 1]\n+++\nabc"
+	s, p = page(t, files, 40, 24)
+	if _, ok := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(1, 2))).Next(); !ok {
+		t.Error("a rectangle without stars has no events")
+	}
+}

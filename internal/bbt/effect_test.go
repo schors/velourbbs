@@ -62,19 +62,23 @@ func TestEffectErrors(t *testing.T) {
 		{map[string]string{"s.bbt": front("", `effect = 5`)}, []string{`screens/s.bbt:2:10: effect: must be an array of tables`}},
 		{map[string]string{"s.bbt": front("", `effect = [1]`)}, []string{`screens/s.bbt:2:11: effect: must be an array of tables`}},
 		{map[string]string{"goodbye.bbt": tw(`at = [1, 1]`)},
-			[]string{`screens/goodbye.bbt:2:1: effect: the goodbye screen cannot have effects`}},
+			[]string{`screens/goodbye.bbt:2:1: effect 1: the goodbye screen cannot have effects`}},
 		{map[string]string{"shutdown.bbt": tw(`at = [1, 1]`)},
-			[]string{`screens/shutdown.bbt:2:1: effect: the shutdown screen cannot have effects`}},
+			[]string{`screens/shutdown.bbt:2:1: effect 1: the shutdown screen cannot have effects`}},
 		{map[string]string{"s.bbt": front("", slices.Repeat([]string{`[[effect]]`, `do = "glint"`}, 17)...)},
-			[]string{`screens/s.bbt:34:1: effect: more than 16 effects`}},
-		{map[string]string{"s.bbt": front("", `[[effect]]`, `at = [1, 1]`, `[[effect]]`, `do = "blink"`, `[[effect]]`, `do = 1`)}, []string{
+			[]string{`screens/s.bbt:34:1: effect 17: more than 16 effects`}},
+		{map[string]string{"s.bbt": front("", `[[effect]]`, `at = [1, 1]`, `[[effect]]`, `do = "blink"`)}, []string{
 			`screens/s.bbt:2:1: effect 1: do is missing`,
 			`screens/s.bbt:5:6: effect 2: do: unknown effect "blink"`,
-			`screens/s.bbt:7:6: effect 3: do: must be a string`,
 		}},
+		// The document gives one type error, else the unknown keys, before the other errors (screen-render, section 3.1).
+		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "glint"`, `every = "bad"`, `time = 20`)},
+			[]string{`screens/s.bbt:4:9: effect.every: must be a number`}},
+		{map[string]string{"s.bbt": front("", `typo = 1`, `[[effect]]`, `do = "glint"`, `time = 20`, `foo = 1`)},
+			[]string{`screens/s.bbt:2:1: unknown key "typo"`, `screens/s.bbt:6:1: unknown key "effect.foo"`}},
 		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `peak = "1"`, `width = 2`)}, []string{
-			`screens/s.bbt:6:8: effect 1: peak: twinkle has no key peak`,
-			`screens/s.bbt:7:9: effect 1: width: twinkle has no key width`,
+			`screens/s.bbt:6:1: effect 1: peak: twinkle has no key peak`,
+			`screens/s.bbt:7:1: effect 1: width: twinkle has no key width`,
 		}},
 		// A value outside its range.
 		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `delay = 3601`, `every = 0.01`, `share = 0`)}, []string{
@@ -82,11 +86,14 @@ func TestEffectErrors(t *testing.T) {
 			`screens/s.bbt:7:9: effect 1: every: 0.01, must be 0.05–3600`,
 			`screens/s.bbt:8:9: effect 1: share: 0, must be more than 0 and at most 1`,
 		}},
-		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "sparkle"`, `chars = "."`, `count = 101`, `time = 61`, `over = 1`)}, []string{
+		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "sparkle"`, `chars = "."`, `count = 101`, `time = 61`)}, []string{
 			`screens/s.bbt:5:9: effect 1: count: 101, must be 1–100`,
 			`screens/s.bbt:6:8: effect 1: time: 61, must be 0.05–60`,
-			`screens/s.bbt:7:8: effect 1: over: must be a boolean`,
 		}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `share = nan`)},
+			[]string{`screens/s.bbt:6:9: effect 1: share: NaN, must be more than 0 and at most 1`}},
+		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "candle"`, `at = [1, 1]`, `chars = "^"`, `colors = ["1"]`, `every = nan`)},
+			[]string{`screens/s.bbt:7:9: effect 1: every: NaN, must be 0.05–3600`}},
 		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "sweep"`, `width = 21`, `speed = 0.5`, `time = 11`, `delay = -1`)}, []string{
 			`screens/s.bbt:4:9: effect 1: width: 21, must be 1–20`,
 			`screens/s.bbt:5:9: effect 1: speed: 0.5, must be 1–1000`,

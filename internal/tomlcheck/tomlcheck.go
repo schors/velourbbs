@@ -314,6 +314,10 @@ func describe(t reflect.Type) string {
 		return "a string"
 	case reflect.Int64:
 		return "an integer"
+	case reflect.Float64:
+		return "a number"
+	case reflect.Bool:
+		return "a boolean"
 	case reflect.Slice:
 		switch deref(t.Elem()).Kind() {
 		case reflect.Struct, reflect.Map:

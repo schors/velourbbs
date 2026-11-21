@@ -58,11 +58,13 @@ Full rules: [live-screen](../../../specs/live-screen.md), section 6.2.
 
 | Key | Default | Value |
 |---|---|---|
-| `delay` | `0` | The seconds before the first change: 0–3600. |
+| `delay` | `0` | The seconds before the timing starts: 0–3600. |
 | `every` | Of the effect. | The seconds between two changes: 0.05–3600. |
 | `spread` | Half of `every`. | A random part of `every`: each time is `every` plus or minus up to `spread`. |
 
 - A value is a number of seconds, for example `0.5`.
+- The first change comes `delay` plus one interval after the show.
+  Example: `delay = 1` and `every = 1` with `spread = 0` give the first change after 2 seconds.
 - With `spread = 0`, each change comes exactly `every` seconds after the change before.
 - `every - spread` must be at least 0.05.
 - The changes are random. Each session has its own random values.

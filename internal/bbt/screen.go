@@ -443,7 +443,7 @@ func (l *loader) checkItems(units []*unit) {
 			l.errorf(u, u.keyPos("data"), false, "data: the %s screen cannot be a list screen", u.s.Name)
 		}
 		if end && len(u.s.Effects) > 0 { // live-screen, section 6.1
-			l.errorf(u, u.keyPos("effect"), false, "effect: the %s screen cannot have effects", u.s.Name)
+			l.errorf(u, u.keyPos("effect"), false, "effect 1: the %s screen cannot have effects", u.s.Name)
 		}
 		keys := map[string]bool{}
 		for _, it := range u.s.Items {

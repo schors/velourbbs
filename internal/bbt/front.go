@@ -45,7 +45,7 @@ type frontDoc struct {
 		Do   *string            `toml:"do"`
 		Args *map[string]string `toml:"args"`
 	} `toml:"select"`
-	Effect *[]map[string]any `toml:"effect"` // the plain tables: parseEffects checks their keys
+	Effect []effectDoc `toml:"effect"`
 	Item   []struct {
 		Key    *string            `toml:"key"`
 		Do     *string            `toml:"do"`
@@ -87,9 +87,7 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, theme
 	}
 	fr.file = parseFileKeys(&doc, root, errorf)
 	fr.list = parseListKeys(&doc, root, langs, errorf)
-	if doc.Effect != nil {
-		fr.effects = parseEffects(*doc.Effect, root, theme, errorf)
-	}
+	fr.effects = parseEffects(doc.Effect, root, theme, errorf)
 	pages := doc.File != nil || doc.Data != nil // a page action is valid (file-view, section 3.3)
 	seen := map[string]bool{}
 	for i, it := range doc.Item {
