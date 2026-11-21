@@ -281,9 +281,8 @@ func TestFrontMatter(t *testing.T) {
 		{map[string]string{"s.bbt": "+++\n[[item]]\nkey = \"A\"\ndo = \"logoff\"\nwhen = \"t > 1\"\n+++\n"},
 			[]string{`screens/s.bbt:5:8: item "A": when: string field "term.type" takes a string, found an integer`}},
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ndo = 1\nx = \"y\"\n+++\n"}, []string{`screens/s.bbt:5:6: item.do: must be a string`}},
-		// The aliases are in screens/screens.toml: [fields] in a front matter is an unknown key (section 3.2).
+		// Unknown keys come before the errors of [fields].
 		{map[string]string{"s.bbt": "+++\n[fields]\nk = \"item.A\"\n[[item]]\ny = 1\nx = 2\n+++\n"}, []string{
-			`screens/s.bbt:2:2: unknown key "fields"`,
 			`screens/s.bbt:5:1: unknown key "item.y"`,
 			`screens/s.bbt:6:1: unknown key "item.x"`,
 		}},

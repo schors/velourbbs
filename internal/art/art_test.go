@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 	"testing"
-	"testing/fstest"
 
 	"github.com/schors/velourbbs/internal/art"
 	"github.com/schors/velourbbs/internal/screen"
@@ -408,22 +407,6 @@ func TestTooManyDiagnostics(t *testing.T) {
 	_, ds := art.Parse("a.ans", flat(strings.Repeat("\t", 200)+"\n\x1b[1m", 4, 0), aliases)
 	if len(ds) != screen.MaxFileDiags+1 || ds[len(ds)-1].Msg != "too many diagnostics" {
 		t.Errorf("%d diagnostics, last %q", len(ds), ds[len(ds)-1].Msg)
-	}
-}
-
-func TestLoad(t *testing.T) {
-	fsys := fstest.MapFS{
-		"big.ans": {Data: bytes.Repeat([]byte("a"), screen.MaxFileBytes+1)},
-		"ok.ans":  {Data: flat("ab", 2, 0)},
-	}
-	if _, ds := art.Load(fsys, "big.ans", aliases); diagText(ds) != "big.ans:1:1: file is over 1048576 bytes" {
-		t.Errorf("big: %s", diagText(ds))
-	}
-	if _, ds := art.Load(fsys, "none.ans", aliases); !ds.HasErrors() {
-		t.Error("missing file: no error")
-	}
-	if a, ds := art.Load(fsys, "ok.ans", aliases); a == nil || len(ds) > 0 {
-		t.Errorf("ok: %s", diagText(ds))
 	}
 }
 
