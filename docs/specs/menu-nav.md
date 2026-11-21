@@ -179,7 +179,7 @@ The current list page and the cursor are the page and the cursor of the top fram
      continues at step 3. A `theme` action continues at step 3.
    - A cursor move on the same list page renders the page with the values of step 3
      and updates it ([telnet-term](telnet-term.md), section 7.5). Continue at step 4.
-     On a live page, the values are the values of the last tick ([live-screen](live-screen.md), section 4).
+     On a live page, the slots have the values of the last tick ([live-screen](live-screen.md), section 4).
    - Each other action leaves the screen.
 
 ### 5.4. Ask

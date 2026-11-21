@@ -65,12 +65,13 @@ also from `38;5;n` and `48;5;n`.
 ## 4. Fields in art
 
 - After the read, the loader finds fields in each grid row. A field token in art is `{`,
-  optional spaces, a path ([bbt-format](bbt-format.md), section 4), optional spaces and `}`
-  on one row. The block tokens of section 5 are tokens too. Each other `{` is a plain character.
+  optional spaces, a path ([bbt-format](bbt-format.md), section 4), the optional live mark
+  ([live-screen](live-screen.md), section 3), optional spaces and `}` on one row. The block tokens of section 5 are tokens too. Each other `{` is a plain character.
 - All cells of a token must have one background. All its non-space cells must have
   one foreground. An error gives both colours and their columns.
 - A field takes the cells of its token and the style of its first non-space cell.
   It aligns right when the path follows spaces, else left.
+  A live field with a layout makes a long token: an alias with the mark is the short form.
 - The art row with `row.*` fields is the list row of a list screen: [list-view](list-view.md), section 9.
 
 ## 5. Blocks in art

@@ -69,7 +69,8 @@ The front matter is TOML 1.1. An unknown key is an error.
 | `gutter` | integer | The cells that the render width leaves on each side of the screen area, from 0 to 100. Section 6.1. |
 | `file`, `lines`, `numbers`, `margin` | — | The file of a file screen: [file-view](file-view.md), section 3. |
 | `data`, `rows`, `select` | — | The list of a list screen: [list-view](list-view.md), section 3. |
-| `live`, `[[effect]]` | — | The ticks and the effects of the shown page: [live-screen](live-screen.md), section 3. |
+| `[fields]` | table | The aliases of the screen, its fragments and its art. They have the rules of [screens-toml](screens-toml.md), section 3.3. Section 4.2. |
+| `[[effect]]` | — | The effects of the shown page: [live-screen](live-screen.md), section 6. |
 | `[[item]]` | array of tables | Menu items with `key`, `do` and the optional keys of section 8.2. Section 8. An array of inline tables is the same: `item = [{ key = "G", do = "logoff" }]`. |
 
 Example:
@@ -105,6 +106,7 @@ In art, only [art-format](art-format.md), sections 4 and 5, defines the tokens.
 | `{<path>}` | Field with its natural width. Section 4. |
 | `{<path>      }` | Field with the width of the token, aligned left. |
 | `{      <path>}` | Field with the width of the token, aligned right. |
+| `{<path> live}` `{bbs.time live "<layout>"}` | Live field: its value ticks in its place. [live-screen](live-screen.md), section 3. The width forms apply. |
 | `{#if <cond>}` `{#else}` `{/if}` | Conditional block. Section 5. |
 | `{!<style>}` | Style change. Section 7.3. |
 | `{>_<name>}` | Include of the fragment `_<name>.bbt`. Section 3.4. |
@@ -152,6 +154,7 @@ In art, only [art-format](art-format.md), sections 4 and 5, defines the tokens.
 | `session.*`, `bbs.*` | — | The fields of the session and of the BBS: [session-fields](session-fields.md), section 2. |
 
 - A path matches `[a-z][a-z0-9_]*(\.[A-Za-z0-9_]+)?`. A path without a dot is an alias.
+  A field token can have the live mark after the path ([live-screen](live-screen.md), section 3).
 - [telnet-term](telnet-term.md) gives the `term.*` values.
   `term.cols` is from 20 to 255. `term.rows` is from 10 to 100.
 - `item.<KEY>` is valid only in `{#if}`. Section 8.1 defines `<KEY>`.
@@ -162,7 +165,11 @@ In art, only [art-format](art-format.md), sections 4 and 5, defines the tokens.
 
 - `[fields]` in `screens/screens.toml` maps an alias to a registry path:
   [screens-toml](screens-toml.md), section 3.3.
+- `[fields]` in the front matter of a screen maps aliases with the same rules. They are valid in the screen,
+  its fragments and its art. An alias of the front matter overrides the alias of `screens/screens.toml`
+  with the same name.
 - An alias is valid in each screen, fragment and art. Short aliases let art have short fields.
+- An alias can hold the live mark: `clock = 'bbs.time live "15:04"'` ([live-screen](live-screen.md), section 3).
 
 ### 4.3. Values
 
@@ -194,6 +201,7 @@ string  = '"' { any character except '"' and '}' } '"' ;
 - An integer field takes an integer literal and each operator.
 - A string field takes a string literal and only `==` or `!=`.
 - Each other combination is an error.
+- An alias with the live mark is an error ([live-screen](live-screen.md), section 3).
 - The host evaluates the conditions of a screen at each render.
 
 ## 6. Layout
@@ -248,7 +256,7 @@ The body gives rows in source order:
 - A word that is wider than W starts on a new row and breaks at a grapheme boundary.
 - A wide grapheme that does not fit at the end of a row goes to the next row.
   When W is 1, a wide grapheme becomes a space.
-- A fixed-width field is one word. If it is wider than W, it has the width W.
+- A fixed-width field and a live field are one word. If it is wider than W, it has the width W.
 - The style continues on the next row.
 
 ### 6.4. Height
