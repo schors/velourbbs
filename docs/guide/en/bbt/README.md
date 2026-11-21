@@ -62,7 +62,6 @@ The BBS does not have these features yet:
 - marks (`{@<id>}`) and the choice of an item with the arrow keys.
   The user chooses an item only with its key;
 - access checks (`require`). They need users;
-- `ask` and a field token in an `args` value;
 - punctuation keys, for example `?`;
 - a label of an item. The BBS does not print the text of an item;
 - the table of contents of a Markdown file, active links to other files,

@@ -1,0 +1,12 @@
++++
+valign = "middle"
+[[item]]
+key = "A"
+ask = "Name: "
+ask_max = 4
+do = "gosub hello"
+args = { name = "{in}" }
+[[item]]
+key = "ESC"
+do = "back"
++++

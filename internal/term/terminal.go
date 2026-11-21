@@ -92,10 +92,11 @@ func (t *Terminal) Key(ctx context.Context) (string, error) {
 
 // ReadLine runs the line input in the field f (line-input, sections 6 and 7).
 // It gives the line and true after ENTER, or false after ESC. It panics when the field
-// does not fit the screen. It gives the errors of next and of the writes.
+// does not fit the size of the page of the last Page or Update: the size of the current screen,
+// also after a resize. It gives the errors of next and of the writes.
 // Before an error of next, it turns the bracketed paste mode off (section 8.4).
 func (t *Terminal) ReadLine(ctx context.Context, f line.Field) (string, bool, error) {
-	l := line.New(f, t.term.Cols, t.term.Rows)
+	l := line.New(f, t.shown.Cols, t.shown.Height)
 	t.mode = true
 	var out []byte // the draw that waits for the end of the queued keys
 	if err := t.write(context.Background(), t.appendDraw([]byte(pasteOn), l.Draw())); err != nil {

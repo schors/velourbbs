@@ -68,7 +68,7 @@ func screenLayout(m *bbs.Model, s *screen.Screen, term screen.Term, args map[str
 // of [screen] lang, then the other sets in the order of the codes; in each set, the screens
 // in name order, the items in source order, then select with the first row of the list.
 // A list screen with arguments has a list only after an action shows it.
-// A {arg.<name>} value gives the sample value of the argument (bbs.Samples).
+// A {arg.<name>} value gives the sample value of the argument (bbs.Samples). {in} gives an empty value.
 // An action whose {arg.<name>} gives no value does not count.
 func screenArgs(m *bbs.Model) map[string]map[string]string {
 	out := map[string]map[string]string{}
@@ -88,6 +88,12 @@ func screenArgs(m *bbs.Model) map[string]map[string]string {
 				args = map[string]string{}
 			}
 			args[name] = v
+		}
+		for _, name := range a.In { // {in} gives an empty value
+			if args == nil {
+				args = map[string]string{}
+			}
+			args[name] = ""
 		}
 		out[a.Screen] = args
 	}

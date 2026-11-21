@@ -117,7 +117,13 @@ func (l *loader) screen(u *unit) {
 		}
 	}
 	u.s.Items = u.fr.items
-	for _, it := range u.s.Items {
+	for i, it := range u.s.Items {
+		// The free cells of the prompt at W = min: the cells after it, minus 1 (section 8.6).
+		if it.Ask != nil && u.s.Width.Min-it.Ask.Width()-1 < 1 {
+			l.errorf(u, filePos(u.f.name, ItemPlace(u.s.Front, i).At("ask").Value()), false,
+				"item %q: ask: the prompt is %d cells wide, the min width %d leaves no free cell",
+				it.Key, it.Ask.Width(), u.s.Width.Min)
+		}
 		if it.When != nil {
 			u.addArgs(it.When.Args()...)
 		}

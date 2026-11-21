@@ -1,0 +1,22 @@
++++
+[[item]]
+key = "J"
+ask = "Your name: "
+ask_max = 8
+do = "gosub hello"
+args = { name = "{in}" }
+[[item]]
+key = "F"
+do = "gosub read"
+[[item]]
+key = "L"
+do = "gosub parts"
+[[item]]
+key = "E"
+do = "gosub empty"
+[[item]]
+key = "G"
+do = "logoff"
++++
+Main
+[J] Name  [F] File  [L] List  [E] Empty

@@ -26,8 +26,10 @@ type lineResult struct {
 	err  error
 }
 
-// readLine starts ReadLine with ctx in the field f and waits until it blocks.
+// readLine starts ReadLine with ctx in the field f on a shown page of the terminal size
+// and waits until it blocks.
 func readLine(ctx context.Context, term *Terminal, f line.Field) <-chan lineResult {
+	term.shown = screen.Page{Cols: term.term.Cols, Height: term.term.Rows}
 	done := make(chan lineResult, 1)
 	go func() {
 		text, ok, err := term.ReadLine(ctx, f)
@@ -276,6 +278,7 @@ func TestReadLineModeOff(t *testing.T) {
 func TestReadLineFit(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		term, f := connect(t, testTimeouts)
+		term.shown = screen.Page{Cols: term.term.Cols, Height: term.term.Rows}
 		before := len(f.output())
 		func() {
 			defer func() {

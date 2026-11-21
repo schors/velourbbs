@@ -13,6 +13,7 @@ import (
 	"github.com/schors/velourbbs/internal/bbs"
 	"github.com/schors/velourbbs/internal/config"
 	"github.com/schors/velourbbs/internal/key"
+	"github.com/schors/velourbbs/internal/line"
 	"github.com/schors/velourbbs/internal/screen"
 )
 
@@ -32,6 +33,10 @@ type Terminal interface {
 	// Update shows the page p in place of the page that Page showed last: p differs from it
 	// only in the cells of its rows (section 5.3).
 	Update(p screen.Page) error
+	// ReadLine reads a line with the line input in the field f on the page that Page showed last
+	// (line-input). It gives the line and true after ENTER, or false after ESC.
+	// ctx and the errors are as of Key.
+	ReadLine(ctx context.Context, f line.Field) (string, bool, error)
 }
 
 // Events takes the other events of section 7. Run sends them only to a Terminal
@@ -44,6 +49,11 @@ type Events interface {
 	KeyEvent(k string, ignored bool) error
 	// Logoff tells that an item runs logoff. The pages of goodbye follow.
 	Logoff() error
+	// Ask tells that an item with ask runs. The page with the ask row follows (section 5.4).
+	Ask() error
+	// Line tells the end of the line input of ask: the line and true after ENTER with a line,
+	// or false after ESC or ENTER with an empty line. Then the page follows again.
+	Line(text string, ok bool) error
 }
 
 // noEvents is the Events of a Terminal that does not implement Events.
@@ -52,6 +62,8 @@ type noEvents struct{}
 func (noEvents) Screen(string) error         { return nil }
 func (noEvents) KeyEvent(string, bool) error { return nil }
 func (noEvents) Logoff() error               { return nil }
+func (noEvents) Ask() error                  { return nil }
+func (noEvents) Line(string, bool) error     { return nil }
 
 // Values gives the values of the session and BBS fields of the session ss
 // (session-fields, section 2), except session.theme and session.lang: the session gives them
@@ -142,7 +154,7 @@ func (ss *Session) Run(ctx context.Context) error {
 			return err
 		}
 		if g, ok := ss.screen("goodbye"); ok {
-			_, err = ss.show(ctx, g, nil)
+			_, _, err = ss.show(ctx, g, nil)
 		}
 		return err
 	}
@@ -197,7 +209,8 @@ func (ss *Session) Shutdown() error {
 	return nil
 }
 
-// run shows the screen of the frame f and gives the item that leaves it.
+// run shows the screen of the frame f and gives the item that leaves it, with the line of its ask
+// as the value of each {in}.
 // A page action or a theme action of a file screen or a list screen shows a page and waits for keys again.
 // Such a screen starts at the page of f and sets the page of f to each shown page (sections 5.1 and 5.3).
 // The check of the screen sets (session-language, section 6) makes sure that the set
@@ -205,11 +218,11 @@ func (ss *Session) Shutdown() error {
 func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 	s, _ := ss.screen(f.name)
 	if s.FileScreen == nil && s.List == nil {
-		items, err := ss.show(ctx, s, f.args)
+		items, p, err := ss.show(ctx, s, f.args)
 		if err != nil {
 			return screen.Item{}, err
 		}
-		return ss.next(ctx, items, nil)
+		return ss.next(ctx, s, items, nil, p)
 	}
 	if err := ss.ev.Screen(s.Name); err != nil {
 		return screen.Item{}, err
@@ -227,7 +240,7 @@ func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 		if err := ss.t.Page(p); err != nil {
 			return screen.Item{}, err
 		}
-		it, err := ss.next(ctx, items, nil)
+		it, err := ss.next(ctx, s, items, nil, p)
 		if err != nil || !it.Do.Op.IsPage() && it.Do.Op != screen.Theme {
 			return it, err
 		}
@@ -258,7 +271,7 @@ func (ss *Session) runList(ctx context.Context, f *frame, v *listView) (screen.I
 		if err := ss.t.Page(p); err != nil {
 			return screen.Item{}, err
 		}
-		it, err := ss.next(ctx, items, moves)
+		it, err := ss.next(ctx, v.s, items, moves, p)
 		// A cursor move on the same list page updates the page. A cursor key has no action.
 		for err == nil && it.Do.Op == 0 && (it.Key == key.Up && c > v.first(n) || it.Key == key.Down && c < v.last(n)) {
 			if it.Key == key.Up {
@@ -267,8 +280,9 @@ func (ss *Session) runList(ctx context.Context, f *frame, v *listView) (screen.I
 				c++
 			}
 			f.cursor = c
-			if err = ss.t.Update(v.move(c)); err == nil {
-				it, err = ss.next(ctx, items, moves)
+			p = v.move(c)
+			if err = ss.t.Update(p); err == nil {
+				it, err = ss.next(ctx, v.s, items, moves, p)
 			}
 		}
 		if err != nil {
@@ -313,10 +327,12 @@ func pageNum(op screen.Op, n, count int) int {
 
 // show shows the screen s, not a file screen, with the arguments args: it renders s
 // and shows its pages (section 5). After each page with a More row, it waits for any key.
-// It gives the enabled items.
-func (ss *Session) show(ctx context.Context, s *screen.Screen, args map[string]string) (map[string]screen.Item, error) {
+// It gives the enabled items and the last page.
+func (ss *Session) show(ctx context.Context, s *screen.Screen, args map[string]string) (map[string]screen.Item,
+	screen.Page, error) {
+	var last screen.Page
 	if err := ss.ev.Screen(s.Name); err != nil {
-		return nil, err
+		return nil, last, err
 	}
 	cfg := ss.m.Config
 	env, items := Enabled(s, screen.Env{Term: ss.t.Term(), Args: args, Session: ss.sessionValues()})
@@ -325,18 +341,18 @@ func (ss *Session) show(ctx context.Context, s *screen.Screen, args map[string]s
 		if !first {
 			k, err := ss.t.Key(ctx)
 			if err != nil {
-				return nil, err
+				return nil, last, err
 			}
 			if err := ss.ev.KeyEvent(key.Map(k), false); err != nil {
-				return nil, err
+				return nil, last, err
 			}
 		}
-		first = false
+		first, last = false, p
 		if err := ss.t.Page(p); err != nil {
-			return nil, err
+			return nil, last, err
 		}
 	}
-	return items, nil
+	return items, last, nil
 }
 
 // Pages gives each page of the screen s for the terminal term with the arguments args
@@ -521,8 +537,11 @@ func Enabled(s *screen.Screen, env screen.Env) (*screen.Env, map[string]screen.I
 // and gives this item. In a list screen with select, moves reports whether a cursor key
 // does something: next then gives an item with this key and no action for it, and ignores
 // the other cursor keys (list-view, section 8). moves is nil in each other screen.
-func (ss *Session) next(ctx context.Context, items map[string]screen.Item,
-	moves func(k string) bool) (screen.Item, error) {
+// An item with ask reads a line on the page shown of the screen s, and next gives the item
+// with the line as the value of each {in}. A cancel shows the page again, and next waits again
+// (section 5.4).
+func (ss *Session) next(ctx context.Context, s *screen.Screen, items map[string]screen.Item,
+	moves func(k string) bool, shown screen.Page) (screen.Item, error) {
 	for {
 		k, err := ss.t.Key(ctx)
 		if err != nil {
@@ -539,7 +558,18 @@ func (ss *Session) next(ctx context.Context, items map[string]screen.Item,
 		if err := ss.ev.KeyEvent(k, !ok); err != nil {
 			return screen.Item{}, err
 		}
-		if ok {
+		if !ok {
+			continue
+		}
+		if it.Ask == nil {
+			return it, nil
+		}
+		text, entered, err := ss.ask(ctx, s, shown, it.Ask)
+		if err != nil {
+			return screen.Item{}, err
+		}
+		if entered {
+			it.Do = it.Do.Input(text)
 			return it, nil
 		}
 	}

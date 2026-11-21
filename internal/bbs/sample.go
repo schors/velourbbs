@@ -11,7 +11,7 @@ import (
 // The screen set of [screen] lang gives the values.
 type Samples struct {
 	actions []sampleAction // the goto and gosub actions in the order of the values
-	// sources holds each argument with a literal value: the walk needs no other argument.
+	// sources holds each argument with a literal value or {in}: the walk needs no other argument.
 	sources map[argRef]bool
 	// links holds the arguments whose {arg.<name>} values give each argument.
 	links map[argRef][]argRef
@@ -38,6 +38,9 @@ func NewSamples(m *Model) *Samples {
 		}
 		s.actions = append(s.actions, sampleAction{from, a})
 		for name := range a.Args {
+			s.sources[argRef{a.Screen, name}] = true
+		}
+		for _, name := range a.In {
 			s.sources[argRef{a.Screen, name}] = true
 		}
 		for name, src := range a.ArgRefs {
@@ -107,6 +110,9 @@ func (s *Samples) value(sa sampleAction, name string, path []argRef) (string, bo
 	if v, ok := sa.a.Args[name]; ok {
 		return v, true
 	}
+	if slices.Contains(sa.a.In, name) { // {in} gives an empty value
+		return "", true
+	}
 	src, ok := sa.a.ArgRefs[name]
 	if !ok {
 		return "", false
@@ -120,7 +126,7 @@ func (s *Samples) value(sa sampleAction, name string, path []argRef) (string, bo
 }
 
 // hasValue reports whether a walk from the argument r that does not pass the arguments of path
-// reaches an argument with a literal value.
+// reaches an argument with a literal value or {in}.
 func (s *Samples) hasValue(r argRef, path []argRef) bool {
 	seen := map[argRef]bool{r: true}
 	for _, p := range path {

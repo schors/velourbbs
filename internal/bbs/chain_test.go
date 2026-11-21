@@ -92,6 +92,17 @@ func TestChainErrors(t *testing.T) {
 			"screens/mid.bbt":   mid("dir", "sub"),
 			"screens/sub.bbt":   strings.Replace(parts(""), "rows = 2\n", "rows = 1\n", 1),
 		}, []string{`screens/parts.bbt:4:45: select: args: dir: the value reaches the data of screen "sub"`}},
+		// An open value {in} cannot reach file or data, also through the screen mid.
+		{"in file", nil, map[string]string{
+			"screens/main.bbt": "+++\n[[item]]\nkey = \"N\"\nask = \"File: \"\ndo = \"gosub mid\"\nargs = { file = \"{in}\" }\n" +
+				"[[item]]\nkey = \"H\"\ndo = \"gosub hub\"\nargs = { dir = \"docs\", file = \"intro.md\" }\n+++\n",
+			"screens/mid.bbt": mid("file", "read"),
+		}, []string{`screens/main.bbt:6:17: item "N": args: file: the value reaches the file of screen "read"`}},
+		{"in data", nil, map[string]string{
+			"screens/main.bbt": "+++\n[[item]]\nkey = \"N\"\nask = \"Dir: \"\ndo = \"gosub mid\"\nargs = { dir = \"{in}\" }\n" +
+				"[[item]]\nkey = \"H\"\ndo = \"gosub hub\"\nargs = { dir = \"docs\", file = \"intro.md\" }\n+++\n",
+			"screens/mid.bbt": mid("dir", "parts"),
+		}, []string{`screens/main.bbt:6:16: item "N": args: dir: the value reaches the data of screen "parts"`}},
 		// Each set finds the error of a common select once (session-language, section 6).
 		{"select data in each set", []string{"en", "ru"}, map[string]string{
 			"screens/parts.bbt": parts(`select = { do = "gosub mid", args = { dir = "{row.path}" } }`),

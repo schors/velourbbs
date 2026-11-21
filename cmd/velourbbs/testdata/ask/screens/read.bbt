@@ -1,0 +1,14 @@
++++
+file = "intro.md"
+[[item]]
+key = "A"
+ask = "Name: "
+do = "gosub hello"
+args = { name = "{in}" }
+[[item]]
+key = "ESC"
+do = "back"
++++
+Read: {file.title}
+{>file}
+[A] Name  [Esc] Back
