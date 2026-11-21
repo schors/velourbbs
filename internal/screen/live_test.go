@@ -261,7 +261,7 @@ func TestGrid(t *testing.T) {
 
 // The page lists the first insert of each art with a row on it (live-screen, section 6.2).
 // In a file screen, the art after the file area comes after the file rows.
-func TestArtPlaces(t *testing.T) {
+func TestInsertsFile(t *testing.T) {
 	fsys := fstest.MapFS{
 		"screens/f.bbt": {Data: []byte("+++\nfile = \"a.txt\"\n+++\n{>a.ans}\n{>file}\n{>b.ans}\n{>a.ans}\n")},
 		"screens/a.ans": {Data: []byte(sauceArt("a\nb", 4))},
@@ -274,8 +274,44 @@ func TestArtPlaces(t *testing.T) {
 	}
 	env := &screen.Env{Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Colors: 16}}
 	p := screen.RenderFile(sets["en"]["f"], env, theme, fileRows(3), 1)
-	want := []screen.ArtPlace{{Name: "a.ans", Row: 0, Width: 4, Height: 2}, {Name: "b.ans", Row: 5, Width: 6, Height: 1}}
-	if !slices.Equal(p.Arts, want) {
-		t.Errorf("arts %+v, want %+v", p.Arts, want)
+	want := []screen.Insert{{Name: "a.ans", Row: 0, Width: 4, Height: 2}, {Name: "b.ans", Row: 5, Width: 6, Height: 1}}
+	if !slices.Equal(p.Inserts, want) {
+		t.Errorf("inserts %+v, want %+v", p.Inserts, want)
+	}
+}
+
+// The page lists the first include of each fragment with a row on it, with all rows of its lines:
+// the rows of its includes and of its art. A fragment has the width of the screen area.
+// An include without rows is not in the list (live-screen, section 6.2).
+func TestInsertsFragment(t *testing.T) {
+	s := loadLive(t, map[string]string{
+		"main.bbt": "{>_e}\n{>_a}\n{>_b}\n",
+		"_e.bbt":   "{#if term.cols > 100}\nx\n{/if}\n",
+		"_a.bbt":   "a\n{>_b}\n{>b.ans}\n",
+		"_b.bbt":   "b1\nb2\n",
+		"b.ans":    sauceArt("c", 6),
+	}, "main", 20)
+	var got [][]screen.Insert
+	for p := range screen.Render(s, liveEnv(30, 24), theme, "-- More --") {
+		got = append(got, p.Inserts)
+	}
+	want := []screen.Insert{{Name: "_a", Row: 0, Width: 20, Height: 4}, {Name: "_b", Row: 1, Width: 20, Height: 2},
+		{Name: "b.ans", Row: 3, Width: 6, Height: 1}}
+	if len(got) != 1 || !slices.Equal(got[0], want) {
+		t.Errorf("inserts %+v, want %+v", got, want)
+	}
+}
+
+// A page before the end of an include has the fragment rows so far. The last page has all fragment rows:
+// the fragment starts on a page before (live-screen, section 6.2).
+func TestInsertsFragmentPages(t *testing.T) {
+	s := loadLive(t, map[string]string{"main.bbt": "{>_l}\n", "_l.bbt": strings.Repeat("l\n", 12)}, "main", 20)
+	var got [][]screen.Insert
+	for p := range screen.Render(s, liveEnv(20, 10), theme, "-- More --") {
+		got = append(got, p.Inserts)
+	}
+	want := [][]screen.Insert{{{Name: "_l", Row: 0, Width: 20, Height: 11}}, {{Name: "_l", Row: -9, Width: 20, Height: 12}}}
+	if !slices.EqualFunc(got, want, slices.Equal) {
+		t.Errorf("inserts %+v, want %+v", got, want)
 	}
 }

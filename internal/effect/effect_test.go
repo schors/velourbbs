@@ -99,6 +99,34 @@ func TestPlaceInArt(t *testing.T) {
 	}
 }
 
+// A place with in of a fragment moves with the fragment: the text above it wraps at a smaller width.
+// Column 1 is the left edge of the screen area, and -1 is its last column and the last fragment row.
+// The host cuts the place to the fragment rows: a point below or above them has no cell (live-screen, section 6.2).
+func TestPlaceInFragment(t *testing.T) {
+	tests := []struct {
+		at   string
+		cols int
+		want string
+	}{
+		{"[[2, 1], [-1, -1]]", 40, "1:1 ^ 11/0; 2:39 ^ 11/0"},
+		{"[[2, 1], [-1, -1]]", 10, "2:1 ^ 11/0; 3:9 ^ 11/0"},
+		{"[[1, 3], [1, -3]]", 40, ""},
+	}
+	for _, tt := range tests {
+		files := map[string]string{"s.bbt": candle(tt.at, "_f") + "one two three\n{>_f}\nend", "_f.bbt": "abc\ndef"}
+		s, p := page(t, files, tt.cols, 24)
+		if got := cells(s, p, 0); got != tt.want {
+			t.Errorf("%s at %d cols: got %q, want %q", tt.at, tt.cols, got, tt.want)
+		}
+	}
+	// A fragment row has W cells also when term.cols is smaller: -1 is the column W, cut at term.cols.
+	files := map[string]string{"s.bbt": strings.Replace(candle("[[-1, 1], [20, 1]]", "_f"), "[10, 40]", "[40, 40]", 1) + "{>_f}", "_f.bbt": "abc"}
+	s, p := page(t, files, 20, 24)
+	if got, want := cells(s, p, 0), "0:19 ^ 11/0"; got != want {
+		t.Errorf("cut at term.cols: got %q, want %q", got, want)
+	}
+}
+
 // A negative coordinate counts from the end of the screen area and of the page, or of the art grid.
 // The screen area has a margin, and the page has fill rows above it (live-screen, section 6.2).
 func TestPlaceNegative(t *testing.T) {
@@ -139,26 +167,31 @@ func TestPlaceFreeCells(t *testing.T) {
 	}
 }
 
-// A cell that the page does not show is not in a place: an art cut at W, the rows of an art
-// on a page before a More row, and an art in a false block (live-screen, section 6.2).
+// A cell that the page does not show is not in a place: an art or a fragment cut at W, the rows
+// of an art or a fragment on a page before a More row, and an art or a fragment in a false block
+// (live-screen, section 6.2).
 func TestPlaceShown(t *testing.T) {
 	tests := []struct {
-		at, body string
-		rows     int
-		want     string
+		in, at, body string
+		rows         int
+		want         string
 	}{
 		// W = 10 in the middle of 40 columns: the margin is 15.
-		{"[[12, 1], [10, 1]]", "{>a.ans}", 24, "0:24 ^ 11/0"},
-		// 10 rows: page 1 has 9 rows and the More row. The last page starts at art row 10.
-		{"[[1, 8], [1, 9], [1, 12]]", "{>a.ans}", 10, "2:15 ^ 11/0"},
-		{"[1, 1]", "{#if term.cols > 100}\n{>a.ans}\n{/if}\nabc", 24, ""},
+		{"a.ans", "[[12, 1], [10, 1]]", "{>a.ans}", 24, "0:24 ^ 11/0"},
+		{"_f", "[[12, 1], [10, 1]]", "{>_f}", 24, "0:24 ^ 11/0"},
+		// 10 rows: page 1 has 9 rows and the More row. The last page starts at row 10 of the art or the fragment.
+		{"a.ans", "[[1, 8], [1, 9], [1, 12]]", "{>a.ans}", 10, "2:15 ^ 11/0"},
+		{"_f", "[[1, 8], [1, 9], [1, 12]]", "{>_f}", 10, "2:15 ^ 11/0"},
+		{"a.ans", "[1, 1]", "{#if term.cols > 100}\n{>a.ans}\n{/if}\nabc", 24, ""},
+		{"_f", "[1, 1]", "{#if term.cols > 100}\n{>_f}\n{/if}\nabc", 24, ""},
 	}
 	art := sauceArt(strings.Repeat("abcdefghijkl\n", 12), 12)
 	for _, tt := range tests {
-		files := map[string]string{"s.bbt": strings.Replace(candle(tt.at, "a.ans"), "[10, 40]", "[10, 10]", 1) + tt.body, "a.ans": art}
+		files := map[string]string{"s.bbt": strings.Replace(candle(tt.at, tt.in), "[10, 40]", "[10, 10]", 1) + tt.body,
+			"a.ans": art, "_f.bbt": strings.Repeat("abcdefghij\n", 12)}
 		s, p := page(t, files, 40, tt.rows)
 		if got := cells(s, p, 0); got != tt.want {
-			t.Errorf("%s: got %q, want %q", tt.at, got, tt.want)
+			t.Errorf("%s %s: got %q, want %q", tt.in, tt.at, got, tt.want)
 		}
 	}
 }
@@ -409,4 +442,21 @@ func sorted(s string) string {
 	parts := strings.Split(s, "; ")
 	slices.Sort(parts)
 	return strings.Join(parts, "; ")
+}
+
+// The rectangle of a place with in of a fragment is cut to the fragment rows (live-screen, section 6.2):
+// a lightning in a rectangle below the fragment rows has the bolt of the rectangle of the fragment rows.
+func TestLightningFragmentCut(t *testing.T) {
+	layer := func(at string) string {
+		front := "+++\n[[effect]]\ndo = \"lightning\"\nin = \"_f\"\nover = true\nat = " + at + "\nevery = 1\nspread = 0\n+++\n"
+		s, p := page(t, map[string]string{"s.bbt": front + "top\n{>_f}\n" + strings.Repeat("below\n", 8), "_f.bbt": "abc\nabc\nabc"}, 40, 24)
+		return cells(s, p, time.Second)
+	}
+	want := layer("[1, 1, 3, 3]")
+	if want == "" {
+		t.Fatal("no bolt")
+	}
+	if got := layer("[1, 1, 3, 9]"); got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
 }

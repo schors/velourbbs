@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/schors/velourbbs/internal/provider"
 	"github.com/schors/velourbbs/internal/screen"
@@ -150,20 +151,27 @@ func (l *loader) screen(u *unit) {
 	u.done = !u.f.skip
 }
 
-// checkEffects checks the key in of each effect of the screen against its art inserts
-// (live-screen, section 6.1): the screen and its fragments insert the art, and each cell
-// of the place is in the art grid.
+// checkEffects checks the key in of each effect of the screen against its art inserts and fragment includes
+// (live-screen, section 6.1): the screen and its fragments insert the art or include the fragment,
+// and each cell of the place is in the art grid.
 func (l *loader) checkEffects(u *unit) {
 	if len(u.s.Effects) == 0 {
 		return
 	}
-	arts := map[string]*screen.Art{}
-	insertedArts(u.s.Body, arts)
+	arts, fragments := map[string]*screen.Art{}, map[string]bool{}
+	inserted(u.s.Body, arts, fragments)
 	for i, e := range u.s.Effects {
 		if e.In == "" {
 			continue
 		}
 		at := u.s.Front.At("effect").Elem(i)
+		if strings.HasPrefix(e.In, "_") {
+			if !fragments[e.In] {
+				l.errorf(u, filePos(u.f.name, at.At("in").Value()), false,
+					"effect %d: in: the screen does not include fragment %q", i+1, e.In)
+			}
+			continue
+		}
 		a := arts[e.In]
 		if a == nil {
 			l.errorf(u, filePos(u.f.name, at.At("in").Value()), false,
@@ -177,19 +185,21 @@ func (l *loader) checkEffects(u *unit) {
 	}
 }
 
-// insertedArts adds the art of each art insert of segs to arts, by its name.
-func insertedArts(segs []screen.Seg, arts map[string]*screen.Art) {
+// inserted adds the art of each art insert of segs to arts, by its name, and the name of each included
+// fragment to fragments.
+func inserted(segs []screen.Seg, arts map[string]*screen.Art, fragments map[string]bool) {
 	for _, s := range segs {
 		switch s := s.(type) {
 		case screen.ArtInsert:
 			arts[s.Name] = s.Art
 		case screen.If:
-			insertedArts(s.Then, arts)
-			insertedArts(s.Else, arts)
+			inserted(s.Then, arts, fragments)
+			inserted(s.Else, arts, fragments)
 		case screen.Include:
-			insertedArts(s.Body, arts)
+			fragments[s.Name] = true
+			inserted(s.Body, arts, fragments)
 		case screen.ListLine:
-			insertedArts(s.Row, arts)
+			inserted(s.Row, arts, fragments)
 		}
 	}
 }
@@ -297,7 +307,7 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 			}
 		case include:
 			if body, ok := l.include(u, n, top); ok {
-				segs = append(segs, screen.Include{File: l.find(n.file), Body: body})
+				segs = append(segs, screen.Include{File: l.find(n.file), Name: strings.TrimSuffix(n.file, ".bbt"), Body: body})
 			}
 		case artInsert:
 			if top {

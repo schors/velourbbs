@@ -133,8 +133,10 @@ func (p *effectParser) parse() (e screen.Effect) {
 		}
 	}
 	if d.In != nil {
-		if !strings.HasSuffix(*d.In, ".ans") || !screen.IsName(strings.TrimSuffix(*d.In, ".ans")) {
-			p.fail("in", "%q is not the name of an art insert", *d.In)
+		art, isArt := strings.CutSuffix(*d.In, ".ans")
+		fragment, isFragment := strings.CutPrefix(*d.In, "_")
+		if valid := isArt && screen.IsName(art) || isFragment && screen.IsName(fragment); !valid {
+			p.fail("in", "%q is not the name of an art insert or a fragment", *d.In)
 		}
 		e.In = *d.In
 	}
