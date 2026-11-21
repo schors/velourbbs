@@ -438,14 +438,49 @@ func TestItemErrors(t *testing.T) {
 			`screens/s.bbt:5:25: item "A": args: b: value has a control character`,
 			`screens/s.bbt:5:37: item "A": args: c: value has a control character`,
 		}},
-		// A value is a literal or {arg.<name>}: each other token is an error (bbt-format, section 8.5).
-		{[]string{`key = "A"`, `do = "goto r"`, `args = { a = "{in}", b = "{row.path}", c = "{arg.x  }", d = "{t}", e = "{arg.x", F = "{arg.x}" }`}, []string{
-			`screens/s.bbt:5:14: item "A": args: a: invalid token "{in}", want a value or {arg.<name>}`,
-			`screens/s.bbt:5:26: item "A": args: b: invalid token "{row.path}", want a value or {arg.<name>}`,
-			`screens/s.bbt:5:44: item "A": args: c: invalid token "{arg.x  }", want a value or {arg.<name>}`,
-			`screens/s.bbt:5:61: item "A": args: d: invalid token "{t}", want a value or {arg.<name>}`,
-			`screens/s.bbt:5:72: item "A": args: e: invalid token "{arg.x", want a value or {arg.<name>}`,
+		// A value is a literal, {arg.<name>} or {in}: each other token is an error (bbt-format, section 8.5).
+		// {in} is valid only in an item with ask.
+		{[]string{`key = "A"`, `do = "goto r"`, `args = { a = "{in}", b = "{row.path}", c = "{arg.x  }", d = "{t}", e = "{arg.x", F = "{arg.x}", g = "{in }" }`}, []string{
+			`screens/s.bbt:5:14: item "A": args: a: {in} is valid only in an item with ask`,
+			`screens/s.bbt:5:26: item "A": args: b: invalid token "{row.path}", want a value, {arg.<name>} or {in}`,
+			`screens/s.bbt:5:44: item "A": args: c: invalid token "{arg.x  }", want a value, {arg.<name>} or {in}`,
+			`screens/s.bbt:5:61: item "A": args: d: invalid token "{t}", want a value, {arg.<name>} or {in}`,
+			`screens/s.bbt:5:72: item "A": args: e: invalid token "{arg.x", want a value, {arg.<name>} or {in}`,
 			`screens/s.bbt:5:82: item "A": args: invalid argument name "F"`,
+			`screens/s.bbt:5:101: item "A": args: g: invalid token "{in }", want a value, {arg.<name>} or {in}`,
+		}},
+		// The errors of ask and ask_max (section 8.6). The prompt has the rules of a text.
+		{[]string{`key = "A"`, `ask = "N\u0009: "`, `do = "goto r"`, `args = { n = "{in}" }`}, []string{
+			`screens/s.bbt:4:7: item "A": ask: control character U+0009`,
+		}},
+		{[]string{`key = "A"`, `ask = "\u200b"`, `do = "goto r"`, `args = { n = "{in}" }`}, []string{
+			`screens/s.bbt:4:7: item "A": ask: zero-width grapheme U+200B`,
+		}},
+		{[]string{`key = "A"`, `ask = "a` + strings.Repeat("\u0301", 20) + `"`, `do = "goto r"`, `args = { n = "{in}" }`}, []string{
+			`screens/s.bbt:4:7: item "A": ask: grapheme over 32 bytes: 41 bytes`,
+		}},
+		{[]string{`key = "A"`, `ask = "N: "`, `ask_max = 0`, `do = "goto r"`, `args = { n = "{in}" }`}, []string{
+			`screens/s.bbt:5:11: item "A": ask_max: 0, must be at least 1`,
+		}},
+		{[]string{`key = "A"`, `ask_max = 5`, `do = "goto r"`}, []string{
+			`screens/s.bbt:4:11: item "A": ask_max: the item has no ask`,
+		}},
+		{[]string{`key = "A"`, `ask = "N: "`, `do = "back"`}, []string{
+			`screens/s.bbt:4:7: item "A": ask: the action must be goto or gosub`,
+		}},
+		{[]string{`key = "A"`, `ask = "N: "`, `do = "goto r"`, `args = { n = "5" }`}, []string{
+			`screens/s.bbt:4:7: item "A": ask: args has no value {in}`,
+		}},
+		{[]string{`key = "A"`, `ask = "N: "`, `do = "goto r"`}, []string{
+			`screens/s.bbt:4:7: item "A": ask: args has no value {in}`,
+		}},
+		// The min width 40 leaves the free cells 40 - 38 - 1 = 1 after a prompt of 38 cells, and none after 39.
+		{[]string{`key = "A"`, `ask = "` + strings.Repeat("ы", 37) + `語"`, `do = "goto r"`, `args = { n = "{in}" }`}, []string{
+			`screens/s.bbt:4:7: item "A": ask: the prompt is 39 cells wide, the min width 40 leaves no free cell`,
+		}},
+		{[]string{`key = "A"`, `ask = 1`, `do = "goto r"`}, []string{`screens/s.bbt:4:7: item.ask: must be a string`}},
+		{[]string{`key = "A"`, `ask = "N: "`, `ask_max = "5"`, `do = "goto r"`}, []string{
+			`screens/s.bbt:5:11: item.ask_max: must be an integer`,
 		}},
 		{[]string{`key = "A"`, `do = "goto r"`, `args = { file = 1 }`}, []string{
 			`screens/s.bbt:5:17: item.args: must be a table of strings`,
@@ -759,6 +794,43 @@ do = "goto r"
 	want := []map[string]string{{"file": "gold.md", "n": ""}, {"file": "золото.md"}, nil}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("args %q, want %q", got, want)
+	}
+}
+
+// ask gives the prompt and ask_max. {in} can be the value of more than one argument.
+// The prompt has no tokens, and a prompt of 38 cells leaves 1 free cell at the min width 40 (section 8.6).
+func TestItemAsk(t *testing.T) {
+	screens := mustLoad(t, map[string]string{"s.bbt": `+++
+[[item]]
+key = "J"
+ask = "{n}: "
+ask_max = 5
+do = "gosub r"
+args = { area = "a", n = "{in}", m = "{in}" }
+[[item]]
+key = "K"
+ask = "` + strings.Repeat("ы", 36) + `語"
+do = "goto r"
+args = { n = "{in}" }
+[[item]]
+key = "L"
+ask = ""
+do = "goto r"
+args = { n = "{in}" }
++++
+`})
+	items := screens["s"].Items
+	if a := items[0].Ask; a == nil || *a != (screen.Ask{Prompt: "{n}: ", Max: 5}) {
+		t.Errorf("ask of J %+v", a)
+	}
+	if got := items[0].Do; !reflect.DeepEqual(got.Args, map[string]string{"area": "a"}) || !slices.Equal(got.In, []string{"m", "n"}) {
+		t.Errorf("args of J %q, in %q", got.Args, got.In)
+	}
+	if a := items[1].Ask; a == nil || a.Width() != 38 || a.Max != 0 {
+		t.Errorf("ask of K %+v", a)
+	}
+	if a := items[2].Ask; a == nil || a.Prompt != "" {
+		t.Errorf("ask of L %+v", a)
 	}
 }
 

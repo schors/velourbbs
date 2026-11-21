@@ -12,7 +12,7 @@ import (
 	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
-// Origin is the literal or the {row.<field>} that gives the values of an argument,
+// Origin is the literal, the {row.<field>} or the {in} that gives the values of an argument,
 // or a value of velourbbs preview --set (bbt-format, section 8.5).
 type Origin struct {
 	// File, Screen and Label are the screen file, the screen name and `item "<KEY>"` or `select`.
@@ -21,6 +21,7 @@ type Origin struct {
 	At                  tomlcheck.Place
 	Arg                 string // the argument name in the args of the origin
 	Row                 string // the <field> of a {row.<field>} value, else ""
+	In                  bool   // a value {in}: an open value
 	Text                string // the value of a literal or of --set
 }
 
@@ -75,7 +76,12 @@ func Reach(sets Sets, langs []string, seeds Reached) Reached {
 					o.Arg, o.Text = arg, a.Args[arg]
 					r.add(a.Screen, arg, o)
 				}
-				o.Text = ""
+				o.Text, o.In = "", true
+				for _, arg := range a.In {
+					o.Arg = arg
+					r.add(a.Screen, arg, o)
+				}
+				o.In = false
 				for _, arg := range slices.Sorted(maps.Keys(rows)) {
 					o.Arg, o.Row = arg, rows[arg]
 					r.add(a.Screen, arg, o)
@@ -112,7 +118,11 @@ func itemLabel(k string) string { return fmt.Sprintf("item %q", k) }
 
 // Texts gives the values of the origin o: the text of a literal or of --set, or the field of each row
 // of each list of the select of o in the sets of langs (list-view, section 8).
+// An open value gives no text: the checks between the screens report it at file and data.
 func Texts(sets Sets, langs []string, o Origin) []string {
+	if o.In {
+		return nil
+	}
 	if o.Row == "" {
 		return []string{o.Text}
 	}

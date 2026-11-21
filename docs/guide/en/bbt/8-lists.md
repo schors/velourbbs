@@ -316,6 +316,52 @@ select = { do = "gosub note", args = { dir = "{arg.dir}", file = "{row.path}" } 
 
 Full rules: [bbt-format](../../../specs/bbt-format.md), section 8.5.
 
+## A line from the user
+
+An item can ask for one line of text before its action. `ask` is the prompt,
+and `{in}` in `args` gives the line to the next screen.
+This example is not a part of Lamp. To try it, add the item to `screens/main.bbt`
+of your BBS:
+
+```
+[[item]]
+key = "N"
+ask = "Your name: "
+ask_max = 20
+do = "gosub hello"
+args = { name = "{in}" }
+```
+
+Then create the screen `hello`. `screens/hello.bbt`:
+
+```
++++
+[[item]]
+key = "ESC"
+do = "back"
++++
+Good evening, {arg.name}.
+```
+
+- The key `N` shows the prompt and a field on the last row of the page.
+  The user types the line and presses Enter. Then `hello` gets the line in `name`.
+- Esc or Enter with an empty line cancels the input. The page stays.
+- `ask_max` is the most characters of the line. Without it, the field fills the rest of the row.
+- An item with `ask` needs `goto` or `gosub` and `{in}` in `args`.
+  `{in}` is valid only in an item with `ask`.
+- The prompt is plain text: a token in it is text. The theme styles `more` and `select`
+  give the colours of the prompt and of the field.
+- At the min width of the screen, the prompt must leave at least 2 cells.
+- The line cannot reach `file` or `data`, also through other screens:
+  the BBS loads the files and the rows at the start, and a user can type any line.
+
+Test the line on the screen `main` with the item: `velourbbs preview main --keys N,a,n,n,ENTER`. The output has `ask`,
+the page with the prompt, each key of the line and `line "ann"`.
+A letter of the line keeps its case.
+
+Full rules: [bbt-format](../../../specs/bbt-format.md), section 8.6,
+and [menu-nav](../../../specs/menu-nav.md), section 5.4.
+
 ## Sample data
 
 `velourbbs fields` (task 5) also lists the fields of the rows:

@@ -3,6 +3,7 @@ package bbt
 import (
 	"fmt"
 	"maps"
+	"math"
 	"slices"
 	"strings"
 
@@ -43,10 +44,12 @@ type frontDoc struct {
 		Args *map[string]string `toml:"args"`
 	} `toml:"select"`
 	Item []struct {
-		Key  *string            `toml:"key"`
-		Do   *string            `toml:"do"`
-		When *string            `toml:"when"`
-		Args *map[string]string `toml:"args"`
+		Key    *string            `toml:"key"`
+		Do     *string            `toml:"do"`
+		When   *string            `toml:"when"`
+		Args   *map[string]string `toml:"args"`
+		Ask    *string            `toml:"ask"`
+		AskMax *int64             `toml:"ask_max"`
 	} `toml:"item"`
 }
 
@@ -121,8 +124,12 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 					item.Do.Args[name] = v
 				case !screen.IsIdent(name):
 					errorf(pos, "%s: args: invalid argument name %q", label, name)
+				case kind == "in" && it.Ask == nil:
+					errorf(pos, "%s: args: %s: {in} is valid only in an item with ask", label, name)
+				case kind == "in":
+					item.Do.In = append(item.Do.In, name) // sorted: the names are in order
 				case kind != "arg":
-					errorf(pos, "%s: args: %s: invalid token %q, want a value or {arg.<name>}", label, name, v)
+					errorf(pos, "%s: args: %s: invalid token %q, want a value, {arg.<name>} or {in}", label, name, v)
 				default:
 					if item.Do.ArgRefs == nil {
 						item.Do.ArgRefs = map[string]string{}
@@ -131,6 +138,7 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 				}
 			}
 		}
+		item.Ask = parseAsk(it.Ask, it.AskMax, item.Do, at, label, errorf)
 		if it.When != nil {
 			when := at.At("when").Value()
 			c, err := screen.ParseCond(*it.When, fields, false)
@@ -151,6 +159,35 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 		return nil
 	}
 	return fr
+}
+
+// parseAsk parses the keys ask and ask_max of the item at the place at with the action a
+// and the label label (section 8.6). It gives nil without ask. The loader checks the free cells.
+func parseAsk(ask *string, max *int64, a screen.Action, at tomlcheck.Place, label string, errorf errorFunc) *screen.Ask {
+	if ask == nil {
+		if max != nil {
+			errorf(at.At("ask_max").Value(), "%s: ask_max: the item has no ask", label)
+		}
+		return nil
+	}
+	s := &screen.Ask{Prompt: *ask}
+	if err := screen.CheckText(*ask); err != nil {
+		errorf(at.At("ask").Value(), "%s: ask: %v", label, err)
+	}
+	if max != nil {
+		if *max < 1 {
+			errorf(at.At("ask_max").Value(), "%s: ask_max: %d, must be at least 1", label, *max)
+		} else {
+			s.Max = int(min(*max, math.MaxInt32))
+		}
+	}
+	// Op 0: the do has an error.
+	if a.Op != 0 && !a.Op.HasTarget() {
+		errorf(at.At("ask").Value(), "%s: ask: the action must be goto or gosub", label)
+	} else if a.Op != 0 && len(a.In) == 0 {
+		errorf(at.At("ask").Value(), "%s: ask: args has no value {in}", label)
+	}
+	return s
 }
 
 // errorFunc reports an error of a front matter at a position in the screen file.
@@ -235,7 +272,8 @@ func rowField(c *screen.Cond) string {
 }
 
 // tokenValue reports whether the value v starts with "{": a token. For a value that is exactly
-// one token {arg.<name>} or {row.<name>}, kind is "arg" or "row" and name is the <name>; else both are ""
+// one token {arg.<name>} or {row.<name>}, kind is "arg" or "row" and name is the <name>.
+// For {in}, kind is "in" and name is "". Else both are ""
 // (bbt-format, section 8.5).
 func tokenValue(v string) (kind, name string, token bool) {
 	t, ok := strings.CutPrefix(v, "{")
@@ -245,6 +283,9 @@ func tokenValue(v string) (kind, name string, token bool) {
 	t, ok = strings.CutSuffix(t, "}")
 	if !ok {
 		return "", "", true
+	}
+	if t == "in" {
+		return "in", "", true
 	}
 	for _, k := range []string{"arg", "row"} {
 		if n, ok := strings.CutPrefix(t, k+"."); ok && screen.IsIdent(n) {

@@ -754,3 +754,45 @@ func TestServeStopPage(t *testing.T) {
 	}
 	logRecord(t, ts, "close", "reason", "shutdown")
 }
+
+// An item with ask shows the ask row on the last row of the page and draws the field.
+// ESC shows the page again (menu-nav, section 5.4, and line-input, section 7).
+// A resize before the ask does not change the field: it has the size of the current screen.
+func TestServeAsk(t *testing.T) {
+	fsys := fstest.MapFS{
+		"bbs.toml": {},
+		"screens/main.bbt": {Data: []byte("+++\n[[item]]\nkey = \"J\"\nask = \"N: \"\nask_max = 3\ndo = \"gosub hi\"\n" +
+			"args = { n = \"{in}\" }\n[[item]]\nkey = \"K\"\nask = \"N: \"\ndo = \"gosub hi\"\nargs = { n = \"{in}\" }\n" +
+			"[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\nHello from main\n")},
+		"screens/hi.bbt": {Data: []byte("+++\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\nHi {arg.n}\n")},
+	}
+	ts := startFS(t, fsys, nil, nil, 0)
+	c := ts.dial(t)
+	// WILL NAWS with the size 80x24 and WONT TTYPE.
+	probe(t, c, "\xff\xfb\x1f\xff\xfa\x1f\x00\x50\x00\x18\xff\xf0\xff\xfc\x18")
+	// The page with the ask row at 80 columns, then the start of the line input and the draw of the field.
+	write(t, c, "j")
+	got := readUntil(t, c, "\x1b[?2004h\x1b[1;4H\x1b[0;30;47m    \x1b[0m\x1b[1;4H", 1)
+	want := "\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;97;40mN: \x1b[0;30;47m    \x1b[0;37;40m" + strings.Repeat(" ", 73) +
+		"\x1b[0m\x1b[?2026l\x1b[?2004h\x1b[1;4H\x1b[0;30;47m    \x1b[0m\x1b[1;4H"
+	if got = got[strings.LastIndex(got, "\x1b[?2026h"):]; got != want {
+		t.Errorf("ask\n%q, want\n%q", got, want)
+	}
+	// ESC ends the line input and shows the page again.
+	write(t, c, "\x1b")
+	got = readUntil(t, c, "\x1b[?2026l", 1)
+	want = "\x1b[?2004l\x1b[?2026h\x1b[0m\x1b[2J\x1b[1;1H\x1b[0;37;40mHello from main" + strings.Repeat(" ", 65) +
+		"\x1b[0m\x1b[?2026l"
+	if got != want {
+		t.Errorf("cancel\n%q, want\n%q", got, want)
+	}
+	// NAWS 40x24 does not change the current screen: the field of K has M = 80 - 3 - 1.
+	write(t, c, "\xff\xfa\x1f\x00\x28\x00\x18\xff\xf0k")
+	readUntil(t, c, "\x1b[?2004h\x1b[1;4H\x1b[0;30;47m"+strings.Repeat(" ", 77)+"\x1b[0m\x1b[1;4H", 1)
+	write(t, c, "x\r")
+	readUntil(t, c, "Hi x", 1)
+	write(t, c, "\x1bq")
+	if got := readAll(t, c); !strings.Contains(got, "Hello from main") {
+		t.Errorf("output %q has no page of main", got)
+	}
+}

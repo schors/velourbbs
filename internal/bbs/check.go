@@ -91,24 +91,36 @@ func checkSelect(sets bbt.Sets, lang string, sel *screen.Select, at tomlcheck.Pl
 	}
 }
 
-// checkReach adds to sd each {row.<field>} value that reaches the data of a screen, also through
+// checkReach adds to sd each open value that reaches the file or the data of a screen
+// and each {row.<field>} value that reaches the data of a screen, also through
 // the {arg.<name>} values of other screens (bbt-format, section 8.5). The set of the screen
-// with data finds the error (session-language, section 6). It needs the screens of all sets of langs
+// with file or data finds the error (session-language, section 6). It needs the screens of all sets of langs
 // and their checks without errors.
 func checkReach(langs []string, sets bbt.Sets, sd *bbt.SetDiags) {
 	r := bbt.Reach(sets, langs, nil)
 	for _, lang := range langs {
 		var ds screen.Diags
+		report := func(o bbt.Origin, key, name string) {
+			p := o.Pos()
+			ds.Errorf(p.File, p.Line, p.Col, "%s: args: %s: the value reaches the %s of screen %q", o.Label, o.Arg, key, name)
+		}
 		for _, name := range slices.Sorted(maps.Keys(sets[lang])) {
-			ls := sets[lang][name].List
+			s := sets[lang][name]
+			if f := s.FileScreen; f != nil && f.Arg != "" {
+				for _, o := range r[name][f.Arg] {
+					if o.In {
+						report(o, "file", name)
+					}
+				}
+			}
+			ls := s.List
 			if ls == nil {
 				continue
 			}
 			for _, pa := range slices.Sorted(maps.Keys(ls.ArgRefs)) {
 				for _, o := range r[name][ls.ArgRefs[pa]] {
-					if o.Row != "" {
-						p := o.Pos()
-						ds.Errorf(p.File, p.Line, p.Col, "%s: args: %s: the value reaches the data of screen %q", o.Label, o.Arg, name)
+					if o.Row != "" || o.In {
+						report(o, "data", name)
 					}
 				}
 			}

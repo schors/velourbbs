@@ -19,6 +19,7 @@ import (
 	"github.com/schors/velourbbs/internal/config"
 	"github.com/schors/velourbbs/internal/content"
 	"github.com/schors/velourbbs/internal/key"
+	"github.com/schors/velourbbs/internal/line"
 	"github.com/schors/velourbbs/internal/menu"
 	"github.com/schors/velourbbs/internal/screen"
 	"github.com/schors/velourbbs/internal/term"
@@ -484,8 +485,8 @@ func parseKeys(v string) ([]string, error) {
 	var keys []string
 	for _, e := range strings.Split(v, ",") {
 		k, ok := key.Parse(e)
-		if !ok || k == key.Any {
-			r := []rune(e)
+		// A character stays as it is, with its case: the session maps it outside the line input.
+		if r := []rune(e); !ok || k == key.Any || len(r) == 1 {
 			if len(r) != 1 || r[0] == ' ' || !unicode.IsPrint(r[0]) {
 				return nil, fmt.Errorf("invalid key %q", e)
 			}
@@ -544,6 +545,42 @@ func (t *keysTerm) KeyEvent(k string, ignored bool) error {
 
 func (t *keysTerm) Logoff() error {
 	_, err := io.WriteString(t.w, "logoff\n")
+	return err
+}
+
+// ReadLine runs the line input on the keys of the list. It writes each key as it is.
+// The list is not a queue: the end of the input drops no key (menu-nav, section 5.4).
+func (t *keysTerm) ReadLine(ctx context.Context, f line.Field) (string, bool, error) {
+	l := line.New(f, t.term.Cols, t.term.Rows)
+	for {
+		k, err := t.Key(ctx)
+		if err != nil {
+			return "", false, err
+		}
+		if _, err := fmt.Fprintf(t.w, "key %s\n", k); err != nil {
+			return "", false, err
+		}
+		switch l.Key(k, false) {
+		case line.Enter:
+			return l.Text(), true, nil
+		case line.Cancel:
+			return "", false, nil
+		}
+	}
+}
+
+func (t *keysTerm) Ask() error {
+	_, err := io.WriteString(t.w, "ask\n")
+	return err
+}
+
+// Line writes the line with a \ before each " and \ (menu-nav, section 7).
+func (t *keysTerm) Line(text string, ok bool) error {
+	out := "line cancelled\n"
+	if ok {
+		out = `line "` + strings.NewReplacer(`"`, `\"`, `\`, `\\`).Replace(text) + "\"\n"
+	}
+	_, err := io.WriteString(t.w, out)
 	return err
 }
 

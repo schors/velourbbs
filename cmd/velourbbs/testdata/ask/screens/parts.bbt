@@ -1,0 +1,16 @@
++++
+data = { from = "files", args = { dir = "docs" } }
+rows = 3
+select = { do = "gosub hello", args = { name = "{row.title}" } }
+[[item]]
+key = "A"
+ask = "Name: "
+do = "gosub hello"
+args = { name = "{in}" }
+[[item]]
+key = "ESC"
+do = "back"
++++
+Parts
+{#each}{#if row.selected}>{#else} {/if}{row.title}{/each}
+[A] Name  [Esc] Back

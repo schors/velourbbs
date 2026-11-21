@@ -22,9 +22,14 @@ func TestSamples(t *testing.T) {
 		"screens/b.bbt": screen(item("1", "gosub a", `x = "{arg.x}"`), item("2", "gosub c", `y = "{arg.x}"`)),
 		"screens/c.bbt": "+++\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{arg.y}\n",
 		// d and e give z only to each other: z has no value.
-		"screens/d.bbt":    "+++\n" + item("1", "gosub e", `z = "{arg.z}"`) + "+++\n{arg.z}\n",
-		"screens/e.bbt":    "+++\n" + item("1", "gosub d", `z = "{arg.z}"`) + "+++\n{arg.z}\n",
-		"screens/main.bbt": "+++\n" + item("1", "gosub a", `x = "m"`) + "[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n",
+		"screens/d.bbt": "+++\n" + item("1", "gosub e", `z = "{arg.z}"`) + "+++\n{arg.z}\n",
+		"screens/e.bbt": "+++\n" + item("1", "gosub d", `z = "{arg.z}"`) + "+++\n{arg.z}\n",
+		// f gives its {in} to g, and g gives it on to h: an empty value.
+		"screens/f.bbt": "+++\n[[item]]\nkey = \"1\"\nask = \"N: \"\ndo = \"gosub g\"\nargs = { n = \"{in}\" }\n" +
+			"[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n",
+		"screens/g.bbt":    "+++\n" + item("1", "gosub h", `n = "{arg.n}"`) + "[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n",
+		"screens/h.bbt":    "+++\n[[item]]\nkey = \"ESC\"\ndo = \"back\"\n+++\n{arg.n}\n",
+		"screens/main.bbt": "+++\n" + item("1", "gosub a", `x = "m"`) + item("2", "gosub f", "") + "[[item]]\nkey = \"Q\"\ndo = \"logoff\"\n+++\n",
 	})
 	if m == nil {
 		t.Fatalf("diags:\n%s", strings.Join(msgs, "\n"))
@@ -38,12 +43,14 @@ func TestSamples(t *testing.T) {
 		{"b", "x", "m", true},
 		{"c", "y", "m", true},
 		{"d", "z", "", false},
+		{"g", "n", "", true},
+		{"h", "n", "", true},
 	} {
 		if v, ok := s.Arg(tt.screen, tt.arg); v != tt.want || ok != tt.ok {
 			t.Errorf("Arg(%s, %s) = %q, %v; want %q, %v", tt.screen, tt.arg, v, ok, tt.want, tt.ok)
 		}
 	}
-	if got, want := s.Fields(), map[string]string{"x": "m", "y": "m"}; !maps.Equal(got, want) {
+	if got, want := s.Fields(), map[string]string{"x": "m", "y": "m", "n": ""}; !maps.Equal(got, want) {
 		t.Errorf("Fields() = %v, want %v", got, want)
 	}
 }

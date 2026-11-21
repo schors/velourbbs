@@ -14,6 +14,7 @@ import (
 	"github.com/schors/velourbbs/internal/bbs"
 	"github.com/schors/velourbbs/internal/bbt"
 	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/line"
 	"github.com/schors/velourbbs/internal/screen"
 )
 
@@ -59,6 +60,25 @@ func (f *fakeTerm) Page(p screen.Page) error {
 	return f.pageErr
 }
 
+// ReadLine logs the field as "line <row>:<col> <M>" and runs the line input on the keys.
+func (f *fakeTerm) ReadLine(ctx context.Context, fd line.Field) (string, bool, error) {
+	f.log = append(f.log, fmt.Sprintf("line %d:%d %d", fd.Row, fd.Col, fd.Max))
+	c := f.Term()
+	l := line.New(fd, c.Cols, c.Rows)
+	for {
+		k, err := f.Key(ctx)
+		if err != nil {
+			return "", false, err
+		}
+		switch l.Key(k, false) {
+		case line.Enter:
+			return l.Text(), true, nil
+		case line.Cancel:
+			return "", false, nil
+		}
+	}
+}
+
 // Update logs the rows of p after "update:", separated with "|".
 func (f *fakeTerm) Update(p screen.Page) error {
 	f.log = append(f.log, "update: "+rowsText(p))
@@ -96,6 +116,19 @@ func (f eventsTerm) KeyEvent(k string, ignored bool) error {
 
 func (f eventsTerm) Logoff() error {
 	f.log = append(f.log, "logoff")
+	return nil
+}
+
+func (f eventsTerm) Ask() error {
+	f.log = append(f.log, "ask")
+	return nil
+}
+
+func (f eventsTerm) Line(text string, ok bool) error {
+	if !ok {
+		text = "cancelled"
+	}
+	f.log = append(f.log, "line "+text)
 	return nil
 }
 
@@ -441,6 +474,10 @@ func (f *styleTerm) Page(p screen.Page) error {
 }
 
 func (f *styleTerm) Update(screen.Page) error { return nil }
+
+func (f *styleTerm) ReadLine(context.Context, line.Field) (string, bool, error) {
+	return "", false, io.EOF
+}
 
 // The session renders with the session theme of the term.colors of the terminal.
 func TestRunSessionTheme(t *testing.T) {

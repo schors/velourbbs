@@ -178,10 +178,27 @@ func (e KeyError) Error() string { return e.Key + ": " + e.Err.Error() }
 func (e KeyError) Unwrap() error { return e.Err }
 
 // Item is a menu item of the front matter. When is nil when the item has no when.
+// Ask is nil when the item has no ask.
 type Item struct {
 	Key  string // a key name of section 8.1, in upper case
 	Do   Action
 	When *Cond
+	Ask  *Ask
+}
+
+// Ask is the line of an item that the host asks for before the action (section 8.6).
+type Ask struct {
+	Prompt string
+	Max    int // ask_max; 0 without ask_max
+}
+
+// Width gives the cells of the prompt.
+func (a *Ask) Width() int {
+	n := 0
+	for _, w := range Graphemes(a.Prompt) {
+		n += w
+	}
+	return n
 }
 
 // Action is the parsed do of an item (section 8.3) and its args.
@@ -196,6 +213,8 @@ type Action struct {
 	Args map[string]string
 	// ArgRefs holds the <name> of each value {arg.<name>} by argument name; nil without such values.
 	ArgRefs map[string]string
+	// In holds the sorted names of the arguments with the value {in}; nil without such values.
+	In []string
 }
 
 // Names gives the sorted names of the args of a.
@@ -204,8 +223,25 @@ func (a Action) Names() []string {
 	for name := range a.ArgRefs {
 		names = append(names, name)
 	}
+	names = append(names, a.In...)
 	slices.Sort(names)
 	return names
+}
+
+// Input gives a with the line in as the value of each {in} (menu-nav, section 5.4).
+func (a Action) Input(in string) Action {
+	if len(a.In) == 0 {
+		return a
+	}
+	a.Args = maps.Clone(a.Args)
+	if a.Args == nil {
+		a.Args = map[string]string{}
+	}
+	for _, name := range a.In {
+		a.Args[name] = in
+	}
+	a.In = nil
+	return a
 }
 
 // Resolve gives a with the value of each {arg.<name>} from the arguments args of the current screen

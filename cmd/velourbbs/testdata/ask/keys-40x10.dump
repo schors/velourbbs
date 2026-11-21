@@ -1,0 +1,274 @@
+screen main
+page 1 40x10 fill none
+|Main                                    |
+|[J] Name  [F] File  [L] List  [E] Empty |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+key X ignored
+key J
+ask
+page 1 40x10 fill none
+|Main                                    |
+|Your name:                              |
+styles
+1: 1-40 7/0
+2: 1-11 15/0, 12-20 0/7, 21-40 7/0
+key ESC
+line cancelled
+page 1 40x10 fill none
+|Main                                    |
+|[J] Name  [F] File  [L] List  [E] Empty |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+key J
+ask
+page 1 40x10 fill none
+|Main                                    |
+|Your name:                              |
+styles
+1: 1-40 7/0
+2: 1-11 15/0, 12-20 0/7, 21-40 7/0
+key ENTER
+line cancelled
+page 1 40x10 fill none
+|Main                                    |
+|[J] Name  [F] File  [L] List  [E] Empty |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+key J
+ask
+page 1 40x10 fill none
+|Main                                    |
+|Your name:                              |
+styles
+1: 1-40 7/0
+2: 1-11 15/0, 12-20 0/7, 21-40 7/0
+key j
+key o
+key TAB
+key e
+key BS
+key y
+key "
+key \
+key ENTER
+line "joy\"\\"
+screen hello
+page 1 40x10 fill none
+|Good evening, joy"\.                    |
+styles
+1: 1-40 7/0
+key ESC
+screen main
+page 1 40x10 fill none
+|Main                                    |
+|[J] Name  [F] File  [L] List  [E] Empty |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+key F
+screen read
+page 1 40x10 fill none
+|Read: Intro                             |
+|Intro                                   |
+|                                        |
+|The first text.                         |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|[A] Name  [Esc] Back                    |
+styles
+1: 1-40 7/0
+2: 1-5 15/0 bold, 6-40 7/0
+3: 1-40 7/0
+4: 1-40 7/0
+5: 1-40 7/0
+6: 1-40 7/0
+7: 1-40 7/0
+8: 1-40 7/0
+9: 1-40 7/0
+10: 1-40 7/0
+key A
+ask
+page 1 40x10 fill none
+|Read: Intro                             |
+|Intro                                   |
+|                                        |
+|The first text.                         |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|Name:                                   |
+styles
+1: 1-40 7/0
+2: 1-5 15/0 bold, 6-40 7/0
+3: 1-40 7/0
+4: 1-40 7/0
+5: 1-40 7/0
+6: 1-40 7/0
+7: 1-40 7/0
+8: 1-40 7/0
+9: 1-40 7/0
+10: 1-6 15/0, 7-40 0/7
+key q
+key ENTER
+line "q"
+screen hello
+page 1 40x10 fill none
+|Good evening, q.                        |
+styles
+1: 1-40 7/0
+key ESC
+screen read
+page 1 40x10 fill none
+|Read: Intro                             |
+|Intro                                   |
+|                                        |
+|The first text.                         |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|                                        |
+|[A] Name  [Esc] Back                    |
+styles
+1: 1-40 7/0
+2: 1-5 15/0 bold, 6-40 7/0
+3: 1-40 7/0
+4: 1-40 7/0
+5: 1-40 7/0
+6: 1-40 7/0
+7: 1-40 7/0
+8: 1-40 7/0
+9: 1-40 7/0
+10: 1-40 7/0
+key ESC
+screen main
+page 1 40x10 fill none
+|Main                                    |
+|[J] Name  [F] File  [L] List  [E] Empty |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+key L
+screen parts
+page 1 40x10 fill none
+|Parts                                   |
+|>One                                    |
+| Two                                    |
+|                                        |
+|[A] Name  [Esc] Back                    |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+3: 1-40 7/0
+4: 1-40 7/0
+5: 1-40 7/0
+key DOWN
+page 1 40x10 fill none
+|Parts                                   |
+| One                                    |
+|>Two                                    |
+|                                        |
+|[A] Name  [Esc] Back                    |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+3: 1-40 7/0
+4: 1-40 7/0
+5: 1-40 7/0
+key A
+ask
+page 1 40x10 fill none
+|Parts                                   |
+| One                                    |
+|>Two                                    |
+|                                        |
+|Name:                                   |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+3: 1-40 7/0
+4: 1-40 7/0
+5: 1-6 15/0, 7-40 0/7
+key ESC
+line cancelled
+page 1 40x10 fill none
+|Parts                                   |
+| One                                    |
+|>Two                                    |
+|                                        |
+|[A] Name  [Esc] Back                    |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+3: 1-40 7/0
+4: 1-40 7/0
+5: 1-40 7/0
+key ENTER
+screen hello
+page 1 40x10 fill none
+|Good evening, Two.                      |
+styles
+1: 1-40 7/0
+key ESC
+screen parts
+page 1 40x10 fill none
+|Parts                                   |
+| One                                    |
+|>Two                                    |
+|                                        |
+|[A] Name  [Esc] Back                    |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+3: 1-40 7/0
+4: 1-40 7/0
+5: 1-40 7/0
+key ESC
+screen main
+page 1 40x10 fill none
+|Main                                    |
+|[J] Name  [F] File  [L] List  [E] Empty |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+key E
+screen empty
+page 1 40x10 fill none
+styles
+key A
+ask
+page 1 40x10 fill none
+|Name:                                   |
+styles
+5: 1-6 15/0, 7-11 0/7, 12-40 7/0
+key x
+key ENTER
+line "x"
+screen hello
+page 1 40x10 fill none
+|Good evening, x.                        |
+styles
+1: 1-40 7/0
+key ESC
+screen empty
+page 1 40x10 fill none
+styles
+key ESC
+screen main
+page 1 40x10 fill none
+|Main                                    |
+|[J] Name  [F] File  [L] List  [E] Empty |
+styles
+1: 1-40 7/0
+2: 1-40 7/0
+key G
+logoff
