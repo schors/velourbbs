@@ -140,6 +140,7 @@ with 16 colours, and `#004080/7 bold underline` in the light theme with 16 colou
 ### 3.3. `[fields]`
 
 `[fields]` maps an alias to a registry path: [bbt-format](bbt-format.md), sections 4.1 and 4.2.
+The front matter of a screen can have `[fields]` with the same rules ([bbt-format](bbt-format.md), section 3.2).
 
 - An alias matches `[a-z][a-z0-9_]*`. Each value is a string. The default `[fields]` is empty.
 - An alias cannot be `term`, `item`, `arg`, `file`, `meta`, `row`, `list`, `session`, `bbs`, `in`, `and`, `or` or `not`.
@@ -149,6 +150,8 @@ with 16 colours, and `#004080/7 bold underline` in the light theme with 16 colou
   of a file screen is valid only in a file screen ([file-view](file-view.md), section 3.4),
   and an alias to a field of a list screen has the rules of [list-view](list-view.md), section 6.
 - The path is a path of the registry with a dot. It cannot be `item.<KEY>`.
+- After the path, the value can have the live mark: `clock = 'bbs.time live "15:04:05"'`
+  ([live-screen](live-screen.md), section 3).
 
 ### 3.4. `[menu]`
 

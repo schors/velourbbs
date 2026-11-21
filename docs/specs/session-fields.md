@@ -33,8 +33,8 @@ the online time, the BBS name, the version, the open sessions, the server time a
 - A list screen takes the values at step 1 of [menu-nav](menu-nav.md), section 5.3,
   for the page size ([list-view](list-view.md), section 7). It takes them again for each page
   at step 3. A cursor move on the same list page keeps them.
-- A live page with `live = true` takes the values again at each tick ([live-screen](live-screen.md), section 4).
-  A cursor move then keeps the values of the last tick.
+- A tick of a live page takes the values again only for its slots ([live-screen](live-screen.md), section 4).
+  The conditions and the other fields keep the values of the show.
 
 ## 3. Values
 
