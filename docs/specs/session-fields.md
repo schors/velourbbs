@@ -4,7 +4,7 @@ This specification defines the fields of the session and of the BBS: their value
 in `velourbbs serve` and in `velourbbs preview`.
 Related parts: [bbt-format](bbt-format.md), [bbs-toml](bbs-toml.md),
 [screens-toml](screens-toml.md), [screen-render](screen-render.md), [menu-nav](menu-nav.md),
-[file-view](file-view.md) and [telnet-term](telnet-term.md).
+[file-view](file-view.md), [live-screen](live-screen.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
@@ -33,6 +33,7 @@ the online time, the BBS name, the version, the open sessions, the server time a
 - A list screen takes the values at step 1 of [menu-nav](menu-nav.md), section 5.3,
   for the page size ([list-view](list-view.md), section 7). It takes them again for each page
   at step 3. A cursor move on the same list page keeps them.
+- A live page takes the values again at each tick ([live-screen](live-screen.md), section 4).
 
 ## 3. Values
 
@@ -131,6 +132,5 @@ the online time, the BBS name, the version, the open sessions, the server time a
 
 ## 7. Not in this specification
 
-- The update of a field on an open screen: [live-fields](https://github.com/schors/velourbbs/issues/10).
 - A node number.
 - The names of months and days in other languages.
