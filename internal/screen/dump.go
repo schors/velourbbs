@@ -25,8 +25,30 @@ func (p Page) Header() string {
 
 // WritePage writes the part of the cell dump for the page p (screen-render, section 3.3).
 func WritePage(w io.Writer, p Page) error {
+	return writePart(w, p.Header(), p)
+}
+
+// GridPage gives the grid of p (Page.Grid) as a page: its rows are all terminal rows,
+// without a margin. The line form of velourbbs preview writes it (live-screen, section 7).
+func (p Page) GridPage() Page {
+	return Page{Num: p.Num, Rows: p.Grid(), Cols: p.Cols, Height: p.Height, Normal: p.Normal, Fill: p.Fill}
+}
+
+// GridHeader gives the first line of the grid dump of p, without the line end (live-screen, section 7).
+func (p Page) GridHeader() string {
+	return fmt.Sprintf("grid %dx%d", p.Cols, p.Height)
+}
+
+// WriteGrid writes the grid dump of the grid of p (live-screen, section 7): the cell dump
+// of all terminal rows with the first line GridHeader.
+func WriteGrid(w io.Writer, p Page) error {
+	return writePart(w, p.GridHeader(), p.GridPage())
+}
+
+// writePart writes a part of the cell dump: the line header, then the rows of p and their styles.
+func writePart(w io.Writer, header string, p Page) error {
 	var b bytes.Buffer
-	b.WriteString(p.Header())
+	b.WriteString(header)
 	b.WriteByte('\n')
 	var line Row
 	for i := range p.Rows {

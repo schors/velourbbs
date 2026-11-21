@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 	"testing/fstest"
+	"time"
 
 	"github.com/schors/velourbbs/internal/bbs"
 	"github.com/schors/velourbbs/internal/bbt"
@@ -19,12 +20,66 @@ import (
 )
 
 // fakeTerm is a Terminal without Events. It logs each page as "page: <row 1>".
+// A key "+<duration>" is a wait: it moves the clock (as velourbbs preview, live-screen, section 7).
 type fakeTerm struct {
 	cols    []int // the cols of each Term call; the last value stays
 	rows    []int // the rows of each Term call, as cols; 10 when empty
 	keys    []string
 	log     []string
-	pageErr error // the error of Page
+	pageErr error     // the error of Page
+	now     time.Time // the clock; zero is fakeStart
+	waitEnd time.Time // the end of the wait at the head of keys, else zero
+}
+
+// fakeStart is the start of the clock of fakeTerm.
+var fakeStart = time.Date(2006, 1, 2, 15, 4, 5, 0, time.UTC)
+
+func (f *fakeTerm) Now() time.Time {
+	if f.now.IsZero() {
+		f.now = fakeStart
+	}
+	return f.now
+}
+
+// Wait gives the next key. A wait at the head of keys moves the clock to the deadline dl
+// and gives no key, or to its end when dl is zero or later. Then the next key follows.
+func (f *fakeTerm) Wait(ctx context.Context, dl time.Time) (string, bool, error) {
+	for {
+		if len(f.keys) == 0 {
+			return "", false, io.EOF
+		}
+		d, ok := waitKey(f.keys[0])
+		if !ok {
+			k, err := f.Key(ctx)
+			return k, true, err
+		}
+		if f.waitEnd.IsZero() {
+			f.waitEnd = f.Now().Add(d)
+		}
+		if !dl.IsZero() && !dl.After(f.waitEnd) {
+			f.now = later(f.Now(), dl)
+			return "", false, nil
+		}
+		f.now, f.waitEnd = f.waitEnd, time.Time{}
+		f.log = append(f.log, "wait "+f.keys[0])
+		f.keys = f.keys[1:]
+	}
+}
+
+// waitKey gives the duration of the wait k: "+<duration>".
+func waitKey(k string) (time.Duration, bool) {
+	s, ok := strings.CutPrefix(k, "+")
+	if !ok || s == "" {
+		return 0, false
+	}
+	d, err := time.ParseDuration(s)
+	return d, err == nil
+}
+
+// Frame logs the clock and the rows of p after "frame <clock>:", separated with "|".
+func (f *fakeTerm) Frame(p screen.Page) error {
+	f.log = append(f.log, "frame "+f.Now().Format("05.000")+": "+rowsText(p))
+	return nil
 }
 
 func (f *fakeTerm) Term() screen.Term {
@@ -42,13 +97,21 @@ func (f *fakeTerm) Term() screen.Term {
 	return screen.Term{Type: "ansi", Cols: c, Rows: r, Colors: 16}
 }
 
+// Key gives the next key. A wait moves the clock to its end and logs "wait <key> no frame".
 func (f *fakeTerm) Key(context.Context) (string, error) {
-	if len(f.keys) == 0 {
-		return "", io.EOF
+	for {
+		if len(f.keys) == 0 {
+			return "", io.EOF
+		}
+		k := f.keys[0]
+		f.keys = f.keys[1:]
+		d, ok := waitKey(k)
+		if !ok {
+			return k, nil
+		}
+		f.now, f.waitEnd = f.Now().Add(d), time.Time{}
+		f.log = append(f.log, "wait "+k+" no frame")
 	}
-	k := f.keys[0]
-	f.keys = f.keys[1:]
-	return k, nil
 }
 
 func (f *fakeTerm) Page(p screen.Page) error {
@@ -474,6 +537,15 @@ func (f *styleTerm) Page(p screen.Page) error {
 }
 
 func (f *styleTerm) Update(screen.Page) error { return nil }
+
+func (f *styleTerm) Frame(screen.Page) error { return nil }
+
+func (f *styleTerm) Now() time.Time { return fakeStart }
+
+func (f *styleTerm) Wait(ctx context.Context, _ time.Time) (string, bool, error) {
+	k, err := f.Key(ctx)
+	return k, err == nil, err
+}
 
 func (f *styleTerm) ReadLine(context.Context, line.Field) (string, bool, error) {
 	return "", false, io.EOF

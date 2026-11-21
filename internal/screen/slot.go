@@ -1,6 +1,7 @@
 package screen
 
 import (
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,6 +18,78 @@ type Slot struct {
 	Ref         Ref
 	Layout      string // the layout of bbs.time of the token or of the alias, else ""
 	Right       bool   // the value aligns right
+}
+
+// liveValue gives the graphemes of the value of the live field ref with the layout layout in env
+// (live-screen, section 3). bbs.time with a layout shows Session.Clock in the layout;
+// a zero instant, for a value of --set, shows Session.Time.
+func liveValue(ref Ref, layout string, env *Env) []Grapheme {
+	if layout != "" && !env.Session.Clock.IsZero() {
+		return CleanValue(env.Session.Clock.Format(layout))
+	}
+	return env.Text(ref)
+}
+
+// Tick gives the page p with the values of sv in its slots (live-screen, section 4).
+// It fits the value of each slot to the slot and writes the graphemes of its run.
+// The styles and the other cells stay. A cut through a wide grapheme at the edge of a run
+// leaves a space. Tick does not change the rows of p: it copies each row with a slot.
+func (p Page) Tick(sv SessionValues) Page {
+	if len(p.Slots) == 0 {
+		return p
+	}
+	env := &Env{Session: sv}
+	rows := slices.Clone(p.Rows)
+	copied := map[int]bool{}
+	var cells []Cell
+	for _, s := range p.Slots {
+		if !copied[s.Row] {
+			rows[s.Row] = slices.Clone(rows[s.Row])
+			copied[s.Row] = true
+		}
+		cells = cells[:0]
+		for _, g := range FitValue(liveValue(s.Ref, s.Layout, env), s.Width, s.Right) {
+			cells = appendSlot(cells, g, Style{}, 0)
+		}
+		run := rows[s.Row][s.Col : s.Col+s.Cells]
+		for i := range run {
+			j := s.Skip + i
+			g := cells[j].Grapheme
+			switch {
+			case i == 0 && g == "": // the second cell of a wide grapheme that starts before the run
+				g = " "
+			case i == len(run)-1 && j+1 < len(cells) && g != "" && cells[j+1].Grapheme == "":
+				g = " " // a wide grapheme that ends after the run
+			}
+			run[i].Grapheme = g
+		}
+	}
+	p.Rows = rows
+	return p
+}
+
+// Grid gives the cells of all terminal rows of p, term.rows rows of term.cols cells:
+// the grid without a layer (live-screen, section 2). A cell of a fill row is a space:
+// in the colour default without attributes with fill none, else in Normal.
+// A row of p below term.rows is not in the grid.
+func (p Page) Grid() []Row {
+	grid := make([]Row, p.Height)
+	for i := range grid {
+		if j := i - p.Top; j >= 0 && j < len(p.Rows) {
+			grid[i] = p.Line(j, nil)
+			continue
+		}
+		style := p.Normal
+		if p.Fill == FillNone {
+			style = Style{}
+		}
+		row := make(Row, p.Cols)
+		for k := range row {
+			row[k] = Cell{Grapheme: " ", Style: style}
+		}
+		grid[i] = row
+	}
+	return grid
 }
 
 // durationWidth is the largest width of session.online and bbs.uptime: the width of "9999d 23:59:59"

@@ -7,7 +7,6 @@
 package term
 
 import (
-	"slices"
 	"strconv"
 	"unicode/utf8"
 
@@ -21,18 +20,6 @@ import (
 // then a VGA colour goes out as its RGB value.
 // The caller doubles IAC after it (section 4.3).
 func AppendPage(dst []byte, p screen.Page, colors int, vgaRGB bool) []byte {
-	return appendPage(dst, p, nil, colors, vgaRGB)
-}
-
-// AppendUpdate appends the output of the update of the shown page prev to the page p (section 7.1):
-// the rows of p whose cells differ from the row of prev, without the clear and without the fill rows.
-// p and prev have the same size, the same Top and the same count of rows. The arguments are as of AppendPage.
-func AppendUpdate(dst []byte, p, prev screen.Page, colors int, vgaRGB bool) []byte {
-	return appendPage(dst, p, &prev, colors, vgaRGB)
-}
-
-// appendPage appends the output of the page p, or of its update when prev is the shown page.
-func appendPage(dst []byte, p screen.Page, prev *screen.Page, colors int, vgaRGB bool) []byte {
 	e := encoder{dst: append(dst, "\x1b[?2026h"...), colors: colors, vgaRGB: vgaRGB}
 	if p.Fill == screen.FillErase {
 		e.model, e.out = p.Normal, reduceStyle(p.Normal, colors, vgaRGB)
@@ -40,11 +27,9 @@ func appendPage(dst []byte, p screen.Page, prev *screen.Page, colors int, vgaRGB
 	} else {
 		e.dst = append(e.dst, "\x1b[0m"...)
 	}
-	if prev == nil {
-		e.dst = append(e.dst, "\x1b[2J"...)
-	}
+	e.dst = append(e.dst, "\x1b[2J"...)
 	fillRow := func(row int) {
-		if p.Fill != screen.FillSpaces || prev != nil {
+		if p.Fill != screen.FillSpaces {
 			return
 		}
 		e.dst = appendPos(e.dst, row)
@@ -54,15 +39,10 @@ func appendPage(dst []byte, p screen.Page, prev *screen.Page, colors int, vgaRGB
 	for row := range p.Top {
 		fillRow(row + 1)
 	}
-	var line, old screen.Row
+	var line screen.Row
 	for i := range p.Rows {
 		row := p.Top + i + 1
 		line = p.Line(i, line)
-		if prev != nil {
-			if old = prev.Line(i, old); slices.Equal(line, old) {
-				continue
-			}
-		}
 		e.dst = appendPos(e.dst, row)
 		e.row(line, func(dst []byte, col int) []byte { return appendCUP(dst, row, col) })
 	}
@@ -72,11 +52,138 @@ func appendPage(dst []byte, p screen.Page, prev *screen.Page, colors int, vgaRGB
 	return append(e.dst, "\x1b[0m\x1b[?2026l"...)
 }
 
+// CursorPlace gives the cursor place of the page p, 1-based (section 7.5): the last terminal row
+// that the output of p writes, at the column term.cols, or row 1, column 1 when it writes no row.
+func CursorPlace(p screen.Page) (row, col int) {
+	switch {
+	case p.Fill == screen.FillSpaces && p.Height > 0:
+		return p.Height, p.Cols
+	case len(p.Rows) > 0:
+		return min(p.Top+len(p.Rows), p.Height), p.Cols
+	}
+	return 1, 1
+}
+
+// AppendUpdate appends the update of section 7.5 to dst: the runs of the cells of the grid g
+// that differ from the shown grid prev, then the move to the cursor place row, col.
+// g and prev have the same count of rows and of cells in each row (screen.Page.Grid).
+// Without a changed cell, it appends nothing. The other arguments are as of AppendPage.
+func AppendUpdate(dst []byte, g, prev []screen.Row, row, col, colors int, vgaRGB bool) []byte {
+	e := encoder{dst: dst, colors: colors, vgaRGB: vgaRGB}
+	changed := false
+	for i, line := range g {
+		for _, r := range runs(line, prev[i]) {
+			if !changed {
+				e.dst = append(e.dst, "\x1b[?2026h\x1b[?25l"...)
+				changed = true
+			}
+			n := i + 1
+			e.dst = appendCUP(e.dst, n, r.start+1)
+			e.cells(line, r.start, r.end, func(dst []byte, col int) []byte { return appendCUP(dst, n, col) })
+		}
+	}
+	if !changed {
+		return dst
+	}
+	e.dst = append(e.dst, "\x1b[0m"...)
+	e.dst = appendCUP(e.dst, row, col)
+	return append(e.dst, "\x1b[?25h\x1b[?2026l"...)
+}
+
+// run is the cells [start, end) of a row.
+type run struct{ start, end int }
+
+// maxGap is the most equal cells between two runs of one run (section 7.5).
+const maxGap = 3
+
+// runs gives the runs of the row line that differ from the shown row old (section 7.5), in order.
+// A cell differs in its grapheme or its style.
+func runs(line, old screen.Row) []run {
+	var out []run
+	for j := range line {
+		if line[j].Grapheme == old[j].Grapheme && line[j].Style == old[j].Style {
+			continue
+		}
+		if n := len(out); n > 0 && j-out[n-1].end <= maxGap {
+			out[n-1].end = j + 1
+			continue
+		}
+		out = append(out, run{j, j + 1})
+	}
+	for i := range out {
+		out[i] = grow(line, out[i])
+	}
+	// A run that grows over the next run takes it.
+	merged := out[:0]
+	for _, r := range out {
+		if n := len(merged); n > 0 && r.start <= merged[n-1].end {
+			merged[n-1].end = max(merged[n-1].end, r.end)
+			continue
+		}
+		merged = append(merged, r)
+	}
+	return merged
+}
+
+// grow grows the run r of the row line until the rules of section 7.5 hold:
+// it takes each wide grapheme at its edges, the grapheme of more than one code point before it,
+// and the cell after its last grapheme when that grapheme has more than one code point.
+func grow(line screen.Row, r run) run {
+	for {
+		start, end := r.start, r.end
+		if line[r.start].Grapheme == "" { // the second cell of a wide grapheme
+			r.start--
+		}
+		if r.end < len(line) && line[r.end].Grapheme == "" {
+			r.end++
+		}
+		if r.start > 0 {
+			k := r.start - 1
+			if line[k].Grapheme == "" {
+				k--
+			}
+			if long(line[k].Grapheme) {
+				r.start = k
+			}
+		}
+		if r.end < len(line) && long(line[lastGrapheme(line, r.end)].Grapheme) {
+			r.end++
+		}
+		if r.start == start && r.end == end {
+			return r
+		}
+	}
+}
+
+// lastGrapheme gives the index of the first cell of the grapheme that ends before the cell end.
+func lastGrapheme(line screen.Row, end int) int {
+	k := end - 1
+	if line[k].Grapheme == "" {
+		k--
+	}
+	return k
+}
+
+// long reports whether the grapheme g has more than one code point: it needs the re-sync of section 7.4.
+func long(g string) bool { return utf8.RuneCountInString(g) > 1 }
+
 // AppendLines appends the line form of page p (screen-render, section 3.7) to dst
 // for a terminal with term.colors = colors. The arguments are as of AppendPage.
 // A VGA colour goes out as its RGB value.
 func AppendLines(dst []byte, p screen.Page, colors int) []byte {
-	dst = append(append(dst, p.Header()...), '\n')
+	return appendLines(dst, p.Header(), p, colors)
+}
+
+// AppendGridLines appends the grid of page p in the line form (live-screen, section 7) to dst:
+// the first line of the grid dump, then each terminal row as a row of a page.
+// The arguments are as of AppendLines.
+func AppendGridLines(dst []byte, p screen.Page, colors int) []byte {
+	return appendLines(dst, p.GridHeader(), p.GridPage(), colors)
+}
+
+// appendLines appends the line form of page p with the first line header.
+func appendLines(dst []byte, header string, p screen.Page, colors int) []byte {
+	dst = append(append(dst, header...), '\n')
 	e := encoder{dst: dst, colors: colors, vgaRGB: true}
 	// endRow resets the style: each row starts with default colours without attributes.
 	endRow := func() {
@@ -134,7 +241,15 @@ func (e *encoder) spaces(p screen.Page) {
 // row appends the cells of line with the re-sync of section 7.4.
 // resync appends the move to the 1-based column col of the row.
 func (e *encoder) row(line screen.Row, resync func(dst []byte, col int) []byte) {
-	for j, c := range line {
+	e.cells(line, 0, len(line), resync)
+}
+
+// cells appends the cells [start, end) of line with the re-sync of section 7.4: a grapheme
+// of more than one code point that a cell of the row follows. The re-sync of the last grapheme
+// before end writes a space over the cell end.
+func (e *encoder) cells(line screen.Row, start, end int, resync func(dst []byte, col int) []byte) {
+	for j := start; j < end; j++ {
+		c := line[j]
 		if c.Grapheme == "" { // the second cell of a wide grapheme gives no output
 			continue
 		}
@@ -144,7 +259,7 @@ func (e *encoder) row(line screen.Row, resync func(dst []byte, col int) []byte) 
 		if next < len(line) && line[next].Grapheme == "" {
 			next++
 		}
-		if next < len(line) && utf8.RuneCountInString(c.Grapheme) > 1 {
+		if next < len(line) && long(c.Grapheme) {
 			e.dst = append(e.dst, ' ')
 			e.dst = resync(e.dst, next+1)
 		}

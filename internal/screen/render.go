@@ -629,14 +629,8 @@ func (r *renderer) field(f Field, style Style) {
 // live gives the graphemes of the value of the live field f in env, the width of its slot
 // and a new mark of the slot (live-screen, section 3.1): the width of the token, else the largest width.
 // A slot in a text has at most W cells; a slot in art has the width of its token, and the cut at W cuts it.
-// bbs.time with a layout shows Session.Clock in the layout; a zero instant shows Session.Time.
 func (r *renderer) live(f Field, env *Env, art bool) ([]Grapheme, int, int32) {
-	var gs []Grapheme
-	if f.Layout != "" && !env.Session.Clock.IsZero() {
-		gs = CleanValue(env.Session.Clock.Format(f.Layout))
-	} else {
-		gs = r.fieldText(f.Ref, env)
-	}
+	gs := liveValue(f.Ref, f.Layout, env)
 	width := f.Width
 	if width == 0 {
 		width = env.slotWidth(f.Ref, f.Layout)

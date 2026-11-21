@@ -362,7 +362,9 @@ page 1 80x25 fill none
   (section 5.3, [live-screen](live-screen.md), section 5).
   The wait for a key takes the context of the session ([session](session.md), section 6)
   and a deadline: the time of the next frame of a live page ([live-screen](live-screen.md), section 5).
-  At the deadline, it gives no key.
+  At the deadline, it gives no key. A More row and the line input wait without a deadline.
+  The terminal also gives the clock of the ticks: the server clock, or the fixed clock
+  of `velourbbs preview` ([live-screen](live-screen.md), section 7).
   `velourbbs preview` and telnet-term give its implementations.
 - The terminal interface also reads a line with the line input (section 5.4,
   [line-input](line-input.md), section 8).

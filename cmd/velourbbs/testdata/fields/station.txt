@@ -23,7 +23,7 @@ session.online   string   -   -      00:00:00
 bbs.name         string   -   -      Velour
 bbs.version      string   -   -      dev
 bbs.sessions     integer  -   -      1
-bbs.time         string   -   -      15:04 UTC
+bbs.time         string   -   -      2006-01-02 15:04:05
 bbs.uptime       string   -   -      00:00:00
 arg.file         string   -   -      guide/bbt/README.md
 arg.title        string   -   -      BBT guide

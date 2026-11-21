@@ -1,6 +1,7 @@
 package term
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -238,30 +239,106 @@ func TestAppendPageErase(t *testing.T) {
 	}
 }
 
-// TestAppendUpdate: an update sends only the rows that differ from the shown page,
-// without the clear and without the fill rows (section 7.1).
+// plain gives a row of the text s: one cell for each code point, "_" for the second cell
+// of a wide grapheme, in the style default.
+func plain(s string) screen.Row {
+	var r screen.Row
+	for _, c := range s {
+		g := string(c)
+		if g == "_" {
+			g = ""
+		}
+		r = append(r, screen.Cell{Grapheme: g})
+	}
+	return r
+}
+
+// TestRuns covers the runs of section 7.5: a gap of at most 3 equal cells joins two runs,
+// and a run grows over a wide grapheme at its edges, over a grapheme of more than one code point
+// before it and over the cell after such a grapheme at its end.
+func TestRuns(t *testing.T) {
+	const flag = "\U0001F1FA\U0001F1F8" // a wide grapheme of two code points
+	tests := []struct {
+		name     string
+		old, new screen.Row
+		want     []run
+	}{
+		{"none", plain("abcdef"), plain("abcdef"), nil},
+		{"one", plain("abcdef"), plain("abXdef"), []run{{2, 3}}},
+		{"gap 3", plain("abcdefgh"), plain("XbcdXfgh"), []run{{0, 5}}},
+		{"gap 4", plain("abcdefgh"), plain("XbcdeXgh"), []run{{0, 1}, {5, 6}}},
+		{"style", plain("ab"), screen.Row{{Grapheme: "a", Style: screen.Style{Attr: screen.Bold}}, {Grapheme: "b"}},
+			[]run{{0, 1}}},
+		{"second cell of a wide grapheme", plain("a世_b"), plain("a世_c"), []run{{3, 4}}},
+		{"wide grapheme in the run", plain("abcd"), plain("a世_d"), []run{{1, 3}}},
+		{"wide grapheme at the end", plain("ab世_"), plain("aX世_"), []run{{1, 2}}},
+		{"change of the second cell", plain("a世_b"), append(plain("a世"), screen.Cell{Grapheme: "", Style: screen.Style{Attr: screen.Bold}}, screen.Cell{Grapheme: "b"}),
+			[]run{{1, 3}}},
+		{"long grapheme before", append(plain("a"), screen.Cell{Grapheme: flag}, screen.Cell{}, screen.Cell{Grapheme: "b"}),
+			append(plain("a"), screen.Cell{Grapheme: flag}, screen.Cell{}, screen.Cell{Grapheme: "c"}), []run{{1, 4}}},
+		{"long grapheme at the end", plain("abcd"),
+			append(plain("a"), screen.Cell{Grapheme: "e\u0301"}, screen.Cell{Grapheme: "c"}, screen.Cell{Grapheme: "d"}),
+			[]run{{1, 3}}},
+		{"long grapheme at the row end", plain("ab"), append(plain("a"), screen.Cell{Grapheme: "e\u0301"}), []run{{1, 2}}},
+		{"two runs grow into one", plain("abcdefgh"),
+			append(plain("aX"), screen.Cell{Grapheme: "e\u0301"}, screen.Cell{Grapheme: "d"}, screen.Cell{Grapheme: "e"},
+				screen.Cell{Grapheme: "f"}, screen.Cell{Grapheme: "X"}, screen.Cell{Grapheme: "h"}),
+			[]run{{1, 7}}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := runs(tc.new, tc.old); !slices.Equal(got, tc.want) {
+				t.Errorf("runs = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+// TestAppendUpdate covers the bytes of section 7.5: the synchronized output and the hidden cursor,
+// the runs with their positions, the styles from default colours, the re-sync, a fill row
+// with fill = "none" and the move to the cursor place.
 func TestAppendUpdate(t *testing.T) {
 	normal := screen.Style{Fg: idx(7), Bg: idx(0)}
-	page := func(sel int) screen.Page {
-		var rs []screen.Row
-		for i := range 3 {
-			c := cell(" ", idx(7), idx(0), 0)
-			if i == sel {
-				c = cell(">", idx(15), idx(4), 0)
-			}
-			rs = append(rs, screen.Row{c, cell(string(rune('a'+i)), idx(7), idx(0), 0)})
+	hi := screen.Style{Fg: idx(15), Bg: idx(4)}
+	row := func(s string, style screen.Style) screen.Row {
+		r := plain(s)
+		for i := range r {
+			r[i].Style = style
 		}
-		return screen.Page{Rows: rs, Cols: 2, Height: 5, Top: 1, Normal: normal, Fill: screen.FillSpaces}
+		return r
 	}
-	want := "\x1b[?2026h\x1b[0m" +
-		"\x1b[2;1H\x1b[0;37;40m a" +
-		"\x1b[4;1H\x1b[0;97;44m>\x1b[0;37;40mc" +
-		"\x1b[0m\x1b[?2026l"
-	if got := string(AppendUpdate(nil, page(2), page(0), screen.Colors16, false)); got != want {
+	prev := []screen.Row{row("    ", screen.Style{}), row("abcd", normal), row("efgh", normal)}
+	g := []screen.Row{row("  x ", screen.Style{}), row("abcd", normal),
+		{{Grapheme: "e\u0301", Style: hi}, {Grapheme: "f", Style: normal}, {Grapheme: "g", Style: normal}, {Grapheme: "Z", Style: hi}}}
+	want := "\x1b[?2026h\x1b[?25l" +
+		"\x1b[1;3Hx" +
+		"\x1b[3;1H\x1b[0;97;44me\u0301 \x1b[3;2H\x1b[0;37;40mfg\x1b[0;97;44mZ" +
+		"\x1b[0m\x1b[3;4H\x1b[?25h\x1b[?2026l"
+	if got := string(AppendUpdate(nil, g, prev, 3, 4, screen.Colors16, false)); got != want {
 		t.Errorf("AppendUpdate =\n%q\nwant\n%q", got, want)
 	}
-	if got, want := string(AppendUpdate(nil, page(0), page(0), screen.Colors16, false)), "\x1b[?2026h\x1b[0m\x1b[0m\x1b[?2026l"; got != want {
-		t.Errorf("AppendUpdate of the same page = %q, want %q", got, want)
+	if got := AppendUpdate([]byte("x"), prev, prev, 3, 4, screen.Colors16, false); string(got) != "x" {
+		t.Errorf("AppendUpdate of the same grid = %q, want only the bytes before", got)
+	}
+}
+
+// TestCursorPlace: the last terminal row that the page writes, at the column term.cols (section 7.5).
+func TestCursorPlace(t *testing.T) {
+	r := screen.Row{{Grapheme: "a"}}
+	tests := []struct {
+		name     string
+		p        screen.Page
+		row, col int
+	}{
+		{"rows", screen.Page{Rows: []screen.Row{r, r}, Cols: 80, Height: 24, Top: 3}, 5, 80},
+		{"fill spaces", screen.Page{Rows: []screen.Row{r}, Cols: 80, Height: 24, Fill: screen.FillSpaces}, 24, 80},
+		{"fill erase", screen.Page{Rows: []screen.Row{r}, Cols: 80, Height: 24, Fill: screen.FillErase}, 1, 80},
+		{"no rows", screen.Page{Cols: 80, Height: 24}, 1, 1},
+	}
+	for _, tc := range tests {
+		if row, col := CursorPlace(tc.p); row != tc.row || col != tc.col {
+			t.Errorf("%s: CursorPlace = %d, %d, want %d, %d", tc.name, row, col, tc.row, tc.col)
+		}
 	}
 }
 

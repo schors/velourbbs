@@ -274,6 +274,24 @@ After `B`, it shows the light theme again, because `term.background` is `light`.
 Full rules: [screens-toml](../../../specs/screens-toml.md), sections 3.1 and 3.2,
 and [menu-nav](../../../specs/menu-nav.md), section 4.
 
+## The attribute `blink`
+
+A style can have the attribute `blink`, but the terminals show it in different ways:
+
+| Terminal | `blink` |
+|---|---|
+| PuTTY | Off by default. It shows a bright background in place of the blink. |
+| Tera Term | No blink. It shows a blink colour. |
+| Windows Terminal | Blinks. All cells blink at the same time. |
+| xterm | Blinks when the build has blink. Else bold. |
+| iTerm2 | Off by default. |
+| Ghostty | No blink. |
+| tmux | It sends the attribute to the outer terminal. |
+
+So do not use `blink` for text that must look the same in each terminal.
+
+Full rules: [live-screen](../../../specs/live-screen.md), section 8.
+
 ## Result
 
 - `velourbbs check` gives no output.

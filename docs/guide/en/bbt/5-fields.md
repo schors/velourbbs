@@ -67,7 +67,7 @@ Users online {bbs.sessions}, up {bbs.uptime}
 | `bbs.uptime` | The time from the start of `velourbbs serve`, in the form of `session.online`. |
 
 - The BBS takes the values when it shows the screen. A value on the screen does not change
-  until the next screen.
+  until the next screen. A live field is the exception (below).
 - `[screen] time` in `screens/screens.toml` sets the form of `bbs.time` with the Go reference time
   `2006-01-02 15:04:05`. The default is `"2006-01-02 15:04:05"`. Example for `16.11.2026 15:04`:
 
@@ -119,6 +119,36 @@ In this screen, its fragments and its art, `{w}` shows the rows of the terminal.
 
 Full rules: [bbt-format](../../../specs/bbt-format.md), sections 3.2, 3.3 and 4,
 and [screens-toml](../../../specs/screens-toml.md), section 3.3.
+
+## Live fields
+
+A field with the mark `live` changes while the screen waits for a key:
+
+```
+Time {bbs.time live "15:04:05"}, online {session.online live}
+```
+
+- Each second, the BBS writes the new value in place of the old value. The rest of the screen stays.
+- These fields can be live: `bbs.time`, `session.online`, `bbs.uptime` and `bbs.sessions`.
+  The mark on another field has no effect.
+- A live field has the width of its largest value, so the text after it does not move.
+  For example, `session.online` has 14 cells, the width of `9999d 23:59:59`.
+- After the mark, `bbs.time` can have its own form in double quotes, for example `"15:04:05"`.
+  Without it, the field has the form of `[screen] time`.
+- An alias can hold the mark. Then `{clock}` is a live field:
+
+```toml
+[fields]
+clock = 'bbs.time live "15:04:05"'
+```
+
+- A token with an alias takes no mark: `{clock live}` is an error.
+- A condition, `{#if}` or `when`, takes the value when the BBS shows the screen. The condition does not change.
+- A live field does not change on a page with a More row and while the user types a line (task 8).
+- `velourbbs preview` has a clock that stands still. In `--keys`, `+1s` moves it one second
+  and shows the screen after the second: `velourbbs preview main --keys +1s`.
+
+Full rules: [live-screen](../../../specs/live-screen.md), sections 3, 4 and 7.
 
 ## Conditions
 

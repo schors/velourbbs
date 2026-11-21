@@ -2,6 +2,7 @@ package screen_test
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"testing/fstest"
@@ -169,6 +170,91 @@ func TestArtSlotCut(t *testing.T) {
 		want := `0:0 23 0+20 bbs.sessions "                    "`
 		if got := showSlots(p); got != want {
 			t.Errorf("got  %s\nwant %s", got, want)
+		}
+	}
+}
+
+// A tick writes the values into the slots: the page equals the render with these values
+// (live-screen, section 4). The cases cover a slot in text, in art, a fixed width aligned right,
+// a slot that a long word breaks over rows, a cut at term.cols and a value of --set.
+func TestTick(t *testing.T) {
+	art := sauceArt("ab{clock  }{ bbs.sessions live}", 40)
+	tests := []struct {
+		name, body string
+		w, cols    int
+	}{
+		{"text", "Time [{bbs.time live}] up {session.online live} {bbs.uptime live}|", 80, 80},
+		{"art", "{>a.ans}\n", 40, 40},
+		{"long word", "ab{bbs.time live}", 20, 40},
+		{"cut", strings.Repeat("x", 20) + "{bbs.time live}", 40, 30},
+	}
+	later := func(env *screen.Env) *screen.Env {
+		e := *env
+		clock := env.Session.Clock.Add(26*time.Hour + 61*time.Second)
+		e.Session.Clock, e.Session.Time = clock, clock.Format(env.Session.Layout)
+		e.Session.Online, e.Session.Uptime, e.Session.Sessions = "1d 02:01:01", "12d 00:00:00", 17
+		return &e
+	}
+	for _, tt := range tests {
+		s := loadLive(t, map[string]string{"main.bbt": tt.body, "a.ans": art}, "main", tt.w)
+		env := liveEnv(tt.cols, 24)
+		var p, want screen.Page
+		for p = range screen.Render(s, env, theme, "-- More --") {
+		}
+		for want = range screen.Render(s, later(env), theme, "-- More --") {
+		}
+		got := p.Tick(later(env).Session)
+		if !slices.EqualFunc(got.Rows, want.Rows, slices.Equal) {
+			t.Errorf("%s:\n got %q\nwant %q", tt.name, texts(got), texts(want))
+		}
+		if strings.Join(texts(p), "|") == strings.Join(texts(got), "|") {
+			t.Errorf("%s: the tick changed the rows of the page", tt.name)
+		}
+	}
+}
+
+// A cut through a wide grapheme at the edge of a run leaves a space.
+func TestTickWide(t *testing.T) {
+	ref, _, err := screen.LookupField("bbs.time", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p := screen.Page{
+		Rows:  []screen.Row{{{Grapheme: "a"}, {Grapheme: "b"}, {Grapheme: "c"}, {Grapheme: "d"}}},
+		Slots: []screen.Slot{{Width: 6, Skip: 1, Cells: 4, Ref: ref}},
+	}
+	got := p.Tick(screen.SessionValues{Time: "世界x"})
+	var b strings.Builder
+	for _, c := range got.Rows[0] {
+		b.WriteString(c.Grapheme + "|")
+	}
+	if b.String() != " |界||x|" {
+		t.Errorf("got %q, want \" |界||x|\"", b.String())
+	}
+	p.Slots[0].Cells = 1
+	if got := texts(p.Tick(screen.SessionValues{Time: "a世界"})); got[0] != " bcd" {
+		t.Errorf("got %q, want a space for the cut wide grapheme", got[0])
+	}
+}
+
+// The grid has all terminal rows of term.cols cells. A fill row is spaces in default
+// with fill none, else in normal (live-screen, section 2).
+func TestGrid(t *testing.T) {
+	normal := screen.Style{Fg: screen.Colour{Kind: screen.Index, Value: 7}}
+	for _, fill := range []screen.Fill{screen.FillNone, screen.FillSpaces} {
+		p := screen.Page{Rows: []screen.Row{{{Grapheme: "a", Style: normal}}}, Cols: 3, Height: 3, Top: 1, Margin: 1,
+			Normal: normal, Fill: fill}
+		var b strings.Builder
+		if err := screen.WriteGrid(&b, p); err != nil {
+			t.Fatal(err)
+		}
+		fillStyle := "-/-"
+		if fill != screen.FillNone {
+			fillStyle = "7/-"
+		}
+		want := "grid 3x3\n|   |\n| a |\n|   |\nstyles\n1: 1-3 " + fillStyle + "\n2: 1-3 7/-\n3: 1-3 " + fillStyle + "\n"
+		if b.String() != want {
+			t.Errorf("fill %s:\n%s\nwant\n%s", fill, b.String(), want)
 		}
 	}
 }

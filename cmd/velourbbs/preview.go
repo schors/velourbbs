@@ -187,8 +187,11 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 	s = m.Sets[sv.Lang][name]
 	writePage := pageWriter(*view, term.Colors)
 	if session {
-		t := &keysTerm{term: term, keys: keys, w: stdout, write: writePage}
-		ss := menu.New(m, t, name, argVals, choice, sv.Lang, func(*menu.Session) screen.SessionValues { return sv })
+		start := previewTime(m.Config.Zone)
+		t := &keysTerm{term: term, keys: keys, w: stdout, write: writePage, writeGrid: gridWriter(*view, term.Colors),
+			now: start}
+		values := func(*menu.Session) screen.SessionValues { return clockValues(sv, svSet, start, t.now) }
+		ss := menu.New(m, t, name, argVals, choice, sv.Lang, values)
 		return runKeys(t, ss, stderr)
 	}
 	cfg := m.Config
@@ -212,6 +215,34 @@ func pageWriter(view bool, colors int) func(io.Writer, screen.Page) error {
 		_, err := w.Write(term.AppendLines(nil, p, colors))
 		return err
 	}
+}
+
+// gridWriter gives the writer of the grid dump of velourbbs preview --keys (live-screen, section 7),
+// or with view of the grid in the line form for term.colors = colors.
+func gridWriter(view bool, colors int) func(io.Writer, screen.Page) error {
+	if !view {
+		return screen.WriteGrid
+	}
+	return func(w io.Writer, p screen.Page) error {
+		_, err := w.Write(term.AppendGridLines(nil, p, colors))
+		return err
+	}
+}
+
+// clockValues gives the values sv at the time now of the fixed clock that starts at start
+// (live-screen, section 7): now moves bbs.time, session.online and bbs.uptime.
+// A value of --set, a path of set, stays.
+func clockValues(sv screen.SessionValues, set map[string]bool, start, now time.Time) screen.SessionValues {
+	if !set["bbs.time"] {
+		sv.Time, sv.Clock = now.Format(sv.Layout), now
+	}
+	if !set["session.online"] {
+		sv.Online = screen.FormatDuration(now.Sub(start))
+	}
+	if !set["bbs.uptime"] {
+		sv.Uptime = screen.FormatDuration(now.Sub(start))
+	}
+	return sv
 }
 
 // argFiles loads the rows and the content files of each screen that the values of the arguments args
@@ -487,14 +518,28 @@ func setSession(sv *screen.SessionValues, path, value string) (bool, error) {
 	return true, nil
 }
 
+// The range of a wait of --keys (live-screen, section 7).
+const (
+	minWait = time.Millisecond
+	maxWait = time.Hour
+)
+
 // parseKeys parses the key list of --keys (menu-nav, section 7). An element is a key name
-// except ANY, or one other printable character except the comma and the space.
+// except ANY, or one other printable character except the comma and the space,
+// or a wait "+<duration>" (live-screen, section 7). A wait stays as it is.
 func parseKeys(v string) ([]string, error) {
 	if v == "" {
 		return nil, nil
 	}
 	var keys []string
 	for _, e := range strings.Split(v, ",") {
+		if _, ok, err := parseWait(e); ok || err != nil {
+			if err != nil {
+				return nil, err
+			}
+			keys = append(keys, e)
+			continue
+		}
 		k, ok := key.Parse(e)
 		// A character stays as it is, with its case: the session maps it outside the line input.
 		if r := []rune(e); !ok || k == key.Any || len(r) == 1 {
@@ -508,37 +553,117 @@ func parseKeys(v string) ([]string, error) {
 	return keys, nil
 }
 
+// parseWait parses the element e of --keys as a wait "+<duration>" (live-screen, section 7).
+// It reports whether e is a wait: "+" alone is a key. It gives an error for a wait that is not valid.
+func parseWait(e string) (time.Duration, bool, error) {
+	s, ok := strings.CutPrefix(e, "+")
+	if !ok || s == "" {
+		return 0, false, nil
+	}
+	d, err := time.ParseDuration(s)
+	if err != nil || d < minWait || d > maxWait {
+		return 0, true, fmt.Errorf("invalid wait %q: must be a duration from 1ms to 1h", e)
+	}
+	return d, true, nil
+}
+
 // errNoKeys is the error of keysTerm.Key at the end of the key list.
 var errNoKeys = errors.New("no more keys")
 
-// keysTerm is the terminal of velourbbs preview --keys. It takes the keys from a list
-// and writes the events of menu-nav, section 7, to w. write writes a page.
+// keysTerm is the terminal of velourbbs preview --keys. It takes the keys and the waits from a list
+// and writes the events of menu-nav, section 7, to w. write writes a page and writeGrid a grid dump.
+// Its clock is the fixed clock of live-screen, section 7: only a wait moves it.
 type keysTerm struct {
-	term  screen.Term
-	keys  []string
-	w     io.Writer
-	write func(io.Writer, screen.Page) error
+	term      screen.Term
+	keys      []string
+	w         io.Writer
+	write     func(io.Writer, screen.Page) error
+	writeGrid func(io.Writer, screen.Page) error
+	now       time.Time   // the fixed clock
+	end       time.Time   // the end of the wait at the head of keys, once it started; else zero
+	grid      screen.Page // the page of the shown grid: of the last Page, Update or Frame
 }
 
 func (t *keysTerm) Term() screen.Term { return t.term }
 
-// Key ignores the context of the session (session, section 6).
+func (t *keysTerm) Now() time.Time { return t.now }
+
+// Key gives the next key. A wait moves the clock with no frame: its output is only the line wait
+// (live-screen, section 7). Key ignores the context of the session (session, section 6).
 func (t *keysTerm) Key(context.Context) (string, error) {
-	if len(t.keys) == 0 {
-		return "", errNoKeys
+	for {
+		if len(t.keys) == 0 {
+			return "", errNoKeys
+		}
+		k := t.keys[0]
+		d, wait, _ := parseWait(k)
+		if !wait {
+			t.keys = t.keys[1:]
+			return k, nil
+		}
+		if t.end.IsZero() {
+			t.end = t.now.Add(d)
+		}
+		if err := t.endWait(); err != nil {
+			return "", err
+		}
 	}
-	k := t.keys[0]
+}
+
+// Wait gives the next key of the shown page. A wait at the head of the list moves the clock
+// to the deadline dl, at or before its end, and gives no key: the session makes its frame.
+// Else the wait ends: the clock moves to its end, and Wait writes the line wait and the grid dump.
+func (t *keysTerm) Wait(ctx context.Context, dl time.Time) (string, bool, error) {
+	for {
+		if len(t.keys) == 0 {
+			return "", false, errNoKeys
+		}
+		d, wait, _ := parseWait(t.keys[0])
+		if !wait {
+			k, err := t.Key(ctx)
+			return k, true, err
+		}
+		if t.end.IsZero() {
+			t.end = t.now.Add(d)
+		}
+		if !dl.IsZero() && !dl.After(t.end) { // a tick or an event at the end of a wait is in the wait
+			if dl.After(t.now) {
+				t.now = dl
+			}
+			return "", false, nil
+		}
+		if err := t.endWait(); err != nil {
+			return "", false, err
+		}
+		if err := t.writeGrid(t.w, t.grid); err != nil {
+			return "", false, err
+		}
+	}
+}
+
+// endWait ends the wait at the head of the list: it moves the clock to its end and writes the line wait.
+func (t *keysTerm) endWait() error {
+	t.now, t.end = t.end, time.Time{}
+	_, err := fmt.Fprintf(t.w, "wait %s\n", t.keys[0][1:])
 	t.keys = t.keys[1:]
-	return k, nil
+	return err
 }
 
 func (t *keysTerm) Page(p screen.Page) error {
+	t.grid = p
 	return t.write(t.w, p)
 }
 
 // Update writes the whole page (menu-nav, section 7).
 func (t *keysTerm) Update(p screen.Page) error {
+	t.grid = p
 	return t.write(t.w, p)
+}
+
+// Frame keeps the page for the grid dump at the end of the wait: a frame has no output (live-screen, section 7).
+func (t *keysTerm) Frame(p screen.Page) error {
+	t.grid = p
+	return nil
 }
 
 func (t *keysTerm) Screen(name string) error {
@@ -606,7 +731,11 @@ func runKeys(t *keysTerm, ss *menu.Session, stderr io.Writer) int {
 		_, _ = fmt.Fprintf(stderr, "velourbbs preview: %v\n", err)
 		return exitError
 	case len(t.keys) > 0:
-		_, _ = fmt.Fprintf(stderr, "velourbbs preview: key %q after logoff\n", key.Map(t.keys[0]))
+		if _, wait, _ := parseWait(t.keys[0]); wait {
+			_, _ = fmt.Fprintf(stderr, "velourbbs preview: wait %q after logoff\n", t.keys[0])
+		} else {
+			_, _ = fmt.Fprintf(stderr, "velourbbs preview: key %q after logoff\n", key.Map(t.keys[0]))
+		}
 		return exitError
 	}
 	return 0

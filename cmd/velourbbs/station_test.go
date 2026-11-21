@@ -89,8 +89,8 @@ func TestStationSettingsError(t *testing.T) {
 		t.Fatal(err)
 	}
 	tests := []struct{ line, want string }{
-		{`gold   = #b8902f`, "screens/screens.toml:22:10: unexpected character U+0023 '#' at start of value\n"},
-		{`gold   = "#b8902g"`, `screens/screens.toml:22:10: theme.default.gold: invalid style "#b8902g": invalid colour "#b8902g"` + "\n"},
+		{`gold   = #b8902f`, "screens/screens.toml:25:10: unexpected character U+0023 '#' at start of value\n"},
+		{`gold   = "#b8902g"`, `screens/screens.toml:25:10: theme.default.gold: invalid style "#b8902g": invalid colour "#b8902g"` + "\n"},
 	}
 	for _, tt := range tests {
 		bad := strings.Replace(string(data), `gold   = "#b8902f"`, tt.line, 1)
