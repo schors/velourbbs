@@ -1,0 +1,14 @@
++++
+[[item]]
+key = "L"
+do = "gosub list"
+[[item]]
+key = "G"
+do = "logoff"
++++
+[{bbs.time live}] [{session.online live}] [{bbs.uptime live}] [{bbs.sessions live}]
+[{bbs.time live "Monday, January 2 15:04:05.000 MST"}]
+[{bbs.time}] [{session.online}] [{bbs.uptime}] [{bbs.sessions}]
+[{clock}] [{clock         }] [{     bbs.sessions live}]
+{!14}L List{~.}{clock}{~.}G Bye
+{>main.ans}

@@ -67,6 +67,9 @@ also from `38;5;n` and `48;5;n`.
 - After the read, the loader finds fields in each grid row. A field token in art is `{`,
   optional spaces, a path ([bbt-format](bbt-format.md), section 4), the optional live mark
   ([live-screen](live-screen.md), section 3), optional spaces and `}` on one row. The block tokens of section 5 are tokens too. Each other `{` is a plain character.
+- A token with ` live` after the path ends at the first `}` on the row. An error of its mark
+  is an error of [live-screen](live-screen.md), section 3. Example: `{bbs.time foo}` is plain text,
+  `{bbs.time live 15:04}` is an error.
 - All cells of a token must have one background. All its non-space cells must have
   one foreground. An error gives both colours and their columns.
 - A field takes the cells of its token and the style of its first non-space cell.

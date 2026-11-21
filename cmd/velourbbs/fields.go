@@ -90,7 +90,7 @@ func bbsFields(m *bbs.Model) []field {
 
 	sv := previewSession()
 	sv.Name = m.Config.Name
-	sv.Time = previewTime(m.Config.Zone).Format(m.Config.Time)
+	previewClock(&sv, m.Config, false)
 	sv.Lang = m.Config.Lang
 	sv.Theme = string(m.Config.ThemeChoice)
 	// file.* and list.* have the values of page 1 of 1 without a file.

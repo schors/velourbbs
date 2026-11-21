@@ -272,8 +272,20 @@ func ArgRef(name string) Ref { return Ref{kind: refArg, name: name} }
 // RowRef gives the field row.<field>.
 func RowRef(field string) Ref { return Ref{kind: refRow, name: field} }
 
-// Fields maps an alias to its field (section 4.2).
-type Fields map[string]Ref
+// Fields maps an alias to its field and its live mark (section 4.2).
+type Fields map[string]Alias
+
+// Alias is the field of an alias with its live mark (screens-toml, section 3.3).
+type Alias struct {
+	Ref Ref
+	Mark
+}
+
+// Mark is the live mark of a field token (live-screen, section 3).
+type Mark struct {
+	Live   bool
+	Layout string // the layout of bbs.time, else ""
+}
 
 // reserved are the names that an alias cannot have (screens-toml, section 3.3).
 var reserved = []string{"term", "item", "arg", "file", "meta", "row", "list", "session", "bbs", "in", "and", "or", "not"}
@@ -289,38 +301,115 @@ func CheckAlias(name string) error {
 	return nil
 }
 
-// NewAlias checks the alias name (CheckAlias) and its path against screens-toml, section 3.3,
-// and gives the field of the path.
-func NewAlias(name, path string) (Ref, error) {
+// NewAlias checks the alias name (CheckAlias) and its value against screens-toml, section 3.3:
+// a registry path with an optional live mark. It gives the field of the path and the mark.
+func NewAlias(name, value string) (Alias, error) {
 	if err := CheckAlias(name); err != nil {
-		return Ref{}, err
+		return Alias{}, err
+	}
+	path, m, err := parseMark(value)
+	if err != nil {
+		return Alias{}, fmt.Errorf("alias %q: %w", name, err)
 	}
 	if !strings.Contains(path, ".") {
-		return Ref{}, fmt.Errorf("alias %q: %q is not a registry path", name, path)
+		return Alias{}, fmt.Errorf("alias %q: %q is not a registry path", name, path)
 	}
 	r, err := resolve(path, nil)
+	if err == nil {
+		err = m.check(r)
+	}
 	if err != nil {
-		return Ref{}, fmt.Errorf("alias %q: %w", name, err)
+		return Alias{}, fmt.Errorf("alias %q: %w", name, err)
 	}
 	if r.isItem() {
-		return Ref{}, fmt.Errorf("alias %q: %q is valid only in {#if}", name, path)
+		return Alias{}, fmt.Errorf("alias %q: %q is valid only in {#if}", name, path)
 	}
-	return r, nil
+	return Alias{Ref: r, Mark: m}, nil
 }
 
-// LookupField resolves the path of a field token. item.<KEY> and file.last are errors:
+// LookupField resolves the text of a field token without the spaces around it: a path
+// and an optional live mark (live-screen, section 3). It gives the field and the mark:
+// of the token, or of the alias. item.<KEY> and file.last are errors:
 // a field token cannot show a boolean.
-func LookupField(path string, fields Fields) (Ref, error) {
-	r, err := resolve(path, fields)
-	switch {
-	case err != nil:
-		return Ref{}, err
-	case r.isItem():
-		return Ref{}, fmt.Errorf("field %q is valid only in {#if}", path)
-	case r.Type() == TypeBool:
-		return Ref{}, fmt.Errorf("field %q is boolean, valid only in a condition", path)
+func LookupField(text string, fields Fields) (Ref, Mark, error) {
+	path, m, err := parseMark(text)
+	if err != nil {
+		return Ref{}, Mark{}, err
 	}
-	return r, nil
+	r, err := resolve(path, fields)
+	if err != nil {
+		return Ref{}, Mark{}, err
+	}
+	if a, ok := fields[path]; ok && !strings.Contains(path, ".") {
+		if m.Live {
+			return Ref{}, Mark{}, fmt.Errorf("the live mark on the alias %q: an alias takes no mark", path)
+		}
+		m = a.Mark
+	}
+	switch {
+	case r.isItem():
+		return Ref{}, Mark{}, fmt.Errorf("field %q is valid only in {#if}", path)
+	case r.Type() == TypeBool:
+		return Ref{}, Mark{}, fmt.Errorf("field %q is boolean, valid only in a condition", path)
+	}
+	if err := m.check(r); err != nil {
+		return Ref{}, Mark{}, err
+	}
+	return r, m, nil
+}
+
+// parseMark splits the text of a field token without the spaces around it into its path
+// and its live mark (live-screen, section 3):
+//
+//	path [ " live" [ " " layout ] ]
+//	layout = '"' { any character except '"' and '}' } '"'
+func parseMark(text string) (string, Mark, error) {
+	path, rest, ok := strings.Cut(text, " ")
+	if !IsPath(path) {
+		return "", Mark{}, fmt.Errorf("invalid field path %q", text)
+	}
+	if !ok {
+		return path, Mark{}, nil
+	}
+	if rest == "live" {
+		return path, Mark{Live: true}, nil
+	}
+	if strings.HasPrefix(rest, `"`) {
+		return "", Mark{}, fmt.Errorf("layout %s without \"live\"", rest)
+	}
+	q, ok := strings.CutPrefix(rest, "live ")
+	if !ok || len(q) < 2 || q[0] != '"' || q[len(q)-1] != '"' || strings.ContainsAny(q[1:len(q)-1], "\"}") {
+		return "", Mark{}, fmt.Errorf("%q after the path %q is not the live mark", rest, path)
+	}
+	layout := q[1 : len(q)-1]
+	switch {
+	case layout == "":
+		return "", Mark{}, errors.New("empty layout")
+	case strings.ContainsFunc(layout, IsControl):
+		return "", Mark{}, fmt.Errorf("layout %q has a control character", layout)
+	}
+	return path, Mark{Live: true, Layout: layout}, nil
+}
+
+// check reports a layout of the mark on a field other than bbs.time (live-screen, section 3).
+func (m Mark) check(r Ref) error {
+	if m.Layout != "" && (r.kind != refSession || r.session != bbsTime) {
+		return fmt.Errorf("layout %q on %q: only bbs.time takes a layout", m.Layout, r.String())
+	}
+	return nil
+}
+
+// Ticks reports whether the value of r changes while a page is shown: bbs.time, session.online,
+// bbs.uptime and bbs.sessions. A live field of these fields gives a slot (live-screen, section 3).
+func (r Ref) Ticks() bool {
+	if r.kind != refSession {
+		return false
+	}
+	switch r.session {
+	case bbsTime, sessionOnline, bbsUptime, bbsSessions:
+		return true
+	}
+	return false
 }
 
 // IsPath reports whether s matches the path syntax of section 4.1:
@@ -337,8 +426,8 @@ func resolve(path string, fields Fields) (Ref, error) {
 	}
 	head, tail, dot := strings.Cut(path, ".")
 	if !dot {
-		if r, ok := fields[path]; ok {
-			return r, nil
+		if a, ok := fields[path]; ok {
+			return a.Ref, nil
 		}
 	} else {
 		switch head {
@@ -502,6 +591,14 @@ type SessionValues struct {
 	Name, Version string
 	Sessions      int
 	Time, Uptime  string
+	// Clock is the server time in the zone of bbs.time. A live bbs.time with a layout shows it
+	// (live-screen, section 3). A zero instant, for a value of --set, shows Time in each layout.
+	// Its zone gives the largest width of MST.
+	Clock time.Time
+	// Layout is the layout of Time: [screen] time (screens-toml, section 3.1).
+	Layout string
+	// MaxConns is max_conns of bbs.toml: its digits are the largest width of bbs.sessions.
+	MaxConns int
 }
 
 // FormatDuration gives d in the duration form of session-fields, section 3.3:

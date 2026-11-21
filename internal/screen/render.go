@@ -62,7 +62,7 @@ func RenderFile(s *Screen, env *Env, theme map[string]Style, file []Row, n int) 
 	rows = append(rows, r.rows[:split]...)
 	left := make([]Cell, s.FileScreen.Left)
 	for i := range left {
-		left[i] = Cell{" ", r.normal}
+		left[i] = Cell{Grapheme: " ", Style: r.normal}
 	}
 	widest := 0
 	for _, cells := range file {
@@ -240,6 +240,11 @@ type renderer struct {
 	margin int // the left margin of the screen area
 	fill   Fill
 	values map[Ref][]Grapheme
+	slots  []Slot // the slot of each Cell.Slot - 1, without its run (live-screen, section 3.1)
+	// seen is the cells of each slot in the rows so far, before the cut at the screen area.
+	// skips is the Slot.Skip of each run in the rows so far; pageSlots takes them in order.
+	seen  map[int32]int
+	skips []int
 
 	// The pages (section 6.4).
 	height  int // term.rows
@@ -422,23 +427,26 @@ type stretchTok struct {
 }
 
 // add adds the grapheme g in style to the row of the width w.
-func (l *stretchLine) add(g Grapheme, style Style, w int) {
+func (l *stretchLine) add(g Grapheme, style Style, w int) { l.addSlot(g, style, 0, w) }
+
+// addSlot adds the grapheme g in style with the mark slot (Cell.Slot) to the row of the width w.
+func (l *stretchLine) addSlot(g Grapheme, style Style, slot int32, w int) {
 	l.width += g.Width
 	if g.Text != " " {
 		l.full = l.width
 	}
 	if len(l.cells) <= w {
-		l.cells = appendCell(l.cells, g, style)
+		l.cells = appendSlot(l.cells, g, style, slot)
 	}
 }
 
 // field adds a fixed-width field to the row of the width w: the graphemes gs of the cut field
 // and the cells n of the field before the cut, up to its last grapheme that is not a space.
 // The field before the cut is wider than gs.
-func (l *stretchLine) field(gs []Grapheme, n, cells int, style Style, w int) {
+func (l *stretchLine) field(gs []Grapheme, n, cells int, style Style, slot int32, w int) {
 	start := l.width
 	for _, g := range gs {
-		l.add(g, style, w)
+		l.addSlot(g, style, slot, w)
 	}
 	l.width = start + cells
 	if n > 0 {
@@ -460,7 +468,7 @@ func (l *stretchLine) stretch(g Grapheme, style Style, w int) {
 	if len(l.toks) == 2*w {
 		l.toks = l.toks[:copy(l.toks, l.toks[w:])]
 	}
-	l.toks = append(l.toks, stretchTok{len(l.cells), Cell{g.Text, style}})
+	l.toks = append(l.toks, stretchTok{len(l.cells), Cell{Grapheme: g.Text, Style: style}})
 	l.n++
 }
 
@@ -543,17 +551,20 @@ func (r *renderer) rowText(segs []Seg, cur Style, env *Env, l *stretchLine) Styl
 				l.add(g, cur, r.w)
 			}
 		case Field:
-			gs := r.fieldText(seg.Ref, env)
-			if seg.Width > r.w {
-				full := FitValue(gs, seg.Width, seg.Right)
-				l.field(FitValue(gs, r.w, seg.Right), inkGraphemes(full), seg.Width, cur, r.w)
+			gs, width, slot := r.fieldText(seg.Ref, env), seg.Width, int32(0)
+			if seg.Live {
+				gs, width, slot = r.live(seg, env, false)
+			}
+			if width > r.w {
+				full := FitValue(gs, width, seg.Right)
+				l.field(FitValue(gs, r.w, seg.Right), inkGraphemes(full), width, cur, slot, r.w)
 				continue
 			}
-			if seg.Width > 0 {
-				gs = FitValue(gs, seg.Width, seg.Right)
+			if width > 0 {
+				gs = FitValue(gs, width, seg.Right)
 			}
 			for _, g := range gs {
-				l.add(g, cur, r.w)
+				l.addSlot(g, cur, slot, r.w)
 			}
 		case SetStyle:
 			cur = seg.Apply(cur, r.theme)
@@ -576,24 +587,27 @@ func (r *renderer) text(gs []Grapheme, style Style) {
 		if r.stretching {
 			r.sl.add(g, style, r.w)
 		} else {
-			r.add(lineCell{g, style, g.Text == " "})
+			r.add(lineCell{g: g, style: style, brk: g.Text == " "})
 		}
 	}
 }
 
 // field adds the value of a field token to the line (sections 4.3 and 6.3).
 // A fixed-width field is one word of at most W cells.
+// A live field is a slot: one word of its slot width (live-screen, section 3.1).
 func (r *renderer) field(f Field, style Style) {
-	gs := r.value(f.Ref)
-	if f.Width == 0 {
+	gs, width, slot := r.value(f.Ref), f.Width, int32(0)
+	if f.Live {
+		gs, width, slot = r.live(f, r.env, false)
+	} else if width == 0 {
 		r.text(gs, style)
 		return
 	}
-	cut := FitValue(gs, min(f.Width, r.w), f.Right)
-	if f.Width > r.w { // the field is one word of W cells: its row is the field (section 6.3)
-		n := inkGraphemes(FitValue(gs, f.Width, f.Right))
+	cut := FitValue(gs, min(width, r.w), f.Right)
+	if width > r.w { // the field is one word of W cells: its row is the field (section 6.3)
+		n := inkGraphemes(FitValue(gs, width, f.Right))
 		if r.stretching {
-			r.sl.field(cut, n, f.Width, style, r.w)
+			r.sl.field(cut, n, width, style, slot, r.w)
 			return
 		}
 		// The field starts a new row after other cells (section 6.3).
@@ -605,11 +619,33 @@ func (r *renderer) field(f Field, style Style) {
 	}
 	for _, g := range cut {
 		if r.stretching {
-			r.sl.add(g, style, r.w)
+			r.sl.addSlot(g, style, slot, r.w)
 		} else {
-			r.add(lineCell{g, style, false})
+			r.add(lineCell{g: g, style: style, slot: slot})
 		}
 	}
+}
+
+// live gives the graphemes of the value of the live field f in env, the width of its slot
+// and a new mark of the slot (live-screen, section 3.1): the width of the token, else the largest width.
+// A slot in a text has at most W cells; a slot in art has the width of its token, and the cut at W cuts it.
+// bbs.time with a layout shows Session.Clock in the layout; a zero instant shows Session.Time.
+func (r *renderer) live(f Field, env *Env, art bool) ([]Grapheme, int, int32) {
+	var gs []Grapheme
+	if f.Layout != "" && !env.Session.Clock.IsZero() {
+		gs = CleanValue(env.Session.Clock.Format(f.Layout))
+	} else {
+		gs = r.fieldText(f.Ref, env)
+	}
+	width := f.Width
+	if width == 0 {
+		width = env.slotWidth(f.Ref, f.Layout)
+	}
+	if !art { // a slot in a text is one word of at most W cells (bbt-format, section 6.3)
+		width = min(width, r.w)
+	}
+	r.slots = append(r.slots, Slot{Width: width, Ref: f.Ref, Layout: f.Layout, Right: f.Right})
+	return gs, width, int32(len(r.slots))
 }
 
 // art adds the rows of an art insert with the values of its fields (section 6.2 and art-format, section 4).
@@ -650,9 +686,13 @@ func (r *renderer) artFields(a *Art, n int, cells Row, env *Env) Row {
 			continue
 		}
 		own()
+		gs, slot := r.fieldText(f.Ref, env), int32(0)
+		if f.Live { // the slot has the width of the token (live-screen, section 3.1)
+			gs, _, slot = r.live(Field{Ref: f.Ref, Width: f.Width, Right: f.Right, Live: true, Layout: f.Layout}, env, true)
+		}
 		var value []Cell
-		for _, g := range FitValue(r.fieldText(f.Ref, env), f.Width, f.Right) {
-			value = appendCell(value, g, f.Style)
+		for _, g := range FitValue(gs, f.Width, f.Right) {
+			value = appendSlot(value, g, f.Style, slot)
 		}
 		copy(cells[f.Col-1:], value)
 	}
@@ -667,7 +707,7 @@ func (r *renderer) artFields(a *Art, n int, cells Row, env *Env) Row {
 			shown = copy(box, cells[b.Content-1:b.Content-1+b.Len])
 		}
 		for i := shown; i < len(box); i++ {
-			box[i] = Cell{" ", b.Style}
+			box[i] = Cell{Grapheme: " ", Style: b.Style}
 		}
 	}
 	return cells
@@ -684,7 +724,7 @@ func (r *renderer) listRect(a *Art, i int, cells Row) Row {
 	n := (r.env.List.Page-1)*r.pageSize + i
 	if i >= r.pageSize || n >= len(r.list) {
 		for c := from; c < to; c++ {
-			cells[c] = Cell{" ", listRow[c].Style}
+			cells[c] = Cell{Grapheme: " ", Style: listRow[c].Style}
 		}
 		return cells
 	}
@@ -801,10 +841,36 @@ func (r *renderer) start() Pos {
 	return Pos{File: r.file, Line: 1, Col: 1}
 }
 
-// page gives the next page with rows.
+// page gives the next page with rows and their slots.
 func (r *renderer) page(rows []Row) Page {
 	r.pages++
-	return Page{Num: r.pages, Rows: rows, Cols: r.cols, Height: r.height, Margin: r.margin, Normal: r.normal, Fill: r.fill}
+	return Page{
+		Num: r.pages, Rows: rows, Cols: r.cols, Height: r.height, Margin: r.margin, Normal: r.normal, Fill: r.fill,
+		Slots: r.pageSlots(rows),
+	}
+}
+
+// pageSlots gives the slots of rows: one for each run of cells with one mark (live-screen, section 3.1).
+// The rows come from row, in order.
+func (r *renderer) pageSlots(rows []Row) []Slot {
+	var out []Slot
+	for i, row := range rows {
+		last := int32(0)
+		for j, c := range row {
+			switch c.Slot {
+			case 0:
+			case last:
+				out[len(out)-1].Cells++
+			default:
+				s := r.slots[c.Slot-1]
+				s.Row, s.Col, s.Skip, s.Cells = i, j, r.skips[0], 1
+				r.skips = r.skips[1:]
+				out = append(out, s)
+			}
+			last = c.Slot
+		}
+	}
+	return out
 }
 
 // row gives a row of the screen area with cells. It cuts cells at the screen area; a cut through a wide grapheme leaves a space in its style.
@@ -812,20 +878,36 @@ func (r *renderer) page(rows []Row) Page {
 func (r *renderer) row(cells []Cell) Row {
 	row := make(Row, r.area)
 	for i := range row {
-		row[i] = Cell{" ", r.normal}
+		row[i] = Cell{Grapheme: " ", Style: r.normal}
 	}
 	n := copy(row, cells)
 	if n < len(cells) && n > 0 && cells[n].Grapheme == "" {
 		row[n-1].Grapheme = " "
 	}
+	last := int32(0)
+	for i, c := range cells { // the runs of the slots: a cut cell counts for the run after it
+		if c.Slot != 0 {
+			if c.Slot != last && i < n {
+				r.skips = append(r.skips, r.seen[c.Slot])
+			}
+			if r.seen == nil {
+				r.seen = map[int32]int{}
+			}
+			r.seen[c.Slot]++
+		}
+		last = c.Slot
+	}
 	return row
 }
 
 // appendCell appends the cells of g: a wide grapheme takes 2 cells.
-func appendCell(cells []Cell, g Grapheme, style Style) []Cell {
-	cells = append(cells, Cell{g.Text, style})
+func appendCell(cells []Cell, g Grapheme, style Style) []Cell { return appendSlot(cells, g, style, 0) }
+
+// appendSlot appends the cells of g with the mark slot (Cell.Slot).
+func appendSlot(cells []Cell, g Grapheme, style Style, slot int32) []Cell {
+	cells = append(cells, Cell{Grapheme: g.Text, Style: style, Slot: slot})
 	if g.Width == 2 {
-		cells = append(cells, Cell{"", style})
+		cells = append(cells, Cell{Style: style, Slot: slot})
 	}
 	return cells
 }

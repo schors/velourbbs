@@ -8,7 +8,7 @@ import (
 )
 
 func TestLookupField(t *testing.T) {
-	fields := Fields{"w": {kind: refTerm, term: termCols}, "f": {kind: refArg, name: "file"}}
+	fields := Fields{"w": {Ref: Ref{kind: refTerm, term: termCols}}, "f": {Ref: Ref{kind: refArg, name: "file"}}}
 	tests := []struct {
 		path, want, err string
 	}{
@@ -60,7 +60,7 @@ func TestLookupField(t *testing.T) {
 		{path: "bbs", err: `unknown field "bbs"`},
 	}
 	for _, tt := range tests {
-		r, err := LookupField(tt.path, fields)
+		r, _, err := LookupField(tt.path, fields)
 		switch {
 		case tt.err != "":
 			if err == nil || err.Error() != tt.err {
@@ -111,8 +111,8 @@ func TestNewAlias(t *testing.T) {
 			}
 		case err != nil:
 			t.Errorf("%s = %q: %v", tt.name, tt.path, err)
-		case r.String() != tt.path:
-			t.Errorf("%s = %q: got %s", tt.name, tt.path, r)
+		case r.Ref.String() != tt.path:
+			t.Errorf("%s = %q: got %s", tt.name, tt.path, r.Ref)
 		}
 	}
 }
@@ -157,7 +157,7 @@ func TestEnvText(t *testing.T) {
 		{"bbs.uptime", "3d 04:17:09"},
 	}
 	for _, tt := range tests {
-		r, err := LookupField(tt.path, nil)
+		r, _, err := LookupField(tt.path, nil)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -191,7 +191,7 @@ func TestRefArg(t *testing.T) {
 		"bbs.name": TypeString, "bbs.version": TypeString, "bbs.sessions": TypeInt,
 		"bbs.time": TypeString, "bbs.uptime": TypeString,
 	} {
-		if r, _ := LookupField(path, nil); r.Type() != want {
+		if r, _, _ := LookupField(path, nil); r.Type() != want {
 			t.Errorf("%s: type %v, want %v", path, r.Type(), want)
 		}
 	}

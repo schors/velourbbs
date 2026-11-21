@@ -310,10 +310,14 @@ type Text struct {
 }
 
 // Field is a field token. Width is 0 for the natural width, else the cells of the token.
+// Live is true for a live field with a slot (live-screen, section 3): its Ref ticks.
+// Layout is the layout of a live bbs.time of the token or of the alias, else "".
 type Field struct {
-	Ref   Ref
-	Width int
-	Right bool
+	Ref    Ref
+	Width  int
+	Right  bool
+	Live   bool
+	Layout string
 }
 
 // SetStyle is a style token (section 7.3). A theme style token has only Name:

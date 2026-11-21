@@ -1,0 +1,10 @@
++++
+data = { from = "files", args = { dir = "parts" } }
+rows = 3
+[[item]]
+key = "Q"
+do = "back"
++++
+Parts
+{#each}{row.num}. {row.title} {~.} {bbs.uptime live}|{/each}
+Q Back

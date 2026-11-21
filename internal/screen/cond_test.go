@@ -6,7 +6,7 @@ import (
 )
 
 func TestCondEval(t *testing.T) {
-	fields := Fields{"w": {kind: refTerm, term: termCols}, "t": {kind: refTerm, term: termType}}
+	fields := Fields{"w": {Ref: Ref{kind: refTerm, term: termCols}}, "t": {Ref: Ref{kind: refTerm, term: termType}}}
 	env := &Env{
 		Term:  Term{Type: "ansi", Cols: 80, Rows: 25, Colors: 16},
 		Items: map[string]bool{"A": true, "B": true},
@@ -66,7 +66,7 @@ func TestCondEval(t *testing.T) {
 }
 
 func TestCondErrors(t *testing.T) {
-	fields := Fields{"w": {kind: refTerm, term: termCols}}
+	fields := Fields{"w": {Ref: Ref{kind: refTerm, term: termCols}}}
 	tests := []struct {
 		cond, err string
 	}{
@@ -147,7 +147,7 @@ func TestCondItems(t *testing.T) {
 }
 
 func TestCondArgs(t *testing.T) {
-	c, err := ParseCond(`arg.a == "x" and term.cols > 1 or f != "" and item.A`, Fields{"f": {kind: refArg, name: "b"}}, true)
+	c, err := ParseCond(`arg.a == "x" and term.cols > 1 or f != "" and item.A`, Fields{"f": {Ref: Ref{kind: refArg, name: "b"}}}, true)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -10,6 +10,8 @@ import (
 type Cell struct {
 	Grapheme string
 	Style    Style
+	// Slot is the number of the slot of the cell in its render, from 1, else 0 (live-screen, section 3.1).
+	Slot int32
 }
 
 // Row is one row of cells.
@@ -21,12 +23,13 @@ type Row []Cell
 type Page struct {
 	Num    int // the page number from 1: file.page on a file screen, list.page on a list screen (screen-render, section 3.3)
 	Rows   []Row
-	Cols   int   // term.cols
-	Height int   // term.rows
-	Top    int   // the fill rows above the rows: the first row is the terminal row Top + 1
-	Margin int   // the left margin of the screen area
-	Normal Style // the style normal: the cells outside the screen area and the fill rows
-	Fill   Fill  // the cells of the fill rows
+	Cols   int    // term.cols
+	Height int    // term.rows
+	Top    int    // the fill rows above the rows: the first row is the terminal row Top + 1
+	Margin int    // the left margin of the screen area
+	Normal Style  // the style normal: the cells outside the screen area and the fill rows
+	Fill   Fill   // the cells of the fill rows
+	Slots  []Slot // the slots of the rows, in row order (live-screen, section 3.1)
 }
 
 // Line gives row i at p.Cols cells in buf: each cell outside the screen area
@@ -34,11 +37,11 @@ type Page struct {
 func (p Page) Line(i int, buf Row) Row {
 	buf = buf[:0]
 	for range p.Margin {
-		buf = append(buf, Cell{" ", p.Normal})
+		buf = append(buf, Cell{Grapheme: " ", Style: p.Normal})
 	}
 	buf = append(buf, p.Rows[i]...)
 	for len(buf) < p.Cols {
-		buf = append(buf, Cell{" ", p.Normal})
+		buf = append(buf, Cell{Grapheme: " ", Style: p.Normal})
 	}
 	return buf
 }

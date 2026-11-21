@@ -77,7 +77,7 @@ layout = '"' { any character except '"' and '}' } '"'
 - The width of the slot is the width of the token for a fixed-width field and for a field in art.
   Else it is the "largest width" of the value:
   - `bbs.time`: the sum of the largest widths of the elements of the layout. An element of the Go package `time`
-    has its largest width: `January` and `Monday` 9; `1`, `2`, `3`, `4`, `5` 2; `.9…` the count of its digits plus 1;
+    has its largest width: `January` and `Monday` 9; `1`, `2`, `3`, `4`, `5` 2; `.0…` and `.9…` the count of its digits, at most 9, plus 1;
     a `Z07…` form the width of its numeric form (`Z07:00` gives 6); `MST` the widest abbreviation
     of `[screen] zone` from 2000 to 2100 (the Go method `time.Time.ZoneBounds` gives the periods of the zone).
     Each other element and each other character has the width of its value;

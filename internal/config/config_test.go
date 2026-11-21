@@ -116,7 +116,7 @@ w = "term.cols"
 	if cfg.Start != "welcome" {
 		t.Errorf("start %q", cfg.Start)
 	}
-	if len(cfg.Fields) != 1 || cfg.Fields["w"].String() != "term.cols" {
+	if len(cfg.Fields) != 1 || cfg.Fields["w"].Ref.String() != "term.cols" {
 		t.Errorf("fields %v", cfg.Fields)
 	}
 	want := map[string]string{

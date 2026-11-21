@@ -250,6 +250,9 @@ func (p *condParser) path(w string) (Ref, error) {
 	if w == "" || w == "and" || w == "or" || w == "not" {
 		return Ref{}, fmt.Errorf("expected a field, found %s", p.found(w))
 	}
+	if a, ok := p.fields[w]; ok && a.Live {
+		return Ref{}, fmt.Errorf("alias %q has the live mark: a condition takes the values of the show", w)
+	}
 	ref, err := resolve(w, p.fields)
 	if err == nil && ref.isItem() && !p.items {
 		return Ref{}, fmt.Errorf("field %q is valid only in {#if}", w)

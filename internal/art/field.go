@@ -8,7 +8,7 @@ import (
 
 // findTokens finds the field tokens (section 4) and the boxes (section 5) in the rows of the art.
 // It resolves the paths with the aliases fields. A field token is "{", optional spaces, a path,
-// optional spaces and "}" on one row. A "{" followed by "#", "/", "!" or ">" starts a token
+// the optional live mark, optional spaces and "}" on one row (scanToken). A "{" followed by "#", "/", "!" or ">" starts a token
 // that ends at the first "}" on the row. Each other "{" is a plain character.
 func findTokens(d *screen.FileDiags, rows []screen.Row, fields screen.Fields) ([]screen.ArtField, []screen.ArtBox) {
 	var found []screen.ArtField
@@ -29,21 +29,25 @@ func findTokens(d *screen.FileDiags, rows []screen.Row, fields screen.Fields) ([
 				c = end
 				continue
 			}
-			path, start, end, ok := scanToken(row, c)
+			text, start, end, ok := scanToken(row, c)
 			if !ok {
 				continue
 			}
 			valid := checkToken(d, i+1, row[c:end+1], c+1)
-			ref, err := screen.LookupField(path, fields)
+			ref, m, err := screen.LookupField(text, fields)
 			if err != nil {
 				d.Errorf(i+1, c+1, "%v", err)
 				valid = false
 			}
 			if valid {
-				found = append(found, screen.ArtField{
+				f := screen.ArtField{
 					Row: i + 1, Col: c + 1, Width: end - c + 1, Ref: ref,
 					Right: start > c+1, Style: row[c].Style,
-				})
+				}
+				if m.Live && ref.Ticks() { // the mark on another field gives no slot (live-screen, section 3)
+					f.Live, f.Layout = true, m.Layout
+				}
+				found = append(found, f)
 			}
 			c = end
 		}
@@ -117,21 +121,32 @@ func cellText(cells screen.Row) string {
 	return b.String()
 }
 
-// scanToken scans the token at row[c] == "{". It gives the path, the index of its
-// first cell and the index of "}".
-func scanToken(row screen.Row, c int) (path string, start, end int, ok bool) {
+// scanToken scans the field token at row[c] == "{": a path with optional spaces around it,
+// or a path with " live" after it up to the first "}" (live-screen, section 3).
+// It gives the text of the token without the spaces around it, the index of the first cell
+// of the path and the index of "}".
+func scanToken(row screen.Row, c int) (text string, start, end int, ok bool) {
 	j := skipSpaces(row, c+1)
 	start = j
 	var b strings.Builder
 	for ; j < len(row) && isPathCell(row[j].Grapheme); j++ {
 		b.WriteString(row[j].Grapheme)
 	}
-	path = b.String()
-	j = skipSpaces(row, j)
-	if j == len(row) || row[j].Grapheme != "}" || !screen.IsPath(path) {
+	path := b.String()
+	if !screen.IsPath(path) {
 		return "", 0, 0, false
 	}
-	return path, start, j, true
+	if k := skipSpaces(row, j); k < len(row) && row[k].Grapheme == "}" {
+		return path, start, k, true
+	}
+	if mark := cellText(row[j:min(j+6, len(row))]); mark != " live " && mark != " live}" {
+		return "", 0, 0, false
+	}
+	end = closing(row, j)
+	if end < 0 {
+		return "", 0, 0, false
+	}
+	return strings.TrimRight(cellText(row[start:end]), " "), start, end, true
 }
 
 func skipSpaces(row screen.Row, j int) int {
