@@ -865,7 +865,7 @@ type insertStart struct {
 	name      string
 	row, rows int
 	width     int  // the art width
-	fragment  bool // a fragment has the width of the screen area
+	fragment  bool // a fragment has the render width W
 	open      bool
 }
 
@@ -892,8 +892,8 @@ func (r *renderer) insertPlaces(rowOf func(int) int, n int) []Insert {
 		if a.open {
 			rows = r.count - a.row
 		}
-		if a.fragment {
-			width = r.area
+		if a.fragment { // a fragment row has W cells; the place cuts them at term.cols (live-screen, section 6.2)
+			width = r.w
 		}
 		row := rowOf(a.row)
 		if rows == 0 || row >= n || row+rows <= 0 || slices.ContainsFunc(out, func(p Insert) bool { return p.Name == a.name }) {

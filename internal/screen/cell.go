@@ -41,7 +41,7 @@ type Page struct {
 // Insert is an art insert or an include of a fragment on a page. Name is "<name>.ans" or "_<name>".
 // Row is the row of the page of the first art row or fragment row, from 0: it is negative when the art
 // or the fragment starts on a page before. They start at the first column of the screen area.
-// Width is the art width, or the cells of the screen area for a fragment. Height is the rows.
+// Width is the art width, or the render width W for a fragment. Height is the rows.
 type Insert struct {
 	Name          string
 	Row           int

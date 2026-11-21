@@ -119,6 +119,12 @@ func TestPlaceInFragment(t *testing.T) {
 			t.Errorf("%s at %d cols: got %q, want %q", tt.at, tt.cols, got, tt.want)
 		}
 	}
+	// A fragment row has W cells also when term.cols is smaller: -1 is the column W, cut at term.cols.
+	files := map[string]string{"s.bbt": strings.Replace(candle("[[-1, 1], [20, 1]]", "_f"), "[10, 40]", "[40, 40]", 1) + "{>_f}", "_f.bbt": "abc"}
+	s, p := page(t, files, 20, 24)
+	if got, want := cells(s, p, 0), "0:19 ^ 11/0"; got != want {
+		t.Errorf("cut at term.cols: got %q, want %q", got, want)
+	}
 }
 
 // A negative coordinate counts from the end of the screen area and of the page, or of the art grid.
