@@ -77,6 +77,14 @@ func TestStation(t *testing.T) {
 			}
 			golden(t, filepath.Join("testdata", "station", screen+"-"+size+"-256.dump"), out.String())
 		}
+		// The sweep over the logotype: the band on the letters, on the signature line, at B B S, and the end.
+		out.Reset()
+		errOut.Reset()
+		args := []string{"preview", "main", "--size", size, "--set", "term.colors=256", "--keys", "+1s,+500ms,+1s,+1500ms"}
+		if status := run(args, t.TempDir(), fsys, &out, &errOut); errOut.Len() != 0 || status != 0 {
+			t.Errorf("main-sweep %s: stderr %q, status %d", size, errOut.String(), status)
+		}
+		golden(t, filepath.Join("testdata", "station", "main-sweep-"+size+"-256.dump"), out.String())
 	}
 }
 

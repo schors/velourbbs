@@ -98,6 +98,7 @@ On section screens the name is letter-spaced in bright gold (`hi`) in the header
 | Letters | Latin capitals of a 5x7 pixel font. Draw a new letter in the style of the VELOUR letters. |
 | Length | A name of n letters is 6n-1 pixels wide. With ` B B S`, up to 8 letters fit the big logotype (104 columns at 132) and up to 9 the small one (64 columns at 80). |
 | Clear space | One empty row between the logotype and its signature line, one more before anything else. |
+| Light | On the entry and the menu, a light runs once over the name and its signature line, from left to right, half a second after the screen shows. Its peak is `g0`. The last cell of each row glints when the light passes it. Nothing else moves on the logotype. |
 | Never | Frames around the name, outlines, colours other than the gold ramp, centring on section screens. |
 
 ## 3. Colour

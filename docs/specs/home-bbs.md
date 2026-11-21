@@ -45,6 +45,9 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   So, counted from 1, the kicker is at row 5 at 80x24 and 80x25 and at row 6 at 132x43.
   The keys are at row 23 at 80x24 and 80x25 and at row 41 at 132x43.
 - The logotype is `_logo-132` with `term.cols >= 132 and term.rows >= 43`, else `_logo-80`.
+- `main` and the menus have one `sweep` with `peak = "g0"` for each logotype fragment
+  ([live-screen](live-screen.md), section 6.8). It has no `at`: the light runs over the letters
+  and the signature line, as the brandbook gives in section 2.
 - A file screen has `width = [68, 68]`, `align = "left"` and `margin = [2, 2]`.
   So its column is 8 to 71 at each width: the brandbook has no reading screen at 132 yet.
 - With `term.ambiguous` 2, `main` shows a hint in both languages in place of the greeting:
@@ -80,7 +83,10 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   with 256 colours with its golden file `cmd/velourbbs/testdata/station/<screen>-<size>-256.dump`.
   `<screen>` is a common screen, `<lang>-<name>` with `--set session.lang=<lang>`,
   or `main-ambiguous`: `main` with `--set term.ambiguous=2`.
-  The test has no other cases.
+- The test compares the output of `velourbbs preview main` with `--keys +1s,+500ms,+1s,+1500ms`
+  at 80x24 and at 132x43 with 256 colours with its golden file
+  `cmd/velourbbs/testdata/station/main-sweep-<size>-256.dump`. It shows the sweep over the logotype.
+- The test has no other cases.
 - The station tests use a guide fixture in place of `content/<lang>/guide`.
   An edit of `docs/guide/` does not change their result.
 - Tests check the same items in `screens/ru/` and `screens/en/`, the guide symlinks
