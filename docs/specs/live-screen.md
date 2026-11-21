@@ -17,14 +17,16 @@ a sweep along a row and lightning.
   or of a list screen. A page before a More row is not a shown page.
 - The "show" is the output of the shown page with a clear ([telnet-term](telnet-term.md), section 7.1).
   The "show time" is the time of the show.
-- A "live page" is a shown page of a screen with `live = true` (section 3).
-- A "tick" is a new render of a live page at a whole second (section 4).
-- The "base" is the last render of the shown page: the render of the show or of the last tick.
+- A "live page" is a shown page of a screen with `live = true` or with an effect (section 3).
+- A "tick" is a new render of a live page with `live = true` at a whole second (section 4).
+- The "base" is the last render of the shown page: the render of the show, of the last tick
+  or of the last cursor move in a list screen ([menu-nav](menu-nav.md), section 5.3).
 - An "effect" is one `[[effect]]` table of the front matter (section 6).
   The "layer" is the cells that the effects change on the base at a time.
-- The "grid" is the cells of all terminal rows: the rows of the page with the cells outside the screen area,
-  and the fill rows ([bbt-format](bbt-format.md), section 6.5). A fill row with `fill = "none"`
-  has spaces in the colour `default` without attributes.
+- The "grid" is the base with the layer: the cells of all terminal rows. A row of the page has
+  the cells outside the screen area ([bbt-format](bbt-format.md), section 6.2). A cell of a fill row
+  ([bbt-format](bbt-format.md), section 6.5) is a space: in the colour `default` without attributes
+  with `fill = "none"`, in `normal` with `"spaces"` and `"erase"`.
 - A "frame" is the output of the changed cells of the grid ([telnet-term](telnet-term.md), section 7.5).
 - A "field cell" is a cell of the value of a field token.
 
@@ -61,10 +63,11 @@ do = "logoff"
 - A missing or unknown `do`, or a key that the table of the effect in section 6 does not have.
 - A value outside its range in the tables of section 6.
 - `on` with a control character, a grapheme of width other than 1, or more than 32 graphemes.
+  `on` of a `twinkle` with fewer than 2 different graphemes.
 - `style` with a name that is not a name of the theme ([bbt-format](bbt-format.md), section 7.3).
 - A style value of `peak` or `colors` that is not a valid value of a theme style
   ([screens-toml](screens-toml.md), section 3.2): a style or the name of a theme style.
-- `spread` with `every - spread < 0.05`.
+- `spread` with `every - spread < 0.05`, and `spread` of a `sweep` without `every`.
 
 The errors have the positions of [screen-render](screen-render.md), section 3.1.
 The message starts with `effect <n>: `, the 1-based number of the effect.
@@ -88,13 +91,15 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
 - A More row waits for a key with no ticks and no effects.
 - The line input of `ask` ([menu-nav](menu-nav.md), section 5.4) has no ticks and no frames.
   The page with the ask row has no layer. After the input, the frames go on.
+- A cursor move in a list screen renders with the values of the base. Its render is the new base,
+  and the update sends it with the layer.
 - The stop ([telnet-term](telnet-term.md), section 10.2) ends the wait of a live page as each wait.
 
 ## 5. Frames
 
 - The layer is a function of the time from the show time and of the random source of the session (section 6).
 - The host makes a frame at each tick and at each time when the layer changes: the start of an event
-  of an effect, and each 50 ms while an event runs (section 6).
+  of an effect, each 50 ms while an event runs, and the end of an event (section 6).
 - Two frames are at least 50 ms apart. A frame that comes earlier waits until 50 ms after the frame before.
   A frame takes the layer and the base at its own time. So after a slow write, the next frame
   shows the current state, and the host does not send the missed frames.
@@ -110,16 +115,24 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
 
 - An effect has "events". An event starts at a time and can run for a time.
 - The first event starts at the show time plus d. Each next event starts at the start of the event
-  before plus d. d is `every` plus a random value from `-spread` to `spread`. The events of one effect can overlap.
+  before plus d. d is `every` plus a random value from `-spread` to `spread`.
+- The events of one effect can overlap. On a cell of two events, the event that started later wins.
+  At the end of an event, its cells show the other events or the cell before the effect.
+- An event without selected cells changes nothing and takes no random values.
+  The next events of the effect start as before.
 - The "selected cells" of an effect are the cells of the rows of the base in the screen area that:
   - have a grapheme of `on`, when the effect has `on`;
   - have a theme style of `style`, when the effect has `style`.
-    The theme style of a cell is the name of the last style token `{!<name>}` before it,
-    when no colour token (`{!14}`, `{!/1}`) comes after that token. `{!}` gives `normal`.
-    A cell of art has no theme style;
+    The theme style of a cell is the name of the whole style that the render gives the cell:
+    a token `{!<name>}`, `{!}` (`normal`), the start of the screen (`normal`), the style after an include
+    ([bbt-format](bbt-format.md), section 3.4), the cursor row of a list screen (`select`)
+    or a style `md_*` of the file area of a file screen. A colour token (`{!14}`, `{!/1}`) after it
+    removes the name until the next whole style. A cell of art and a cell that the screen does not draw
+    have no theme style;
   - are not field cells and have a grapheme of width 1.
 - Effects never change a field cell or a cell of a grapheme of width 2.
-- The effects apply in source order. A later effect replaces the cell of an earlier effect.
+- The effects apply in source order. Each effect takes the cell after the earlier effects:
+  its grapheme, and its foreground for the mix. The selection uses the base.
 - Each session has its own random source: the generator PCG of the Go package `math/rand/v2`
   with a random seed. `velourbbs preview` takes a fixed seed (section 7).
 - A tick can move or remove the selected cells. The layer keeps the state of a position
@@ -132,6 +145,8 @@ The "mix" of a cell with a colour P at an amount a, from 0 to 1, gives the foreg
 - an index 16–255: the xterm palette;
 - `default`: the foreground of `normal`, or `aaaaaa` when it is `default` too.
 
+P has the same rules.
+
 The background and the attributes of the cell stay. The output reduces the colour to `term.colors`
 ([telnet-term](telnet-term.md), section 7.3). So on 16 colours a glint has few steps.
 
@@ -140,12 +155,13 @@ So a light table can give another peak ([screens-toml](screens-toml.md), section
 
 ### 6.2. `twinkle`
 
-On each event, `share` of the selected cells, rounded, but at least 1, change to another grapheme of `on`.
+On each event, `share` of the selected cells, rounded, but at least 1, change to a grapheme of `on`
+that differs from the grapheme of the cell.
 The host takes the cells and the graphemes at random. The style stays. The change stays until the next event of the cell.
 
 | Key | Type | Default | Range |
 |---|---|---|---|
-| `on` | string | Required. | 2 graphemes or more. |
+| `on` | string | Required. | 2 different graphemes or more. |
 | `style` | array of strings | None. | Names of theme styles. |
 | `every` | number, seconds | `1` | 0.05–3600. |
 | `spread` | number, seconds | `0.5` | 0 or more. |
@@ -192,7 +208,7 @@ A bright spot runs from left to right over the selected cells.
 |---|---|---|---|
 | `on`, `style` | — | One of them is required. | As `glint`. |
 | `every` | number, seconds | None: one event. | 0.05–3600. |
-| `spread` | number, seconds | `0`. Only with `every`. | 0 or more. |
+| `spread` | number, seconds | `0`. Only with `every`: else an error. | 0 or more. |
 | `peak`, `time` | — | As `glint`. | As `glint`. |
 | `width` | integer, cells | `3` | 1–20. |
 | `speed` | number, columns each second | `40` | 1–1000. |
@@ -203,9 +219,11 @@ Each event draws a bolt on the grid for `time`.
 
 - The main bolt starts at a random column of the terminal row 1. It goes down one terminal row
   at each step, with a random column step of -1, 0 or +1, for a random count of rows from `term.rows / 2`,
-  rounded down, to `term.rows`. A step out of the grid ends the part.
+  rounded down, to `term.rows`. A step out of the grid is a step 0.
 - The bolt has 1–3 branches, a random count. A branch starts at a random cell of the main bolt
-  below row 1. It goes down with one column step, -1 or +1 at random, for 2–6 rows, a random count.
+  below row 1. Its first cell is in the next row. It goes down with one column step, -1 or +1 at random,
+  for 2–6 rows, a random count. A step out of the grid ends the branch.
+- Where two parts cross, the later part wins: the branches come after the main bolt, in their order.
 - The grapheme of a cell shows the step to the next row: `chars` has the graphemes
   of the steps +1, 0 and -1. The last cell of a part has the grapheme of the step 0.
 - For the main bolt and for each branch, the host takes at random: behind or in front.
@@ -230,12 +248,16 @@ Each event draws a bolt on the grid for `time`.
 
 - In `--keys` ([menu-nav](menu-nav.md), section 7), an element `+<duration>` waits for the time
   `<duration>`: a duration of the Go function `time.ParseDuration` from 1 ms to 1 h. Examples: `+1s`, `+250ms`.
+  A wait is not a key. It gives no `key` line.
 - The preview has a fixed clock. It starts at the time of [session-fields](session-fields.md), section 4.
   Only a wait moves it. A wait moves `bbs.time`, `session.online` and `bbs.uptime`.
   A value of `--set` stays fixed.
 - The random source has the fixed seed `(1, 2)`. So the output is the same at each run.
 - During a wait, the session makes the ticks and the frames of sections 4 and 5 in order, with the fixed clock.
-- The output of a wait is the line `wait <duration>`, then the "grid dump" of the grid at the end of the wait.
+- The output of a wait is the line `wait <duration>`, with the duration as the element gives it,
+  then the "grid dump" of the grid at the end of the wait.
+- In the line input of `ask`, a wait moves the clock with no frame. Its output is only the line `wait <duration>`.
+- A wait after the end of the session at `logoff` is an error, as a key is.
 - The grid dump is the cell dump of [screen-render](screen-render.md), section 3.3, for all terminal rows:
   the first line is `grid <cols>x<rows>`, then one row between two `|` for each terminal row,
   then the `styles`. A cell of a fill row with `fill = "none"` has the style `-/-`.
@@ -249,7 +271,6 @@ Example: the clock `{bbs.time}` with `[screen] time = "15:04:05"` and `live = tr
 screen main
 page 1 80x24 fill none
 |15:04:05 ...
-key +1s
 wait 1s
 grid 80x24
 |15:04:06 ...

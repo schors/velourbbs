@@ -33,7 +33,8 @@ the online time, the BBS name, the version, the open sessions, the server time a
 - A list screen takes the values at step 1 of [menu-nav](menu-nav.md), section 5.3,
   for the page size ([list-view](list-view.md), section 7). It takes them again for each page
   at step 3. A cursor move on the same list page keeps them.
-- A live page takes the values again at each tick ([live-screen](live-screen.md), section 4).
+- A live page with `live = true` takes the values again at each tick ([live-screen](live-screen.md), section 4).
+  A cursor move then keeps the values of the last tick.
 
 ## 3. Values
 
@@ -79,7 +80,8 @@ the online time, the BBS name, the version, the open sessions, the server time a
 
 ## 4. `velourbbs preview`
 
-`velourbbs preview` has no connection. It takes these values:
+`velourbbs preview` has no connection. It takes these values at the start.
+A wait of `--keys` moves `session.online`, `bbs.time` and `bbs.uptime` ([live-screen](live-screen.md), section 7):
 
 | Field | Value |
 |---|---|

@@ -393,8 +393,12 @@ The host sends it in this order:
 3. `ESC[0m`, `ESC[<row>;<col>H` to the cursor place, `ESC[?25h ESC[?2026l`.
 
 - A "run" starts and ends at a cell that differs from the shown grid. Two runs with at most
-  3 equal cells between them are one run. A run that starts or ends in a grapheme of width 2
-  takes the whole grapheme.
+  3 equal cells between them are one run. Then each run grows until these rules hold:
+  - a run that starts or ends in a grapheme of width 2 takes the whole grapheme;
+  - a run that starts directly after a grapheme of more than one code point takes that grapheme.
+    A terminal that shows the grapheme wide uses the next cell for it;
+  - a run that ends with a grapheme of more than one code point takes the next cell of the row, if there is one.
+    The re-sync of section 7.4 writes a space over that cell.
 - The styles have the rule of section 7.2. Before the first cell of step 2, the style is `default`
   colours without attributes. A cell of a fill row with `fill = "none"` is a space in this style.
 - The encoder of section 7.4 writes the cells, with the re-sync.
@@ -541,7 +545,7 @@ The keys of `[telnet]` and `[limits]` are in [bbs-toml](bbs-toml.md), sections 3
 
 ### 9.4. Output
 
-- The host writes each page in one write. A write that does not complete within
+- The host writes each page and each update (section 7.5) in one write. A write that does not complete within
   `output_timeout` ends the session.
 
 ## 10. Command

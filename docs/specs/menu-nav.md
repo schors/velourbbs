@@ -178,7 +178,8 @@ The current list page and the cursor are the page and the cursor of the top fram
    - A `page` action or a cursor move to another list page ([list-view](list-view.md), section 8)
      continues at step 3. A `theme` action continues at step 3.
    - A cursor move on the same list page renders the page with the values of step 3
-     and updates it ([telnet-term](telnet-term.md), section 7.1). Continue at step 4.
+     and updates it ([telnet-term](telnet-term.md), section 7.5). Continue at step 4.
+     On a live page, the values are the values of the last tick ([live-screen](live-screen.md), section 4).
    - Each other action leaves the screen.
 
 ### 5.4. Ask
@@ -295,7 +296,7 @@ It is the test harness for the navigation.
   of [bbt-format](bbt-format.md), section 8.1, except `ANY`, or one other printable character
   except the comma and the space.
   Example: `S,ы,ESC,G`. An empty list is valid.
-  An element `+<duration>` is a wait ([live-screen](live-screen.md), section 7). Example: `S,+2s,G`.
+  An element `+<duration>` is a wait, not a key ([live-screen](live-screen.md), section 7). Example: `S,+2s,G`.
 - `<name>` must be a valid start screen (section 6), except the rule on arguments.
   Else it is an invalid argument. The session starts with one frame: this screen.
   `--set arg.<name>` gives the arguments of the screen ([screen-render](screen-render.md), section 3.2).
@@ -360,7 +361,8 @@ page 1 80x25 fill none
 - The terminal interface gives the size and the keys, shows a page and updates a page
   (section 5.3, [live-screen](live-screen.md), section 5).
   The wait for a key takes the context of the session ([session](session.md), section 6)
-  and a deadline: the time of the next frame of a live page. At the deadline, it gives no key.
+  and a deadline: the time of the next frame of a live page ([live-screen](live-screen.md), section 5).
+  At the deadline, it gives no key.
   `velourbbs preview` and telnet-term give its implementations.
 - The terminal interface also reads a line with the line input (section 5.4,
   [line-input](line-input.md), section 8).
