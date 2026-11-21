@@ -91,7 +91,7 @@ func TestClockValues(t *testing.T) {
 	}
 }
 
-// The effects of live-screen, sections 6.4 and 6.6–6.8, at three times with the fixed seed:
+// The effects of live-screen, sections 6.4–6.9, at three times with the fixed seed:
 // with in and without in, with a point, an array of points and a rectangle where the effect takes them.
 // twinkle: a point on the page; an array of points in the art with colors, one of them
 // at the last cell of the art; a rectangle of the art with share 0.5.
@@ -100,6 +100,9 @@ func TestClockValues(t *testing.T) {
 // glint: a point on the page with an RGB peak; an array of points in the art with a theme style as peak;
 // a rectangle of the art. The dump shows the grid of the last frame before the end of a wait.
 // sweep: the whole art once, from 0.5 s; a rectangle on the last row of the page with every.
+// sparkle: a point on a space of the page; an array of points in the art with over and colors;
+// a rectangle of the art with count 3.
+// lightning: the whole grid with ASCII chars, on empty cells only; the whole art with over and a theme style as peak.
 func TestEffects(t *testing.T) {
 	out, errOut, status := runIn(t, "effects", "check")
 	if out != "" || errOut != "" || status != 0 {
@@ -110,6 +113,8 @@ func TestEffects(t *testing.T) {
 		{"candle", "+1s,+1s,+1s"},
 		{"glint", "+1250ms,+1s,+1s"},
 		{"sweep", "+1s,+500ms,+1s"},
+		{"sparkle", "+1s,+1s,+1s"},
+		{"lightning", "+1100ms,+1s,+1s"},
 	} {
 		out, errOut, status := runIn(t, "effects", "preview", tt.name, "--size", "40x10", "--keys", tt.keys)
 		if errOut != "" || status != 0 {

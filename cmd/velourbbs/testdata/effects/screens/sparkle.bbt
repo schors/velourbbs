@@ -1,0 +1,30 @@
++++
+[[effect]]
+do = "sparkle"
+at = [-1, 1]
+chars = "*+"
+time = 1.5
+[[effect]]
+do = "sparkle"
+in = "sky.ans"
+at = [[2, 1], [-1, -1]]
+chars = "#"
+colors = ["14", "star"]
+over = true
+every = 0.8
+time = 0.5
+[[effect]]
+do = "sparkle"
+in = "sky.ans"
+at = [1, 2, 20, 2]
+chars = ".·*"
+count = 3
+every = 0.5
+time = 1.2
+[[item]]
+key = "Q"
+do = "back"
++++
+@ Sparkle
+{>sky.ans}
+Q Back

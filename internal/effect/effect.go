@@ -32,16 +32,47 @@ type runner struct {
 	order  []int           // the keys of drawn in the order of their first draw
 	star   map[int]string  // the grapheme of each star of a twinkle
 	runs   []*run          // the events of a glint or a sweep that run, in the order of their starts
+	shows  []*flash        // the events of a sparkle or a lightning that show, in the order of their starts
 	lit    map[int]float64 // the amount of the mix of each cell at the time of the layer
 	litOrd []int           // the keys of lit in the order of the runs and of their cells
 }
 
-// mark is a drawn cell: its grapheme, and its foreground when ownFg is true. The other parts of the cell
-// come from the cell below it at each frame, so a new base (a cursor move) shows through (section 6.3).
+// mark is a drawn cell: its grapheme, and its foreground when ownFg is true. plain drops the attributes
+// (a lightning). The other parts of the cell come from the cell below it at each frame,
+// so a new base (a cursor move) shows through (section 6.3).
 type mark struct {
 	g     string
 	fg    screen.Colour
 	ownFg bool
+	plain bool
+}
+
+// on gives the cell v with the mark.
+func (m mark) on(v screen.Cell) screen.Cell {
+	v.Grapheme, v.Slot = m.g, 0
+	if m.ownFg {
+		v.Style.Fg = m.fg
+	}
+	if m.plain {
+		v.Style.Attr = 0
+	}
+	return v
+}
+
+// flash is an event of a sparkle or a lightning that shows (live-screen, sections 6.5 and 6.9):
+// its drawn cells until its end from the show. The cells do not change while the event shows.
+type flash struct {
+	end   time.Duration
+	marks map[int]mark
+	order []int // the keys of marks in the order of their first draw
+}
+
+// put draws the cell c of the flash. A later draw on the same cell wins.
+func (f *flash) put(c int, m mark) {
+	if _, ok := f.marks[c]; !ok {
+		f.order = append(f.order, c)
+	}
+	f.marks[c] = m
 }
 
 // run is an event of a glint or a sweep that runs (live-screen, sections 6.7 and 6.8):
@@ -63,6 +94,7 @@ type litCell struct {
 
 // place is a place of an effect (live-screen, section 6.2) and the time of its next event.
 type place struct {
+	rect  rect  // the rectangle of the place, cut to the grid
 	cells []int // the cells in the place; an event takes random cells by a partial shuffle
 	point bool  // a point: each event takes its cell
 	next  time.Duration
@@ -84,12 +116,7 @@ func New(effs []screen.Effect, p screen.Page, theme map[string]screen.Style, rng
 			r.peak = screen.ColourValue(e.Peak, theme)
 		}
 		l.fx = append(l.fx, r)
-		if e.Do == screen.Sparkle || e.Do == screen.Lightning {
-			continue // these effects come in another block
-		}
-		for _, cells := range places(e, p, grid) {
-			r.places = append(r.places, &place{cells: cells, point: e.At.Kind == screen.AtPoint || e.At.Kind == screen.AtPoints})
-		}
+		r.places = places(e, p, grid)
 		l.show(len(l.fx)-1, grid)
 		for _, pl := range r.places {
 			pl.next = e.Delay + l.every(e)
@@ -110,7 +137,7 @@ func (l *Layer) show(i int, grid []screen.Row) {
 			continue
 		}
 		live = append(live, pl)
-		if r.e.Do == screen.Glint || r.e.Do == screen.Sweep { // they draw nothing at the show
+		if r.e.Do != screen.Twinkle && r.e.Do != screen.Candle { // the others draw nothing at the show
 			continue
 		}
 		if r.e.Do == screen.Twinkle && !pl.point { // the stars: the cells with a grapheme of chars
@@ -150,21 +177,34 @@ func (l *Layer) every(e screen.Effect) time.Duration {
 const step = 50 * time.Millisecond
 
 // Next gives the time from the show when the layer changes next, and false when it does not change:
-// the start of the next event, the end of an event that runs, or step after the last Cells
-// while an event runs (live-screen, section 5).
+// the start of the next event, the end of an event, or step after the last Cells while an event
+// of a glint or a sweep runs (live-screen, section 5).
 func (l *Layer) Next() (time.Duration, bool) {
 	next, ok := time.Duration(0), false
+	at := func(d time.Duration) {
+		if !ok || d < next {
+			next, ok = d, true
+		}
+	}
 	if _, pl := l.first(); pl != nil {
-		next, ok = pl.next, true
+		at(pl.next)
 	}
 	for _, r := range l.fx {
 		for _, rn := range r.runs {
-			if d := min(rn.end, l.now+step); !ok || d < next {
-				next, ok = d, true
-			}
+			at(min(rn.end, l.now+step))
+		}
+		for _, f := range r.shows {
+			at(f.end)
 		}
 	}
 	return next, ok
+}
+
+// expire drops the events of a sparkle or a lightning that end at the time t or before.
+func (l *Layer) expire(t time.Duration) {
+	for _, r := range l.fx {
+		r.shows = slices.DeleteFunc(r.shows, func(f *flash) bool { return f.end <= t })
+	}
 }
 
 // first gives the effect and the place of the next event: the earliest start, then the first effect,
@@ -189,6 +229,7 @@ func (l *Layer) Cells(t time.Duration, base []screen.Row) []screen.GridCell {
 		if pl == nil || pl.next > t {
 			break
 		}
+		l.expire(pl.next)
 		l.event(i, pl, base)
 		if l.fx[i].e.Every == 0 { // a sweep without every has one event
 			pl.done = true
@@ -197,10 +238,11 @@ func (l *Layer) Cells(t time.Duration, base []screen.Row) []screen.GridCell {
 		pl.next += l.every(l.fx[i].e)
 	}
 	l.now = t
+	l.expire(t)
 	var out []screen.GridCell
 	for i, r := range l.fx {
 		r.light(t)
-		for _, c := range slices.Concat(r.order, r.litOrd) {
+		for _, c := range slices.Concat(r.order, r.litOrd, r.shown()) {
 			row, col := c/l.cols, c%l.cols
 			if !free(base[row], col) { // a new base can have a slot or a wide grapheme here
 				continue
@@ -219,9 +261,11 @@ func (l *Layer) over(i, c int, grid []screen.Row) screen.Cell {
 // apply gives the cell v after the effect r on the cell c: a drawn grapheme, or the mix of its foreground.
 func (l *Layer) apply(r *runner, c int, v screen.Cell) screen.Cell {
 	if m, ok := r.drawn[c]; ok {
-		v.Grapheme, v.Slot = m.g, 0
-		if m.ownFg {
-			v.Style.Fg = m.fg
+		v = m.on(v)
+	}
+	for _, f := range r.shows { // the event that started later wins
+		if m, ok := f.marks[c]; ok {
+			v = m.on(v)
 		}
 	}
 	if a, ok := r.lit[c]; ok {
@@ -230,16 +274,38 @@ func (l *Layer) apply(r *runner, c int, v screen.Cell) screen.Cell {
 	return v
 }
 
-// event runs an event of the effect i in the place pl (sections 6.4 and 6.6–6.8).
+// shown gives the cells of the events of a sparkle or a lightning that show, each once,
+// in the order of the events and of their cells.
+func (r *runner) shown() []int {
+	var out []int
+	seen := map[int]bool{}
+	for _, f := range r.shows {
+		for _, c := range f.order {
+			if !seen[c] {
+				seen[c] = true
+				out = append(out, c)
+			}
+		}
+	}
+	return out
+}
+
+// event runs an event of the effect i in the place pl (sections 6.4–6.9).
 // A rectangle of a twinkle or a candle takes share of its cells, rounded, but at least 1.
 func (l *Layer) event(i int, pl *place, grid []screen.Row) {
 	r := l.fx[i]
 	switch r.e.Do {
+	case screen.Sparkle:
+		l.sparkle(i, pl, grid)
+		return
 	case screen.Glint:
 		l.glint(i, pl, grid)
 		return
 	case screen.Sweep:
 		l.sweep(i, pl, grid)
+		return
+	case screen.Lightning:
+		l.lightning(i, pl, grid)
 		return
 	}
 	if len(pl.cells) == 0 { // a twinkle rectangle without stars
@@ -275,6 +341,101 @@ func (l *Layer) nonSpace(i int, pl *place, grid []screen.Row) []int {
 		}
 	}
 	return out
+}
+
+// canDraw reports whether the effect i can draw on the cell c of the place: a cell that is now a slot
+// or a part of a wide grapheme (a new base) is not in the place. With over = false, only an empty cell:
+// a space after the effects before (sections 6.3, 6.5 and 6.9).
+func (l *Layer) canDraw(i, c int, grid []screen.Row) bool {
+	return free(grid[c/l.cols], c%l.cols) && (l.fx[i].e.Over || l.below(i, c, grid).Grapheme == " ")
+}
+
+// sparkle starts an event of a sparkle of the effect i in the place pl (section 6.5): a point,
+// or count random cells of the place that can take a star, show a random grapheme of chars for time.
+// A cell with a star of this effect cannot take another.
+func (l *Layer) sparkle(i int, pl *place, grid []screen.Row) {
+	r := l.fx[i]
+	starred := map[int]bool{}
+	for _, c := range r.shown() {
+		starred[c] = true
+	}
+	var cells []int
+	for _, c := range pl.cells {
+		if !starred[c] && l.canDraw(i, c, grid) {
+			cells = append(cells, c)
+		}
+	}
+	if len(cells) == 0 {
+		return
+	}
+	n := 1
+	if !pl.point {
+		n = min(r.e.Count, len(cells))
+	}
+	f := &flash{end: pl.next + r.e.Time, marks: map[int]mark{}}
+	for k := range n { // a partial shuffle: the random cells of one event are different cells
+		if !pl.point {
+			j := k + l.rng.IntN(len(cells)-k)
+			cells[k], cells[j] = cells[j], cells[k]
+		}
+		f.put(cells[k], l.paint(r, r.e.Chars[l.rng.IntN(len(r.e.Chars))]))
+	}
+	r.shows = append(r.shows, f)
+}
+
+// lightning starts an event of a lightning of the effect i in the place pl (section 6.9): the main bolt
+// and its branches in the rectangle of the place. The grapheme of a cell shows the step to the next row:
+// chars has the graphemes of the steps +1, 0 and -1. The last cell of a part has the grapheme of the step 0.
+func (l *Layer) lightning(i int, pl *place, grid []screen.Row) {
+	r := l.fx[i]
+	can := func(c int) bool {
+		_, in := slices.BinarySearch(pl.cells, c)
+		return in && l.canDraw(i, c, grid)
+	}
+	if !slices.ContainsFunc(pl.cells, can) {
+		return
+	}
+	b := pl.rect
+	f := &flash{end: pl.next + r.e.Time, marks: map[int]mark{}}
+	// part draws a part of the bolt from the row: cols are its columns, one for each row.
+	part := func(row int, cols []int) {
+		for k, col := range cols {
+			s := 0
+			if k+1 < len(cols) {
+				s = cols[k+1] - col
+			}
+			if c := (row+k)*l.cols + col; can(c) {
+				f.put(c, mark{g: r.e.Chars[1-s], fg: r.peak, ownFg: true, plain: true})
+			}
+		}
+	}
+	inside := func(col int) bool { return col >= b.col && col < b.col+b.width }
+	lo := max(1, b.height/2)
+	bolt := []int{b.col + l.rng.IntN(b.width)}
+	for range lo + l.rng.IntN(b.height-lo+1) - 1 {
+		col := bolt[len(bolt)-1]
+		if s := l.rng.IntN(3) - 1; inside(col + s) { // a step out of the rectangle is a step 0
+			col += s
+		}
+		bolt = append(bolt, col)
+	}
+	part(b.row, bolt)
+	if len(bolt) > 1 {
+		for range 1 + l.rng.IntN(3) {
+			k := 1 + l.rng.IntN(len(bolt)-1)
+			dir := 2*l.rng.IntN(2) - 1
+			var cols []int
+			for m := range 2 + l.rng.IntN(5) {
+				col := bolt[k] + (m+1)*dir
+				if k+m+1 >= b.height || !inside(col) { // a step out of the rectangle ends the branch
+					break
+				}
+				cols = append(cols, col)
+			}
+			part(b.row+k+1, cols)
+		}
+	}
+	r.shows = append(r.shows, f)
 }
 
 // glint starts a glint of the effect i in the place pl (section 6.7): one random cell of the cells

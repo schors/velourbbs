@@ -15,6 +15,13 @@ chars = "·+*"
 colors = ["223", "215"]
 every = 1.5
 [[effect]]
+do = "sparkle"
+in = "lamp.ans"
+chars = "·."
+colors = ["137", "223"]
+count = 2
+time = 1.5
+[[effect]]
 do = "candle"
 at = [[13, -1], [28, -1]]
 chars = "▲▴"

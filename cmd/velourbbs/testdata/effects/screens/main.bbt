@@ -12,7 +12,14 @@ do = "gosub glint"
 key = "S"
 do = "gosub sweep"
 [[item]]
+key = "P"
+do = "gosub sparkle"
+[[item]]
+key = "N"
+do = "gosub lightning"
+[[item]]
 key = "G"
 do = "logoff"
 +++
-T Twinkle  C Candle  L Glint  S Sweep  G Bye
+T Twinkle  C Candle  L Glint  S Sweep
+P Sparkle  N Lightning  G Bye

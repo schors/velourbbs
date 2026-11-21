@@ -2,8 +2,8 @@
 
 An "effect" changes cells of a screen while the screen waits for a key.
 In this task, you add effects to the lamp of task 9: the light of the lamp shimmers,
-stars twinkle around it, two small flames burn beside the key, the shade glints,
-and a bright band runs over the lamp once.
+stars twinkle around it, small sparks appear in the dark and go, two small flames burn
+beside the key, the shade glints, and a bright band runs over the lamp once.
 Use the directory `myart` of task 9.
 
 ## The table `[[effect]]`
@@ -17,7 +17,7 @@ at = [37, 3]
 chars = "*+·"
 ```
 
-- `do` names the effect. This task shows `twinkle`, `candle`, `glint` and `sweep`.
+- `do` names the effect: `twinkle`, `sparkle`, `candle`, `glint`, `sweep` or `lightning`.
 - `at` is the "place": the cells where the effect acts (below).
 - A screen has at most 16 effects. The effects apply in the order of the file:
   an effect acts on the cells after the effects above it.
@@ -110,6 +110,30 @@ A flame that flickers.
 
 Full rules: [live-screen](../../../specs/live-screen.md), sections 6.4 and 6.6.
 
+## The effect `sparkle`
+
+A star that appears and goes.
+
+| Key | Default | Value |
+|---|---|---|
+| `at` | None: the whole art or page. | A point, a rectangle or an array of points. |
+| `chars` | Required. | 1–32 characters of one cell. |
+| `colors` | None. | 1–16 colours, as in `twinkle`. |
+| `over` | `false` | `true`: a star can cover each cell. |
+| `count` | `1` | The stars of a rectangle at each time: 1–100. Not with a point. |
+| `time` | `2` | The seconds that a star shows: 0.05–60. |
+| `every` | `1` | |
+
+- At each time, a point shows a random character of `chars` for `time` seconds.
+  In a rectangle, `count` random cells do so.
+- With `over = false`, a star appears only on an empty cell: a space.
+  So the art and the text stay. With `over = true`, a star can cover each cell of the place.
+- A cell with a star does not take a second star of the same effect.
+- With `colors`, each star takes a random colour of `colors`. Else it keeps the colour of the cell.
+  The background stays.
+
+Full rules: [live-screen](../../../specs/live-screen.md), section 6.5.
+
 ## The brightness
 
 `glint` and `sweep` make a cell bright and keep its character.
@@ -164,6 +188,38 @@ A bright spot runs from left to right over the characters of the place.
 
 Full rules: [live-screen](../../../specs/live-screen.md), sections 6.7 and 6.8.
 
+## The effect `lightning`
+
+A bolt that flashes for a short time.
+
+| Key | Default | Value |
+|---|---|---|
+| `at` | None: the whole art or page. | A rectangle. |
+| `chars` | `╲│╱` | 3 characters: the steps down to the right, straight down and down to the left. |
+| `peak` | `#ffffff` | The colour of the bolt: a style or the name of a theme style. |
+| `over` | `false` | `true`: the bolt can cover each cell. |
+| `time` | `0.3` | The seconds that a bolt shows: 0.05–10. |
+| `every` | `30` | |
+
+- The bolt starts at a random column of the top row of the rectangle. It goes down
+  to the bottom half of the rectangle or further, with random steps to the left and to the right.
+  It has 1–3 branches.
+- With `over = false`, the bolt draws only on empty cells: the art and the text cover it.
+  With `over = true`, it covers each cell of the place.
+- A bolt keeps the background of each cell. It has no bold and no other attributes.
+- For ASCII characters, write `chars = "\\|/"`: in TOML, `\\` is one `\`.
+
+Example: a bolt in the sky above the text, about each 20 seconds, on a page with 80 columns:
+
+```
+[[effect]]
+do = "lightning"
+at = [1, 1, 80, 8]
+every = 20
+```
+
+Full rules: [live-screen](../../../specs/live-screen.md), section 6.9.
+
 ## The file
 
 Change `screens/main.bbt`:
@@ -186,6 +242,13 @@ at = [[4, 2], [37, 3], [2, 9], [39, 10]]
 chars = "·+*"
 colors = ["223", "215"]
 every = 1.5
+[[effect]]
+do = "sparkle"
+in = "lamp.ans"
+chars = "·."
+colors = ["137", "223"]
+count = 2
+time = 1.5
 [[effect]]
 do = "candle"
 at = [[13, -1], [28, -1]]
@@ -211,6 +274,8 @@ do = "logoff"
 - The first `twinkle` is the light under the shade: a rectangle of the art, the rows 5–7.
   Its stars are the cells `░` and `▒`. About each second, a fifth of them change.
 - The second `twinkle` gives four stars in the dark ground of the art, in cream and orange.
+- The `sparkle` acts on the whole art. About each second, two sparks appear for 1.5 seconds.
+  They appear only on empty cells, so they stay in the dark ground and do not cover the lamp.
 - The `candle` gives two flames on the last row of the page, beside the key `G`, in orange and yellow.
   The page coordinates work here: the screen is 40 columns wide, so its rows do not wrap.
 - The `glint` acts on the shade: a rectangle of the art, the rows 2–4.
@@ -223,9 +288,9 @@ do = "logoff"
 - `velourbbs check` gives no output.
 - `velourbbs preview main` gives the screen of task 9: the preview shows the screen
   before the effects.
-- `velourbbs preview main --keys +1s` shows the screen after one second: the stars, the flames
-  and the band of the sweep in the middle of the lamp.
+- `velourbbs preview main --keys +1s` shows the screen after one second: the stars, the sparks,
+  the flames and the band of the sweep in the middle of the lamp.
   `+1s,+1s` shows it after one second and after two seconds.
   The random values of the preview are the same at each run.
-- Run `velourbbs serve`. PuTTY shows the light that shimmers, the stars, the flames, the glints
-  and the band.
+- Run `velourbbs serve`. PuTTY shows the light that shimmers, the stars, the sparks, the flames,
+  the glints and the band.

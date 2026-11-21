@@ -1,0 +1,22 @@
++++
+[[effect]]
+do = "lightning"
+chars = "\\|/"
+every = 1
+spread = 0
+time = 0.6
+[[effect]]
+do = "lightning"
+in = "sky.ans"
+peak = "star"
+over = true
+every = 1.5
+spread = 0
+time = 0.8
+[[item]]
+key = "Q"
+do = "back"
++++
+@ Lightning
+{>sky.ans}
+Q Back

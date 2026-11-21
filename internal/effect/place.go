@@ -5,11 +5,12 @@ import "github.com/schors/velourbbs/internal/screen"
 // rect is a rectangle of the grid: the first cell and the size, from 0.
 type rect struct{ col, row, width, height int }
 
-// places gives the cells of each place of the effect e on the page p with the grid grid
-// (live-screen, section 6.2): one place for an at without points, else one place for each point.
-// A cell is row*cols + col. A cell that the page does not show, a slot cell and a cell
-// of a grapheme of width 2 are not in a place. An effect with in on a page without the art has no place.
-func places(e screen.Effect, p screen.Page, grid []screen.Row) [][]int {
+// places gives each place of the effect e on the page p with the grid grid (live-screen, section 6.2):
+// one place for an at without points, else one place for each point. A cell is row*cols + col.
+// A cell that the page does not show, a slot cell and a cell of a grapheme of width 2 are not in a place.
+// The rectangle of a place is the rectangle of at, the art grid or the grid, cut to the grid.
+// An effect with in on a page without the art has no place.
+func places(e screen.Effect, p screen.Page, grid []screen.Row) []*place {
 	// frame is the cells where the coordinates count: the art grid or the page, in grid coordinates,
 	// and shown is the part of the grid that can be in a place.
 	frame := rect{col: p.Margin, row: p.Top, width: p.Area, height: len(p.Rows)}
@@ -31,23 +32,27 @@ func places(e screen.Effect, p screen.Page, grid []screen.Row) [][]int {
 		// keeps the place in the art grid.
 		shown = intersect(intersect(shown, frame), rect{col: p.Margin, row: p.Top, width: p.Area, height: len(p.Rows)})
 	}
-	var out [][]int
+	var out []*place
 	add := func(r rect) {
+		pl := &place{rect: intersect(r, rect{width: p.Cols, height: p.Height}), point: e.At.Kind == screen.AtPoint || e.At.Kind == screen.AtPoints}
 		r = intersect(r, shown)
-		var cells []int
 		for row := r.row; row < r.row+r.height; row++ {
 			for col := r.col; col < r.col+r.width; col++ {
 				if free(grid[row], col) {
-					cells = append(cells, row*p.Cols+col)
+					pl.cells = append(pl.cells, row*p.Cols+col)
 				}
 			}
 		}
-		out = append(out, cells)
+		out = append(out, pl)
 	}
 	at := e.At
 	switch at.Kind {
-	case screen.AtAll:
-		add(shown)
+	case screen.AtAll: // the art grid of in, else the grid
+		if e.In != "" {
+			add(frame)
+		} else {
+			add(shown)
+		}
 	case screen.AtRect:
 		col, row := coord(at.Points[0].Col, frame.width), coord(at.Points[0].Row, frame.height)
 		add(rect{col: frame.col + col, row: frame.row + row, width: at.Width, height: at.Height})
