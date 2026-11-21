@@ -4,7 +4,6 @@ package art
 
 import (
 	"bytes"
-	"io/fs"
 
 	"github.com/schors/velourbbs/internal/screen"
 )
@@ -15,21 +14,9 @@ const MaxRows = 1000
 // errNotFlat is the error of the steps 1, 2 and 4 of section 2.
 const errNotFlat = "not in the flat form, convert it with velourbbs art import"
 
-// Load reads the file name of fsys and parses it. name is also the file in the diagnostics.
-// fields is the aliases of screens/screens.toml (bbt-format, section 4.2).
-// The art is nil when the diagnostics have an error.
-func Load(fsys fs.FS, name string, fields screen.Fields) (*screen.Art, screen.Diags) {
-	data, err := screen.ReadFile(fsys, name)
-	if err != nil {
-		var ds screen.Diags
-		ds.Errorf(name, 1, 1, "%v", err)
-		return nil, ds
-	}
-	return Parse(name, data, fields)
-}
-
 // Parse loads the contents of an .ans file in the flat form and resolves
-// its fields with the aliases fields. The art is nil when the diagnostics have an error.
+// its fields with the aliases fields of the screen (bbt-format, section 4.2).
+// name is the file in the diagnostics. The art is nil when the diagnostics have an error.
 func Parse(name string, file []byte, fields screen.Fields) (*screen.Art, screen.Diags) {
 	d := &screen.FileDiags{File: name}
 	art := readGrid(d, file)

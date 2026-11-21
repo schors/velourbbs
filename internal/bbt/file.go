@@ -7,18 +7,20 @@ import (
 	"github.com/schors/velourbbs/internal/screen"
 )
 
-// file is a .bbt file after the file pass. The file pass runs once for each file;
-// the screens that use the file share the result.
+// file is a .bbt file after the file pass. The file pass runs once for each screen file,
+// and once for each fragment and alias set; the screens that use the result share it.
 type file struct {
 	name  string
 	front *front // nil without front matter
-	skip  bool   // the screen pass skips the file: invalid UTF-8 or a front matter error
-	body  []node
+	// fields is the aliases of the screen with [fields] in its front matter, else nil (section 4.2).
+	fields screen.Fields
+	skip   bool // the screen pass skips the file: invalid UTF-8 or a front matter error
+	body   []node
 }
 
 // node is a body part after the file pass: screen.Text, screen.SetStyle, screen.Stretch, field,
 // lineEnd, spacerLine, *ifNode, include, artInsert, fileArea or *eachNode. The file pass resolves the fields and
-// the conditions with the aliases of screens/screens.toml. The screen pass gives screen.Seg.
+// the conditions with the aliases of the screen (section 4.2). The screen pass gives screen.Seg.
 type node any
 
 // field is a field token and its position.
@@ -69,7 +71,8 @@ type artInsert struct {
 }
 
 // parseFile does the file pass (sections 3.1–3.4, 4 and 5). d.File is the file name.
-// theme is the base theme and fields is the aliases of screens/screens.toml.
+// theme is the base theme. fields is the aliases of screens/screens.toml, or of the screen
+// for a fragment; the body of a screen uses the aliases of its front matter over them.
 // The file pass uses only the names of theme.
 // langs is the languages of the BBS.
 func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, fields screen.Fields, langs []string,
@@ -94,8 +97,11 @@ func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, 
 		if fragment {
 			d.Errorf(1, 1, "a fragment cannot have front matter")
 		} else {
-			f.front = parseFront(d, lines[1:end], fields, langs)
+			f.front, f.fields = parseFront(d, lines[1:end], fields, langs)
 			f.skip = f.front == nil
+			if f.fields != nil {
+				fields = f.fields
+			}
 		}
 		first = end + 1
 	}

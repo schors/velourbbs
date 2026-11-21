@@ -12,11 +12,15 @@ import (
 
 // unit is a screen during the load.
 type unit struct {
-	s     *screen.Screen
-	f     *file
-	fr    *front
-	done  bool     // the screen pass resolved the body
-	conds []condAt // the {#if} conditions, for the item.<KEY> checks
+	s  *screen.Screen
+	f  *file
+	fr *front
+	// aliases names the alias set of the screen: "" for the aliases of screens/screens.toml,
+	// else the name of the screen with [fields]. fields is the aliases of the set (section 4.2).
+	aliases string
+	fields  screen.Fields
+	done    bool     // the screen pass resolved the body
+	conds   []condAt // the {#if} conditions, for the item.<KEY> checks
 	// frags holds each fragment, resolved once for the screen;
 	// resolving marks the fragments in progress.
 	frags     map[*file]fragment
@@ -53,13 +57,17 @@ func filePos(name string, p tomlcheck.Pos) screen.Pos {
 	return screen.Pos{File: name, Line: p.Line, Col: p.Col}
 }
 
-// errorf reports an error at pos. A position in another file than the screen
-// starts with the screen name (screen-render, section 3.1). A screen with a front matter error
+// errorf reports an error at pos with diag. A screen with a front matter error
 // reports nothing: without its width limits and items, it gives only noise.
 func (l *loader) errorf(u *unit, pos screen.Pos, warning bool, format string, args ...any) {
-	if u.f.skip {
-		return
+	if !u.f.skip {
+		l.diag(u, pos, warning, format, args...)
 	}
+}
+
+// diag reports an error at pos. A position in another file than the screen
+// starts with the screen name (screen-render, section 3.1).
+func (l *loader) diag(u *unit, pos screen.Pos, warning bool, format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	if pos.File != u.s.File {
 		msg = fmt.Sprintf("screen %q: %s", u.s.Name, msg)
@@ -73,13 +81,17 @@ func (l *loader) errorf(u *unit, pos screen.Pos, warning bool, format string, ar
 }
 
 // screen does the screen pass: the limits of section 9, the includes,
-// the art inserts and the layout. The file pass resolved the fields.
+// the art inserts and the layout. The file pass resolves the fields with the aliases of the screen.
 // A screen with a front matter error resolves for the errors of its includes
 // and art inserts, and gives no model.
 func (l *loader) screen(u *unit) {
 	u.fr = u.f.front
 	if u.fr == nil {
 		u.fr = &front{}
+	}
+	u.aliases, u.fields = "", l.st.Fields
+	if u.f.fields != nil {
+		u.aliases, u.fields = u.s.Name, u.f.fields
 	}
 	u.frags = map[*file]fragment{}
 	u.resolving = map[*file]bool{}
@@ -228,7 +240,7 @@ func (l *loader) resolve(u *unit, nodes []node, top bool) []screen.Seg {
 				u.at = n.pos
 			}
 			name := l.find(n.file)
-			a, missing := l.art(name)
+			a, missing := l.art(u, name)
 			if a == nil {
 				if missing {
 					l.errorOnce(n.pos, "art %q does not exist", name)
@@ -326,7 +338,7 @@ func (l *loader) include(u *unit, n include, top bool) (body []screen.Seg, ok bo
 		return nil, false
 	}
 	name := l.find(n.file)
-	frag, missing := l.file(name, true)
+	frag, missing := l.fragment(u, name)
 	switch {
 	case frag == nil:
 		if missing {

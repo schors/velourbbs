@@ -3,12 +3,14 @@ package screen
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/schors/velourbbs/internal/key"
+	"github.com/schors/velourbbs/internal/tomlcheck"
 )
 
 // Type is the type of a field (section 4.1).
@@ -290,8 +292,30 @@ type Mark struct {
 // reserved are the names that an alias cannot have (screens-toml, section 3.3).
 var reserved = []string{"term", "item", "arg", "file", "meta", "row", "list", "session", "bbs", "in", "and", "or", "not"}
 
-// CheckAlias checks the alias name against screens-toml, section 3.3.
-func CheckAlias(name string) error {
+// NewFields checks the aliases of a [fields] table (screens-toml, section 3.3) in the order
+// of their names and gives the valid aliases. root is the table that holds [fields].
+// errorf reports an error of an alias name at its key and each other error at its value
+// (screen-render, section 3.1).
+func NewFields(table map[string]string, root tomlcheck.Place, errorf func(at tomlcheck.Pos, format string, args ...any)) Fields {
+	fields := Fields{}
+	for _, name := range slices.Sorted(maps.Keys(table)) {
+		at := root.At("fields", name)
+		if err := checkAlias(name); err != nil {
+			errorf(at.Key(), "fields: %v", err)
+			continue
+		}
+		a, err := NewAlias(name, table[name])
+		if err != nil {
+			errorf(at.Value(), "fields: %v", err)
+			continue
+		}
+		fields[name] = a
+	}
+	return fields
+}
+
+// checkAlias checks the alias name against screens-toml, section 3.3.
+func checkAlias(name string) error {
 	switch {
 	case !IsIdent(name):
 		return fmt.Errorf("invalid alias %q", name)
@@ -301,10 +325,10 @@ func CheckAlias(name string) error {
 	return nil
 }
 
-// NewAlias checks the alias name (CheckAlias) and its value against screens-toml, section 3.3:
+// NewAlias checks the alias name (checkAlias) and its value against screens-toml, section 3.3:
 // a registry path with an optional live mark. It gives the field of the path and the mark.
 func NewAlias(name, value string) (Alias, error) {
-	if err := CheckAlias(name); err != nil {
+	if err := checkAlias(name); err != nil {
 		return Alias{}, err
 	}
 	path, m, err := parseMark(value)

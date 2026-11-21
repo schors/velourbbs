@@ -1,5 +1,6 @@
 // Package bbt loads the BBS templates of screens/ into the screen model of internal/screen.
-// The file pass parses each file once and resolves its fields with the aliases of screens/screens.toml.
+// The file pass parses each screen file once, and each fragment and art once for each alias set
+// of the screens that use it. It resolves the fields with the aliases of the screen (section 4.2).
 // The screen pass expands the includes and the art inserts of each screen.
 // Specification: docs/specs/bbt-format.md.
 package bbt
@@ -52,8 +53,8 @@ func Load(fsys fs.FS, st Settings) (Sets, screen.Diags) {
 	for _, lang := range st.Langs {
 		l := &loader{
 			fsys: fsys, lang: lang, st: st,
-			diags: map[string]*screen.FileDiags{}, files: map[string]*file{}, arts: map[string]*screen.Art{},
-			missing: map[string]bool{}, reported: map[screen.Pos]bool{}, contents: map[string]loaded{},
+			diags: map[string]*screen.FileDiags{}, files: map[string]*file{}, sources: map[string]*source{},
+			reported: map[screen.Pos]bool{}, contents: map[string]loaded{},
 			found: map[string]string{},
 		}
 		l.load(used)
@@ -118,21 +119,18 @@ func (l *loader) load(used map[string]bool) {
 	for _, base := range slices.SortedFunc(maps.Keys(byName), func(a, b string) int {
 		return strings.Compare(a+".bbt", b+".bbt")
 	}) {
-		f, missing := l.file(byName[base], false)
-		if missing { // a broken symlink (bbt-format, section 2)
-			l.fd(byName[base]).Errorf(1, 1, "not a regular file")
-		}
-		if f != nil {
+		if f := l.screenFile(byName[base]); f != nil {
 			l.units = append(l.units, &unit{s: &screen.Screen{Name: base, File: byName[base]}, f: f})
 		}
 	}
 	for _, u := range l.units {
 		l.screen(u)
 	}
+	l.report()
 	for name := range l.files {
 		used[name] = true
 	}
-	for name := range l.arts {
+	for name := range l.sources {
 		used[name] = true
 	}
 }
@@ -170,15 +168,13 @@ func unused(fsys fs.FS, st Settings, used map[string]bool) screen.Diags {
 
 // loader loads the screen set of one language.
 type loader struct {
-	fsys  fs.FS
-	lang  string // the language of the screen set
-	st    Settings
-	units []*unit // the screens of the set
-	diags map[string]*screen.FileDiags
-	files map[string]*file       // nil for a file that cannot be read
-	arts  map[string]*screen.Art // nil for art that cannot be loaded
-	// missing holds the .bbt and .ans files that do not exist.
-	missing map[string]bool
+	fsys    fs.FS
+	lang    string // the language of the screen set
+	st      Settings
+	units   []*unit // the screens of the set
+	diags   map[string]*screen.FileDiags
+	files   map[string]*file   // the screen files, nil for a file that cannot be read
+	sources map[string]*source // the fragments and the art files
 	// reported holds the include and art insert positions with an error:
 	// the screens that use a fragment report its errors once.
 	reported map[screen.Pos]bool
@@ -213,42 +209,131 @@ func (l *loader) fd(name string) *screen.FileDiags {
 	return d
 }
 
-// file reads and parses a .bbt file once. missing is true when the file does not exist;
-// the caller reports it. Each other read error is an error at 1:1 of the file.
-func (l *loader) file(name string, fragment bool) (f *file, missing bool) {
-	if f, ok := l.files[name]; ok {
-		return f, l.missing[name]
+// screenFile reads and parses the screen file name. It gives nil for a file that cannot be read.
+func (l *loader) screenFile(name string) *file {
+	data, err := screen.ReadFile(l.fsys, name)
+	if errors.Is(err, fs.ErrNotExist) {
+		err = errors.New("not a regular file") // a broken symlink (bbt-format, section 2)
 	}
+	if err != nil {
+		l.fd(name).Errorf(1, 1, "%v", err)
+		l.files[name] = nil
+		return nil
+	}
+	f := parseFile(l.fd(name), data, l.st.Theme, l.st.Fields, l.st.Langs, false)
+	l.files[name] = f
+	return f
+}
+
+// source is a fragment or an art file. The load reads it once and resolves it once
+// for each alias set of the screens that use it (section 4.2).
+type source struct {
+	data    []byte // nil when the file cannot be read
+	missing bool   // the file does not exist; the caller reports it
+	sets    []*resolved
+}
+
+// resolved is a source resolved with one alias set: the fragment or the art, nil after an error
+// that stops the parse, the diagnostics of the parse and the screens that use it.
+type resolved struct {
+	aliases string // the alias set: unit.aliases
+	f       *file
+	a       *screen.Art
+	diags   screen.Diags
+	units   []*unit
+}
+
+// read reads the fragment or art file name once. Each read error other than a missing file
+// is an error at 1:1 of the file.
+func (l *loader) read(name string) *source {
+	if src, ok := l.sources[name]; ok {
+		return src
+	}
+	src := &source{}
+	l.sources[name] = src
 	data, err := screen.ReadFile(l.fsys, name)
 	switch {
 	case errors.Is(err, fs.ErrNotExist):
-		l.files[name] = nil
-		l.missing[name] = true
-		return nil, true
+		src.missing = true
 	case err != nil:
 		l.fd(name).Errorf(1, 1, "%v", err)
-		l.files[name] = nil
-		return nil, false
+	default:
+		src.data = data
 	}
-	f = parseFile(l.fd(name), data, l.st.Theme, l.st.Fields, l.st.Langs, fragment)
-	l.files[name] = f
-	return f, false
+	return src
 }
 
-// art loads an .ans file once. missing is true when the file does not exist.
-func (l *loader) art(name string) (a *screen.Art, missing bool) {
-	if a, ok := l.arts[name]; ok {
-		return a, l.missing[name]
+// use gives the resolution of src for the alias set of the screen u and adds u to its screens.
+// A new resolution gets its result and its diagnostics from parse.
+func (src *source) use(u *unit, parse func(r *resolved) screen.Diags) *resolved {
+	i := slices.IndexFunc(src.sets, func(r *resolved) bool { return r.aliases == u.aliases })
+	if i < 0 {
+		r := &resolved{aliases: u.aliases}
+		r.diags = parse(r)
+		src.sets = append(src.sets, r)
+		i = len(src.sets) - 1
 	}
-	if _, err := fs.Stat(l.fsys, name); errors.Is(err, fs.ErrNotExist) {
-		l.arts[name] = nil
-		l.missing[name] = true
-		return nil, true
+	r := src.sets[i]
+	if !slices.Contains(r.units, u) {
+		r.units = append(r.units, u)
 	}
-	a, ds := art.Load(l.fsys, name, l.st.Fields)
-	l.fd(name).Diags = append(l.fd(name).Diags, ds...)
-	l.arts[name] = a
-	return a, false
+	return r
+}
+
+// fragment gives the fragment file name, resolved for the screen u. missing is true
+// when the file does not exist; the caller reports it.
+func (l *loader) fragment(u *unit, name string) (f *file, missing bool) {
+	src := l.read(name)
+	if src.data == nil {
+		return nil, src.missing
+	}
+	return src.use(u, func(r *resolved) screen.Diags {
+		d := &screen.FileDiags{File: name}
+		r.f = parseFile(d, src.data, l.st.Theme, u.fields, l.st.Langs, true)
+		return d.Diags
+	}).f, false
+}
+
+// art gives the art file name, resolved for the screen u. missing is true when the file does not exist.
+func (l *loader) art(u *unit, name string) (a *screen.Art, missing bool) {
+	src := l.read(name)
+	if src.data == nil {
+		return nil, src.missing
+	}
+	return src.use(u, func(r *resolved) screen.Diags {
+		var ds screen.Diags
+		r.a, ds = art.Parse(name, src.data, u.fields)
+		return ds
+	}).a, false
+}
+
+// report adds the diagnostics of the fragments and the art files (screen-render, section 3.1).
+// A diagnostic that each resolution of a file gives is a diagnostic of the file.
+// Each other diagnostic depends on the aliases of the screen: it appears for each screen
+// of its resolution, with the screen name.
+func (l *loader) report() {
+	for _, name := range slices.Sorted(maps.Keys(l.sources)) {
+		src := l.sources[name]
+		all := func(d screen.Diag) bool {
+			return !slices.ContainsFunc(src.sets, func(r *resolved) bool { return !slices.Contains(r.diags, d) })
+		}
+		for i, r := range src.sets {
+			for _, d := range r.diags {
+				switch {
+				case !all(d):
+					for _, u := range r.units {
+						// The parse does not depend on the width limits and the items: no skip.
+						l.diag(u, screen.Pos{File: name, Line: d.Row, Col: d.Col}, d.Warning, "%s", d.Msg)
+					}
+				case i > 0: // the first resolution reports it
+				case d.Warning:
+					l.fd(name).Warnf(d.Row, d.Col, "%s", d.Msg)
+				default:
+					l.fd(name).Errorf(d.Row, d.Col, "%s", d.Msg)
+				}
+			}
+		}
+	}
 }
 
 // errorOnce reports an error at pos once for all screens.

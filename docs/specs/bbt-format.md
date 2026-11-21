@@ -168,8 +168,8 @@ In art, only [art-format](art-format.md), sections 4 and 5, defines the tokens.
   [screens-toml](screens-toml.md), section 3.3.
 - `[fields]` in the front matter of a screen maps aliases with the same rules. They are valid in the screen,
   its fragments and its art. An alias of the front matter overrides the alias of `screens/screens.toml`
-  with the same name.
-- An alias is valid in each screen, fragment and art. Short aliases let art have short fields.
+  with the same name. A fragment or an art takes the aliases of each screen that uses it.
+- An alias of `screens/screens.toml` is valid in each screen, fragment and art. Short aliases let art have short fields.
 - An alias can hold the live mark: `clock = 'bbs.time live "15:04"'` ([live-screen](live-screen.md), section 3).
 
 ### 4.3. Values

@@ -38,7 +38,8 @@ type frontDoc struct {
 		From *string            `toml:"from"`
 		Args *map[string]string `toml:"args"`
 	} `toml:"data"`
-	Rows   *int64 `toml:"rows"`
+	Rows   *int64             `toml:"rows"`
+	Fields *map[string]string `toml:"fields"`
 	Select *struct {
 		Do   *string            `toml:"do"`
 		Args *map[string]string `toml:"args"`
@@ -54,9 +55,10 @@ type frontDoc struct {
 }
 
 // parseFront parses the front matter lines. The first line of lines is line 2 of the file.
-// fields is the aliases of screens/screens.toml. The result is nil when the front matter has an error.
-// langs is the languages of the BBS.
-func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs []string) *front {
+// fields is the aliases of screens/screens.toml. The front is nil when the front matter has an error.
+// own is the valid aliases of [fields] over fields, also after an error, else nil without [fields]:
+// the front matter and the body use them (section 4.2). langs is the languages of the BBS.
+func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs []string) (fr *front, own screen.Fields) {
 	var doc frontDoc
 	data := []byte(strings.Join(lines, "\n"))
 	root, errs := tomlcheck.DecodeFront(data, &doc)
@@ -64,7 +66,9 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 		d.Errorf(e.Line, e.Col, "%s", e.Msg)
 	}
 	if len(errs) > 0 {
-		return nil
+		// The document gives only these errors (screen-render, section 3.1): the aliases
+		// that it decodes stay for the body without their errors.
+		return nil, ownFields(doc.Fields, root, fields, func(tomlcheck.Pos, string, ...any) {})
 	}
 	// Each other error has the position of the key path of its message (screen-render, section 3.1).
 	ok := true
@@ -72,8 +76,11 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 		d.Errorf(at.Line, at.Col, format, args...)
 		ok = false
 	}
-	fr := &front{at: root, layout: screen.ParseLayoutKeys(doc.Width, doc.Align, doc.VAlign, doc.Fill, doc.Gutter,
+	fr = &front{at: root, layout: screen.ParseLayoutKeys(doc.Width, doc.Align, doc.VAlign, doc.Fill, doc.Gutter,
 		func(key string, err error) { errorf(root.At(key).Value(), "%s: %v", key, err) })}
+	if own = ownFields(doc.Fields, root, fields, errorf); own != nil {
+		fields = own
+	}
 	fr.file = parseFileKeys(&doc, root, errorf)
 	fr.list = parseListKeys(&doc, root, langs, errorf)
 	pages := doc.File != nil || doc.Data != nil // a page action is valid (file-view, section 3.3)
@@ -156,9 +163,9 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 		fr.items = append(fr.items, item)
 	}
 	if !ok {
-		return nil
+		return nil, own
 	}
-	return fr
+	return fr, own
 }
 
 // parseAsk parses the keys ask and ask_max of the item at the place at with the action a
@@ -192,6 +199,20 @@ func parseAsk(ask *string, max *int64, a screen.Action, at tomlcheck.Place, labe
 
 // errorFunc reports an error of a front matter at a position in the screen file.
 type errorFunc func(at tomlcheck.Pos, format string, args ...any)
+
+// ownFields gives the valid aliases of the [fields] table over fields, else nil without the table
+// (section 4.2). root is the root table of the front matter. errorf reports the errors of the aliases.
+func ownFields(table *map[string]string, root tomlcheck.Place, fields screen.Fields, errorf errorFunc) screen.Fields {
+	if table == nil {
+		return nil
+	}
+	own := maps.Clone(fields)
+	if own == nil {
+		own = screen.Fields{}
+	}
+	maps.Copy(own, screen.NewFields(*table, root, errorf))
+	return own
+}
 
 // ItemPlace gives the place of the 0-based item i of the front matter with the root table root.
 func ItemPlace(root tomlcheck.Place, i int) tomlcheck.Place {

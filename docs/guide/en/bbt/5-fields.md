@@ -103,7 +103,21 @@ w = "term.cols"
 
 Then `{w}` shows the columns of the terminal. A short alias helps in art (task 9).
 
-Full rules: [bbt-format](../../../specs/bbt-format.md), sections 3.3 and 4,
+A screen can have its own aliases: `[fields]` in its front matter. They are valid in the screen,
+its fragments and its art. An alias of the screen replaces the alias of `screens/screens.toml`
+with the same name:
+
+```
++++
+[fields]
+w = "term.rows"
++++
+Rows: {w}
+```
+
+In this screen, its fragments and its art, `{w}` shows the rows of the terminal.
+
+Full rules: [bbt-format](../../../specs/bbt-format.md), sections 3.2, 3.3 and 4,
 and [screens-toml](../../../specs/screens-toml.md), section 3.3.
 
 ## Conditions

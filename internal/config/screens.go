@@ -72,7 +72,7 @@ type screensDoc struct {
 // It gives at most screen.MaxFileDiags diagnostics (screen-render, section 3.1).
 func parseScreens(data []byte) (Config, screen.Diags) {
 	cfg := Config{
-		Layout: defaultLayout, Lang: defaultLang, Time: defaultTime, Zone: time.Local, Fields: screen.Fields{}, Start: "main",
+		Layout: defaultLayout, Lang: defaultLang, Time: defaultTime, Zone: time.Local, Start: "main",
 		StartPos: tomlcheck.Pos{Line: 1, Col: 1}, ThemeChoice: ThemeDark, Telnet: defaultTelnet, Limits: defaultLimits,
 		Name: defaultName,
 	}
@@ -128,19 +128,7 @@ func parseScreens(data []byte) (Config, screen.Diags) {
 		}
 	}
 	theme(&cfg, d, root, errorf)
-	for _, name := range slices.Sorted(maps.Keys(d.Fields)) {
-		at := root.At("fields", name)
-		if err := screen.CheckAlias(name); err != nil {
-			errorf(at.Key(), "fields: %v", err)
-			continue
-		}
-		ref, err := screen.NewAlias(name, d.Fields[name])
-		if err != nil {
-			errorf(at.Value(), "fields: %v", err)
-			continue
-		}
-		cfg.Fields[name] = ref
-	}
+	cfg.Fields = screen.NewFields(d.Fields, root, errorf)
 	return cfg, fd.Diags
 }
 

@@ -92,7 +92,8 @@ The host renders a screen page by page. A session holds one page in memory.
 - A diagnostic escapes each invalid UTF-8 byte and each rune that is not printable,
   as a Go quoted string does. Example: a file name with ESC gives `\x1b`.
 - A check of a fragment or an art file can depend on the screen that uses it:
-  on its items, its width limits or its `rows` ([list-view](list-view.md), section 9).
+  on its items, its width limits, its `rows` ([list-view](list-view.md), section 9)
+  or its aliases ([bbt-format](bbt-format.md), section 4.2).
   Such an error starts with `screen "<name>": `.
 - The host runs the same checks at start. An error stops the start.
 - `velourbbs check --size <cols>x<rows>` also gives the layout warnings of section 3.6.
