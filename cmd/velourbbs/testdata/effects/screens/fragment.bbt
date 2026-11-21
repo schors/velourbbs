@@ -1,0 +1,18 @@
++++
+[[effect]]
+do = "twinkle"
+in = "_logo"
+at = [[1, 1], [-1, -1]]
+chars = "*+"
+colors = ["star"]
+[[effect]]
+do = "sweep"
+in = "_logo"
+speed = 20
+[[item]]
+key = "Q"
+do = "back"
++++
+@ Fragment
+{>_logo}
+Q Back

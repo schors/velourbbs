@@ -40,18 +40,22 @@ Full rules: [live-screen](../../../specs/live-screen.md), sections 5 and 6.1.
 - With `in = "<name>.ans"`, the coordinates are in the art: column 1 and row 1 are
   the first cell of the art. The place moves with the art. When the text above the art wraps
   into more rows, the effect stays on the same cells of the art.
+- With `in = "_<name>"`, the coordinates are in the rows of the fragment `{>_<name>}`:
+  column 1 is the left edge of the screen, and row 1 is the first row of the fragment.
+  The place moves with the fragment and stays in its rows. Example: `in = "_logo"`
+  makes a `sweep` run over a logo of text with theme colours.
 - Without `in`, the coordinates are in the page. Column 1 is the left edge of the screen,
   row 1 is the first row of the page. A text that wraps moves the rows below it, so use
   this form only for rows that do not wrap: a header, a corner or the key row.
 - A negative coordinate counts from the end: `-1` is the last column or the last row
-  of the art, or of the screen and the page. Example: `[-1, -1]` is the cell in the lower right corner.
+  of the art, of the fragment, or of the screen and the page. Example: `[-1, -1]` is the cell in the lower right corner.
 - A live field (task 5) and a wide character, for example `語`, are not in a place.
   An effect never changes them.
 - When the screen does not show a cell, the cell is not in the place: for example,
   a cell of art that is cut at the edge of a narrow terminal.
 
-`velourbbs check` gives an error when the screen does not insert the art of `in`,
-or when a cell of the place is outside the art.
+`velourbbs check` gives an error when the screen does not insert the art of `in`
+or does not include its fragment, or when a cell of the place is outside the art.
 
 Full rules: [live-screen](../../../specs/live-screen.md), section 6.2.
 

@@ -8,16 +8,19 @@ type rect struct{ col, row, width, height int }
 // places gives each place of the effect e on the page p with the grid grid (live-screen, section 6.2):
 // one place for an at without points, else one place for each point. A cell is row*cols + col.
 // A cell that the page does not show, a slot cell and a cell of a grapheme of width 2 are not in a place.
-// The rectangle of a place is the rectangle of at, the art grid or the grid, cut to the grid.
-// An effect with in on a page without the art has no place.
+// The rectangle of a place is the rectangle of at, the art grid, the fragment rows or the grid,
+// cut to the art grid or the fragment rows of in and to the grid.
+// An effect with in on a page without the art or the fragment has no place.
 func places(e screen.Effect, p screen.Page, grid []screen.Row) []*place {
-	// frame is the cells where the coordinates count: the art grid or the page, in grid coordinates,
-	// and shown is the part of the grid that can be in a place.
+	// frame is the cells where the coordinates count: the art grid, the fragment rows or the page,
+	// in grid coordinates. bounds is the cut of the rectangle of a place, and shown is the part
+	// of the grid that can be in a place.
 	frame := rect{col: p.Margin, row: p.Top, width: p.Area, height: len(p.Rows)}
-	shown := rect{width: p.Cols, height: p.Height}
+	bounds := rect{width: p.Cols, height: p.Height}
+	shown := bounds
 	if e.In != "" {
 		i := -1
-		for j, a := range p.Arts {
+		for j, a := range p.Inserts {
 			if a.Name == e.In {
 				i = j
 				break
@@ -26,15 +29,15 @@ func places(e screen.Effect, p screen.Page, grid []screen.Row) []*place {
 		if i < 0 {
 			return nil
 		}
-		a := p.Arts[i]
+		a := p.Inserts[i]
 		frame = rect{col: p.Margin, row: p.Top + a.Row, width: a.Width, height: a.Height}
-		// The art shows in the screen area and on the rows of the page. The check of the screen set
-		// keeps the place in the art grid.
-		shown = intersect(intersect(shown, frame), rect{col: p.Margin, row: p.Top, width: p.Area, height: len(p.Rows)})
+		bounds = intersect(bounds, frame)
+		// The art and the fragment show in the screen area and on the rows of the page.
+		shown = intersect(bounds, rect{col: p.Margin, row: p.Top, width: p.Area, height: len(p.Rows)})
 	}
 	var out []*place
 	add := func(r rect) {
-		pl := &place{rect: intersect(r, rect{width: p.Cols, height: p.Height}), point: e.At.Kind == screen.AtPoint || e.At.Kind == screen.AtPoints}
+		pl := &place{rect: intersect(r, bounds), point: e.At.Kind == screen.AtPoint || e.At.Kind == screen.AtPoints}
 		r = intersect(r, shown)
 		for row := r.row; row < r.row+r.height; row++ {
 			for col := r.col; col < r.col+r.width; col++ {
@@ -47,7 +50,7 @@ func places(e screen.Effect, p screen.Page, grid []screen.Row) []*place {
 	}
 	at := e.At
 	switch at.Kind {
-	case screen.AtAll: // the art grid of in, else the grid
+	case screen.AtAll: // the art grid or the fragment rows of in, else the grid
 		if e.In != "" {
 			add(frame)
 		} else {

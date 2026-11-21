@@ -152,9 +152,15 @@ func TestEffectErrors(t *testing.T) {
 			[]string{`screens/s.bbt:4:6: effect 1: at: lightning cannot take an array of points`}},
 		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "sparkle"`, `chars = "."`, `at = [1, 1]`, `count = 2`)},
 			[]string{`screens/s.bbt:6:9: effect 1: count: a point or an array of points has no count`}},
-		// in: an art of the screen set, and a place in its grid.
+		// in: an art of the screen set, and a place in its grid; a fragment of the screen set.
 		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `in = "a"`)},
-			[]string{`screens/s.bbt:6:6: effect 1: in: "a" is not the name of an art insert`}},
+			[]string{`screens/s.bbt:6:6: effect 1: in: "a" is not the name of an art insert or a fragment`}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `in = "_f.bbt"`) + "{>_f}", "_f.bbt": "a"},
+			[]string{`screens/s.bbt:6:6: effect 1: in: "_f.bbt" is not the name of an art insert or a fragment`}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `in = "_g"`) + "{>_f}", "_f.bbt": "a", "_g.bbt": "b"},
+			[]string{`screens/_g.bbt:1:1: warning: no screen uses this file`, `screens/s.bbt:6:6: effect 1: in: the screen does not include fragment "_g"`}},
+		// A fragment has no check of the cells: a place outside its rows is valid.
+		{map[string]string{"s.bbt": tw(`at = [[1, 1], [100, -50]]`, `in = "_g"`) + "{>_f}", "_f.bbt": "{#if term.cols > 1}\n{>_g}\n{/if}", "_g.bbt": "b"}, nil},
 		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `in = "a.ans"`) + "{>_f}", "_f.bbt": "{>b.ans}", "a.ans": sauceArt("a", 10), "b.ans": sauceArt("b", 10)},
 			[]string{`screens/a.ans:1:1: warning: no screen uses this file`, `screens/s.bbt:6:6: effect 1: in: the screen does not insert art "a.ans"`}},
 		{map[string]string{"s.bbt": tw(`at = [[1, 1], [-10, -1]]`, `in = "a.ans"`) + "{>_f}", "_f.bbt": "{#if term.cols > 1}\n{>a.ans}\n{/if}", "a.ans": sauceArt("a", 10)}, nil},

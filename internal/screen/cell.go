@@ -31,15 +31,18 @@ type Page struct {
 	Fill   Fill   // the cells of the fill rows
 	Slots  []Slot // the slots of the rows, in row order (live-screen, section 3.1)
 	Area   int    // the cells of the screen area: the length of each row
-	// Arts holds the first insert of each art with a row on the page, in render order (live-screen, section 6.2).
-	Arts []ArtPlace
+	// Inserts holds the first insert of each art and the first include of each fragment with a row on the page,
+	// in render order (live-screen, section 6.2).
+	Inserts []Insert
 	// Layer holds the cells that the effects change on the grid (live-screen, section 2). Grid writes them.
 	Layer []GridCell
 }
 
-// ArtPlace is an art insert on a page. Row is the row of the page of the first art row, from 0:
-// it is negative when the art starts on a page before. The art starts at the first column of the screen area.
-type ArtPlace struct {
+// Insert is an art insert or an include of a fragment on a page. Name is "<name>.ans" or "_<name>".
+// Row is the row of the page of the first art row or fragment row, from 0: it is negative when the art
+// or the fragment starts on a page before. They start at the first column of the screen area.
+// Width is the art width, or the cells of the screen area for a fragment. Height is the rows.
+type Insert struct {
 	Name          string
 	Row           int
 	Width, Height int

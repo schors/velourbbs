@@ -42,7 +42,7 @@ type At struct {
 // Each key holds its value or its default. Every is 0 for one event: a sweep without every.
 type Effect struct {
 	Do                   EffectKind
-	In                   string // the art name of in, else "": the page
+	In                   string // the art name or the fragment name of in, else "": the page
 	At                   At
 	Delay, Every, Spread time.Duration
 	Chars                []string // the graphemes of chars

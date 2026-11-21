@@ -354,9 +354,10 @@ type If struct {
 }
 
 // Include is an include of a fragment. After it, the style is the style before it.
-// The includes of one fragment in one screen share Body.
+// The includes of one fragment in one screen share Body. Name is the fragment name of the token: "_<name>".
 type Include struct {
 	File string
+	Name string
 	Body []Seg
 }
 

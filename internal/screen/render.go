@@ -84,7 +84,7 @@ func RenderFile(s *Screen, env *Env, theme map[string]Style, file []Row, n int) 
 	}
 	p := r.page(rows[:min(len(rows), r.height)])
 	p.Num = n
-	p.Arts = r.artPlaces(func(row int) int { // the file rows come before the rows after the file area
+	p.Inserts = r.insertPlaces(func(row int) int { // the file rows come before the rows after the file area
 		if row >= split {
 			return row + len(file)
 		}
@@ -252,9 +252,9 @@ type renderer struct {
 	slots  []Slot // the slot of each Cell.Slot - 1, without its run (live-screen, section 3.1)
 	// seen is the cells of each slot in the rows so far, before the cut at the screen area.
 	// skips is the Slot.Skip of each run in the rows so far; pageSlots takes them in order.
-	seen  map[int32]int
-	skips []int
-	arts  []artStart // the art inserts so far (live-screen, section 6.2)
+	seen    map[int32]int
+	skips   []int
+	inserts []insertStart // the art inserts and the fragment includes so far (live-screen, section 6.2)
 
 	// The pages (section 6.4).
 	height  int // term.rows
@@ -335,7 +335,7 @@ func (r *renderer) walk(segs []Seg, cur Style) Style {
 				cur = r.walk(seg.Else, cur)
 			}
 		case Include:
-			r.walk(seg.Body, cur) // the style before the include stays (section 3.4)
+			r.include(seg, cur)
 		case ArtInsert:
 			r.art(seg) // the art does not change the style of the text (section 7.3)
 		case FileArea:
@@ -662,7 +662,7 @@ func (r *renderer) art(a ArtInsert) {
 	if r.layout != nil && a.Art.Width > r.area && r.area < r.widthMax {
 		r.layout.add(LayoutNote{Kind: LayoutArt, Pos: a.Pos, N: a.Art.Width, M: r.area, Art: a.Name})
 	}
-	r.arts = append(r.arts, artStart{name: a.Name, row: r.count, art: a.Art})
+	r.inserts = append(r.inserts, insertStart{name: a.Name, row: r.count, rows: len(a.Art.Rows), width: a.Art.Width})
 	ls := a.Art.List
 	if r.env.List == nil {
 		ls = nil
@@ -855,27 +855,51 @@ func (r *renderer) page(rows []Row) Page {
 	}
 	return Page{
 		Num: r.pages, Rows: rows, Cols: r.cols, Height: r.height, Margin: r.margin, Normal: r.normal, Fill: r.fill,
-		Slots: r.pageSlots(rows), Area: r.area, Arts: r.artPlaces(func(n int) int { return n - start }, len(rows)),
+		Slots: r.pageSlots(rows), Area: r.area, Inserts: r.insertPlaces(func(n int) int { return n - start }, len(rows)),
 	}
 }
 
-// artStart is an art insert of the render: row is the rendered row of its first art row, from 0.
-type artStart struct {
-	name string
-	row  int
-	art  *Art
+// insertStart is an art insert or a fragment include of the render: row is the rendered row of its first row,
+// from 0, and rows is its rows. An include in progress (open) has the rows so far.
+type insertStart struct {
+	name      string
+	row, rows int
+	width     int  // the art width
+	fragment  bool // a fragment has the width of the screen area
+	open      bool
 }
 
-// artPlaces gives the first insert of each art with a row on a page of n rows (Page.Arts).
-// rowOf gives the row of the page of a rendered row.
-func (r *renderer) artPlaces(rowOf func(int) int, n int) []ArtPlace {
-	var out []ArtPlace
-	for _, a := range r.arts {
+// include renders the include of a fragment with the style cur and keeps its rows (live-screen, section 6.2).
+// The style before the include stays (section 3.4).
+func (r *renderer) include(inc Include, cur Style) {
+	if r.counting != nil {
+		r.walk(inc.Body, cur)
+		return
+	}
+	i := len(r.inserts)
+	r.inserts = append(r.inserts, insertStart{name: inc.Name, row: r.count, fragment: true, open: true})
+	r.walk(inc.Body, cur)
+	r.inserts[i].rows, r.inserts[i].open = r.count-r.inserts[i].row, false
+}
+
+// insertPlaces gives the first insert of each art and the first include of each fragment with a row
+// on a page of n rows (Page.Inserts). rowOf gives the row of the page of a rendered row.
+// A page before the end of an include has the fragment rows so far: they reach the end of the page.
+func (r *renderer) insertPlaces(rowOf func(int) int, n int) []Insert {
+	var out []Insert
+	for _, a := range r.inserts {
+		rows, width := a.rows, a.width
+		if a.open {
+			rows = r.count - a.row
+		}
+		if a.fragment {
+			width = r.area
+		}
 		row := rowOf(a.row)
-		if row >= n || row+len(a.art.Rows) <= 0 || slices.ContainsFunc(out, func(p ArtPlace) bool { return p.Name == a.name }) {
+		if rows == 0 || row >= n || row+rows <= 0 || slices.ContainsFunc(out, func(p Insert) bool { return p.Name == a.name }) {
 			continue
 		}
-		out = append(out, ArtPlace{Name: a.name, Row: row, Width: a.art.Width, Height: a.art.Height})
+		out = append(out, Insert{Name: a.name, Row: row, Width: width, Height: rows})
 	}
 	return out
 }

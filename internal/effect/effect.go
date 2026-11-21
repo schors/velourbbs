@@ -94,7 +94,7 @@ type litCell struct {
 
 // place is a place of an effect (live-screen, section 6.2) and the time of its next event.
 type place struct {
-	rect  rect  // the rectangle of the place, cut to the grid
+	rect  rect  // the rectangle of the place, cut to the art grid or the fragment rows of in and to the grid
 	cells []int // the cells in the place; an event takes random cells by a partial shuffle
 	point bool  // a point: each event takes its cell
 	next  time.Duration
