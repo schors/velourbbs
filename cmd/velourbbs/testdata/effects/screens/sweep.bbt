@@ -1,0 +1,21 @@
++++
+[[effect]]
+do = "sweep"
+in = "sky.ans"
+speed = 20
+[[effect]]
+do = "sweep"
+at = [1, -1, 6, 1]
+peak = "star"
+delay = 0.2
+every = 1.1
+width = 2
+speed = 10
+time = 0.3
+[[item]]
+key = "Q"
+do = "back"
++++
+@ Sweep
+{>sky.ans}
+Q Back

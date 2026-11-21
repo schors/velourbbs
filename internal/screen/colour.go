@@ -83,3 +83,26 @@ func (s Style) String() string {
 	}
 	return b.String()
 }
+
+// vga holds the values of the indexes 0–15 (telnet-term, section 7.3).
+var vga = [16]uint32{
+	0x000000, 0xaa0000, 0x00aa00, 0xaa5500, 0x0000aa, 0xaa00aa, 0x00aaaa, 0xaaaaaa,
+	0x555555, 0xff5555, 0x55ff55, 0xffff55, 0x5555ff, 0xff55ff, 0x55ffff, 0xffffff,
+}
+
+// cube holds the component levels of the xterm colour cube.
+var cube = [6]uint32{0, 95, 135, 175, 215, 255}
+
+// Palette gives the value 0xRRGGBB of the index n, 0–255: VGA for 0–15, xterm for 16–255
+// (telnet-term, section 7.3).
+func Palette(n uint32) uint32 {
+	switch {
+	case n < 16:
+		return vga[n]
+	case n < 232:
+		n -= 16
+		return cube[n/36]<<16 | cube[n/6%6]<<8 | cube[n%6]
+	}
+	v := 8 + 10*(n-232)
+	return v<<16 | v<<8 | v
+}

@@ -2,7 +2,8 @@
 
 An "effect" changes cells of a screen while the screen waits for a key.
 In this task, you add effects to the lamp of task 9: the light of the lamp shimmers,
-stars twinkle around it, and two small flames burn beside the key.
+stars twinkle around it, two small flames burn beside the key, the shade glints,
+and a bright band runs over the lamp once.
 Use the directory `myart` of task 9.
 
 ## The table `[[effect]]`
@@ -16,7 +17,7 @@ at = [37, 3]
 chars = "*+·"
 ```
 
-- `do` names the effect. This task shows `twinkle` and `candle`.
+- `do` names the effect. This task shows `twinkle`, `candle`, `glint` and `sweep`.
 - `at` is the "place": the cells where the effect acts (below).
 - A screen has at most 16 effects. The effects apply in the order of the file:
   an effect acts on the cells after the effects above it.
@@ -109,6 +110,60 @@ A flame that flickers.
 
 Full rules: [live-screen](../../../specs/live-screen.md), sections 6.4 and 6.6.
 
+## The brightness
+
+`glint` and `sweep` make a cell bright and keep its character.
+They move the colour of the character to the colour `peak` and back.
+The background stays.
+
+- A `peak` of `"#ffffff"` gives white. A `peak` of `"230"` gives cream. The name of a theme style
+  gives the colour of the style.
+- A cell in the colour `default` takes the colour of `normal`.
+- On a terminal with 16 colours, the steps between the colours are few.
+  On 256 colours and on true colour, they are smooth.
+
+Full rules: [live-screen](../../../specs/live-screen.md), section 6.3.
+
+## The effect `glint`
+
+A cell becomes bright and fades.
+
+| Key | Default | Value |
+|---|---|---|
+| `at` | None: the whole art or page. | A point, a rectangle or an array of points. |
+| `peak` | `#ffffff` | The colour of the brightest moment: a style or the name of a theme style. |
+| `time` | `0.6` | The seconds from the brightest moment to the end: 0.05–10. |
+| `every` | `3` | |
+
+- At each time, one random cell of the place becomes bright. It fades in `time` seconds.
+- A space does not glint. Only a cell with a character can glint.
+- A point glints always at the same cell.
+
+## The effect `sweep`
+
+A bright spot runs from left to right over the characters of the place.
+
+| Key | Default | Value |
+|---|---|---|
+| `at` | None: the whole art or page. | A rectangle. |
+| `delay` | `0.5` | The seconds before the timing starts, as in the other effects. |
+| `every` | None: one run. | The seconds between two runs. |
+| `spread` | `0` | Only with `every`. |
+| `peak` | `#ffffff` | As in `glint`. |
+| `time` | `0.6` | The seconds of the glint at the end of each row. |
+| `width` | `3` | The half width of the spot in cells: 1–20. |
+| `speed` | `40` | The columns each second: 1–1000. |
+
+- The spot runs over all rows of the place at the same time. Over several rows,
+  it is a band.
+- A space does not become bright. So the band shows the shape of the characters.
+- When the spot comes to the last character of a row, that character glints for `time` seconds.
+- Without `every`, the band runs once, `delay` seconds after the show.
+- With `every`, the timing is as in the other effects: the first run comes `delay` plus one interval
+  after the show. Example: `delay = 0.5` and `every = 2` give the first run after 2.5 seconds.
+
+Full rules: [live-screen](../../../specs/live-screen.md), sections 6.7 and 6.8.
+
 ## The file
 
 Change `screens/main.bbt`:
@@ -136,6 +191,14 @@ do = "candle"
 at = [[13, -1], [28, -1]]
 chars = "▲▴"
 colors = ["208", "214", "220"]
+[[effect]]
+do = "glint"
+in = "lamp.ans"
+at = [11, 2, 20, 3]
+every = 2
+[[effect]]
+do = "sweep"
+in = "lamp.ans"
 [[item]]
 key = "G"
 do = "logoff"
@@ -150,13 +213,19 @@ do = "logoff"
 - The second `twinkle` gives four stars in the dark ground of the art, in cream and orange.
 - The `candle` gives two flames on the last row of the page, beside the key `G`, in orange and yellow.
   The page coordinates work here: the screen is 40 columns wide, so its rows do not wrap.
+- The `glint` acts on the shade: a rectangle of the art, the rows 2–4.
+  About each 2 seconds, one cell of the shade becomes white and fades.
+- The `sweep` runs once over the whole lamp, half a second after the show.
+  It comes last, so it makes the stars and the light of the effects above it bright too.
 
 ## Result
 
 - `velourbbs check` gives no output.
 - `velourbbs preview main` gives the screen of task 9: the preview shows the screen
   before the effects.
-- `velourbbs preview main --keys +1s` shows the screen after one second: the stars and the flames.
+- `velourbbs preview main --keys +1s` shows the screen after one second: the stars, the flames
+  and the band of the sweep in the middle of the lamp.
   `+1s,+1s` shows it after one second and after two seconds.
   The random values of the preview are the same at each run.
-- Run `velourbbs serve`. PuTTY shows the light that shimmers, the stars and the flames.
+- Run `velourbbs serve`. PuTTY shows the light that shimmers, the stars, the flames, the glints
+  and the band.

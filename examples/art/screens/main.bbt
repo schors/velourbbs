@@ -19,6 +19,14 @@ do = "candle"
 at = [[13, -1], [28, -1]]
 chars = "▲▴"
 colors = ["208", "214", "220"]
+[[effect]]
+do = "glint"
+in = "lamp.ans"
+at = [11, 2, 20, 3]
+every = 2
+[[effect]]
+do = "sweep"
+in = "lamp.ans"
 [[item]]
 key = "G"
 do = "logoff"

@@ -230,3 +230,98 @@ func TestTwinkleStars(t *testing.T) {
 		t.Error("a rectangle without stars has no events")
 	}
 }
+
+// A glint takes a random cell that is not a space. At the time t of the event, the cell is the mix
+// with peak at the amount 1 - t / time (live-screen, section 6.7). While the event runs,
+// the layer changes each 50 ms; it changes at the end of the event too.
+func TestGlint(t *testing.T) {
+	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"glint\"\nat = [1, 1, 3, 1]\nevery = 1\nspread = 0\ntime = 0.5\n+++\na b"}
+	s, p := page(t, files, 40, 24)
+	for _, tt := range []struct {
+		t    time.Duration
+		want string
+	}{
+		{900 * time.Millisecond, ""},
+		{time.Second, "0:0 a #ffffff/0"},
+		{1250 * time.Millisecond, "0:0 a #d5d5d5/0"},
+		{1500 * time.Millisecond, ""},
+		{7 * time.Second, "0:2 b #ffffff/0"},
+	} {
+		if got := cells(s, p, tt.t); got != tt.want {
+			t.Errorf("%v: got %q, want %q", tt.t, got, tt.want)
+		}
+	}
+	l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(1, 2)))
+	grid := p.Grid()
+	for _, tt := range []struct{ t, next time.Duration }{
+		{0, time.Second},
+		{time.Second, 1050 * time.Millisecond},
+		{1480 * time.Millisecond, 1500 * time.Millisecond},
+		{1500 * time.Millisecond, 2 * time.Second},
+	} {
+		l.Cells(tt.t, grid)
+		if next, ok := l.Next(); !ok || next != tt.next {
+			t.Errorf("after %v: next %v %v, want %v", tt.t, next, ok, tt.next)
+		}
+	}
+}
+
+// A glint takes the cell after the effects before it. On a cell of two events, the event
+// that started later wins (live-screen, section 6.3). A point on a space has no glint.
+func TestGlintOver(t *testing.T) {
+	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"candle\"\nchars = \"^\"\ncolors = [\"11\"]\nat = [1, 1]\nevery = 100\n" +
+		"[[effect]]\ndo = \"glint\"\nat = [[1, 1], [2, 1]]\nevery = 0.2\nspread = 0\ntime = 0.5\n+++\nx "}
+	s, p := page(t, files, 40, 24)
+	// At 0.5 s, the event of 0.2 s has the amount 0.4 and the event of 0.4 s the amount 0.8.
+	if got, want := cells(s, p, 500*time.Millisecond), "0:0 ^ 11/0; 0:0 ^ #ffffdd/0"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+// The band of a sweep runs over the lit cells of all rows at the same time. The last lit cell
+// of each row starts a glint when the centre is at its column (live-screen, section 6.8).
+// Without every, the sweep has one event.
+func TestSweep(t *testing.T) {
+	// L = 0 and R = 2: the centre runs from -2 to 4 at 10 columns each second, in 0.6 s.
+	// The glints start at 0.2 s (row 2) and 0.4 s (row 1) and end at 0.4 s and 0.6 s.
+	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"sweep\"\ndelay = 0\nwidth = 2\nspeed = 10\ntime = 0.2\n+++\nabc\na"}
+	s, p := page(t, files, 40, 24)
+	for _, tt := range []struct {
+		t    time.Duration
+		want string
+	}{
+		{100 * time.Millisecond, "0:0 a #d5d5d5/0; 1:0 a #d5d5d5/0"},
+		// The centre at 1: the band gives 0.5, 1 and 0.5; the glint of row 2 has 0.5.
+		{300 * time.Millisecond, "0:0 a #d5d5d5/0; 0:1 b #ffffff/0; 0:2 c #d5d5d5/0; 1:0 a #d5d5d5/0"},
+		// The centre at 2.5: the band gives 0.25 and 0.75; the glint of row 1 has 0.75.
+		{450 * time.Millisecond, "0:1 b #bfbfbf/0; 0:2 c #eaeaea/0"},
+		{600 * time.Millisecond, ""},
+	} {
+		if got := cells(s, p, tt.t); got != tt.want {
+			t.Errorf("%v: got %q, want %q", tt.t, got, tt.want)
+		}
+	}
+	l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(1, 2)))
+	l.Cells(600*time.Millisecond, p.Grid())
+	if next, ok := l.Next(); ok {
+		t.Errorf("a sweep without every has a next event at %v", next)
+	}
+}
+
+// An event takes its cells from the current base: after a new base, a cell that is now a part
+// of a wide grapheme is not a lit cell of a sweep (live-screen, sections 6.2 and 6.3).
+func TestSweepNewBase(t *testing.T) {
+	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"sweep\"\nat = [1, 1, 3, 1]\ndelay = 0\nwidth = 2\nspeed = 10\n+++\nabc"}
+	s, p := page(t, files, 40, 24)
+	l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(1, 2)))
+	grid := p.Grid()
+	grid[0][2].Grapheme, grid[0][3].Grapheme = "語", ""
+	// The last lit cell is b: its glint starts at 0.3 s. At 0.45 s, the band gives b 0.25 and the glint 0.75.
+	var got []string
+	for _, c := range l.Cells(450*time.Millisecond, grid) {
+		got = append(got, fmt.Sprintf("%d:%d %s %s", c.Row, c.Col, c.Cell.Grapheme, c.Cell.Style))
+	}
+	if want := "0:1 b #eaeaea/0"; strings.Join(got, "; ") != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}

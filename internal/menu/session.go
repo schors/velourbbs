@@ -621,8 +621,8 @@ func (sh *shownPage) move(p screen.Page) {
 	sh.base = p
 }
 
-// deadline gives the time of the next frame: the next tick or the next event of an effect,
-// but at least frameGap after the last frame. A page without a tick and an event has no frame: the zero time.
+// deadline gives the time of the next frame: the next tick or the next change of the layer (effect.Layer.Next),
+// but at least frameGap after the last frame. A page without a tick and a change has no frame: the zero time.
 func (sh *shownPage) deadline() time.Time {
 	var next time.Time
 	if len(sh.base.Slots) > 0 {
