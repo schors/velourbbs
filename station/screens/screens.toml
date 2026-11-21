@@ -7,8 +7,11 @@ align = "center"
 gutter = 6
 fill = "spaces"
 more = "  Any key Next"
-time = "15:04 MST"
 zone = "UTC"
+
+# The clock of the menu key row ticks each second (brandbook, section "Clock").
+[fields]
+clock = 'bbs.time live "15:04:05 MST"'
 
 [lang.ru]
 more = "  Любая клавиша Дальше"

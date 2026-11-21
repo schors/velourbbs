@@ -3,6 +3,9 @@
 key = "L"
 do = "gosub list"
 [[item]]
+key = "M"
+do = "gosub more"
+[[item]]
 key = "G"
 do = "logoff"
 +++

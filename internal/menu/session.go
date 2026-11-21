@@ -24,15 +24,26 @@ type Terminal interface {
 	// (bbt-format, section 4.1). The session reads them before each screen,
 	// so a resize takes effect at the next screen.
 	Term() screen.Term
+	// Now gives the time of the clock of the terminal: the server clock, or the fixed clock
+	// of velourbbs preview (live-screen, section 7). The ticks and the frames use it.
+	Now() time.Time
 	// Key waits for the next key of the input queue: a key name of bbt-format,
 	// section 8.1, except ANY, or one other character: a character without a key name.
 	// ctx is the context of the session (session, section 6). An error ends the session.
+	// A More row waits with Key.
 	Key(ctx context.Context) (string, error)
+	// Wait waits for the next key of the shown page, as Key, until the deadline dl:
+	// the time of the next frame of a live page (live-screen, section 5).
+	// At dl, it gives false and no key. A zero dl is no deadline.
+	Wait(ctx context.Context, dl time.Time) (string, bool, error)
 	// Page shows the page p.
 	Page(p screen.Page) error
-	// Update shows the page p in place of the page that Page showed last: p differs from it
-	// only in the cells of its rows (section 5.3).
+	// Update shows the page p in place of the shown grid: a cursor move in a list screen
+	// (section 5.3). p has the size of the page that Page showed last.
 	Update(p screen.Page) error
+	// Frame shows the page p in place of the shown grid: a frame of a live page
+	// (live-screen, section 5). p has the size of the page that Page showed last.
+	Frame(p screen.Page) error
 	// ReadLine reads a line with the line input in the field f on the page that Page showed last
 	// (line-input). It gives the line and true after ENTER, or false after ESC.
 	// ctx and the errors are as of Key.
@@ -222,7 +233,7 @@ func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 		if err != nil {
 			return screen.Item{}, err
 		}
-		return ss.next(ctx, s, items, nil, p)
+		return ss.next(ctx, s, items, nil, ss.shown(p))
 	}
 	if err := ss.ev.Screen(s.Name); err != nil {
 		return screen.Item{}, err
@@ -240,7 +251,7 @@ func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 		if err := ss.t.Page(p); err != nil {
 			return screen.Item{}, err
 		}
-		it, err := ss.next(ctx, s, items, nil, p)
+		it, err := ss.next(ctx, s, items, nil, ss.shown(p))
 		if err != nil || !it.Do.Op.IsPage() && it.Do.Op != screen.Theme {
 			return it, err
 		}
@@ -271,7 +282,8 @@ func (ss *Session) runList(ctx context.Context, f *frame, v *listView) (screen.I
 		if err := ss.t.Page(p); err != nil {
 			return screen.Item{}, err
 		}
-		it, err := ss.next(ctx, v.s, items, moves, p)
+		sh := ss.shown(p)
+		it, err := ss.next(ctx, v.s, items, moves, sh)
 		// A cursor move on the same list page updates the page. A cursor key has no action.
 		for err == nil && it.Do.Op == 0 && (it.Key == key.Up && c > v.first(n) || it.Key == key.Down && c < v.last(n)) {
 			if it.Key == key.Up {
@@ -280,9 +292,9 @@ func (ss *Session) runList(ctx context.Context, f *frame, v *listView) (screen.I
 				c++
 			}
 			f.cursor = c
-			p = v.move(c)
-			if err = ss.t.Update(p); err == nil {
-				it, err = ss.next(ctx, v.s, items, moves, p)
+			sh.move(v.move(c)) // the new base (live-screen, section 4)
+			if err = ss.t.Update(sh.base); err == nil {
+				it, err = ss.next(ctx, v.s, items, moves, sh)
 			}
 		}
 		if err != nil {
@@ -533,17 +545,96 @@ func Enabled(s *screen.Screen, env screen.Env) (*screen.Env, map[string]screen.I
 	return &env, items
 }
 
+// frameGap is the least time between two frames of a live page (live-screen, section 5).
+const frameGap = 50 * time.Millisecond
+
+// shownPage is the shown page of a screen while it waits for keys (live-screen, sections 4 and 5).
+type shownPage struct {
+	base  screen.Page           // the base: the page with the slot values of the last tick
+	sv    *screen.SessionValues // the values of the last tick; nil before the first tick
+	tick  time.Time             // the time of the next tick
+	frame time.Time             // the time of the last frame
+}
+
+// shown gives the shown page of the page p, which the terminal showed now (live-screen, section 5).
+func (ss *Session) shown(p screen.Page) *shownPage {
+	sh := &shownPage{base: p}
+	sh.show(ss.t.Now())
+	return sh
+}
+
+// show starts the ticks and the frames of a show at the time now. The frame of the show
+// sends the layer of the time 0: a page without effects has no layer, so the frame sends nothing.
+func (sh *shownPage) show(now time.Time) {
+	sh.tick, sh.frame = nextSecond(now), now
+}
+
+// nextSecond gives the whole second after now. It keeps the monotonic clock reading of now
+// (Truncate drops it), so a step of the wall clock does not move the next tick.
+func nextSecond(now time.Time) time.Time {
+	return now.Add(time.Second - time.Duration(now.UnixNano()%int64(time.Second)))
+}
+
+// move sets the base to the page p of a cursor move: p with the slot values of the last tick (section 4).
+func (sh *shownPage) move(p screen.Page) {
+	if sh.sv != nil {
+		p = p.Tick(*sh.sv)
+	}
+	sh.base = p
+}
+
+// deadline gives the time of the next frame: the next tick, but at least frameGap after the last frame.
+// A page without a slot has no frame: the zero time.
+func (sh *shownPage) deadline() time.Time {
+	if len(sh.base.Slots) == 0 {
+		return time.Time{}
+	}
+	return later(sh.tick, sh.frame.Add(frameGap))
+}
+
+// later gives the later time of a and b.
+func later(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
+}
+
+// key waits for the next key of the shown page sh. At the time of each frame, it makes the frame
+// (live-screen, section 5): a tick that is due takes the values of the session again and writes them
+// into the slots of the base (section 4). The frame takes the base at the time of the clock
+// of the terminal, so a late frame shows the current values.
+func (ss *Session) key(ctx context.Context, sh *shownPage) (string, error) {
+	for {
+		k, ok, err := ss.t.Wait(ctx, sh.deadline())
+		if err != nil || ok {
+			return k, err
+		}
+		now := ss.t.Now()
+		if !now.Before(sh.tick) {
+			sv := ss.sessionValues()
+			sh.sv = &sv
+			sh.base = sh.base.Tick(sv)
+			sh.tick = nextSecond(now)
+		}
+		sh.frame = now
+		if err := ss.t.Frame(sh.base); err != nil {
+			return "", err
+		}
+	}
+}
+
 // next waits for keys until one matches an enabled item (section 3.3)
 // and gives this item. In a list screen with select, moves reports whether a cursor key
 // does something: next then gives an item with this key and no action for it, and ignores
 // the other cursor keys (list-view, section 8). moves is nil in each other screen.
-// An item with ask reads a line on the page shown of the screen s, and next gives the item
+// An item with ask reads a line on the shown page sh of the screen s, and next gives the item
 // with the line as the value of each {in}. A cancel shows the page again, and next waits again
 // (section 5.4).
 func (ss *Session) next(ctx context.Context, s *screen.Screen, items map[string]screen.Item,
-	moves func(k string) bool, shown screen.Page) (screen.Item, error) {
+	moves func(k string) bool, sh *shownPage) (screen.Item, error) {
 	for {
-		k, err := ss.t.Key(ctx)
+		k, err := ss.key(ctx, sh)
 		if err != nil {
 			return screen.Item{}, err
 		}
@@ -564,7 +655,7 @@ func (ss *Session) next(ctx context.Context, s *screen.Screen, items map[string]
 		if it.Ask == nil {
 			return it, nil
 		}
-		text, entered, err := ss.ask(ctx, s, shown, it.Ask)
+		text, entered, err := ss.ask(ctx, s, sh.base, it.Ask)
 		if err != nil {
 			return screen.Item{}, err
 		}
@@ -572,5 +663,6 @@ func (ss *Session) next(ctx context.Context, s *screen.Screen, items map[string]
 			it.Do = it.Do.Input(text)
 			return it, nil
 		}
+		sh.show(ss.t.Now()) // the page shows again (live-screen, section 5)
 	}
 }

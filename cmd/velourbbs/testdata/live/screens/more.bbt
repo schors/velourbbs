@@ -1,0 +1,24 @@
++++
+[[item]]
+key = "J"
+do = "gosub echo"
+args = { n = "{in}" }
+ask = "N: "
+[[item]]
+key = "Q"
+do = "back"
++++
+1 {session.online live}
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14 {session.online live}

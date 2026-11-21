@@ -205,8 +205,8 @@ func TestTerminalPage(t *testing.T) {
 	})
 }
 
-// A cursor move sends only the changed rows: Update writes the rows that differ from the last page
-// (section 7.1, and list-view, section 12).
+// A cursor move sends only the changed cells: Update writes the runs of the grid that differ
+// from the shown grid, and an update without a change writes nothing (section 7.5).
 func TestTerminalUpdate(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		term, f := connect(t, testTimeouts)
@@ -219,22 +219,72 @@ func TestTerminalUpdate(t *testing.T) {
 				}
 				rs = append(rs, screen.Row{{Grapheme: mark}, {Grapheme: string(rune('a' + i))}})
 			}
-			return screen.Page{Rows: rs, Cols: 2, Height: 4}
+			return screen.Page{Rows: rs, Cols: 2, Height: 5}
 		}
 		if err := term.Page(page(0)); err != nil {
 			t.Fatal(err)
 		}
 		before := len(f.output())
-		if err := term.Update(page(1)); err != nil {
-			t.Fatal(err)
+		for _, p := range []screen.Page{page(1), page(1), page(2)} {
+			if err := term.Update(p); err != nil {
+				t.Fatal(err)
+			}
 		}
-		if err := term.Update(page(2)); err != nil {
-			t.Fatal(err)
-		}
-		want := "\x1b[?2026h\x1b[0m\x1b[1;1H a\x1b[2;1H>b\x1b[0m\x1b[?2026l" +
-			"\x1b[?2026h\x1b[0m\x1b[2;1H b\x1b[3;1H>c\x1b[0m\x1b[?2026l"
+		want := "\x1b[?2026h\x1b[?25l\x1b[1;1H \x1b[2;1H>\x1b[0m\x1b[4;2H\x1b[?25h\x1b[?2026l" +
+			"\x1b[?2026h\x1b[?25l\x1b[2;1H \x1b[3;1H>\x1b[0m\x1b[4;2H\x1b[?25h\x1b[?2026l"
 		if got := f.output()[before:]; got != want {
 			t.Errorf("output of the updates\n%q\nwant\n%q", got, want)
+		}
+	})
+}
+
+// Wait gives no key at its deadline and a key that comes before it. A key in the queue comes first.
+// The deadlines do not reset the idle timeout (menu-nav, section 8, and section 8.3).
+func TestTerminalWait(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		to := testTimeouts
+		to.Idle = 2500 * time.Millisecond
+		term, f := connect(t, to)
+		start := time.Now()
+		if k, ok, err := term.Wait(t.Context(), start.Add(time.Second)); k != "" || ok || err != nil {
+			t.Fatalf("Wait() = %q, %v, %v; want no key", k, ok, err)
+		}
+		if d := time.Since(start); d != time.Second {
+			t.Errorf("Wait ended after %v, want 1s", d)
+		}
+		f.write("ab")
+		if k, ok, err := term.Wait(t.Context(), start.Add(2*time.Second)); k != "a" || !ok || err != nil {
+			t.Fatalf("Wait() = %q, %v, %v; want a", k, ok, err)
+		}
+		if k, ok, err := term.Wait(t.Context(), start); k != "b" || !ok || err != nil {
+			t.Fatalf("Wait() after the deadline with a key in the queue = %q, %v, %v; want b", k, ok, err)
+		}
+		// The key "a" came at 1 s: the idle timeout ends at 3.5 s, after the deadlines of each 1 s.
+		var err error
+		for n := 2; err == nil; n++ {
+			_, _, err = term.Wait(t.Context(), start.Add(time.Duration(n)*time.Second))
+		}
+		if !errors.Is(err, ErrIdle) || time.Since(start) != 3500*time.Millisecond {
+			t.Errorf("Wait: %v after %v, want ErrIdle after 3.5s", err, time.Since(start))
+		}
+	})
+}
+
+// The end of the context ends a Wait with a deadline at once (telnet-term, section 10.2).
+func TestTerminalWaitStop(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		term, _ := connect(t, testTimeouts)
+		ctx, cancel := context.WithCancel(t.Context())
+		done := make(chan error, 1)
+		go func() {
+			_, _, err := term.Wait(ctx, time.Now().Add(time.Second))
+			done <- err
+		}()
+		time.Sleep(300 * time.Millisecond)
+		start := time.Now()
+		cancel()
+		if err := <-done; !errors.Is(err, ErrStop) || time.Since(start) != 0 {
+			t.Errorf("Wait: %v after %v, want ErrStop at once", err, time.Since(start))
 		}
 	})
 }

@@ -114,6 +114,7 @@ layout = '"' { any character except '"' and '}' } '"'
 - The host makes a frame at each tick and at each time when the layer changes: the start of an event
   of an effect, each 50 ms while an event runs, and the end of an event (section 6).
 - Two frames are at least 50 ms apart. A frame that comes earlier waits until 50 ms after the frame before.
+  The update of a cursor move (section 4) is not a frame: it answers a key at once.
   A frame takes the layer and the base at its own time. So after a slow write, the next frame
   shows the current state, and the host does not send the missed frames.
 - A frame without changed cells sends nothing.

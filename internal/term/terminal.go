@@ -54,15 +54,16 @@ type Terminal struct {
 	p       *telnet.Parser
 	d       Decoder
 	term    screen.Term
-	vgaRGB  bool        // the palette is not VGA (section 5.7)
-	keys    []queued    // the key queue
-	lastKey time.Time   // the start of the idle timeout
-	paste   bool        // the input is in a paste (section 8.4)
-	drop    bool        // drop the rest of the paste
-	mode    bool        // the bracketed paste mode is on
-	out     []byte      // the replies that wait for the next read
-	buf     []byte      // the read buffer
-	shown   screen.Page // the page of the last Page or Update
+	vgaRGB  bool         // the palette is not VGA (section 5.7)
+	keys    []queued     // the key queue
+	lastKey time.Time    // the start of the idle timeout
+	paste   bool         // the input is in a paste (section 8.4)
+	drop    bool         // drop the rest of the paste
+	mode    bool         // the bracketed paste mode is on
+	out     []byte       // the replies that wait for the next read
+	buf     []byte       // the read buffer
+	shown   screen.Page  // the page of the last Page
+	grid    []screen.Row // the shown grid: the grid of the last Page, Update or Frame
 }
 
 // queued is a key of the queue with its paste mark.
@@ -76,16 +77,26 @@ func (t *Terminal) Term() screen.Term {
 	return t.term
 }
 
+// Now gives the time of the server clock.
+func (t *Terminal) Now() time.Time { return time.Now() }
+
 // Key gives the next key of the queue that is not a key of a paste: outside the line
 // input, the host drops each key of a paste (section 8.4). It gives the errors of next.
 func (t *Terminal) Key(ctx context.Context) (string, error) {
+	k, _, err := t.Wait(ctx, time.Time{})
+	return k, err
+}
+
+// Wait is Key with the deadline dl (menu-nav, section 8): at dl, it gives false and no key.
+// A key in the queue comes before the deadline. A zero dl is no deadline.
+func (t *Terminal) Wait(ctx context.Context, dl time.Time) (string, bool, error) {
 	for {
-		q, err := t.next(ctx)
-		if err != nil {
-			return "", err
+		q, ok, err := t.nextBy(ctx, dl)
+		if err != nil || !ok {
+			return "", false, err
 		}
 		if !q.paste {
-			return q.k, nil
+			return q.k, true, nil
 		}
 	}
 }
@@ -167,21 +178,36 @@ func (t *Terminal) ready() bool {
 // It gives ErrIdle at the idle timeout, ErrStop at once after the end of ctx,
 // also with keys in the queue, and the errors of the connection and of the telnet parser.
 func (t *Terminal) next(ctx context.Context) (queued, error) {
+	q, _, err := t.nextBy(ctx, time.Time{})
+	return q, err
+}
+
+// nextBy is next with the deadline dl: at dl, it gives false and no key. A zero dl is no deadline.
+// The idle timeout comes before the deadline.
+func (t *Terminal) nextBy(ctx context.Context, dl time.Time) (queued, bool, error) {
 	defer onDone(ctx, func() { _ = t.c.SetReadDeadline(time.Now()) })()
 	for {
 		if ctx.Err() != nil {
-			return queued{}, ErrStop
+			return queued{}, false, ErrStop
 		}
 		if t.ready() {
 			break
 		}
+		now := time.Now()
 		idle := t.lastKey.Add(t.to.Idle)
-		if !time.Now().Before(idle) {
-			return queued{}, ErrIdle
+		if !now.Before(idle) {
+			return queued{}, false, ErrIdle
 		}
-		events, _, err := t.read(ctx, idle)
+		if !dl.IsZero() && !now.Before(dl) {
+			return queued{}, false, nil
+		}
+		until := idle
+		if !dl.IsZero() && dl.Before(until) {
+			until = dl
+		}
+		events, _, err := t.read(ctx, until)
 		if err != nil {
-			return queued{}, err
+			return queued{}, false, err
 		}
 		// After the probe, the terminal drops the replies, the option events
 		// and the TTYPE names.
@@ -193,22 +219,30 @@ func (t *Terminal) next(ctx context.Context) (queued, error) {
 	}
 	q := t.keys[0]
 	t.keys = t.keys[1:]
-	return q, nil
+	return q, true, nil
 }
 
 // Page writes the page p in one write (sections 7.1 and 9.4).
 func (t *Terminal) Page(p screen.Page) error {
-	t.shown = p
+	t.shown, t.grid = p, p.Grid()
 	return t.write(context.Background(), telnet.Escape(nil, AppendPage(nil, p, t.term.Colors, t.vgaRGB)))
 }
 
-// Update writes the rows of the page p that differ from the page of the last Page or Update,
-// in one write (section 7.1). p has the size, the Top and the count of rows of that page.
+// Update writes the update of the shown grid to the grid of the page p in one write (section 7.5).
+// p has the size of the page of the last Page. An update without a changed cell writes nothing.
 func (t *Terminal) Update(p screen.Page) error {
-	prev := t.shown
-	t.shown = p
-	return t.write(context.Background(), telnet.Escape(nil, AppendUpdate(nil, p, prev, t.term.Colors, t.vgaRGB)))
+	g := p.Grid()
+	row, col := CursorPlace(t.shown)
+	b := AppendUpdate(nil, g, t.grid, row, col, t.term.Colors, t.vgaRGB)
+	t.grid = g
+	if len(b) == 0 {
+		return nil
+	}
+	return t.write(context.Background(), telnet.Escape(nil, b))
 }
+
+// Frame writes a frame of a live page (live-screen, section 5): the update of Update.
+func (t *Terminal) Frame(p screen.Page) error { return t.Update(p) }
 
 // onDone calls f in its own goroutine when ctx ends. It gives the function that stops this.
 // The function waits for a call of f that started, so f has no effect after it returns:
