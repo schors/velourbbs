@@ -1,4 +1,12 @@
 +++
+[[effect]]
+do = "sweep"
+in = "_logo-80"
+peak = "g0"
+[[effect]]
+do = "sweep"
+in = "_logo-132"
+peak = "g0"
 [[item]]
 key = "R"
 do = "gosub ru/menu"
