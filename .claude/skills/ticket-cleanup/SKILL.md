@@ -13,7 +13,8 @@ Set `GHFLOW_AGENT` to your model name for each `tools/ghflow` call.
 
 1. Select the issues: the issue from the arguments, or each worktree
    in `.ai/worktrees/` and each folder in `.ai/issues/` whose name starts with `GH-`.
-2. Run `ghflow show <n>` for each issue. An issue is complete when its PR is merged.
+2. Run `ghflow show <n>` for each issue. An issue is complete when it is closed
+   and its PR is merged.
    A closed issue with no worktree and no merged PR has only a folder to delete.
 3. Show the operator the complete issues, the folders to delete
    and the incomplete issues with the reason.
