@@ -91,22 +91,30 @@ func TestClockValues(t *testing.T) {
 	}
 }
 
-// The effects twinkle and candle of live-screen, sections 6.4 and 6.6, at three times with the fixed seed:
-// with in and without in, with a point, an array of points and a rectangle.
+// The effects of live-screen, sections 6.4 and 6.6–6.8, at three times with the fixed seed:
+// with in and without in, with a point, an array of points and a rectangle where the effect takes them.
 // twinkle: a point on the page; an array of points in the art with colors, one of them
 // at the last cell of the art; a rectangle of the art with share 0.5.
 // candle: a point at the last column of the page; an array of points in the art; a rectangle
 // on the last row of the page with delay 1, which shows from the show.
+// glint: a point on the page with an RGB peak; an array of points in the art with a theme style as peak;
+// a rectangle of the art. The dump shows the grid of the last frame before the end of a wait.
+// sweep: the whole art once, from 0.5 s; a rectangle on the last row of the page with every.
 func TestEffects(t *testing.T) {
 	out, errOut, status := runIn(t, "effects", "check")
 	if out != "" || errOut != "" || status != 0 {
 		t.Errorf("check: stdout %q, stderr %q, status %d", out, errOut, status)
 	}
-	for _, name := range []string{"twinkle", "candle"} {
-		out, errOut, status := runIn(t, "effects", "preview", name, "--size", "40x10", "--keys", "+1s,+1s,+1s")
+	for _, tt := range []struct{ name, keys string }{
+		{"twinkle", "+1s,+1s,+1s"},
+		{"candle", "+1s,+1s,+1s"},
+		{"glint", "+1250ms,+1s,+1s"},
+		{"sweep", "+1s,+500ms,+1s"},
+	} {
+		out, errOut, status := runIn(t, "effects", "preview", tt.name, "--size", "40x10", "--keys", tt.keys)
 		if errOut != "" || status != 0 {
-			t.Errorf("%s: stderr %q, status %d", name, errOut, status)
+			t.Errorf("%s: stderr %q, status %d", tt.name, errOut, status)
 		}
-		golden(t, filepath.Join("testdata", "effects", name+"-40x10.dump"), out)
+		golden(t, filepath.Join("testdata", "effects", tt.name+"-40x10.dump"), out)
 	}
 }

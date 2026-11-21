@@ -187,7 +187,7 @@ func logReply(b string) string {
 // other than the VGA colour of its index (section 5.7).
 func (r *replies) notVGA() bool {
 	for n := range paletteSize {
-		if c := r.palette[n]; c.got && c.rgb != vga[n] {
+		if c := r.palette[n]; c.got && c.rgb != screen.Palette(uint32(n)) {
 			return true
 		}
 	}

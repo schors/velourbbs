@@ -329,6 +329,7 @@ A bright spot runs from left to right over the cells of the place that are not s
   with `peak` and `time`. The host takes this time from `speed`, not from a frame.
   The amount of the cell is the larger amount of the band and of the glint.
 - The event runs until the centre stops and the last glint ends.
+  A lit cell is a cell of the event (section 6.3) only while its amount is more than 0.
 - Without `every`, the effect has one event.
 
 | Key | Type | Default | Range |

@@ -232,7 +232,8 @@ var (
 // in 4-digit form and the terminator end.
 func osc4(end string) string {
 	var b strings.Builder
-	for n, c := range vga {
+	for n := range uint32(16) {
+		c := screen.Palette(n)
 		fmt.Fprintf(&b, "\x1b]4;%d;rgb:%02x%02[2]x/%02x%02[3]x/%02x%02[4]x%s", n, c>>16, c>>8&0xff, c&0xff, end)
 	}
 	return b.String()

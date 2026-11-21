@@ -349,7 +349,7 @@ func reduceStyle(s screen.Style, colors int, vgaRGB bool) screen.Style {
 func reduce(c screen.Colour, colors int, vgaRGB bool) screen.Colour {
 	if c.Kind == screen.VGA {
 		if vgaRGB {
-			c = screen.Colour{Kind: screen.RGB, Value: vga[c.Value]}
+			c = screen.Colour{Kind: screen.RGB, Value: screen.Palette(c.Value)}
 		} else {
 			c.Kind = screen.Index
 		}
@@ -365,7 +365,7 @@ func reduce(c screen.Colour, colors int, vgaRGB bool) screen.Colour {
 	case c.Kind == screen.RGB:
 		return screen.Colour{Kind: screen.Index, Value: nearest(c.Value, 0, 15)}
 	case c.Value >= 16:
-		return screen.Colour{Kind: screen.Index, Value: nearest(palette(c.Value), 0, 15)}
+		return screen.Colour{Kind: screen.Index, Value: nearest(screen.Palette(c.Value), 0, 15)}
 	}
 	return c
 }
@@ -375,7 +375,7 @@ func reduce(c screen.Colour, colors int, vgaRGB bool) screen.Colour {
 func nearest(rgb, lo, hi uint32) uint32 {
 	best, bestD := lo, -1
 	for n := lo; n <= hi; n++ {
-		if d := distance(rgb, palette(n)); bestD < 0 || d < bestD {
+		if d := distance(rgb, screen.Palette(n)); bestD < 0 || d < bestD {
 			best, bestD = n, d
 		}
 	}
@@ -390,26 +390,4 @@ func distance(a, b uint32) int {
 		d += x * x
 	}
 	return d
-}
-
-// vga holds the values of the indexes 0–15 (section 7.3).
-var vga = [16]uint32{
-	0x000000, 0xaa0000, 0x00aa00, 0xaa5500, 0x0000aa, 0xaa00aa, 0x00aaaa, 0xaaaaaa,
-	0x555555, 0xff5555, 0x55ff55, 0xffff55, 0x5555ff, 0xff55ff, 0x55ffff, 0xffffff,
-}
-
-// cube holds the component levels of the xterm colour cube.
-var cube = [6]uint32{0, 95, 135, 175, 215, 255}
-
-// palette gives the value 0xRRGGBB of index n: VGA for 0–15, xterm for 16–255.
-func palette(n uint32) uint32 {
-	switch {
-	case n < 16:
-		return vga[n]
-	case n < 232:
-		n -= 16
-		return cube[n/36]<<16 | cube[n/6%6]<<8 | cube[n%6]
-	}
-	v := 8 + 10*(n-232)
-	return v<<16 | v<<8 | v
 }
