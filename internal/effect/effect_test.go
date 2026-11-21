@@ -307,3 +307,21 @@ func TestSweep(t *testing.T) {
 		t.Errorf("a sweep without every has a next event at %v", next)
 	}
 }
+
+// An event takes its cells from the current base: after a new base, a cell that is now a part
+// of a wide grapheme is not a lit cell of a sweep (live-screen, sections 6.2 and 6.3).
+func TestSweepNewBase(t *testing.T) {
+	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"sweep\"\nat = [1, 1, 3, 1]\ndelay = 0\nwidth = 2\nspeed = 10\n+++\nabc"}
+	s, p := page(t, files, 40, 24)
+	l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(1, 2)))
+	grid := p.Grid()
+	grid[0][2].Grapheme, grid[0][3].Grapheme = "語", ""
+	// The last lit cell is b: its glint starts at 0.3 s. At 0.45 s, the band gives b 0.25 and the glint 0.75.
+	var got []string
+	for _, c := range l.Cells(450*time.Millisecond, grid) {
+		got = append(got, fmt.Sprintf("%d:%d %s %s", c.Row, c.Col, c.Cell.Grapheme, c.Cell.Style))
+	}
+	if want := "0:1 b #eaeaea/0"; strings.Join(got, "; ") != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}

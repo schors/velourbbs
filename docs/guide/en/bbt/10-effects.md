@@ -146,7 +146,7 @@ A bright spot runs from left to right over the characters of the place.
 | Key | Default | Value |
 |---|---|---|
 | `at` | None: the whole art or page. | A rectangle. |
-| `delay` | `0.5` | The seconds after the show before the first run. |
+| `delay` | `0.5` | The seconds before the timing starts, as in the other effects. |
 | `every` | None: one run. | The seconds between two runs. |
 | `spread` | `0` | Only with `every`. |
 | `peak` | `#ffffff` | As in `glint`. |
@@ -158,7 +158,9 @@ A bright spot runs from left to right over the characters of the place.
   it is a band.
 - A space does not become bright. So the band shows the shape of the characters.
 - When the spot comes to the last character of a row, that character glints for `time` seconds.
-- Without `every`, the band runs once after `delay`. With `every`, it runs again.
+- Without `every`, the band runs once, `delay` seconds after the show.
+- With `every`, the timing is as in the other effects: the first run comes `delay` plus one interval
+  after the show. Example: `delay = 0.5` and `every = 2` give the first run after 2.5 seconds.
 
 Full rules: [live-screen](../../../specs/live-screen.md), sections 6.7 and 6.8.
 

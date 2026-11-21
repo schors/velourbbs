@@ -266,10 +266,11 @@ func (l *Layer) event(i int, pl *place, grid []screen.Row) {
 }
 
 // nonSpace gives the cells of the place pl that are not spaces after the effects before the effect i.
+// A cell that is now a slot or a part of a wide grapheme (a new base) is not in the place.
 func (l *Layer) nonSpace(i int, pl *place, grid []screen.Row) []int {
 	var out []int
 	for _, c := range pl.cells {
-		if l.below(i, c, grid).Grapheme != " " {
+		if free(grid[c/l.cols], c%l.cols) && l.below(i, c, grid).Grapheme != " " {
 			out = append(out, c)
 		}
 	}
