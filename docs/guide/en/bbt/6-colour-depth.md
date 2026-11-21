@@ -289,6 +289,8 @@ A style can have the attribute `blink`, but the terminals show it in different w
 | tmux | It sends the attribute to the outer terminal. |
 
 So do not use `blink` for text that must look the same in each terminal.
+To make a screen move, use the effects of [task 10](10-effects.md) in place of `blink`.
+They look the same in each terminal.
 
 Full rules: [live-screen](../../../specs/live-screen.md), section 8.
 

@@ -67,7 +67,7 @@ func checkFileBlocks(fsys fs.FS, md string) []string {
 // The parts of each guide directory (bbt-guide, section 3.1; setup-guide, section 3).
 var guideParts = map[string][]string{
 	// The order of fs.ReadDir: the bytes of the names.
-	"bbt": {"1-bbs-directory.md", "10-errors.md", "2-first-screen.md", "3-header.md", "4-menu.md", "5-fields.md",
+	"bbt": {"1-bbs-directory.md", "10-effects.md", "11-errors.md", "2-first-screen.md", "3-header.md", "4-menu.md", "5-fields.md",
 		"6-colour-depth.md", "7-texts.md", "8-lists.md", "9-art.md", "README.md"},
 	"setup": {"1-program.md", "2-bbs-directory.md", "3-bbs-toml.md", "4-commands.md",
 		"5-systemd.md", "README.md"},

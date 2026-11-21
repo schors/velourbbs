@@ -40,7 +40,7 @@ A guide is a directory of Markdown files, the "parts": `README.md` and one part 
 for each task.
 
 - The parts of this guide: `1-bbs-directory.md`, `2-first-screen.md`, `3-header.md`,
-  `4-menu.md`, `5-fields.md`, `6-colour-depth.md`, `7-texts.md`, `8-lists.md`, `9-art.md`, `10-errors.md`.
+  `4-menu.md`, `5-fields.md`, `6-colour-depth.md`, `7-texts.md`, `8-lists.md`, `9-art.md`, `10-effects.md`, `11-errors.md`.
 - Both languages have the same parts.
 - The first line of a part is a level-1 heading: its title. Outside the code blocks,
   a part has no other level-1 heading.

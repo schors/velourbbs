@@ -1,6 +1,24 @@
 +++
 width = [40, 40]
 fill = "spaces"
+[[effect]]
+do = "twinkle"
+in = "lamp.ans"
+at = [8, 5, 26, 3]
+chars = "░▒"
+share = 0.2
+[[effect]]
+do = "twinkle"
+in = "lamp.ans"
+at = [[4, 2], [37, 3], [2, 9], [39, 10]]
+chars = "·+*"
+colors = ["223", "215"]
+every = 1.5
+[[effect]]
+do = "candle"
+at = [[13, -1], [28, -1]]
+chars = "▲▴"
+colors = ["208", "214", "220"]
 [[item]]
 key = "G"
 do = "logoff"

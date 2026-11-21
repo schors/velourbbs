@@ -69,7 +69,7 @@ func (p Page) Tick(sv SessionValues) Page {
 }
 
 // Grid gives the cells of all terminal rows of p, term.rows rows of term.cols cells:
-// the grid without a layer (live-screen, section 2). A cell of a fill row is a space:
+// the base with the layer of p (live-screen, section 2). A cell of a fill row is a space:
 // in the colour default without attributes with fill none, else in Normal.
 // A row of p below term.rows is not in the grid.
 func (p Page) Grid() []Row {
@@ -88,6 +88,9 @@ func (p Page) Grid() []Row {
 			row[k] = Cell{Grapheme: " ", Style: style}
 		}
 		grid[i] = row
+	}
+	for _, c := range p.Layer {
+		grid[c.Row][c.Col] = c.Cell
 	}
 	return grid
 }

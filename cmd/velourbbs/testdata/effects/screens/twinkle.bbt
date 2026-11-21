@@ -1,0 +1,25 @@
++++
+[[effect]]
+do = "twinkle"
+at = [1, 1]
+chars = "*+x"
+[[effect]]
+do = "twinkle"
+in = "sky.ans"
+at = [[2, 1], [-1, -1]]
+chars = "*+"
+colors = ["14", "star"]
+[[effect]]
+do = "twinkle"
+in = "sky.ans"
+at = [1, 2, 20, 2]
+chars = ".*"
+share = 0.5
+every = 0.5
+[[item]]
+key = "Q"
+do = "back"
++++
+@ Twinkle
+{>sky.ans}
+Q Back

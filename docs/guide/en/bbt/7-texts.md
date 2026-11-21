@@ -350,7 +350,7 @@ author = "Anna Lind"
 
 - The front matter starts on the first line of the file.
 - Each key with one value gives the field `meta.<key>`. The key `title` also gives `file.title`.
-- A first line `+++` without its end line is an error (task 10).
+- A first line `+++` without its end line is an error (task 11).
 - YAML front matter between `---` lines is an error.
 
 Full rules: [file-view](../../../specs/file-view.md), section 5.

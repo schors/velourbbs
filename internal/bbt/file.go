@@ -97,7 +97,7 @@ func parseFile(d *screen.FileDiags, data []byte, theme map[string]screen.Style, 
 		if fragment {
 			d.Errorf(1, 1, "a fragment cannot have front matter")
 		} else {
-			f.front, f.fields = parseFront(d, lines[1:end], fields, langs)
+			f.front, f.fields = parseFront(d, lines[1:end], fields, theme, langs)
 			f.skip = f.front == nil
 			if f.fields != nil {
 				fields = f.fields
