@@ -24,7 +24,7 @@ The work runs on GitHub issues and pull requests (PRs) of `origin`.
   Before the question, show in the chat, in Russian, the content that the operator
   decides on. A link or a number is not content.
 - `/ticket <type> <description>` starts an issue. `/ticket <n>` continues it,
-  also after the merge. `/ticket-cleanup` removes the local files of all merged issues.
+  also after the merge. `/ticket-cleanup` removes the local files of all closed issues.
   `/ticket-cleanup drop <n>` stops an issue.
 
 ## 2. Issues and posts
