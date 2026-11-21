@@ -85,6 +85,20 @@ func TestFrontFieldErrors(t *testing.T) {
 			`screens/a.ans:1:1: screen "t": unknown field "x"`,
 			`screens/a.ans:1:5: unknown field "bad"`,
 		}},
+		// After an unknown key, the body uses the aliases of [fields] without their errors.
+		{map[string]string{"s.bbt": "+++\ntypo = 1\n[fields]\nx = \"term.cols\"\nand = \"term.rows\"\n+++\n{x}\n{>_f}", "_f.bbt": "{x}"},
+			[]string{`screens/s.bbt:2:1: unknown key "typo"`}},
+		// A screen with a front matter error reports the errors of its aliases in a fragment and an art.
+		{map[string]string{
+			"a.bbt":  "+++\nwidth = [1, 0]\n[fields]\nx = 'bbs.time live'\n+++\n{>_f}\n{>a.ans}",
+			"b.bbt":  "+++\n[fields]\nx = \"term.type\"\n+++\n{>_f}\n{>a.ans}",
+			"_f.bbt": "{#if x == \"a\"}{/if}",
+			"a.ans":  sauceArt("{#if x == \"a\"}{/if}", 80),
+		}, []string{
+			`screens/_f.bbt:1:1: screen "a": alias "x" has the live mark: a condition takes the values of the show`,
+			`screens/a.ans:1:1: screen "a": alias "x" has the live mark: a condition takes the values of the show`,
+			`screens/a.bbt:2:9: width: width [1, 0] is not in 1 <= min <= max <= 255`,
+		}},
 		// A fragment that only screens with the alias use has no error.
 		{map[string]string{
 			"s.bbt":  "+++\n[fields]\nx = \"term.type\"\n+++\n{>_f}",

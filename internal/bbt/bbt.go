@@ -322,7 +322,8 @@ func (l *loader) report() {
 				switch {
 				case !all(d):
 					for _, u := range r.units {
-						l.errorf(u, screen.Pos{File: name, Line: d.Row, Col: d.Col}, d.Warning, "%s", d.Msg)
+						// The parse does not depend on the width limits and the items: no skip.
+						l.diag(u, screen.Pos{File: name, Line: d.Row, Col: d.Col}, d.Warning, "%s", d.Msg)
 					}
 				case i > 0: // the first resolution reports it
 				case d.Warning:

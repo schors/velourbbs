@@ -57,13 +57,17 @@ func filePos(name string, p tomlcheck.Pos) screen.Pos {
 	return screen.Pos{File: name, Line: p.Line, Col: p.Col}
 }
 
-// errorf reports an error at pos. A position in another file than the screen
-// starts with the screen name (screen-render, section 3.1). A screen with a front matter error
+// errorf reports an error at pos with diag. A screen with a front matter error
 // reports nothing: without its width limits and items, it gives only noise.
 func (l *loader) errorf(u *unit, pos screen.Pos, warning bool, format string, args ...any) {
-	if u.f.skip {
-		return
+	if !u.f.skip {
+		l.diag(u, pos, warning, format, args...)
 	}
+}
+
+// diag reports an error at pos. A position in another file than the screen
+// starts with the screen name (screen-render, section 3.1).
+func (l *loader) diag(u *unit, pos screen.Pos, warning bool, format string, args ...any) {
 	msg := fmt.Sprintf(format, args...)
 	if pos.File != u.s.File {
 		msg = fmt.Sprintf("screen %q: %s", u.s.Name, msg)

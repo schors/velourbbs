@@ -66,7 +66,9 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 		d.Errorf(e.Line, e.Col, "%s", e.Msg)
 	}
 	if len(errs) > 0 {
-		return nil, nil
+		// The document gives only these errors (screen-render, section 3.1): the aliases
+		// that it decodes stay for the body without their errors.
+		return nil, ownFields(doc.Fields, root, fields, func(tomlcheck.Pos, string, ...any) {})
 	}
 	// Each other error has the position of the key path of its message (screen-render, section 3.1).
 	ok := true
@@ -76,12 +78,7 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 	}
 	fr = &front{at: root, layout: screen.ParseLayoutKeys(doc.Width, doc.Align, doc.VAlign, doc.Fill, doc.Gutter,
 		func(key string, err error) { errorf(root.At(key).Value(), "%s: %v", key, err) })}
-	if doc.Fields != nil {
-		own = maps.Clone(fields)
-		if own == nil {
-			own = screen.Fields{}
-		}
-		maps.Copy(own, screen.NewFields(*doc.Fields, root, errorf))
+	if own = ownFields(doc.Fields, root, fields, errorf); own != nil {
 		fields = own
 	}
 	fr.file = parseFileKeys(&doc, root, errorf)
@@ -202,6 +199,20 @@ func parseAsk(ask *string, max *int64, a screen.Action, at tomlcheck.Place, labe
 
 // errorFunc reports an error of a front matter at a position in the screen file.
 type errorFunc func(at tomlcheck.Pos, format string, args ...any)
+
+// ownFields gives the valid aliases of the [fields] table over fields, else nil without the table
+// (section 4.2). root is the root table of the front matter. errorf reports the errors of the aliases.
+func ownFields(table *map[string]string, root tomlcheck.Place, fields screen.Fields, errorf errorFunc) screen.Fields {
+	if table == nil {
+		return nil
+	}
+	own := maps.Clone(fields)
+	if own == nil {
+		own = screen.Fields{}
+	}
+	maps.Copy(own, screen.NewFields(*table, root, errorf))
+	return own
+}
 
 // ItemPlace gives the place of the 0-based item i of the front matter with the root table root.
 func ItemPlace(root tomlcheck.Place, i int) tomlcheck.Place {
