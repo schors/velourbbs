@@ -112,7 +112,7 @@ layout = '"' { any character except '"' and '}' } '"'
 - Directly after the show, the host makes a frame at the show time: it sends the layer of the time 0.
   A cell dump of the show in `velourbbs preview` is the base (section 7).
 - The host makes a frame at each tick and at each time when the layer changes: the start of an event
-  of an effect, each 50 ms while an event runs, and the end of an event (section 6).
+  of an effect, each 50 ms while an event of a `glint` or a `sweep` runs, and the end of an event (section 6).
 - Two frames are at least 50 ms apart. A frame that comes earlier waits until 50 ms after the frame before.
   The update of a cursor move (section 4) is not a frame: it answers a key at once.
   A frame takes the layer and the base at its own time. So after a slow write, the next frame
@@ -223,6 +223,7 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
 - Each effect takes the cell after the earlier effects: its grapheme, and its foreground for the mix.
   An event takes its cells at its start, from the grid after the earlier effects.
   The stars of a `twinkle` rectangle are the exception: they come from the base at the show.
+- An "empty cell" is a cell with a space after the earlier effects. Its background does not matter.
 - A new base (a cursor move) does not start the effects again. The layer keeps its state.
 - "Rounded" is rounded half up. The host takes the random cells of one event as different cells.
 - Each session has its own random source: the generator PCG of the Go package `math/rand/v2`

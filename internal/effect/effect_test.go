@@ -325,3 +325,88 @@ func TestSweepNewBase(t *testing.T) {
 		t.Errorf("got %q, want %q", got, want)
 	}
 }
+
+// With over = false, only an empty cell, a space, can take a star; with over = true, each cell
+// of the place can. A star shows for time. A cell with a star of the effect cannot take another
+// (live-screen, section 6.5).
+func TestSparkle(t *testing.T) {
+	front := "+++\n[[effect]]\ndo = \"sparkle\"\nchars = \"*\"\nat = [1, 1, 4, 1]\nevery = 1\nspread = 0\ntime = 0.5\ncount = 4\n"
+	for _, tt := range []struct {
+		over string
+		t    time.Duration
+		want string
+	}{
+		{"false", 900 * time.Millisecond, ""},
+		{"false", time.Second, "0:1 * 7/0; 0:3 * 7/0"},
+		{"false", 1500 * time.Millisecond, ""},
+		{"true", time.Second, "0:0 * 7/0; 0:1 * 7/0; 0:2 * 7/0; 0:3 * 7/0"},
+	} {
+		s, p := page(t, map[string]string{"s.bbt": front + "over = " + tt.over + "\n+++\na b"}, 40, 24)
+		if got := sorted(cells(s, p, tt.t)); got != tt.want {
+			t.Errorf("over = %s, %v: got %q, want %q", tt.over, tt.t, got, tt.want)
+		}
+	}
+	// Each second, one star of 2.5 s: the third event finds the two empty cells with a star.
+	// The fourth event at 4 s finds the cell of the first star free again.
+	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"sparkle\"\nchars = \"*\"\nat = [1, 1, 3, 1]\nevery = 1\nspread = 0\ntime = 2.5\n+++\na"}
+	s, p := page(t, files, 40, 24)
+	for _, tt := range []struct {
+		t time.Duration
+		n int
+	}{{time.Second, 1}, {2 * time.Second, 2}, {3 * time.Second, 2}, {3500 * time.Millisecond, 1}, {4 * time.Second, 2}} {
+		if got := cells(s, p, tt.t); strings.Count(got, "*") != tt.n || strings.Contains(got, "0:0") {
+			t.Errorf("%v: got %q, want %d stars on empty cells", tt.t, got, tt.n)
+		}
+	}
+}
+
+// With over = false, the bolt draws only on empty cells; with over = true, on each cell of the place.
+// A drawn cell has the foreground of peak, the background of the cell and no attributes. In a rectangle
+// of one column, each step is a step 0 and no branch has a cell (live-screen, section 6.9).
+func TestLightning(t *testing.T) {
+	// Column 2 has x on the rows 1 and 3 and spaces on the rows 2 and 4.
+	front := "+++\n[[effect]]\ndo = \"lightning\"\nchars = \"\\\\|/\"\npeak = \"15\"\nat = [2, 1, 1, 4]\nevery = 1\nspread = 0\ntime = 0.5\n"
+	layer := func(over string, at time.Duration) []string {
+		s, p := page(t, map[string]string{"s.bbt": front + "over = " + over + "\n+++\nax\na\nax\na"}, 40, 24)
+		l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(1, 2)))
+		grid := p.Grid()
+		for _, row := range grid {
+			row[1].Style.Attr = screen.Bold
+		}
+		var out []string
+		for _, c := range l.Cells(at, grid) {
+			out = append(out, fmt.Sprintf("%d:%d %s %s", c.Row, c.Col, c.Cell.Grapheme, c.Cell.Style))
+		}
+		return out
+	}
+	// The main bolt runs from the first row for 2–4 rows, the same rows with each value of over.
+	all := layer("true", time.Second)
+	if len(all) < 2 || len(all) > 4 {
+		t.Fatalf("over = true: got %q, want 2–4 cells", all)
+	}
+	var empty []string
+	for k, c := range all {
+		if want := fmt.Sprintf("%d:1 | 15/0", k); c != want {
+			t.Errorf("over = true: cell %d is %q, want %q", k, c, want)
+		}
+		if k%2 == 1 {
+			empty = append(empty, c)
+		}
+	}
+	if got := layer("false", time.Second); !slices.Equal(got, empty) {
+		t.Errorf("over = false: got %q, want %q", got, empty)
+	}
+	if got := layer("true", 1500*time.Millisecond); got != nil {
+		t.Errorf("after time: got %q", got)
+	}
+}
+
+// sorted gives the cells of a layer in the short form of cells, sorted.
+func sorted(s string) string {
+	if s == "" {
+		return s
+	}
+	parts := strings.Split(s, "; ")
+	slices.Sort(parts)
+	return strings.Join(parts, "; ")
+}
