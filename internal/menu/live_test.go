@@ -91,3 +91,15 @@ func TestLiveListMove(t *testing.T) {
 		t.Errorf("err %v, log:\n%s\nwant:\n%s", err, strings.Join(ft.log, "\n"), strings.Join(want, "\n"))
 	}
 }
+
+// The next tick is the whole second after now, with the monotonic clock reading of now.
+func TestNextSecond(t *testing.T) {
+	for _, d := range []time.Duration{0, time.Nanosecond, 999 * time.Millisecond} {
+		if got, want := nextSecond(fakeStart.Add(d)), fakeStart.Add(time.Second); !got.Equal(want) {
+			t.Errorf("nextSecond(+%v) = %v, want %v", d, got, want)
+		}
+	}
+	if got := nextSecond(time.Now()).String(); !strings.Contains(got, " m=") {
+		t.Errorf("nextSecond(time.Now()) = %s, want a monotonic clock reading", got)
+	}
+}

@@ -566,7 +566,13 @@ func (ss *Session) shown(p screen.Page) *shownPage {
 // show starts the ticks and the frames of a show at the time now. The frame of the show
 // sends the layer of the time 0: a page without effects has no layer, so the frame sends nothing.
 func (sh *shownPage) show(now time.Time) {
-	sh.tick, sh.frame = now.Truncate(time.Second).Add(time.Second), now
+	sh.tick, sh.frame = nextSecond(now), now
+}
+
+// nextSecond gives the whole second after now. It keeps the monotonic clock reading of now
+// (Truncate drops it), so a step of the wall clock does not move the next tick.
+func nextSecond(now time.Time) time.Time {
+	return now.Add(time.Second - time.Duration(now.UnixNano()%int64(time.Second)))
 }
 
 // move sets the base to the page p of a cursor move: p with the slot values of the last tick (section 4).
@@ -609,7 +615,7 @@ func (ss *Session) key(ctx context.Context, sh *shownPage) (string, error) {
 			sv := ss.sessionValues()
 			sh.sv = &sv
 			sh.base = sh.base.Tick(sv)
-			sh.tick = now.Truncate(time.Second).Add(time.Second)
+			sh.tick = nextSecond(now)
 		}
 		sh.frame = now
 		if err := ss.t.Frame(sh.base); err != nil {
