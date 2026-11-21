@@ -319,7 +319,9 @@ Full rules: [bbt-format](../../../specs/bbt-format.md), section 8.5.
 ## A line from the user
 
 An item can ask for one line of text before its action. `ask` is the prompt,
-and `{in}` in `args` gives the line to the next screen:
+and `{in}` in `args` gives the line to the next screen.
+This example is not a part of Lamp. To try it, add the item to `screens/main.bbt`
+of your BBS:
 
 ```
 [[item]]
@@ -330,8 +332,9 @@ do = "gosub hello"
 args = { name = "{in}" }
 ```
 
+Then create the screen `hello`. `screens/hello.bbt`:
+
 ```
-# screens/hello.bbt
 +++
 [[item]]
 key = "ESC"
@@ -352,7 +355,7 @@ Good evening, {arg.name}.
 - The line cannot reach `file` or `data`, also through other screens:
   the BBS loads the files and the rows at the start, and a user can type any line.
 
-Test the line: `velourbbs preview main --keys N,a,n,n,ENTER`. The output has `ask`,
+Test the line on the screen `main` with the item: `velourbbs preview main --keys N,a,n,n,ENTER`. The output has `ask`,
 the page with the prompt, each key of the line and `line "ann"`.
 A letter of the line keeps its case.
 
