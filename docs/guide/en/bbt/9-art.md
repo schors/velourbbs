@@ -40,7 +40,8 @@ key    = "215 bold"
 
 The style `key` is the 256-colour index 215. The orange 215 stays warm at 16 colours too: the BBS changes it to the nearest index 0–15.
 
-`examples/art/screens/main.bbt`:
+The screen `screens/main.bbt`. Task 10 adds effects to it:
+
 ```
 +++
 width = [40, 40]
@@ -128,7 +129,7 @@ The BBS finds the field in the art and puts the value in its place.
 - Spaces before the name align the value right. Else the value aligns left.
 - All cells of the token must have one background colour.
   All its characters except spaces must have one foreground colour.
-  Else `velourbbs check` gives an error (task 10).
+  Else `velourbbs check` gives an error (task 11).
 - The value takes the colours of the first character of the token.
 - Art can hold only fields and boxes (below): no style tokens and no includes.
   A short alias (task 5) gives a short field, for example `{w}`.

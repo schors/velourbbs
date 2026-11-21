@@ -16,11 +16,12 @@ import (
 
 // front is the front matter of a screen (section 3.2).
 type front struct {
-	at     tomlcheck.Place // the root table, with positions in the screen file
-	layout screen.LayoutKeys
-	items  []screen.Item
-	file   *screen.FileSpec // the keys of a file screen, else nil (file-view, section 3)
-	list   *screen.ListSpec // the keys of a list screen, else nil (list-view, section 3)
+	at      tomlcheck.Place // the root table, with positions in the screen file
+	layout  screen.LayoutKeys
+	items   []screen.Item
+	file    *screen.FileSpec // the keys of a file screen, else nil (file-view, section 3)
+	list    *screen.ListSpec // the keys of a list screen, else nil (list-view, section 3)
+	effects []screen.Effect  // the [[effect]] tables (live-screen, section 6)
 }
 
 // frontDoc is the plain decode of a front matter. A nil pointer is a key that is not set.
@@ -44,7 +45,8 @@ type frontDoc struct {
 		Do   *string            `toml:"do"`
 		Args *map[string]string `toml:"args"`
 	} `toml:"select"`
-	Item []struct {
+	Effect *[]map[string]any `toml:"effect"` // the plain tables: parseEffects checks their keys
+	Item   []struct {
 		Key    *string            `toml:"key"`
 		Do     *string            `toml:"do"`
 		When   *string            `toml:"when"`
@@ -55,10 +57,12 @@ type frontDoc struct {
 }
 
 // parseFront parses the front matter lines. The first line of lines is line 2 of the file.
-// fields is the aliases of screens/screens.toml. The front is nil when the front matter has an error.
+// fields is the aliases of screens/screens.toml, theme the base theme.
+// The front is nil when the front matter has an error.
 // own is the valid aliases of [fields] over fields, also after an error, else nil without [fields]:
 // the front matter and the body use them (section 4.2). langs is the languages of the BBS.
-func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs []string) (fr *front, own screen.Fields) {
+func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, theme map[string]screen.Style,
+	langs []string) (fr *front, own screen.Fields) {
 	var doc frontDoc
 	data := []byte(strings.Join(lines, "\n"))
 	root, errs := tomlcheck.DecodeFront(data, &doc)
@@ -83,6 +87,9 @@ func parseFront(d *screen.FileDiags, lines []string, fields screen.Fields, langs
 	}
 	fr.file = parseFileKeys(&doc, root, errorf)
 	fr.list = parseListKeys(&doc, root, langs, errorf)
+	if doc.Effect != nil {
+		fr.effects = parseEffects(*doc.Effect, root, theme, errorf)
+	}
 	pages := doc.File != nil || doc.Data != nil // a page action is valid (file-view, section 3.3)
 	seen := map[string]bool{}
 	for i, it := range doc.Item {

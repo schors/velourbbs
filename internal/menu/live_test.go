@@ -62,6 +62,48 @@ func TestLiveTicks(t *testing.T) {
 			"frame 08.000: T 15:04:08", "wait +1s",
 		}},
 	}
+	// A page with effects: a frame at the show and at each event (live-screen, section 5).
+	// The candle events come each 0.2 s; with the ticks, a frame waits 50 ms after the frame before.
+	effects := `+++
+[[effect]]
+do = "candle"
+at = [1, 1]
+chars = "^"
+colors = ["1"]
+every = 0.2
+spread = 0
+[[effect]]
+do = "twinkle"
+at = [3, 1]
+chars = "ab"
+every = 0.3
+spread = 0
+[[item]]
+key = "J"
+do = "gosub msg"
+args = { n = "1" }
+[[item]]
+key = "G"
+do = "logoff"
++++
+`
+	tests = append(tests, []struct {
+		name  string
+		start time.Duration
+		rows  int
+		body  string
+		keys  []string
+		want  []string
+	}{
+		{"effects", 0, 10, effects + "X a\n", []string{"+700ms", "G"}, []string{
+			"page: X a", "frame 05.000: ^ a", "frame 05.200: ^ a", "frame 05.300: ^ b", "frame 05.400: ^ b",
+			"frame 05.600: ^ a", "wait +700ms", "page: Bye",
+		}},
+		{"effects and ticks", 900 * time.Millisecond, 10, effects + "X a {bbs.time live}\n", []string{"+300ms"}, []string{
+			"page: X a 15:04:05", "frame 05.900: ^ a 15:04:05", "frame 06.000: ^ a 15:04:06", "frame 06.100: ^ a 15:04:06",
+			"frame 06.200: ^ b 15:04:06", "wait +300ms",
+		}},
+	}...)
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			ss := load(t, map[string]string{"main": tc.body, "info": "", "long": "", "msg": "+++\n[[item]]\nkey = \"B\"\ndo = \"back\"\n+++\n{arg.n}\n"})

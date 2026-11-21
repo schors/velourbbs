@@ -192,6 +192,7 @@ func preview(args []string, fsys fs.FS, stdout, stderr io.Writer) int {
 			now: start}
 		values := func(*menu.Session) screen.SessionValues { return clockValues(sv, svSet, start, t.now) }
 		ss := menu.New(m, t, name, argVals, choice, sv.Lang, values)
+		ss.Seed(1, 2) // the output is the same at each run (live-screen, section 7)
 		return runKeys(t, ss, stderr)
 	}
 	cfg := m.Config

@@ -1,4 +1,4 @@
-# Task 10. Errors
+# Task 11. Errors
 
 `velourbbs check` finds the errors before the BBS starts.
 Each line gives the file, the line number, the column and the message (task 1).

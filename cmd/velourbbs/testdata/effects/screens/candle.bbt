@@ -1,0 +1,27 @@
++++
+[[effect]]
+do = "candle"
+at = [-1, 1]
+chars = "^'"
+colors = ["flame", "#ffcc00"]
+[[effect]]
+do = "candle"
+in = "sky.ans"
+at = [[1, 2], [20, 1]]
+chars = "^"
+colors = ["9", "11", "flame"]
+every = 0.5
+spread = 0.1
+[[effect]]
+do = "candle"
+at = [1, -1, 6, 1]
+chars = "^'`"
+colors = ["flame", "11"]
+delay = 1
+[[item]]
+key = "Q"
+do = "back"
++++
+Candles{~ }
+{>sky.ans}
+Q Back

@@ -53,7 +53,8 @@ Each task refers to the specifications for the full rules.
 - [Task 7. Texts](7-texts.md)
 - [Task 8. Lists](8-lists.md)
 - [Task 9. Art](9-art.md)
-- [Task 10. Errors](10-errors.md)
+- [Task 10. Effects](10-effects.md)
+- [Task 11. Errors](11-errors.md)
 
 ## Not in the MVP
 

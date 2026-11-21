@@ -258,3 +258,24 @@ func TestGrid(t *testing.T) {
 		}
 	}
 }
+
+// The page lists the first insert of each art with a row on it (live-screen, section 6.2).
+// In a file screen, the art after the file area comes after the file rows.
+func TestArtPlaces(t *testing.T) {
+	fsys := fstest.MapFS{
+		"screens/f.bbt": {Data: []byte("+++\nfile = \"a.txt\"\n+++\n{>a.ans}\n{>file}\n{>b.ans}\n{>a.ans}\n")},
+		"screens/a.ans": {Data: []byte(sauceArt("a\nb", 4))},
+		"screens/b.ans": {Data: []byte(sauceArt("c", 6))},
+		"content/a.txt": {Data: []byte("a\n")},
+	}
+	sets, ds := bbt.Load(fsys, bbt.Settings{Theme: theme, Layout: screen.Layout{Width: screen.WidthLimits{Min: 20, Max: 20}}})
+	if ds.HasErrors() {
+		t.Fatalf("diags: %v", ds)
+	}
+	env := &screen.Env{Term: screen.Term{Type: "ansi", Cols: 30, Rows: 10, Colors: 16}}
+	p := screen.RenderFile(sets["en"]["f"], env, theme, fileRows(3), 1)
+	want := []screen.ArtPlace{{Name: "a.ans", Row: 0, Width: 4, Height: 2}, {Name: "b.ans", Row: 5, Width: 6, Height: 1}}
+	if !slices.Equal(p.Arts, want) {
+		t.Errorf("arts %+v, want %+v", p.Arts, want)
+	}
+}

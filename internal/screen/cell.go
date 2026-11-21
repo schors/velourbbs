@@ -30,6 +30,25 @@ type Page struct {
 	Normal Style  // the style normal: the cells outside the screen area and the fill rows
 	Fill   Fill   // the cells of the fill rows
 	Slots  []Slot // the slots of the rows, in row order (live-screen, section 3.1)
+	Area   int    // the cells of the screen area: the length of each row
+	// Arts holds the first insert of each art with a row on the page, in render order (live-screen, section 6.2).
+	Arts []ArtPlace
+	// Layer holds the cells that the effects change on the grid (live-screen, section 2). Grid writes them.
+	Layer []GridCell
+}
+
+// ArtPlace is an art insert on a page. Row is the row of the page of the first art row, from 0:
+// it is negative when the art starts on a page before. The art starts at the first column of the screen area.
+type ArtPlace struct {
+	Name          string
+	Row           int
+	Width, Height int
+}
+
+// GridCell is a cell of the grid at the terminal row Row and the column Col, from 0.
+type GridCell struct {
+	Row, Col int
+	Cell     Cell
 }
 
 // Line gives row i at p.Cols cells in buf: each cell outside the screen area

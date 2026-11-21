@@ -1,0 +1,12 @@
++++
+[[item]]
+key = "T"
+do = "gosub twinkle"
+[[item]]
+key = "C"
+do = "gosub candle"
+[[item]]
+key = "G"
+do = "logoff"
++++
+T Twinkle  C Candle  G Bye
