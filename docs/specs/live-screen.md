@@ -159,8 +159,8 @@ Each effect has these keys:
 | Key | Type | Default | Range |
 |---|---|---|---|
 | `do` | string | Required. | `twinkle`, `sparkle`, `candle`, `glint`, `sweep` or `lightning`. |
-| `in` | string | None: the page. | The name of an art insert: `<name>.ans` (section 6.2). |
-| `at` | array | None: the whole art or grid. | A point, a rectangle or an array of points (section 6.2). |
+| `in` | string | None: the page. | The name of an art insert, `<name>.ans`, or of a fragment, `_<name>` (section 6.2). |
+| `at` | array | None: the whole art, the fragment rows or the grid. | A point, a rectangle or an array of points (section 6.2). |
 | `delay` | number, seconds | `0` | 0–3600. |
 | `every` | number, seconds | Of the effect (sections 6.4–6.9). | 0.05–3600. |
 | `spread` | number, seconds | Half of `every`, except `sweep`. | 0 or more. |
@@ -182,9 +182,10 @@ The tables of sections 6.4–6.9 give the other keys of each effect.
 - An `at` that is not a point, a rectangle or an array of 1–64 points; a coordinate 0;
   a width or a height less than 1. The coordinates are integers.
 - `at` of the kind that the effect does not take (sections 6.4–6.9).
-- `in` with an art that the screen and its fragments do not insert, in a screen set
+- `in` with an art or a fragment that the screen and its fragments do not insert or include, in a screen set
   ([session-language](session-language.md), section 6).
-- With `in`, a cell of the place that is not in the art grid, in a screen set.
+- With `in` of an art, a cell of the place that is not in the art grid, in a screen set.
+  A fragment has no such check: its rows depend on W and on the conditions.
 
 The errors have the positions of [screen-render](screen-render.md), section 3.1.
 The message starts with `effect <n>: `, the 1-based number of the effect.
@@ -193,19 +194,26 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
 
 - A "point" is `[col, row]`. A "rectangle" is `[col, row, width, height]`: its first cell is the point,
   then `width` columns to the right and `height` rows down. An array of points is `[[col, row], ...]`.
-- With `in`, the coordinates are in the art grid ([art-format](art-format.md), section 3) of the first insert
-  of that art on the shown page. The place moves with the art.
+- With `in` of an art, the coordinates are in the art grid ([art-format](art-format.md), section 3) of the first insert
+  of that art with a row on the shown page. The place moves with the art.
+- With `in` of a fragment, the coordinates are in the "fragment rows": the rows that the first include
+  of that fragment with a row on the shown page gives. These are all rows that the lines of the fragment give:
+  text rows, the rows of its includes and of its art, spacer rows and list rows. Column 1 is the left edge
+  of the screen area, and a row has W cells. Row 1 is the first fragment row. The place moves with the fragment.
+  The host cuts the place to the fragment rows. Example: `in = "_logo-80"` for `{>_logo-80}`.
 - Without `in`, the coordinates are in the shown page after the layout. Column 1 is the left edge
   of the screen area ([bbt-format](bbt-format.md), section 6.1). Row 1 is the first row of the page.
   A place can reach the margins and the fill rows: the host cuts it to the cells of the grid.
   These coordinates do not follow a text that wraps at another width. Use them on rows that do not wrap:
   a header, a corner or the key row.
 - A negative coordinate counts from the end: -1 is the last column or row of the art grid,
-  or of the screen area and of the page.
-- Without `at`, the place is the whole art of `in`, else all cells of the grid.
-- The "rectangle of a place" is the rectangle of `at`, the art grid or the grid, cut to the cells of the grid.
+  of the fragment rows or of the page. The last column of the fragment rows and of the page
+  is the last column of the screen area.
+- Without `at`, the place is the whole art or all fragment rows of `in`, else all cells of the grid.
+- The "rectangle of a place" is the rectangle of `at`, the art grid, the fragment rows or the grid,
+  cut to the fragment rows with `in` of a fragment, and to the cells of the grid.
 - A cell of a place that the page does not show is not in the place: a cut at W or at `term.cols`,
-  an art in a false block or on a page before a More row. A place without cells gives no events.
+  an art or a fragment in a false block or on a page before a More row. A place without cells gives no events.
 - Each point of an array of points is a place with its own events (section 6.3).
 - An effect never changes a slot cell or a cell of a grapheme of width 2. These cells are not in a place.
 
@@ -269,7 +277,7 @@ A star that is always visible and changes its grapheme.
 A star that appears and goes.
 
 - A point: at each event, the cell shows a random grapheme of `chars` for `time`.
-- A rectangle, or the whole art or grid without `at`: at each event, `count` random cells of the place
+- A rectangle, or the whole place without `at`: at each event, `count` random cells of the place
   show a random grapheme of `chars` for `time` each. When fewer cells can take a star, all of them take one.
 - With `over = false`, only an empty cell can take a star. With `over = true`, each cell of the place can.
   A cell with a star of this effect cannot take another.
@@ -432,7 +440,7 @@ The terminals show it in different ways:
 | Package | Content |
 |---|---|
 | `internal/bbt`, `internal/art` | The live mark in a field token and in an alias, the front matter `[fields]` and `[[effect]]`, and their checks. |
-| `internal/screen` | The live field in the model, the slot width and the slots of a page. The render marks the cells of each slot. |
+| `internal/screen` | The live field in the model, the slot width and the slots of a page. The render marks the cells of each slot and gives the first insert of each art and the first include of each fragment on a page. |
 | `internal/effect` | The places, the events, the layer of each effect and the mix. It has no I/O and takes the time and the random source as values. |
 | `internal/menu` | The ticks of section 4 and the frames of section 5. |
 | `internal/term` | The wait for a key with a deadline and the frame output of [telnet-term](telnet-term.md), section 7.5. |
@@ -446,8 +454,8 @@ The terminals show it in different ways:
 - A golden output of `velourbbs preview --keys` shows a live clock over two ticks.
 - A golden output shows each effect at three times at least, with the fixed seed: with `in` and without `in`,
   with a point, an array of points and a rectangle where the effect takes them.
-- A test covers a place in art that moves with the art, a negative coordinate, `over`, a slot cell
-  and a wide grapheme in a place.
+- A test covers a place in art and a place in a fragment that move with the art or the fragment,
+  a negative coordinate, `over`, a slot cell and a wide grapheme in a place.
 - A test covers the mix: an index 0–15, a VGA colour, an index 16–255, RGB and `default`.
 - A test covers the frame bytes of [telnet-term](telnet-term.md), section 7.5, and the 50 ms rule.
 - A test covers the line input on a live page: no frame during the input.
