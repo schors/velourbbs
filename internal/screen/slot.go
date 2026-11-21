@@ -113,7 +113,7 @@ func element(s string) (string, int, bool) {
 		if j < len(s) && '0' <= s[j] && s[j] <= '9' {
 			return "", 0, false
 		}
-		return s[:j], j, true // the digits and the separator
+		return s[:j], min(j, 10), true // the separator and the digits: the package time gives at most 9
 	}
 	for _, e := range elementWidths {
 		if strings.HasPrefix(s, e.text) {

@@ -413,7 +413,10 @@ func (s *scanner) field(pos screen.Pos, c string) {
 		f.Live, f.Layout = true, m.Layout
 	}
 	if lead+trail > 0 {
-		f.Width = utf8.RuneCountInString(c) + 2
+		f.Width = 2 // the braces
+		for _, w := range screen.Graphemes(c) {
+			f.Width += w
+		}
 	}
 	s.add(field{pos, f})
 }

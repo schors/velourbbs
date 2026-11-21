@@ -29,7 +29,8 @@ func TestLayoutWidth(t *testing.T) {
 		{"15:04:05.000", time.UTC, 12},
 		{"15:04:05.999999", time.UTC, 15},
 		{"15:04:05,9", time.UTC, 10},
-		{"05.0001", time.UTC, 7}, // "." and "00" are literal: a digit follows the run; "01" is the month
+		{".0000000000", time.UTC, 10}, // the package time gives at most 9 digits
+		{"05.0001", time.UTC, 7},      // "." and "00" are literal: a digit follows the run; "01" is the month
 		{"2006-01-02T15:04:05Z07:00", time.UTC, 25},
 		{"Z0700 Z07 Z070000 Z07:00:00", time.UTC, 27},
 		{"-0700 -07 -070000 -07:00:00 -07:00", time.UTC, 34},

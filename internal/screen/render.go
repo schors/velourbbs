@@ -241,6 +241,10 @@ type renderer struct {
 	fill   Fill
 	values map[Ref][]Grapheme
 	slots  []Slot // the slot of each Cell.Slot - 1, without its run (live-screen, section 3.1)
+	// seen is the cells of each slot in the rows so far, before the cut at the screen area.
+	// skips is the Slot.Skip of each run in the rows so far; pageSlots takes them in order.
+	seen  map[int32]int
+	skips []int
 
 	// The pages (section 6.4).
 	height  int // term.rows
@@ -549,7 +553,7 @@ func (r *renderer) rowText(segs []Seg, cur Style, env *Env, l *stretchLine) Styl
 		case Field:
 			gs, width, slot := r.fieldText(seg.Ref, env), seg.Width, int32(0)
 			if seg.Live {
-				gs, width, slot = r.live(seg, env)
+				gs, width, slot = r.live(seg, env, false)
 			}
 			if width > r.w {
 				full := FitValue(gs, width, seg.Right)
@@ -594,7 +598,7 @@ func (r *renderer) text(gs []Grapheme, style Style) {
 func (r *renderer) field(f Field, style Style) {
 	gs, width, slot := r.value(f.Ref), f.Width, int32(0)
 	if f.Live {
-		gs, width, slot = r.live(f, r.env)
+		gs, width, slot = r.live(f, r.env, false)
 	} else if width == 0 {
 		r.text(gs, style)
 		return
@@ -624,8 +628,9 @@ func (r *renderer) field(f Field, style Style) {
 
 // live gives the graphemes of the value of the live field f in env, the width of its slot
 // and a new mark of the slot (live-screen, section 3.1): the width of the token, else the largest width.
+// A slot in a text has at most W cells; a slot in art has the width of its token, and the cut at W cuts it.
 // bbs.time with a layout shows Session.Clock in the layout; a zero instant shows Session.Time.
-func (r *renderer) live(f Field, env *Env) ([]Grapheme, int, int32) {
+func (r *renderer) live(f Field, env *Env, art bool) ([]Grapheme, int, int32) {
 	var gs []Grapheme
 	if f.Layout != "" && !env.Session.Clock.IsZero() {
 		gs = CleanValue(env.Session.Clock.Format(f.Layout))
@@ -636,7 +641,10 @@ func (r *renderer) live(f Field, env *Env) ([]Grapheme, int, int32) {
 	if width == 0 {
 		width = env.slotWidth(f.Ref, f.Layout)
 	}
-	r.slots = append(r.slots, Slot{Width: min(width, r.w), Ref: f.Ref, Layout: f.Layout, Right: f.Right})
+	if !art { // a slot in a text is one word of at most W cells (bbt-format, section 6.3)
+		width = min(width, r.w)
+	}
+	r.slots = append(r.slots, Slot{Width: width, Ref: f.Ref, Layout: f.Layout, Right: f.Right})
 	return gs, width, int32(len(r.slots))
 }
 
@@ -680,7 +688,7 @@ func (r *renderer) artFields(a *Art, n int, cells Row, env *Env) Row {
 		own()
 		gs, slot := r.fieldText(f.Ref, env), int32(0)
 		if f.Live { // the slot has the width of the token (live-screen, section 3.1)
-			gs, _, slot = r.live(Field{Ref: f.Ref, Width: f.Width, Right: f.Right, Live: true, Layout: f.Layout}, env)
+			gs, _, slot = r.live(Field{Ref: f.Ref, Width: f.Width, Right: f.Right, Live: true, Layout: f.Layout}, env, true)
 		}
 		var value []Cell
 		for _, g := range FitValue(gs, f.Width, f.Right) {
@@ -843,12 +851,9 @@ func (r *renderer) page(rows []Row) Page {
 }
 
 // pageSlots gives the slots of rows: one for each run of cells with one mark (live-screen, section 3.1).
+// The rows come from row, in order.
 func (r *renderer) pageSlots(rows []Row) []Slot {
-	if len(r.slots) == 0 {
-		return nil
-	}
 	var out []Slot
-	seen := map[int32]int{} // the cells of each slot in the runs before
 	for i, row := range rows {
 		last := int32(0)
 		for j, c := range row {
@@ -858,11 +863,9 @@ func (r *renderer) pageSlots(rows []Row) []Slot {
 				out[len(out)-1].Cells++
 			default:
 				s := r.slots[c.Slot-1]
-				s.Row, s.Col, s.Skip, s.Cells = i, j, seen[c.Slot], 1
+				s.Row, s.Col, s.Skip, s.Cells = i, j, r.skips[0], 1
+				r.skips = r.skips[1:]
 				out = append(out, s)
-			}
-			if c.Slot != 0 {
-				seen[c.Slot]++
 			}
 			last = c.Slot
 		}
@@ -880,6 +883,19 @@ func (r *renderer) row(cells []Cell) Row {
 	n := copy(row, cells)
 	if n < len(cells) && n > 0 && cells[n].Grapheme == "" {
 		row[n-1].Grapheme = " "
+	}
+	last := int32(0)
+	for i, c := range cells { // the runs of the slots: a cut cell counts for the run after it
+		if c.Slot != 0 {
+			if c.Slot != last && i < n {
+				r.skips = append(r.skips, r.seen[c.Slot])
+			}
+			if r.seen == nil {
+				r.seen = map[int32]int{}
+			}
+			r.seen[c.Slot]++
+		}
+		last = c.Slot
 	}
 	return row
 }

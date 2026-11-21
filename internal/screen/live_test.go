@@ -78,6 +78,8 @@ func TestSlots(t *testing.T) {
 		// A slot wider than W has the width W. A cut at term.cols cuts the slot.
 		{"wider than W", "{bbs.time live}", 10, 40, `0:0 10 0+10 bbs.time "2006-01-02"`},
 		{"cut", strings.Repeat("x", 20) + "{bbs.time live}", 40, 30, `0:20 19 0+10 bbs.time "2006-01-02"`},
+		// The cells that the cut at term.cols hides count for the run on the next row.
+		{"cut and long word", strings.Repeat("x", 30) + "{bbs.time live}", 40, 20, `1:0 19 10+9 bbs.time " 15:04:05"`},
 		{"block", "{#if term.cols > 1}{bbs.uptime live}{/if}x", 40, 40, `0:0 14 0+14 bbs.uptime "00:00:00      "`},
 	}
 	for _, tt := range tests {
@@ -144,5 +146,29 @@ func TestFileSlots(t *testing.T) {
 	want := `0:0 14 0+14 bbs.uptime "00:00:00      "; 3:0 2 0+2 bbs.sessions "1 "`
 	if got := showSlots(p); got != want {
 		t.Errorf("got  %s\nwant %s", got, want)
+	}
+}
+
+// A slot that a long word breaks over two pages keeps its offset on the second page.
+func TestSlotPages(t *testing.T) {
+	s := loadLive(t, map[string]string{"main.bbt": strings.Repeat("l\n", 8) + "ab{bbs.time live}\nz\n"}, "main", 20)
+	var got []string
+	for p := range screen.Render(s, liveEnv(20, 10), theme, "-- More --") {
+		got = append(got, showSlots(p))
+	}
+	want := []string{`8:2 19 0+18 bbs.time "2006-01-02 15:04:0"`, `0:0 19 18+1 bbs.time "5"`}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Errorf("got  %q\nwant %q", got, want)
+	}
+}
+
+// A slot in art has the width of its token also when the token is wider than W: the cut at W cuts it.
+func TestArtSlotCut(t *testing.T) {
+	s := loadLive(t, map[string]string{"main.bbt": "{>a.ans}\n", "a.ans": sauceArt("{    bbs.sessions live}", 30)}, "main", 20)
+	for p := range screen.Render(s, liveEnv(40, 24), theme, "-- More --") {
+		want := `0:0 23 0+20 bbs.sessions "                    "`
+		if got := showSlots(p); got != want {
+			t.Errorf("got  %s\nwant %s", got, want)
+		}
 	}
 }

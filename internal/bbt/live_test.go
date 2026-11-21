@@ -14,6 +14,7 @@ func TestLiveTokens(t *testing.T) {
 		{"{bbs.uptime live    }", `{bbs.uptime:21 live} /`},
 		{"{    bbs.sessions live}", `{bbs.sessions:23R live} /`},
 		{`{bbs.time live "Jan 2 15:04" }`, `{bbs.time:30 live "Jan 2 15:04"} /`},
+		{`{bbs.time live "年" }`, `{bbs.time:21 live "年"} /`}, // the width of the token in cells
 		// An alias holds the mark. The mark on another field gives no slot.
 		{"{clock}", `{bbs.time live "15:04:05"} /`},
 		{"{clock   }", `{bbs.time:10 live "15:04:05"} /`},
