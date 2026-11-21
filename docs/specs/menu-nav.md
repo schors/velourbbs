@@ -4,7 +4,8 @@ This specification defines the key match, the navigation of a session,
 the menu checks between screens of `velourbbs check` and the key sequences of `velourbbs preview`.
 [bbt-format](bbt-format.md), section 8, defines the menu items and the keys.
 Related parts: [screens-toml](screens-toml.md), [screen-render](screen-render.md), [file-view](file-view.md),
-[list-view](list-view.md), [session-language](session-language.md) and [telnet-term](telnet-term.md).
+[list-view](list-view.md), [session-language](session-language.md), [live-screen](live-screen.md)
+and [telnet-term](telnet-term.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -131,6 +132,7 @@ shows `main`. From `reader`, `top` shows `main`. From `reader`, `goto main` give
   6. After the last page, wait for keys and match them (section 3.3).
 - Keys that arrive during a render stay in the input queue. A More row uses the next key
   of the queue.
+- While the shown page waits for keys, the ticks and the effects of [live-screen](live-screen.md) run.
 - A screen whose items are all disabled and that has no `ANY` item ignores all keys.
   The idle timeout of [telnet-term](telnet-term.md) ends such a session.
 - A hangup or the idle timeout ends the session at once, without `goodbye`.
@@ -176,7 +178,8 @@ The current list page and the cursor are the page and the cursor of the top fram
    - A `page` action or a cursor move to another list page ([list-view](list-view.md), section 8)
      continues at step 3. A `theme` action continues at step 3.
    - A cursor move on the same list page renders the page with the values of step 3
-     and updates it ([telnet-term](telnet-term.md), section 7.1). Continue at step 4.
+     and updates it ([telnet-term](telnet-term.md), section 7.5). Continue at step 4.
+     On a live page, the values are the values of the last tick ([live-screen](live-screen.md), section 4).
    - Each other action leaves the screen.
 
 ### 5.4. Ask
@@ -293,6 +296,7 @@ It is the test harness for the navigation.
   of [bbt-format](bbt-format.md), section 8.1, except `ANY`, or one other printable character
   except the comma and the space.
   Example: `S,ы,ESC,G`. An empty list is valid.
+  An element `+<duration>` is a wait, not a key ([live-screen](live-screen.md), section 7). Example: `S,+2s,G`.
 - `<name>` must be a valid start screen (section 6), except the rule on arguments.
   Else it is an invalid argument. The session starts with one frame: this screen.
   `--set arg.<name>` gives the arguments of the screen ([screen-render](screen-render.md), section 3.2).
@@ -304,6 +308,7 @@ It is the test harness for the navigation.
   - the cell dump of the page, after a `page` action or a `theme` action in a file screen
     or a list screen, and after a cursor move in a list screen;
   - `key <key>` before each key. `key <key> ignored` for an ignored key;
+  - `wait <duration>` and the grid dump after each wait ([live-screen](live-screen.md), section 7);
   - `logoff` when an item runs `logoff`. The pages of `goodbye` follow it;
   - `ask` and the cell dump of the page with the ask row, when an item with `ask` runs
     (section 5.4);
@@ -354,8 +359,10 @@ page 1 80x25 fill none
 - The model (`screen.Item`) holds the key in upper case and the parsed action.
   `internal/screen` uses `internal/key` for the case rule of `item.<KEY>`.
 - The terminal interface gives the size and the keys, shows a page and updates a page
-  (section 5.3).
-  The wait for a key takes the context of the session ([session](session.md), section 6).
+  (section 5.3, [live-screen](live-screen.md), section 5).
+  The wait for a key takes the context of the session ([session](session.md), section 6)
+  and a deadline: the time of the next frame of a live page ([live-screen](live-screen.md), section 5).
+  At the deadline, it gives no key.
   `velourbbs preview` and telnet-term give its implementations.
 - The terminal interface also reads a line with the line input (section 5.4,
   [line-input](line-input.md), section 8).

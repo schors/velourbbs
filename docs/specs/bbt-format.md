@@ -3,7 +3,8 @@
 This specification defines the BBT files and the layout of a screen.
 Related parts: [art-format](art-format.md), [screens-toml](screens-toml.md),
 [bbs-toml](bbs-toml.md), [screen-render](screen-render.md), [menu-nav](menu-nav.md),
-[file-view](file-view.md), [list-view](list-view.md), [session-fields](session-fields.md) and [telnet-term](telnet-term.md).
+[file-view](file-view.md), [list-view](list-view.md), [session-fields](session-fields.md), [live-screen](live-screen.md)
+and [telnet-term](telnet-term.md).
 
 The [BBT guide](bbt-guide.md) teaches this specification. Keep the guide in sync:
 [bbt-guide](bbt-guide.md), section 3.
@@ -68,6 +69,7 @@ The front matter is TOML 1.1. An unknown key is an error.
 | `gutter` | integer | The cells that the render width leaves on each side of the screen area, from 0 to 100. Section 6.1. |
 | `file`, `lines`, `numbers`, `margin` | — | The file of a file screen: [file-view](file-view.md), section 3. |
 | `data`, `rows`, `select` | — | The list of a list screen: [list-view](list-view.md), section 3. |
+| `live`, `[[effect]]` | — | The ticks and the effects of the shown page: [live-screen](live-screen.md), section 3. |
 | `[[item]]` | array of tables | Menu items with `key`, `do` and the optional keys of section 8.2. Section 8. An array of inline tables is the same: `item = [{ key = "G", do = "logoff" }]`. |
 
 Example:

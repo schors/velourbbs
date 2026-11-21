@@ -3,7 +3,7 @@
 This specification defines the telnet server, the detection of the terminal at connect,
 the output of pages, the key decoder and the connection limits.
 Related parts: [bbt-format](bbt-format.md), [bbs-toml](bbs-toml.md), [screen-render](screen-render.md),
-[menu-nav](menu-nav.md) and [line-input](line-input.md).
+[menu-nav](menu-nav.md), [line-input](line-input.md) and [live-screen](live-screen.md).
 
 ## 1. Goal
 
@@ -315,9 +315,7 @@ The host shows a page ([menu-nav](menu-nav.md), section 5) in this order:
    - a fill row with `fill = "spaces"`: `ESC[<row>;1H`, then `term.cols` spaces in `normal`.
 3. `ESC[0m ESC[?2026l`: reset the style and end the synchronized output.
 
-- An update of a page ([menu-nav](menu-nav.md), section 5.3) has the same steps,
-  without the clear of step 1 and without the fill rows. Step 2 sends only each row
-  whose cells differ from the row of the shown page.
+- An update of a page has its own steps (section 7.5).
 - With the synchronized output (mode 2026), the terminal shows the page at once, not row
   by row. The host sends it without a query. A terminal without the mode ignores it.
 - A wide grapheme appears once. Its second cell gives no output.
@@ -381,6 +379,35 @@ after the last cell of the grapheme.
     terminal row overwrites the wrapped part. A fill row with `fill = "erase"` has no output,
     so the part stays there. On the last terminal row, the wrap scrolls the page.
   - When no cell follows the grapheme, a narrow terminal leaves the last cell empty.
+
+### 7.5. Update
+
+An update shows a new grid ([live-screen](live-screen.md), section 2) in place of the grid
+of the last page or update: a cursor move in a list screen ([menu-nav](menu-nav.md), section 5.3)
+and each frame of a live page ([live-screen](live-screen.md), section 5).
+The host sends it in this order:
+
+1. `ESC[?2026h ESC[?25l`: start the synchronized output and hide the cursor.
+2. For each terminal row from the top, for each run of the row: `ESC[<row>;<col>H`,
+   then the cells of the run.
+3. `ESC[0m`, `ESC[<row>;<col>H` to the cursor place, `ESC[?25h ESC[?2026l`.
+
+- A "run" starts and ends at a cell that differs from the shown grid. Two runs with at most
+  3 equal cells between them are one run. Then each run grows until these rules hold:
+  - a run that starts or ends in a grapheme of width 2 takes the whole grapheme;
+  - a run that starts directly after a grapheme of more than one code point takes that grapheme.
+    A terminal that shows the grapheme wide uses the next cell for it;
+  - a run that ends with a grapheme of more than one code point takes the next cell of the row, if there is one.
+    The re-sync of section 7.4 writes a space over that cell.
+- The styles have the rule of section 7.2. Before the first cell of step 2, the style is `default`
+  colours without attributes. A cell of a fill row with `fill = "none"` is a space in this style.
+- The encoder of section 7.4 writes the cells, with the re-sync.
+- The "cursor place" is the place where the last page leaves the cursor: the last terminal row
+  that the page writes, at the column `term.cols`. When the page writes no row, it is row 1, column 1.
+- An update without a changed cell sends nothing.
+- PuTTY 0.83, Tera Term, xterm and tmux before 3.7 have no mode 2026. They show the cells
+  as they arrive. The hidden cursor does not run over the screen.
+- In a terminal without bce, a changed cell of a fill row with `fill = "erase"` gets the background of `normal`.
 
 ## 8. Key decoder
 
@@ -518,7 +545,7 @@ The keys of `[telnet]` and `[limits]` are in [bbs-toml](bbs-toml.md), sections 3
 
 ### 9.4. Output
 
-- The host writes each page in one write. A write that does not complete within
+- The host writes each page and each update (section 7.5) in one write. A write that does not complete within
   `output_timeout` ends the session.
 
 ## 10. Command
@@ -573,7 +600,7 @@ At SIGINT or SIGTERM, the host does these steps:
 | Package | Content |
 |---|---|
 | `internal/telnet` | The telnet parser, the option states and the subnegotiations. |
-| `internal/term` | The probe, the encoder, the colour reduction, the key decoder, the paste, the draw of the line input, the terminal of [menu-nav](menu-nav.md), section 8, and the line form of [screen-render](screen-render.md), section 3.7. |
+| `internal/term` | The probe, the encoder, the colour reduction, the key decoder, the paste, the draw of the line input, the update of section 7.5, the terminal of [menu-nav](menu-nav.md), section 8, and the line form of [screen-render](screen-render.md), section 3.7. |
 | `internal/server` | The listener, the limits, the PROXY protocol header and the sessions. |
 
 - `cmd/velourbbs` loads the model ([session](session.md), section 3) and gives it to `internal/server`.

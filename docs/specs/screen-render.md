@@ -4,7 +4,7 @@ This specification defines the screen model, the render and the commands
 `velourbbs check` and `velourbbs preview`.
 Related parts: [bbt-format](bbt-format.md), [art-format](art-format.md), [bbs-toml](bbs-toml.md),
 [screens-toml](screens-toml.md), [menu-nav](menu-nav.md), [file-view](file-view.md), [list-view](list-view.md),
-[session-fields](session-fields.md) and [telnet-term](telnet-term.md).
+[session-fields](session-fields.md), [live-screen](live-screen.md) and [telnet-term](telnet-term.md).
 
 ## 1. Goal
 
