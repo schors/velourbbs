@@ -32,6 +32,8 @@ type Screen struct {
 	FileScreen *FileSpec
 	// List is the list of a list screen (list-view, section 3), else nil.
 	List *ListSpec
+	// Effects holds the [[effect]] tables of the front matter in source order (live-screen, section 6).
+	Effects []Effect
 	// Front is the root table of the front matter. It gives the positions of the errors
 	// of its keys in File (screen-render, section 3.1).
 	Front tomlcheck.Place

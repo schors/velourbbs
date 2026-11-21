@@ -144,6 +144,9 @@ func Map(data []byte) (map[string]any, []Error) {
 // go-toml reports the other unknown keys.
 func exact(t reflect.Type, m map[string]any, at Place, path []string, errs *[]Error) {
 	t = deref(t)
+	if t.Kind() != reflect.Struct { // a map takes each key
+		return
+	}
 	errorf := func(at Place, format string, args ...any) {
 		pos := at.Key()
 		*errs = append(*errs, Error{pos.Line, pos.Col, fmt.Sprintf(format, args...)})
@@ -178,9 +181,13 @@ func exact(t reflect.Type, m map[string]any, at Place, path []string, errs *[]Er
 	}
 }
 
-// isTables reports whether t is a slice of structs: an array of tables.
+// isTables reports whether t is a slice of structs or of maps: an array of tables.
 func isTables(t reflect.Type) bool {
-	return t.Kind() == reflect.Slice && deref(t.Elem()).Kind() == reflect.Struct
+	if t.Kind() != reflect.Slice {
+		return false
+	}
+	k := deref(t.Elem()).Kind()
+	return k == reflect.Struct || k == reflect.Map
 }
 
 // syntaxError converts an error of the decode of data into a map.
@@ -307,9 +314,13 @@ func describe(t reflect.Type) string {
 		return "a string"
 	case reflect.Int64:
 		return "an integer"
+	case reflect.Float64:
+		return "a number"
+	case reflect.Bool:
+		return "a boolean"
 	case reflect.Slice:
 		switch deref(t.Elem()).Kind() {
-		case reflect.Struct:
+		case reflect.Struct, reflect.Map:
 			return "an array of tables"
 		case reflect.String:
 			return "an array of strings"

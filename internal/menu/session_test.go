@@ -148,12 +148,12 @@ func (f *fakeTerm) Update(p screen.Page) error {
 	return nil
 }
 
-// rowsText gives the text of the rows of p without the trailing spaces, separated with "|".
+// rowsText gives the text of the rows of p with its layer, without the trailing spaces, separated with "|".
 func rowsText(p screen.Page) string {
 	var rows []string
-	for i := range p.Rows {
+	for _, r := range p.Grid()[p.Top : p.Top+len(p.Rows)] {
 		var row strings.Builder
-		for _, c := range p.Line(i, nil) {
+		for _, c := range r {
 			row.WriteString(c.Grapheme)
 		}
 		rows = append(rows, strings.TrimRight(row.String(), " "))

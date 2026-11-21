@@ -99,6 +99,7 @@ func (l *loader) screen(u *unit) {
 	u.s.Layout = u.fr.layout.Over(l.st.Layout)
 	u.s.FileScreen = u.fr.file
 	u.s.List = u.fr.list
+	u.s.Effects = u.fr.effects
 	u.s.Front = u.fr.at
 	u.s.Body = l.resolve(u, u.f.body, true)
 	if u.over { // the body of a screen over the limit is not kept
@@ -128,6 +129,7 @@ func (l *loader) screen(u *unit) {
 			l.literalRows(u, ls)
 		}
 	}
+	l.checkEffects(u)
 	u.s.Items = u.fr.items
 	for i, it := range u.s.Items {
 		// The free cells of the prompt at W = min: the cells after it, minus 1 (section 8.6).
@@ -146,6 +148,68 @@ func (l *loader) screen(u *unit) {
 	}
 	u.s.Args = slices.Sorted(maps.Keys(u.args))
 	u.done = !u.f.skip
+}
+
+// checkEffects checks the key in of each effect of the screen against its art inserts
+// (live-screen, section 6.1): the screen and its fragments insert the art, and each cell
+// of the place is in the art grid.
+func (l *loader) checkEffects(u *unit) {
+	if len(u.s.Effects) == 0 {
+		return
+	}
+	arts := map[string]*screen.Art{}
+	insertedArts(u.s.Body, arts)
+	for i, e := range u.s.Effects {
+		if e.In == "" {
+			continue
+		}
+		at := u.s.Front.At("effect").Elem(i)
+		a := arts[e.In]
+		if a == nil {
+			l.errorf(u, filePos(u.f.name, at.At("in").Value()), false,
+				"effect %d: in: the screen does not insert art %q", i+1, e.In)
+			continue
+		}
+		if !inArt(e.At, a) {
+			l.errorf(u, filePos(u.f.name, at.At("at").Value()), false,
+				"effect %d: at: a cell is not in the art grid of %q, %dx%d", i+1, e.In, a.Width, a.Height)
+		}
+	}
+}
+
+// insertedArts adds the art of each art insert of segs to arts, by its name.
+func insertedArts(segs []screen.Seg, arts map[string]*screen.Art) {
+	for _, s := range segs {
+		switch s := s.(type) {
+		case screen.ArtInsert:
+			arts[s.Name] = s.Art
+		case screen.If:
+			insertedArts(s.Then, arts)
+			insertedArts(s.Else, arts)
+		case screen.Include:
+			insertedArts(s.Body, arts)
+		case screen.ListLine:
+			insertedArts(s.Row, arts)
+		}
+	}
+}
+
+// inArt reports whether each cell of the place at is in the art grid of a (live-screen, section 6.2).
+func inArt(at screen.At, a *screen.Art) bool {
+	in := func(c, n int) (int, bool) { // the coordinate c from 1 in the size n
+		if c < 0 {
+			c += n + 1
+		}
+		return c, c >= 1 && c <= n
+	}
+	for _, p := range at.Points {
+		col, okCol := in(p.Col, a.Width)
+		row, okRow := in(p.Row, a.Height)
+		if !okCol || !okRow || col+max(at.Width, 1)-1 > a.Width || row+max(at.Height, 1)-1 > a.Height {
+			return false
+		}
+	}
+	return true
 }
 
 // addArgs adds the argument names to the screen. It skips "", the name of a field that is not an argument.
@@ -377,6 +441,9 @@ func (l *loader) checkItems(units []*unit) {
 		}
 		if end && u.s.List != nil {
 			l.errorf(u, u.keyPos("data"), false, "data: the %s screen cannot be a list screen", u.s.Name)
+		}
+		if end && len(u.s.Effects) > 0 { // live-screen, section 6.1
+			l.errorf(u, u.keyPos("effect"), false, "effect 1: the %s screen cannot have effects", u.s.Name)
 		}
 		keys := map[string]bool{}
 		for _, it := range u.s.Items {

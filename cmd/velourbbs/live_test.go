@@ -90,3 +90,23 @@ func TestClockValues(t *testing.T) {
 		t.Errorf("clockValues = %+v", got)
 	}
 }
+
+// The effects twinkle and candle of live-screen, sections 6.4 and 6.6, at three times with the fixed seed:
+// with in and without in, with a point, an array of points and a rectangle.
+// twinkle: a point on the page; an array of points in the art with colors, one of them
+// at the last cell of the art; a rectangle of the art with share 0.5.
+// candle: a point at the last column of the page; an array of points in the art; a rectangle
+// on the last row of the page with delay 1, which shows from the show.
+func TestEffects(t *testing.T) {
+	out, errOut, status := runIn(t, "effects", "check")
+	if out != "" || errOut != "" || status != 0 {
+		t.Errorf("check: stdout %q, stderr %q, status %d", out, errOut, status)
+	}
+	for _, name := range []string{"twinkle", "candle"} {
+		out, errOut, status := runIn(t, "effects", "preview", name, "--size", "40x10", "--keys", "+1s,+1s,+1s")
+		if errOut != "" || status != 0 {
+			t.Errorf("%s: stderr %q, status %d", name, errOut, status)
+		}
+		golden(t, filepath.Join("testdata", "effects", name+"-40x10.dump"), out)
+	}
+}

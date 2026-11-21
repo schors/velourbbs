@@ -169,7 +169,7 @@ The tables of sections 6.4–6.9 give the other keys of each effect.
 
 - A "grapheme string" (`chars`) has 1–32 graphemes of width 1 and no control character.
 - A "colour value" (`colors`, `peak`) is a value of a theme style ([screens-toml](screens-toml.md), section 3.2):
-  a style or the name of a theme style. The host takes its foreground in the session theme.
+  a style with a foreground or the name of a theme style. The host takes its foreground in the session theme.
   So a light table can give another colour.
 
 `velourbbs check` ([screen-render](screen-render.md), section 3.1) reports these errors:
@@ -219,7 +219,7 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
 - The events of one place can overlap. On a cell of two events, the event that started later wins.
   At the end of an event, its cells show the other events or the cell before the effect.
 - An event that finds no cell changes nothing and takes no random values.
-  The next events start as before.
+  The next events start as before: d takes its random value.
 - Each effect takes the cell after the earlier effects: its grapheme, and its foreground for the mix.
   An event takes its cells at its start, from the grid after the earlier effects.
   The stars of a `twinkle` rectangle are the exception: they come from the base at the show.
@@ -227,6 +227,9 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
 - "Rounded" is rounded half up. The host takes the random cells of one event as different cells.
 - Each session has its own random source: the generator PCG of the Go package `math/rand/v2`
   with a random seed. `velourbbs preview` takes a fixed seed (section 7).
+- The events take the random values in the order of their starts: at one time, the earlier effect first,
+  then the earlier place. At the show, each effect in order takes the values of the show, then the d
+  of the first event of each place. An event takes its values, then the d of the next event.
 
 The "mix" of a cell with a colour P at an amount a, from 0 to 1, gives the foreground
 `C + (P - C) × a` for each RGB channel, rounded to the nearest integer. C is the foreground of the cell:
@@ -248,7 +251,7 @@ A star that is always visible and changes its grapheme.
 - A point: from the show, the cell shows a star: its grapheme when it is a grapheme of `chars`,
   else the first grapheme of `chars`. At each event, the star changes to another grapheme of `chars`.
 - A rectangle: the stars are the cells of the rectangle with a grapheme of `chars`.
-  They show their grapheme until their first change. At each event, `share` of the stars, rounded,
+  Until its first change, a star shows the cell below it. At each event, `share` of the stars, rounded,
   but at least 1, change to another grapheme of `chars`.
 - The host takes the stars and the graphemes at random. A change stays until the next change of the star.
 

@@ -6,12 +6,14 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"math/rand/v2"
 	"net/netip"
 	"slices"
 	"time"
 
 	"github.com/schors/velourbbs/internal/bbs"
 	"github.com/schors/velourbbs/internal/config"
+	"github.com/schors/velourbbs/internal/effect"
 	"github.com/schors/velourbbs/internal/key"
 	"github.com/schors/velourbbs/internal/line"
 	"github.com/schors/velourbbs/internal/screen"
@@ -96,6 +98,7 @@ type Session struct {
 	choice config.ThemeChoice // the theme choice of the session
 	lang   string             // the session language (session-language, section 5)
 	stack  []*frame           // the navigation stack (section 4.1)
+	rng    *rand.Rand         // the random source of the effects (live-screen, section 6.3)
 }
 
 // New makes a session on the terminal t with the model m. It starts at the screen start
@@ -111,8 +114,13 @@ func New(m *bbs.Model, t Terminal, start string, args map[string]string, choice 
 	return &Session{
 		m: m, t: t, ev: ev, values: values, choice: choice, lang: lang,
 		stack: []*frame{{name: start, args: args, page: 1}},
+		rng:   rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())),
 	}
 }
+
+// Seed sets the seed of the random source of the effects (live-screen, section 6.3).
+// velourbbs preview sets (1, 2). Call it before Run.
+func (ss *Session) Seed(a, b uint64) { ss.rng = rand.New(rand.NewPCG(a, b)) }
 
 // Lang gives the session language.
 func (ss *Session) Lang() string { return ss.lang }
@@ -233,7 +241,11 @@ func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 		if err != nil {
 			return screen.Item{}, err
 		}
-		return ss.next(ctx, s, items, nil, ss.shown(p))
+		sh, err := ss.shown(s, p)
+		if err != nil {
+			return screen.Item{}, err
+		}
+		return ss.next(ctx, s, items, nil, sh)
 	}
 	if err := ss.ev.Screen(s.Name); err != nil {
 		return screen.Item{}, err
@@ -251,7 +263,11 @@ func (ss *Session) run(ctx context.Context, f *frame) (screen.Item, error) {
 		if err := ss.t.Page(p); err != nil {
 			return screen.Item{}, err
 		}
-		it, err := ss.next(ctx, s, items, nil, ss.shown(p))
+		sh, err := ss.shown(s, p)
+		if err != nil {
+			return screen.Item{}, err
+		}
+		it, err := ss.next(ctx, s, items, nil, sh)
 		if err != nil || !it.Do.Op.IsPage() && it.Do.Op != screen.Theme {
 			return it, err
 		}
@@ -282,7 +298,10 @@ func (ss *Session) runList(ctx context.Context, f *frame, v *listView) (screen.I
 		if err := ss.t.Page(p); err != nil {
 			return screen.Item{}, err
 		}
-		sh := ss.shown(p)
+		sh, err := ss.shown(v.s, p)
+		if err != nil {
+			return screen.Item{}, err
+		}
 		it, err := ss.next(ctx, v.s, items, moves, sh)
 		// A cursor move on the same list page updates the page. A cursor key has no action.
 		for err == nil && it.Do.Op == 0 && (it.Key == key.Up && c > v.first(n) || it.Key == key.Down && c < v.last(n)) {
@@ -293,7 +312,7 @@ func (ss *Session) runList(ctx context.Context, f *frame, v *listView) (screen.I
 			}
 			f.cursor = c
 			sh.move(v.move(c)) // the new base (live-screen, section 4)
-			if err = ss.t.Update(sh.base); err == nil {
+			if err = ss.t.Update(sh.grid(ss.t.Now())); err == nil {
 				it, err = ss.next(ctx, v.s, items, moves, sh)
 			}
 		}
@@ -550,23 +569,42 @@ const frameGap = 50 * time.Millisecond
 
 // shownPage is the shown page of a screen while it waits for keys (live-screen, sections 4 and 5).
 type shownPage struct {
+	s     *screen.Screen
 	base  screen.Page           // the base: the page with the slot values of the last tick
 	sv    *screen.SessionValues // the values of the last tick; nil before the first tick
 	tick  time.Time             // the time of the next tick
 	frame time.Time             // the time of the last frame
+	fx    *effect.Layer         // the layer of the effects of the screen, else nil
+	start time.Time             // the show time
 }
 
-// shown gives the shown page of the page p, which the terminal showed now (live-screen, section 5).
-func (ss *Session) shown(p screen.Page) *shownPage {
-	sh := &shownPage{base: p}
-	sh.show(ss.t.Now())
-	return sh
+// shown gives the shown page of the page p of the screen s, which the terminal showed now
+// (live-screen, section 5). It makes the frame of the show.
+func (ss *Session) shown(s *screen.Screen, p screen.Page) (*shownPage, error) {
+	sh := &shownPage{s: s, base: p}
+	return sh, ss.start(sh)
 }
 
-// show starts the ticks and the frames of a show at the time now. The frame of the show
-// sends the layer of the time 0: a page without effects has no layer, so the frame sends nothing.
-func (sh *shownPage) show(now time.Time) {
-	sh.tick, sh.frame = nextSecond(now), now
+// start starts the ticks, the effects and the frames of a show at the time of the clock.
+// The frame of the show sends the layer of the time 0: a page without effects has no layer.
+func (ss *Session) start(sh *shownPage) error {
+	now := ss.t.Now()
+	sh.tick, sh.frame, sh.start = nextSecond(now), now, now
+	if len(sh.s.Effects) == 0 {
+		return nil
+	}
+	theme := ss.m.Config.SessionTheme(ss.choice, ss.t.Term())
+	sh.fx = effect.New(sh.s.Effects, sh.base, theme, ss.rng)
+	return ss.t.Frame(sh.grid(now))
+}
+
+// grid gives the base with the layer of the time now (live-screen, section 5).
+func (sh *shownPage) grid(now time.Time) screen.Page {
+	p := sh.base
+	if sh.fx != nil {
+		p.Layer = sh.fx.Cells(now.Sub(sh.start), p.Grid())
+	}
+	return p
 }
 
 // nextSecond gives the whole second after now. It keeps the monotonic clock reading of now
@@ -583,13 +621,22 @@ func (sh *shownPage) move(p screen.Page) {
 	sh.base = p
 }
 
-// deadline gives the time of the next frame: the next tick, but at least frameGap after the last frame.
-// A page without a slot has no frame: the zero time.
+// deadline gives the time of the next frame: the next tick or the next event of an effect,
+// but at least frameGap after the last frame. A page without a tick and an event has no frame: the zero time.
 func (sh *shownPage) deadline() time.Time {
-	if len(sh.base.Slots) == 0 {
-		return time.Time{}
+	var next time.Time
+	if len(sh.base.Slots) > 0 {
+		next = sh.tick
 	}
-	return later(sh.tick, sh.frame.Add(frameGap))
+	if sh.fx != nil {
+		if d, ok := sh.fx.Next(); ok && (next.IsZero() || sh.start.Add(d).Before(next)) {
+			next = sh.start.Add(d)
+		}
+	}
+	if next.IsZero() {
+		return next
+	}
+	return later(next, sh.frame.Add(frameGap))
 }
 
 // later gives the later time of a and b.
@@ -611,14 +658,14 @@ func (ss *Session) key(ctx context.Context, sh *shownPage) (string, error) {
 			return k, err
 		}
 		now := ss.t.Now()
-		if !now.Before(sh.tick) {
+		if len(sh.base.Slots) > 0 && !now.Before(sh.tick) {
 			sv := ss.sessionValues()
 			sh.sv = &sv
 			sh.base = sh.base.Tick(sv)
 			sh.tick = nextSecond(now)
 		}
 		sh.frame = now
-		if err := ss.t.Frame(sh.base); err != nil {
+		if err := ss.t.Frame(sh.grid(now)); err != nil {
 			return "", err
 		}
 	}
@@ -663,6 +710,8 @@ func (ss *Session) next(ctx context.Context, s *screen.Screen, items map[string]
 			it.Do = it.Do.Input(text)
 			return it, nil
 		}
-		sh.show(ss.t.Now()) // the page shows again (live-screen, section 5)
+		if err := ss.start(sh); err != nil { // the page shows again (live-screen, section 5)
+			return screen.Item{}, err
+		}
 	}
 }

@@ -1,6 +1,9 @@
 package screen
 
-import "iter"
+import (
+	"iter"
+	"slices"
+)
 
 // MaxRenderRows is the row limit of a rendered screen (section 9).
 const MaxRenderRows = 10000
@@ -81,6 +84,12 @@ func RenderFile(s *Screen, env *Env, theme map[string]Style, file []Row, n int) 
 	}
 	p := r.page(rows[:min(len(rows), r.height)])
 	p.Num = n
+	p.Arts = r.artPlaces(func(row int) int { // the file rows come before the rows after the file area
+		if row >= split {
+			return row + len(file)
+		}
+		return row
+	}, len(p.Rows))
 	return p
 }
 
@@ -245,6 +254,7 @@ type renderer struct {
 	// skips is the Slot.Skip of each run in the rows so far; pageSlots takes them in order.
 	seen  map[int32]int
 	skips []int
+	arts  []artStart // the art inserts so far (live-screen, section 6.2)
 
 	// The pages (section 6.4).
 	height  int // term.rows
@@ -652,6 +662,7 @@ func (r *renderer) art(a ArtInsert) {
 	if r.layout != nil && a.Art.Width > r.area && r.area < r.widthMax {
 		r.layout.add(LayoutNote{Kind: LayoutArt, Pos: a.Pos, N: a.Art.Width, M: r.area, Art: a.Name})
 	}
+	r.arts = append(r.arts, artStart{name: a.Name, row: r.count, art: a.Art})
 	ls := a.Art.List
 	if r.env.List == nil {
 		ls = nil
@@ -838,10 +849,35 @@ func (r *renderer) start() Pos {
 // page gives the next page with rows and their slots.
 func (r *renderer) page(rows []Row) Page {
 	r.pages++
+	start := 0 // the rendered row of the first row of rows
+	if !r.frame {
+		start = r.count - len(r.rows)
+	}
 	return Page{
 		Num: r.pages, Rows: rows, Cols: r.cols, Height: r.height, Margin: r.margin, Normal: r.normal, Fill: r.fill,
-		Slots: r.pageSlots(rows),
+		Slots: r.pageSlots(rows), Area: r.area, Arts: r.artPlaces(func(n int) int { return n - start }, len(rows)),
 	}
+}
+
+// artStart is an art insert of the render: row is the rendered row of its first art row, from 0.
+type artStart struct {
+	name string
+	row  int
+	art  *Art
+}
+
+// artPlaces gives the first insert of each art with a row on a page of n rows (Page.Arts).
+// rowOf gives the row of the page of a rendered row.
+func (r *renderer) artPlaces(rowOf func(int) int, n int) []ArtPlace {
+	var out []ArtPlace
+	for _, a := range r.arts {
+		row := rowOf(a.row)
+		if row >= n || row+len(a.art.Rows) <= 0 || slices.ContainsFunc(out, func(p ArtPlace) bool { return p.Name == a.name }) {
+			continue
+		}
+		out = append(out, ArtPlace{Name: a.name, Row: row, Width: a.art.Width, Height: a.art.Height})
+	}
+	return out
 }
 
 // pageSlots gives the slots of rows: one for each run of cells with one mark (live-screen, section 3.1).
