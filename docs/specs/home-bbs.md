@@ -49,14 +49,15 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   The keys are at row 23 at 80x24 and 80x25 and at row 41 at 132x43.
 - The menus have the sections "Документация" / "Documentation" and "Устройство" / "Inside",
   and the screen `about`. The gem of Documentation is `emer`, of Inside `ameth`, of `about` `gold`.
-- Each screen except `main` has the header of the brandbook, section 2.
+- Each screen of a language has the header of the brandbook, section 2.
   The header of a section screen names both sections: the current section in `white`,
   the other `dim`. The header of the menu and of `about` has both sections `dim`.
   The signature line of the menu ends in `B B S`, of `about` in the gem `gold`.
 - The menu has the kicker "Меню" / "Menu" in `gold` above its items.
-- `main` has the logotype: `_logo-132` with `term.cols >= 132 and term.rows >= 43`, else `_logo-80`.
-  It has one `sweep` with `peak = "g0"` for each logotype fragment ([live-screen](live-screen.md),
-  section 6.8). The sweep has no `at`: the light runs over the letters and the signature line.
+- The common screens have the logotype: `_logo-132` with `term.cols >= 132 and term.rows >= 43`,
+  else `_logo-80`. `main` has one `sweep` with `peak = "g0"` for each logotype fragment
+  ([live-screen](live-screen.md), section 6.8). The sweep has no `at`: the light runs over the letters
+  and the signature line.
 - Each screen with a header has one `sweep` with `peak = "g0"` over the signature line:
   `at = [1, 3, 108, 1]`, `delay = 10`, `delay_spread = 8`, `every = 45` and `spread = 20`.
 - Each screen with a header ends its key row with `{clock}` in `dim`, flush with the right edge
