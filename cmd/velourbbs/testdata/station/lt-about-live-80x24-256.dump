@@ -1,7 +1,7 @@
 screen about
 page 1 80x24 fill spaces
 |                                                                                |
-|        V E L O U R      Dokumentacija    Sandara    Apie stotį                 |
+|        V E L O U R      Dokumentacija    Kūrimas    Apie stotį                 |
 |        ────────────────────────────────────────────────────────────── ■        |
 |                                                                                |
 |        ■  Apie stotį                                                           |
@@ -52,7 +52,7 @@ styles
 wait 2s
 grid 80x24
 |                                                                                |
-|        V E L O U R      Dokumentacija    Sandara    Apie stotį                 |
+|        V E L O U R      Dokumentacija    Kūrimas    Apie stotį                 |
 |        ────────────────────────────────────────────────────────────── ■        |
 |                                                                                |
 |        ■  Apie stotį                                                           |

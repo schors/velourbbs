@@ -18,46 +18,71 @@ spread = 20
 [[item]]
 key = "1"
 do = "gosub inside-read"
-args = { file = "inside/station.md", title = "Stotis" }
+args = { file = "inside/go.md", title = "Go ir bibliotekos" }
 [[item]]
 key = "2"
 do = "gosub inside-read"
-args = { file = "inside/development.md", title = "Kūrimas" }
+args = { file = "inside/connect.md", title = "Prisijungimas" }
 [[item]]
 key = "3"
 do = "gosub inside-read"
-args = { file = "inside/deploy.md", title = "Išleidimas" }
+args = { file = "inside/telnet.md", title = "Telnet" }
 [[item]]
 key = "4"
 do = "gosub inside-read"
-args = { file = "inside/tech.md", title = "Technologijos" }
+args = { file = "inside/probe.md", title = "Terminalo atpažinimas" }
 [[item]]
 key = "5"
 do = "gosub inside-read"
-args = { file = "inside/terminals.md", title = "Terminalai" }
+args = { file = "inside/output.md", title = "Išvestis ir įvestis" }
+[[item]]
+key = "6"
+do = "gosub inside-read"
+args = { file = "inside/screens.md", title = "Ekranai" }
+[[item]]
+key = "7"
+do = "gosub inside-read"
+args = { file = "inside/texts.md", title = "Tekstai ir menas" }
+[[item]]
+key = "8"
+do = "gosub inside-read"
+args = { file = "inside/data.md", title = "Duomenys" }
+[[item]]
+key = "9"
+do = "gosub inside-read"
+args = { file = "inside/deploy.md", title = "Išleidimas" }
+[[item]]
+key = "0"
+do = "gosub inside-read"
+args = { file = "inside/process.md", title = "Procesas" }
 [[item]]
 key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Dokumentacija{!}    {!white}Sandara{!}    {!dim}Apie stotį{!}
+  {!hi}V E L O U R{!}      {!dim}Dokumentacija{!}    {!white}Kūrimas{!}    {!dim}Apie stotį{!}
   {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
 
 {#if term.rows >= 43}
 
 {/if}
-  {!ameth}■{!gold}  Sandara{!}
+  {!ameth}■{!gold}  Kūrimas{!}
 
-  {!gold}1{!}  {!ameth}■{!}  {!ctl}Stotis{!} {!frame}{~.}{!} {!dim}Ekranai, tema, trys kalbos, testai{!}  
-  {!gold}2{!}  {!ameth}■{!}  {!ctl}Kūrimas{!} {!frame}{~.}{!} {!dim}DI modeliai, vartai ir peržiūros{!}  
-  {!gold}3{!}  {!ameth}■{!}  {!ctl}Išleidimas{!} {!frame}{~.}{!} {!dim}Žyma, surinkimas ir paleidimas serveryje{!}  
-  {!gold}4{!}  {!ameth}■{!}  {!ctl}Technologijos{!} {!frame}{~.}{!} {!dim}Go, savas telnet, efektai ir ANSI menas{!}  
-  {!gold}5{!}  {!ameth}■{!}  {!ctl}Terminalai{!} {!frame}{~.}{!} {!dim}Klientai, UTF-8 ir spalvos{!}  
+  {!gold}1{!}  {!ameth}■{!}  {!ctl}Go ir bibliotekos{!} {!frame}{~.}{!} {!dim}Kodėl Go, kas savo kodas ir kodėl{!}  
+  {!gold}2{!}  {!ameth}■{!}  {!ctl}Prisijungimas{!} {!frame}{~.}{!} {!dim}Prievadas, PROXY protocol ir ribos{!}  
+  {!gold}3{!}  {!ameth}■{!}  {!ctl}Telnet{!} {!frame}{~.}{!} {!dim}Parinktys, dydis ir terminalo tipas{!}  
+  {!gold}4{!}  {!ameth}■{!}  {!ctl}Terminalo atpažinimas{!} {!frame}{~.}{!} {!dim}Užklausos, atsakymai ir sprendimai{!}  
+  {!gold}5{!}  {!ameth}■{!}  {!ctl}Išvestis ir įvestis{!} {!frame}{~.}{!} {!dim}Langeliai, stiliai, kadrai, klavišai{!}  
+  {!gold}6{!}  {!ameth}■{!}  {!ctl}Ekranai{!} {!frame}{~.}{!} {!dim}BBT, tema, gyvas ekranas, kalbos{!}  
+  {!gold}7{!}  {!ameth}■{!}  {!ctl}Tekstai ir menas{!} {!frame}{~.}{!} {!dim}Markdown ir ANSI meno importas{!}  
+  {!gold}8{!}  {!ameth}■{!}  {!ctl}Duomenys{!} {!frame}{~.}{!} {!dim}JSON Lines ir failo rašymas{!}  
+  {!gold}9{!}  {!ameth}■{!}  {!ctl}Išleidimas{!} {!frame}{~.}{!} {!dim}Žyma, surinkimas ir paleidimas serveryje{!}  
+  {!gold}0{!}  {!ameth}■{!}  {!ctl}Procesas{!} {!frame}{~.}{!} {!dim}DI modeliai, vartai, peržiūros, testai{!}  
 
   {!dim}Pirminis kodas{!}  {!ctl}github.com/schors/velourbbs{!}
 {~}
 {>_foot}
-  {!hi}1 2 3 4 5{!} {!ctl}Atidaryti{!}    {!hi}Esc{!} {!ctl}Į skyrius{!}{~}{!dim}{clock}{!}  
+  {!hi}0-9{!} {!ctl}Atidaryti{!}    {!hi}Esc{!} {!ctl}Į skyrius{!}{~}{!dim}{clock}{!}  
 
 {#if term.rows >= 25}
 

@@ -24,7 +24,7 @@ key = "Q"
 do = "logoff"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Documentation    Inside    About the station{!}
+  {!hi}V E L O U R{!}      {!dim}Documentation   Development   About the station{!}
   {!gold}───────────{!frame}{~─}{!} {!gold}B B S{!}  
 
 {#if term.rows >= 43}
@@ -34,7 +34,7 @@ do = "logoff"
 
   {!gold}01{!} {!emer}■{!}  {!ctl}Documentation{!} {!frame}{~.}{!} {!dim}Guides and features of Velour{!}  
 
-  {!gold}02{!} {!ameth}■{!}  {!ctl}Inside{!} {!frame}{~.}{!} {!dim}How the station is made and why{!}  
+  {!gold}02{!} {!ameth}■{!}  {!ctl}Development{!} {!frame}{~.}{!} {!dim}How Velour works and why{!}  
 
   {!gold}03{!} {!gold}■{!}  {!ctl}About the station{!} {!frame}{~.}{!} {!dim}A little about the station{!}  
 {~}

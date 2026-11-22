@@ -30,10 +30,10 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Документация{!}    {!white}Устройство{!}    {!dim}О станции{!}
+  {!hi}V E L O U R{!}      {!dim}Документация{!}    {!white}Разработка{!}    {!dim}О станции{!}
   {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
 
-  {!ameth}■{!gold}  Устройство  ∙  {arg.title}{!}
+  {!ameth}■{!gold}  Разработка  ∙  {arg.title}{!}
 
   {!dim}{file.minutes} мин чтения{!}
 

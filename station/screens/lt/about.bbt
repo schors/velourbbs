@@ -20,7 +20,7 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Dokumentacija{!}    {!dim}Sandara{!}    {!white}Apie stotį{!}
+  {!hi}V E L O U R{!}      {!dim}Dokumentacija{!}    {!dim}Kūrimas{!}    {!white}Apie stotį{!}
   {!gold}───────────{!frame}{~─}{!} {!gold}■{!}  
 
 {#if term.rows >= 43}

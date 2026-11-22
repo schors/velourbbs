@@ -30,10 +30,10 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Dokumentacija{!}    {!white}Sandara{!}    {!dim}Apie stotį{!}
+  {!hi}V E L O U R{!}      {!dim}Dokumentacija{!}    {!white}Kūrimas{!}    {!dim}Apie stotį{!}
   {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
 
-  {!ameth}■{!gold}  Sandara  ∙  {arg.title}{!}
+  {!ameth}■{!gold}  Kūrimas  ∙  {arg.title}{!}
 
   {!dim}{file.minutes} min skaitymo{!}
 

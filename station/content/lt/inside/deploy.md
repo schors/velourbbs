@@ -1,36 +1,55 @@
 # Išleidimas
 
-Nauja stoties versija išleidžiama pagal žymą. Prižiūrėtojas įkelia žymą, pavyzdžiui `v0.1.0`,
-ant `main` komito. Visa kita atlieka GitHub Actions.
+## Ką daro
 
-## Surinkimas
+Nauja stoties versija išleidžiama pagal žymą. Prižiūrėtojas įkelia anotuotą žymą,
+pavyzdžiui `v0.1.0`, ant `main` komito. Visa kita atlieka GitHub Actions.
 
-Užduotis patikrina, ar žyma yra ant `main` komito. Tada ji paleidžia `go vet` ir testus
-ir surenka Velour sistemoms Linux, macOS ir Windows.
-Programos ir jų SHA-256 sumos patenka į GitHub Release.
+## Kaip
 
-## Pristatymas
+### Surinkimas
+
+1. Užduotis patikrina žymą: jos pavidalą ir tai, kad žymos komitas yra `main`.
+2. Ji paleidžia `go vet` ir testus.
+3. Ji surenka Velour su `CGO_ENABLED=0` platformoms linux/amd64, linux/arm64,
+   darwin/arm64 ir windows/amd64.
+4. `go version -m` patikrina, kad kiekvienoje programoje įrašyta ši žyma.
+5. Programos ir failas `SHA256SUMS` patenka į GitHub Release.
+   Leidimo tekstas - žymos anotacija.
+
+Užduotis naudoja tik `actions/checkout` ir `actions/setup-go`.
+Kiekvienas užfiksuotas pilnu komito SHA. Svetimų veiksmų SSH ir leidimams nėra:
+jie gautų SSH raktą.
+
+### Pristatymas
 
 Užduotis per SSH nusiunčia į serverį vieną archyvą: programą, katalogą `station/`,
-systemd vienetus ir diegimo scenarijų. Serverio adresas ir SSH raktas yra
-GitHub paslaptys. Užduoties žurnalas viešas, bet jame nėra paslapčių.
+systemd vienetus ir diegimo scenarijų. SSH raktas ir serverio adresas yra GitHub
+aplinkos paslaptys. Aplinka leidžia tik žymas `v*`.
 
-## Diegimas
+### Diegimas
 
-Scenarijus serveryje pirmiausia paleidžia `velourbbs check` naujai stočiai.
-Jei patikra randa klaidą, diegimas sustoja, o ankstesnė versija toliau veikia.
-Tada scenarijus nukreipia nuorodą `current` į naują versiją ir paleidžia tarnybą iš naujo.
+1. Scenarijus paleidžia `velourbbs check` naujai stočiai. Patikra skaito ir duomenų failą.
+   Klaida sustabdo diegimą, o ankstesnė versija toliau veikia.
+2. Jis padeda versiją į `releases/<žyma>/` ir nukreipia nuorodą `current` į ją.
+3. Jis paleidžia tarnybą iš naujo ir po 3 sekundžių patikrina, kad ji veikia.
+4. Jis palieka 3 naujausias versijas.
 
-Duomenų failas yra už versijų ribų ir išlieka po kiekvieno diegimo.
-Ekranas "Apie stotį" rodo žymą eilutėje "Velour versija".
-
-## Be prarastų ryšių
-
-Prievadą laiko systemd, ne Velour. Paleidžiant iš naujo prievadas lieka atviras:
-nauji ryšiai laukia eilėje, ir juos priima nauja versija.
+Prievadą laiko systemd vienetas `velourbbs.socket`, ne programa. Paleidžiant iš naujo
+prievadas lieka atviras: nauji ryšiai laukia eilėje, ir juos priima nauja versija.
 Atviri seansai parodo paleidimo iš naujo ekraną ir užsidaro.
 
-## Grąžinimas
+## Ką gauna
 
-Norėdamas grąžinti ankstesnę versiją, prižiūrėtojas iš naujo paleidžia jos vykdymą GitHub Actions.
-GitHub tai leidžia 30 dienų.
+- Versiją, kurią ekranas "Apie stotį" rodo eilutėje "Velour versija".
+- Viešą užduoties žurnalą: jame yra žingsniai ir rezultatas, bet nėra paslapčių.
+- Duomenų failą, kuris yra už versijų ribų ir išlieka po kiekvieno diegimo.
+
+## Ribos
+
+- Grąžinimas - ankstesnės versijos vykdymo pakartojimas GitHub Actions. GitHub tai leidžia 30 dienų.
+  Vėliau - revert `main` šakoje ir nauja žyma.
+- Po duomenų failo migracijos ankstesnė versija nepraeis patikros.
+  Tada reikia grąžinti tos versijos failo kopiją.
+- Tas, kas gali įkelti žymą `v*`, gali pakeisti ir užduotį. Rašyti į saugyklą
+  gali tik prižiūrėtojai.
