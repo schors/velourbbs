@@ -77,7 +77,8 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   the argument `title` in their kicker: the name of the guide, `Velour` for the features text,
   or the name of the text of Inside.
 - The screen `about` shows the repository address, the session and BBS fields
-  and each `term.*` value that the probe detects. `term.type` and `term.name` are
+  and each `term.*` value that the probe detects. `session.online`, `bbs.sessions`
+  and `bbs.uptime` are live fields ([live-screen](live-screen.md), section 3). `term.type` and `term.name` are
   fixed-width fields of 36 cells, so each of their rows fits the column of 64 cells
   and the screen fits 24 rows.
 - The station facts (the SysOp name, the address, the port) come from the operator.
