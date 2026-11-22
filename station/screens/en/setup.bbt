@@ -7,7 +7,7 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!white}Documentation{!}
+  {!hi}V E L O U R{!}      {!white}Documentation{!}    {!dim}Inside{!}
   {!gold}───────────{!frame}{~─}{!} {!emer}■{!}  
 
 {#if term.rows >= 43}

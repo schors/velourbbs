@@ -1,0 +1,36 @@
++++
+[[item]]
+key = "1"
+do = "gosub inside-read"
+args = { file = "inside/station.md", title = "Станция" }
+[[item]]
+key = "2"
+do = "gosub inside-read"
+args = { file = "inside/development.md", title = "Разработка" }
+[[item]]
+key = "3"
+do = "gosub inside-read"
+args = { file = "inside/deploy.md", title = "Выкладка" }
+[[item]]
+key = "ESC"
+do = "back"
++++
+
+  {!hi}V E L O U R{!}      {!dim}Документация{!}    {!white}Устройство{!}
+  {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
+
+{#if term.rows >= 43}
+
+{/if}
+  {!ameth}■{!gold}  Устройство{!}
+
+  {!gold}1{!}  {!ameth}■{!}  {!ctl}Станция{!} {!frame}{~.}{!} {!dim}Экраны, тема, два языка и тесты{!}  
+  {!gold}2{!}  {!ameth}■{!}  {!ctl}Разработка{!} {!frame}{~.}{!} {!dim}AI-модели, гейты и ревью{!}  
+  {!gold}3{!}  {!ameth}■{!}  {!ctl}Выкладка{!} {!frame}{~.}{!} {!dim}Тег, сборка и запуск на хосте{!}  
+{~}
+  {!frame}{~─}{!}  
+  {!hi}1 2 3{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}В меню{!}
+
+{#if term.rows >= 25}
+
+{/if}

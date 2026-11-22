@@ -58,7 +58,8 @@ func TestStation(t *testing.T) {
 	}
 	for _, size := range []string{"80x24", "132x43"} {
 		for _, screen := range []string{"main", "main-ambiguous", "goodbye", "shutdown", "ru-menu", "en-menu", "ru-about", "en-about",
-			"ru-docs", "en-docs", "ru-setup", "en-setup", "ru-bbt", "en-bbt", "ru-read", "en-read"} {
+			"ru-docs", "en-docs", "ru-setup", "en-setup", "ru-bbt", "en-bbt", "ru-read", "en-read",
+			"ru-inside", "en-inside", "ru-inside-read", "en-inside-read"} {
 			out.Reset()
 			errOut.Reset()
 			args := []string{"preview", screen, "--size", size, "--set", "term.colors=256"}
@@ -169,12 +170,22 @@ func TestStationItems(t *testing.T) {
 	}
 }
 
-// TestStationTitles checks the title of each item and select that opens a reading screen
-// (home-bbs, section 3): the name of the guide, or Velour for the features text.
+// readItem is an action that opens a reading screen.
+var readItem = regexp.MustCompile(`"gosub (inside-)?read"`)
+
+// TestStationTitles checks the title of each item and select that opens a reading screen,
+// in their order (home-bbs, section 3): the name of the guide, Velour for the features text,
+// or the name of the text of the section Inside.
 func TestStationTitles(t *testing.T) {
-	want := map[string]string{
-		"en/docs.bbt": "Velour", "en/setup.bbt": "Setup guide", "en/bbt.bbt": "BBT guide",
-		"ru/docs.bbt": "Velour", "ru/setup.bbt": "Руководство по установке", "ru/bbt.bbt": "Руководство по BBT",
+	want := map[string][]string{
+		"en/docs.bbt":   {"Velour"},
+		"en/setup.bbt":  {"Setup guide"},
+		"en/bbt.bbt":    {"BBT guide"},
+		"en/inside.bbt": {"Station", "Development", "Deploy"},
+		"ru/docs.bbt":   {"Velour"},
+		"ru/setup.bbt":  {"Руководство по установке"},
+		"ru/bbt.bbt":    {"Руководство по BBT"},
+		"ru/inside.bbt": {"Станция", "Разработка", "Выкладка"},
 	}
 	// The fragments have no front matter, so the test reads only the screens of a language.
 	files, err := filepath.Glob(filepath.Join("..", "..", "station", "screens", "[er][nu]", "*.bbt"))
@@ -190,15 +201,15 @@ func TestStationTitles(t *testing.T) {
 		for _, m := range titleArg.FindAllStringSubmatch(front, -1) {
 			titles = append(titles, m[1])
 		}
-		reads := strings.Count(front, `"gosub read"`)
+		reads := len(readItem.FindAllString(front, -1))
 		w := want[filepath.Base(filepath.Dir(file))+"/"+filepath.Base(file)]
-		if len(titles) != reads || reads > 0 && w == "" {
-			t.Errorf("%s: %d reading items, %d titles", file, reads, len(titles))
+		if len(titles) != reads || len(titles) != len(w) {
+			t.Errorf("%s: %d reading items, titles %q; want titles %q", file, reads, titles, w)
 			continue
 		}
-		for _, title := range titles {
-			if title != w {
-				t.Errorf("%s: title %q, want %q", file, title, w)
+		for i, title := range titles {
+			if title != w[i] {
+				t.Errorf("%s: title %q, want %q", file, title, w[i])
 			}
 		}
 	}

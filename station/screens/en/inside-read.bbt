@@ -1,0 +1,32 @@
++++
+file = "{arg.file}"
+margin = [2, 2]
+width = [68, 68]
+align = "left"
+[[item]]
+key = "B"
+do = "page prev"
+when = "file.page > 1"
+[[item]]
+key = "SPACE"
+do = "page next"
+when = "not file.last"
+[[item]]
+key = "ESC"
+do = "back"
++++
+
+  {!hi}V E L O U R{!}      {!dim}Documentation{!}    {!white}Inside{!}
+  {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
+
+  {!ameth}■{!gold}  Inside  ∙  {arg.title}{!}
+
+  {!dim}{file.minutes} min read{!}
+
+{>file}
+  {!frame}{#if file.pages == 1}{~─}{#else}{~─}{!dim}   {file.page}/{file.pages}   {!frame}{~─}{/if}{!}  
+  {#if item.B}{!hi}B{!} {!ctl}Back{!}    {/if}{#if item.SPACE}{!hi}Space{!} {!ctl}Next{!}{#else}          {/if}{#if not item.B}          {/if}{~}{!hi}Esc{!} {!ctl}To list{!}  
+
+{#if term.rows >= 25}
+
+{/if}
