@@ -43,8 +43,8 @@ taip pat keičiasi ryšio trukmė, atviri seansai ir stoties veikimo trukmė.
 
 Efektai animuoja ekrano dalis. Jų yra šeši: žvaigždės mirga, žvaigždės atsiranda ir dingsta,
 žvakė plazda, raidė sužiba, šviesa bėga eilute, trenkia žaibas.
-Ši stotis naudoja bėgančią šviesą `sweep`: ji bėga per logotipą įėjimo ekrane
-ir per liniją po meniu antrašte.
+Ši stotis naudoja bėgančią šviesą `sweep`: ji bėga per logotipą įėjimo ekrane,
+per antraštę su jos linija ir per liniją virš klavišų.
 Velour siunčia į terminalą tik pasikeitusias ekrano dalis, o tarp kadrų praeina ne mažiau kaip 50 ms.
 
 ## ANSI menas

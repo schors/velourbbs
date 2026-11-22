@@ -93,15 +93,16 @@ func TestStation(t *testing.T) {
 			t.Errorf("main-sweep %s: stderr %q, status %d", size, errOut.String(), status)
 		}
 		golden(t, filepath.Join("testdata", "station", "main-sweep-"+size+"-256.dump"), out.String())
-		// The sweep over the signature line of the header: the band, the glint at B B S, and the end.
+		// The sweeps of the header and of the footer hairline: the band on the hairline and its end,
+		// the band on the header row and the signature line, the glints at their ends, and the end.
 		out.Reset()
 		errOut.Reset()
-		args = []string{"preview", "menu", "--size", size, "--set", "term.colors=256", "--set", "session.lang=ru",
-			"--keys", "+14750ms,+500ms,+1500ms"}
+		args = []string{"preview", "docs", "--size", size, "--set", "term.colors=256", "--set", "session.lang=ru",
+			"--keys", "+12250ms,+500ms,+2000ms,+750ms,+1500ms"}
 		if status := run(args, t.TempDir(), fsys, &out, &errOut); errOut.Len() != 0 || status != 0 {
-			t.Errorf("ru-menu-sweep %s: stderr %q, status %d", size, errOut.String(), status)
+			t.Errorf("ru-docs-sweep %s: stderr %q, status %d", size, errOut.String(), status)
 		}
-		golden(t, filepath.Join("testdata", "station", "ru-menu-sweep-"+size+"-256.dump"), out.String())
+		golden(t, filepath.Join("testdata", "station", "ru-docs-sweep-"+size+"-256.dump"), out.String())
 		// The fields of about that change while the page is shown tick with the clock.
 		for _, lang := range stationLangs {
 			out.Reset()

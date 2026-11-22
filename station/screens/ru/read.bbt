@@ -5,7 +5,15 @@ width = [68, 68]
 align = "left"
 [[effect]]
 do = "sweep"
-at = [1, 3, 108, 1]
+at = [1, 2, 108, 2]
+peak = "g0"
+delay = 10
+delay_spread = 8
+every = 45
+spread = 20
+[[effect]]
+do = "sweep"
+in = "_foot-file"
 peak = "g0"
 delay = 10
 delay_spread = 8
@@ -24,7 +32,7 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!white}Документация{!}    {!dim}Устройство{!}
+  {!hi}V E L O U R{!}      {!white}Документация{!}    {!dim}Устройство{!}    {!dim}О станции{!}
   {!gold}───────────{!frame}{~─}{!} {!emer}■{!}  
 
   {!emer}■{!gold}  Документация  ∙  {arg.title}{!}
@@ -32,7 +40,7 @@ do = "back"
   {!dim}{file.minutes} мин чтения{!}
 
 {>file}
-  {!frame}{#if file.pages == 1}{~─}{#else}{~─}{!dim}   {file.page}/{file.pages}   {!frame}{~─}{/if}{!}  
+{>_foot-file}
   {#if item.B}{!hi}B{!} {!ctl}Назад{!}    {/if}{#if item.SPACE}{!hi}Пробел{!} {!ctl}Дальше{!}{#else}             {/if}{#if not item.B}           {/if}{~}{!hi}Esc{!} {!ctl}К списку{!}    {!dim}{clock}{!}  
 
 {#if term.rows >= 25}

@@ -99,7 +99,8 @@ On section screens the name is letter-spaced in bright gold (`hi`) in the header
 | Length | A name of n letters is 6n-1 pixels wide. With ` B B S`, up to 8 letters fit the big logotype (104 columns at 132) and up to 9 the small one (64 columns at 80). |
 | Clear space | One empty row between the logotype and its signature line, one more before anything else. |
 | Light | On the entry, a light runs once over the name and its signature line, from left to right, half a second after the screen shows. Its peak is `g0`. The last cell of each row glints when the light passes it. Nothing else moves on the logotype. |
-| Light in the header | On each screen with a header, the same light runs over the signature line of the header. The first run comes at a random moment 2 - 18 seconds after the screen shows, the next runs about each 25 - 65 seconds. |
+| Light in the header | On each screen with a header, the same light runs over the header and its signature line. The first run comes at a random moment 2 - 18 seconds after the screen shows, the next runs about each 25 - 65 seconds. |
+| Light in the footer | On each screen with a footer hairline, a second light runs only over the hairline, with the timing of the header light and its own random moments. |
 | Never | Frames around the name, outlines, colours other than the gold ramp, centring on section screens. |
 
 ## 3. Colour

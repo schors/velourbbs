@@ -1,7 +1,15 @@
 +++
 [[effect]]
 do = "sweep"
-at = [1, 3, 108, 1]
+at = [1, 2, 108, 2]
+peak = "g0"
+delay = 10
+delay_spread = 8
+every = 45
+spread = 20
+[[effect]]
+do = "sweep"
+in = "_foot"
 peak = "g0"
 delay = 10
 delay_spread = 8
@@ -12,7 +20,7 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Documentation    Inside{!}
+  {!hi}V E L O U R{!}      {!dim}Documentation{!}    {!dim}Inside{!}    {!white}About the station{!}
   {!gold}───────────{!frame}{~─}{!} {!gold}■{!}  
 
 {#if term.rows >= 43}
@@ -36,8 +44,8 @@ do = "back"
   {!dim}Background{!}          {#if term.background == ""}unknown{/if}{#if term.background == "dark"}dark, {term.bg_color}{/if}{#if term.background == "light"}light, {term.bg_color}{/if}
   {!dim}Cyrillic width{!}      {#if term.ambiguous == 2}2 cells{#else}1 cell{/if}
 {~}
-  {!frame}{~─}{!}  
-  {!hi}Esc{!} {!ctl}To menu{!}{~}{!dim}{clock}{!}  
+{>_foot}
+  {!hi}Esc{!} {!ctl}To sections{!}{~}{!dim}{clock}{!}  
 
 {#if term.rows >= 25}
 

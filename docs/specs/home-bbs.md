@@ -51,16 +51,23 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   and "Устройство" / "Inside" / "Sandara",
   and the screen `about`. The gem of Documentation is `emer`, of Inside `ameth`, of `about` `gold`.
 - Each screen of a language has the header of the brandbook, section 2.
-  The header of a section screen names both sections: the current section in `white`,
-  the other `dim`. The header of the menu and of `about` has both sections `dim`.
+  The header names the three items of the menu: the two sections and `about`
+  ("О станции" / "About the station" / "Apie stotį"). On a section screen and on `about`,
+  the current item is `white` and the others are `dim`. On the menu, all three are `dim`.
   The signature line of the menu ends in `B B S`, of `about` in the gem `gold`.
-- The menu has the kicker "Меню" / "Menu" / "Meniu" in `gold` above its items.
+- The menu has the kicker "Разделы" / "Sections" / "Skyriai" in `gold` above its items.
+  `Esc` of a screen that goes back to the menu is "К разделам" / "To sections" / "Į skyrius".
 - The common screens have the logotype: `_logo-132` with `term.cols >= 132 and term.rows >= 43`,
   else `_logo-80`. `main` has one `sweep` with `peak = "g0"` for each logotype fragment
   ([live-screen](live-screen.md), section 6.8). The sweep has no `at`: the light runs over the letters
   and the signature line.
-- Each screen with a header has one `sweep` with `peak = "g0"` over the signature line:
-  `at = [1, 3, 108, 1]`, `delay = 10`, `delay_spread = 8`, `every = 45` and `spread = 20`.
+- Each screen with a header has one `sweep` with `peak = "g0"` over the header row
+  and the signature line: `at = [1, 2, 108, 2]`, `delay = 10`, `delay_spread = 8`,
+  `every = 45` and `spread = 20`.
+- Each screen with a footer hairline includes it from a fragment: `_foot` for a bare line,
+  `_foot-list` with the page of a list, `_foot-file` with the page of a file.
+  The screen has a second `sweep` with `peak = "g0"`, `in` of that fragment and no `at`,
+  with the timing of the header sweep. The menu has no hairline.
 - Each screen with a header ends its key row with `{clock}` in `dim`, flush with the right edge
   of the column. On a file screen, `Esc` stays at the right: 4 spaces before the clock.
   `main` has no clock: its key row has no space for it at 80 columns.
@@ -114,9 +121,10 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - The test compares the output of `velourbbs preview main` with `--keys +750ms,+250ms,+500ms,+1500ms`
   at 80x24 and at 132x43 with 256 colours with its golden file
   `cmd/velourbbs/testdata/station/main-sweep-<size>-256.dump`. It shows the sweep over the logotype.
-- The test compares the output of `velourbbs preview menu --set session.lang=ru`
-  with `--keys +14750ms,+500ms,+1500ms` at 80x24 and at 132x43 with 256 colours with its golden file
-  `cmd/velourbbs/testdata/station/ru-menu-sweep-<size>-256.dump`. It shows the sweep over the signature line.
+- The test compares the output of `velourbbs preview docs --set session.lang=ru`
+  with `--keys +12250ms,+500ms,+2000ms,+750ms,+1500ms` at 80x24 and at 132x43 with 256 colours
+  with its golden file `cmd/velourbbs/testdata/station/ru-docs-sweep-<size>-256.dump`.
+  It shows the sweep over the footer hairline, then the sweep over the header row and the signature line.
 - The test compares the output of `velourbbs preview about --set session.lang=<lang>` with `--keys +2s`
   for each language at 80x24 and at 132x43 with 256 colours with its golden file
   `cmd/velourbbs/testdata/station/<lang>-about-live-<size>-256.dump`. It shows the ticks of the live fields.
