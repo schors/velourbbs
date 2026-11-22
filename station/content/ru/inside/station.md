@@ -6,7 +6,8 @@
 
 ## Файлы
 
-Вся станция - каталог `station/` в репозитории Velour. В нём нет кода, только файлы СисОпа:
+Вся станция - каталог `station/` в репозитории Velour:
+[github.com/schors/velourbbs](https://github.com/schors/velourbbs). В нём нет кода, только файлы СисОпа:
 
 - `bbs.toml` - имя BBS и путь к файлу данных;
 - `screens/` - экраны в формате BBT и `screens.toml` с темой;
