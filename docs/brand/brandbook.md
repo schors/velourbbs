@@ -12,12 +12,10 @@ The screens of this book and the ANSI files show the same text. Change both toge
 
 ```text
 
-        █   █ █▀▀▀▀ █     ▄▀▀▀▄ █   █ █▀▀▀▄
-        █   █ █▄▄▄  █     █   █ █   █ █▄▄▄▀
-        ▀▄ ▄▀ █     █     █   █ █   █ █ ▀▄
-          ▀   ▀▀▀▀▀ ▀▀▀▀▀  ▀▀▀   ▀▀▀  ▀   ▀
-
+        V E L O U R      Сообщения    Файлы    Тексты    Код    Блог
         ────────────────────────────────────────────────────────── B B S
+
+        ■  Меню
 
         01 ■  Сообщения ..................... Конференции и личная почта
 
@@ -30,6 +28,8 @@ The screens of this book and the ANSI files show the same text. Change both toge
         05 ■  Блог ........................ Заметки СисОпа и комментарии
 
         06 ■  О станции ..................... Немного о станции и СисОпе
+
+
 
 
 
@@ -85,7 +85,7 @@ On the entry screen at 132, with the greeting above and the gems and the motto b
               ■ ■ ■ ■  Вечер, текст и немного золота
 ```
 
-On section screens the name is letter-spaced in bright gold (`hi`) in the header, the current section in the brightest tone (`white`), the others dim. The signature line under it ends in the section's gem.
+On section screens the name is letter-spaced in bright gold (`hi`) in the header, the current section in the brightest tone (`white`), the others dim. The signature line under it ends in the section's gem. The menu has the same header with all sections dim, and its signature line ends in `B B S` in gold.
 
 ```text
 
@@ -98,7 +98,8 @@ On section screens the name is letter-spaced in bright gold (`hi`) in the header
 | Letters | Latin capitals of a 5x7 pixel font. Draw a new letter in the style of the VELOUR letters. |
 | Length | A name of n letters is 6n-1 pixels wide. With ` B B S`, up to 8 letters fit the big logotype (104 columns at 132) and up to 9 the small one (64 columns at 80). |
 | Clear space | One empty row between the logotype and its signature line, one more before anything else. |
-| Light | On the entry and the menu, a light runs once over the name and its signature line, from left to right, half a second after the screen shows. Its peak is `g0`. The last cell of each row glints when the light passes it. Nothing else moves on the logotype. |
+| Light | On the entry, a light runs once over the name and its signature line, from left to right, half a second after the screen shows. Its peak is `g0`. The last cell of each row glints when the light passes it. Nothing else moves on the logotype. |
+| Light in the header | On each screen with a header, the same light runs over the signature line of the header. The first run comes at a random moment 2 - 18 seconds after the screen shows, the next runs about each 25 - 65 seconds. |
 | Never | Frames around the name, outlines, colours other than the gold ramp, centring on section screens. |
 
 ## 3. Colour
@@ -309,7 +310,7 @@ At 132 the list keeps its width and the card on the right shows the selected ent
 
 
               ────────────────────────────────────────────────────────────────────────────────────────────────────────
-              Enter Читать    Esc В меню
+              Enter Читать    Esc В меню                                                                  21:40:07 UTC
 
 ```
 
@@ -361,7 +362,9 @@ Paging keys on the left, `B` before `Пробел`; actions flush with the colum
         Enter Открыть    Esc Ко входу    Q Выход            21:40:07 UTC
 ```
 
-Only the menu shows the station time. It ends the key row, flush with the column's right edge, in `dim`. Hours, minutes and seconds, then the zone: `21:40:07 UTC`. No date, no label. The clock ticks each second while the menu waits for a key.
+Each screen with a header shows the station time. It ends the key row, flush with the column's right edge, in `dim`, four spaces or more after the last key. Actions at the right edge stand just before it. Hours, minutes and seconds, then the zone: `21:40:07 UTC`. No date, no label. The clock ticks each second while the screen waits for a key.
+
+The entry has no clock. A screen whose keys leave no room for it has no clock either.
 
 ### Comment and the next entry
 
@@ -536,12 +539,10 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 ```text
 
-        █   █ █▀▀▀▀ █     ▄▀▀▀▄ █   █ █▀▀▀▄
-        █   █ █▄▄▄  █     █   █ █   █ █▄▄▄▀
-        ▀▄ ▄▀ █     █     █   █ █   █ █ ▀▄
-          ▀   ▀▀▀▀▀ ▀▀▀▀▀  ▀▀▀   ▀▀▀  ▀   ▀
-
+        V E L O U R      Сообщения    Файлы    Тексты    Код    Блог
         ────────────────────────────────────────────────────────── B B S
+
+        ■  Меню
 
         01 ■  Сообщения ..................... Конференции и личная почта
 
@@ -557,6 +558,8 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 
 
+
+
         Enter Открыть    Esc Ко входу    Q Выход            21:40:07 UTC
 
 ```
@@ -565,17 +568,11 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 ```text
 
-
-              ██      ██  ██████████  ██            ██████    ██      ██  ████████
-              ██      ██  ██          ██          ██      ██  ██      ██  ██      ██
-              ██      ██  ██          ██          ██      ██  ██      ██  ██      ██
-              ██      ██  ████████    ██          ██      ██  ██      ██  ████████
-              ██      ██  ██          ██          ██      ██  ██      ██  ██  ██
-                ██  ██    ██          ██          ██      ██  ██      ██  ██    ██
-                  ██      ██████████  ██████████    ██████      ██████    ██      ██
-
+              V E L O U R      Сообщения    Файлы    Тексты    Код    Блог
               ────────────────────────────────────────────────────────────────────────────────────────────────── B B S
 
+
+              ■  Меню
 
               01 ■  Сообщения ............................................................. Конференции и личная почта
 
@@ -588,6 +585,12 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
               05 ■  Блог ................................................................ Заметки СисОпа и комментарии
 
               06 ■  О станции ............................................................. Немного о станции и СисОпе
+
+
+
+
+
+
 
 
 
@@ -633,7 +636,7 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 
         ────────────────────────────────────────────────────────────────
-        Enter Открыть    Esc В меню
+        Enter Открыть    Esc В меню                         21:40:07 UTC
 
 ```
 
@@ -662,7 +665,7 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
            Собрала палитру станции для 256 цветов. Золото идёт...
 
         ───────────────────────────   1/6   ────────────────────────────
-        Enter Читать    R Написать    Esc К папкам
+        Enter Читать    R Написать    Esc К папкам          21:40:07 UTC
 
 ```
 
@@ -738,7 +741,7 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 
               ────────────────────────────────────────────────────────────────────────────────────────────────────────
-              Enter Читать    Esc В меню
+              Enter Читать    Esc В меню                                                                  21:40:07 UTC
 
 ```
 
@@ -767,7 +770,7 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
            берёт его не руками, а кистью.
 
         ────────────────────────────────────────────────────────────────
-        Enter Читать    Esc В меню
+        Enter Читать    Esc В меню                          21:40:07 UTC
 
 ```
 
@@ -825,7 +828,7 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 
         ───────────────────────────   1/6   ────────────────────────────
-        Enter Перейти    O К тексту    Esc К списку
+        Enter Перейти    O К тексту    Esc К списку         21:40:07 UTC
 
 ```
 
@@ -872,7 +875,7 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 
               ────────────────────────────────────────────────────────────────────────────────────────────────────────
-              Enter Открыть    Esc В меню
+              Enter Открыть    Esc В меню                                                                 21:40:07 UTC
 
 ```
 
@@ -901,7 +904,7 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 
         ───────────────────────────   1/7   ────────────────────────────
-        Enter Читать    Esc В меню
+        Enter Читать    Esc В меню                          21:40:07 UTC
 
 ```
 
@@ -948,7 +951,7 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 
 
               ───────────────────────────────────────────────   1/7   ────────────────────────────────────────────────
-              Enter Читать    Esc В меню
+              Enter Читать    Esc В меню                                                                  21:40:07 UTC
 
 ```
 

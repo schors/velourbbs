@@ -1,4 +1,12 @@
 +++
+[[effect]]
+do = "sweep"
+at = [1, 3, 108, 1]
+peak = "g0"
+delay = 10
+delay_spread = 8
+every = 45
+spread = 20
 [[item]]
 key = "ESC"
 do = "back"
@@ -29,7 +37,7 @@ do = "back"
   {!dim}Cyrillic width{!}      {#if term.ambiguous == 2}2 cells{#else}1 cell{/if}
 {~}
   {!frame}{~─}{!}  
-  {!hi}Esc{!} {!ctl}To menu{!}
+  {!hi}Esc{!} {!ctl}To menu{!}{~}{!dim}{clock}{!}  
 
 {#if term.rows >= 25}
 

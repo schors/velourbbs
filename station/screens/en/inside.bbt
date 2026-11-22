@@ -1,4 +1,12 @@
 +++
+[[effect]]
+do = "sweep"
+at = [1, 3, 108, 1]
+peak = "g0"
+delay = 10
+delay_spread = 8
+every = 45
+spread = 20
 [[item]]
 key = "1"
 do = "gosub inside-read"
@@ -29,7 +37,7 @@ do = "back"
   {!gold}3{!}  {!ameth}■{!}  {!ctl}Deploy{!} {!frame}{~.}{!} {!dim}Tag, build and start on the host{!}  
 {~}
   {!frame}{~─}{!}  
-  {!hi}1 2 3{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To menu{!}
+  {!hi}1 2 3{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To menu{!}{~}{!dim}{clock}{!}  
 
 {#if term.rows >= 25}
 
