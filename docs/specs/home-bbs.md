@@ -25,13 +25,13 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 | `station/content/<lang>/guide` | A relative symlink to `../../../docs/guide/<lang>`. It keeps one copy of the guides. |
 | `cmd/velourbbs/testdata/station/` | The golden cell dumps of section 5. |
 
-`<lang>` is `ru` or `en`.
+`<lang>` is `ru`, `en` or `lt`.
 
 ## 3. Screens
 
-- One BBS directory holds both languages ([session-language](session-language.md)).
-  The common entry `main` sets the language with `gosub ru/menu` or `gosub en/menu`.
-  The screens of `screens/ru/` and `screens/en/` have the same items.
+- One BBS directory holds all languages ([session-language](session-language.md)).
+  The common entry `main` sets the language with `gosub <lang>/menu`.
+  The screens of `screens/<lang>/` have the same items in each language.
 - A screen of a language stays in its language: no item names a language
   (`lang`, `goto <lang>/`, `gosub <lang>/`), and no file argument has a language directory.
 - The texts follow the copy rules of the brandbook, section 7, for their language.
@@ -47,13 +47,14 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   On each screen with keys, a block with `term.rows >= 25` gives the empty row below the keys.
   So, counted from 1, the kicker is at row 5 at 80x24 and 80x25 and at row 6 at 132x43.
   The keys are at row 23 at 80x24 and 80x25 and at row 41 at 132x43.
-- The menus have the sections "Документация" / "Documentation" and "Устройство" / "Inside",
+- The menus have the sections "Документация" / "Documentation" / "Dokumentacija"
+  and "Устройство" / "Inside" / "Sandara",
   and the screen `about`. The gem of Documentation is `emer`, of Inside `ameth`, of `about` `gold`.
 - Each screen of a language has the header of the brandbook, section 2.
   The header of a section screen names both sections: the current section in `white`,
   the other `dim`. The header of the menu and of `about` has both sections `dim`.
   The signature line of the menu ends in `B B S`, of `about` in the gem `gold`.
-- The menu has the kicker "Меню" / "Menu" in `gold` above its items.
+- The menu has the kicker "Меню" / "Menu" / "Meniu" in `gold` above its items.
 - The common screens have the logotype: `_logo-132` with `term.cols >= 132 and term.rows >= 43`,
   else `_logo-80`. `main` has one `sweep` with `peak = "g0"` for each logotype fragment
   ([live-screen](live-screen.md), section 6.8). The sweep has no `at`: the light runs over the letters
@@ -65,10 +66,10 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   `main` has no clock: its key row has no space for it at 80 columns.
 - A file screen has `width = [68, 68]`, `align = "left"` and `margin = [2, 2]`.
   So its column is 8 to 71 at each width: the brandbook has no reading screen at 132 yet.
-- With `term.ambiguous` 2, `main` shows a hint in both languages in place of the greeting:
+- With `term.ambiguous` 2, `main` shows a hint in each language in place of the greeting:
   the screens break, and the setting for one cell in the common terminals.
   The hint follows the layout rules above. Each row of the hint fits 80 columns
-  also when each Cyrillic letter takes two cells.
+  also when each character of East Asian width A, Cyrillic included, takes two cells.
 - The guides and the features text are texts. The station shows each part of a guide
   as one file through the symlink. It does not copy the parts.
 - The lists of guide parts use the provider `files`, so `README.md` is the first row.
@@ -91,7 +92,7 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - `content/<lang>/features.md` lists what the engine can do now, in short paragraphs.
   It names no feature that is not in a specification of `docs/specs/`.
 - A `dev` issue that adds or changes a feature that a user or a sysop sees updates
-  this file in both languages.
+  this file in each language.
 - `content/<lang>/inside/` tells how the station is made and why: `station.md` (the files,
   the screens and the tests of the station), `development.md` (the development flow),
   `deploy.md` (the release and the deploy, [release-deploy](release-deploy.md)),
@@ -101,7 +102,7 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   Each fact comes from the repository. A plan comes from a decision of the operator in an issue.
   The texts name no host, address or port.
 - A change of the station, of `docs/dev-flow/` or of the deploy that makes a fact
-  of an Inside text wrong updates the text in both languages.
+  of an Inside text wrong updates the text in each language.
 
 ## 5. Acceptance
 
@@ -117,10 +118,10 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   with `--keys +14750ms,+500ms,+1500ms` at 80x24 and at 132x43 with 256 colours with its golden file
   `cmd/velourbbs/testdata/station/ru-menu-sweep-<size>-256.dump`. It shows the sweep over the signature line.
 - The test compares the output of `velourbbs preview about --set session.lang=<lang>` with `--keys +2s`
-  for `ru` and `en` at 80x24 and at 132x43 with 256 colours with its golden file
+  for each language at 80x24 and at 132x43 with 256 colours with its golden file
   `cmd/velourbbs/testdata/station/<lang>-about-live-<size>-256.dump`. It shows the ticks of the live fields.
 - The test has no other cases.
 - The station tests use a guide fixture in place of `content/<lang>/guide`.
   An edit of `docs/guide/` does not change their result.
-- Tests check the same items in `screens/ru/` and `screens/en/`, the guide symlinks
+- Tests check the same items in `screens/<lang>/` of each language, the guide symlinks
   and the title of each reading item.

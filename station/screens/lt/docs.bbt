@@ -1,0 +1,45 @@
++++
+[[effect]]
+do = "sweep"
+at = [1, 3, 108, 1]
+peak = "g0"
+delay = 10
+delay_spread = 8
+every = 45
+spread = 20
+[[item]]
+key = "1"
+do = "gosub setup"
+[[item]]
+key = "2"
+do = "gosub bbt"
+[[item]]
+key = "3"
+do = "gosub read"
+args = { file = "features.md", title = "Velour" }
+[[item]]
+key = "ESC"
+do = "back"
++++
+
+  {!hi}V E L O U R{!}      {!white}Dokumentacija{!}    {!dim}Sandara{!}
+  {!gold}───────────{!frame}{~─}{!} {!emer}■{!}  
+
+{#if term.rows >= 43}
+
+{/if}
+  {!emer}■{!gold}  Dokumentacija{!}
+
+  {!dim}Vadovai{!}
+  {!gold}1{!}  {!emer}■{!}  {!ctl}Įdiegimas{!} {!frame}{~.}{!} {!dim}Programa, BBS katalogas, systemd{!}  
+  {!gold}2{!}  {!emer}■{!}  {!ctl}BBT{!} {!frame}{~.}{!} {!dim}Ekranai, meniu, laukai ir ANSI menas{!}  
+
+  {!dim}Velour{!}
+  {!gold}3{!}  {!emer}■{!}  {!ctl}Galimybės{!} {!frame}{~.}{!} {!dim}Ką Velour moka dabar{!}  
+{~}
+  {!frame}{~─}{!}  
+  {!hi}1 2 3{!} {!ctl}Atidaryti{!}    {!hi}Esc{!} {!ctl}Į meniu{!}{~}{!dim}{clock}{!}  
+
+{#if term.rows >= 25}
+
+{/if}

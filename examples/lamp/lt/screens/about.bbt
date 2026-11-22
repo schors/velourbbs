@@ -1,0 +1,19 @@
++++
+[[item]]
+key = "ESC"
+do = "back"
+[[item]]
+key = "ENTER"
+do = "back"
++++
+{>_head}
+       „Lempa“ – maža stotis draugams.
+       Užeik, apsidairyk, pabūk kiek ilgiau.
+
+       Stotis veikia su Velour BBS.
+       Jos ekranai – paprasti tekstiniai failai.
+{~}
+  {!line}{~─}{!}  
+
+    {!key}Esc Enter{!}  {!dim}atgal{!}
+

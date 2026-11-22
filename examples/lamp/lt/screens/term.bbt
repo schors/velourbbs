@@ -1,0 +1,19 @@
++++
+[[item]]
+key = "ESC"
+do = "back"
+[[item]]
+key = "ENTER"
+do = "back"
++++
+{>_head}
+       {!dim}Dydis{!}    {term.cols}×{term.rows}
+       {!dim}Spalvos{!}  {#if term.colors == 16777216}16 mln.{#else}{term.colors}{/if}
+       {!dim}Tipas{!}    {term.type}
+
+       Taip tave mato stotis.
+{~}
+  {!line}{~─}{!}  
+
+    {!key}Esc Enter{!}  {!dim}atgal{!}
+

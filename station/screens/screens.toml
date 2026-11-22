@@ -16,6 +16,9 @@ clock = 'bbs.time live "15:04:05 MST"'
 [lang.ru]
 more = "  Любая клавиша Дальше"
 
+[lang.lt]
+more = "  Bet kuris klavišas Toliau"
+
 [theme.default]
 normal = "#aeaba4/#060a20"
 more   = "#6f7180/#060a20"

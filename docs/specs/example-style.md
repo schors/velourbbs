@@ -34,13 +34,13 @@ can edit without counting cells.
 
 | Path | Content |
 |---|---|
-| `examples/lamp/<lang>/` | The BBS directory in the language `<lang>`: `en` or `ru`. |
+| `examples/lamp/<lang>/` | The BBS directory in the language `<lang>`: `en`, `ru` or `lt`. |
 | `cmd/velourbbs/testdata/lamp/<lang>/` | The golden cell dumps of section 4. |
 
 - Each BBS directory has an empty `bbs.toml`, the screens `main`, `about`, `term`, `texts`,
   `reader` (a file screen), `log` (a list screen) and `goodbye`, the fragment `_head.bbt`
   with rows 1–5, and the content files `lamp.md`, `rules.txt` and `log/`.
-- The two directories have the same files, layout, styles and keys. Only the texts differ.
+- The directories have the same files, layout, styles and keys. Only the texts differ.
 
 ## 4. Acceptance
 

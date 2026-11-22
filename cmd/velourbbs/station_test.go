@@ -12,6 +12,9 @@ import (
 	"testing/fstest"
 )
 
+// stationLangs is the languages of the home BBS (home-bbs, section 2).
+var stationLangs = []string{"ru", "en", "lt"}
+
 // stationFS is the home BBS with the guide fixture in place of each content/<lang>/guide,
 // so an edit of docs/guide/ does not change a test.
 type stationFS struct{ base, guide fs.FS }
@@ -30,7 +33,7 @@ func newStationFS() stationFS {
 }
 
 func (s stationFS) Open(name string) (fs.File, error) {
-	for _, lang := range []string{"ru", "en"} {
+	for _, lang := range stationLangs {
 		dir := "content/" + lang + "/guide"
 		if name == dir {
 			return s.guide.Open(".")
@@ -56,10 +59,14 @@ func TestStation(t *testing.T) {
 	if status := run(args, t.TempDir(), fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {
 		t.Errorf("%q: stdout %q, stderr %q, status %d; want no output and status 0", args, out.String(), errOut.String(), status)
 	}
+	screens := []string{"main", "main-ambiguous", "goodbye", "shutdown"}
+	for _, lang := range stationLangs {
+		for _, name := range []string{"menu", "about", "docs", "setup", "bbt", "read", "inside", "inside-read"} {
+			screens = append(screens, lang+"-"+name)
+		}
+	}
 	for _, size := range []string{"80x24", "132x43"} {
-		for _, screen := range []string{"main", "main-ambiguous", "goodbye", "shutdown", "ru-menu", "en-menu", "ru-about", "en-about",
-			"ru-docs", "en-docs", "ru-setup", "en-setup", "ru-bbt", "en-bbt", "ru-read", "en-read",
-			"ru-inside", "en-inside", "ru-inside-read", "en-inside-read"} {
+		for _, screen := range screens {
 			out.Reset()
 			errOut.Reset()
 			args := []string{"preview", screen, "--size", size, "--set", "term.colors=256"}
@@ -96,7 +103,7 @@ func TestStation(t *testing.T) {
 		}
 		golden(t, filepath.Join("testdata", "station", "ru-menu-sweep-"+size+"-256.dump"), out.String())
 		// The fields of about that change while the page is shown tick with the clock.
-		for _, lang := range []string{"ru", "en"} {
+		for _, lang := range stationLangs {
 			out.Reset()
 			errOut.Reset()
 			args = []string{"preview", "about", "--size", size, "--set", "term.colors=256", "--set", "session.lang=" + lang,
@@ -118,8 +125,8 @@ func TestStationSettingsError(t *testing.T) {
 		t.Fatal(err)
 	}
 	tests := []struct{ line, want string }{
-		{`gold   = #b8902f`, "screens/screens.toml:25:10: unexpected character U+0023 '#' at start of value\n"},
-		{`gold   = "#b8902g"`, `screens/screens.toml:25:10: theme.default.gold: invalid style "#b8902g": invalid colour "#b8902g"` + "\n"},
+		{`gold   = #b8902f`, "screens/screens.toml:28:10: unexpected character U+0023 '#' at start of value\n"},
+		{`gold   = "#b8902g"`, `screens/screens.toml:28:10: theme.default.gold: invalid style "#b8902g": invalid colour "#b8902g"` + "\n"},
 	}
 	for _, tt := range tests {
 		bad := strings.Replace(string(data), `gold   = "#b8902f"`, tt.line, 1)
@@ -139,7 +146,7 @@ func TestStationSettingsError(t *testing.T) {
 // TestStationGuideLinks checks that content/<lang>/guide is a symlink into docs/guide/
 // (home-bbs, section 2).
 func TestStationGuideLinks(t *testing.T) {
-	for _, lang := range []string{"ru", "en"} {
+	for _, lang := range stationLangs {
 		link := filepath.Join("..", "..", "station", "content", lang, "guide")
 		target, err := os.Readlink(link)
 		if err != nil {
@@ -156,13 +163,13 @@ var titleArg = regexp.MustCompile(`title = "([^"]*)"`)
 
 // langLink is an action that sets the language, or a content path with
 // a language directory. A screen of a language stays in its language.
-var langLink = regexp.MustCompile(`do = "(lang |(goto|gosub) (ru|en)/)|file = "(ru|en)/`)
+var langLink = regexp.MustCompile(`do = "(lang |(goto|gosub) (ru|en|lt)/)|file = "(ru|en|lt)/`)
 
-// TestStationItems checks that the screens of screens/ru/ and of screens/en/
-// have the same items (home-bbs, section 5): both directories have the same files,
+// TestStationItems checks that the screens of each language have the same items
+// (home-bbs, section 5): each directory has the files of screens/ru/,
 // and their front matter is equal. The title args are text of the language,
 // so the test ignores their values. TestStationTitles checks the title values.
-// No screen of a language names a language: the same items in both directories
+// No screen of a language names a language: the same items in each directory
 // can still lead to the other language, as gosub en/about in both menus.
 func TestStationItems(t *testing.T) {
 	dir := filepath.Join("..", "..", "station", "screens")
@@ -170,22 +177,25 @@ func TestStationItems(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	en, err := filepath.Glob(filepath.Join(dir, "en", "*.bbt"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(ru) == 0 || len(ru) != len(en) {
-		t.Fatalf("%d ru screens and %d en screens; want the same number, not 0", len(ru), len(en))
+	for _, lang := range stationLangs[1:] {
+		other, err := filepath.Glob(filepath.Join(dir, lang, "*.bbt"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(ru) == 0 || len(ru) != len(other) {
+			t.Fatalf("%d ru screens and %d %s screens; want the same number, not 0", len(ru), len(other), lang)
+		}
 	}
 	for _, ruFile := range ru {
-		enFile := filepath.Join(dir, "en", filepath.Base(ruFile))
 		ruFront := titleArg.ReplaceAllString(frontMatter(t, ruFile), `title = ""`)
-		enFront := titleArg.ReplaceAllString(frontMatter(t, enFile), `title = ""`)
 		if m := langLink.FindString(ruFront); m != "" {
 			t.Errorf("%s: %s names a language", ruFile, m)
 		}
-		if enFront != ruFront {
-			t.Errorf("%s: front matter\n%s\nwant the front matter of %s\n%s", enFile, enFront, ruFile, ruFront)
+		for _, lang := range stationLangs[1:] {
+			file := filepath.Join(dir, lang, filepath.Base(ruFile))
+			if front := titleArg.ReplaceAllString(frontMatter(t, file), `title = ""`); front != ruFront {
+				t.Errorf("%s: front matter\n%s\nwant the front matter of %s\n%s", file, front, ruFile, ruFront)
+			}
 		}
 	}
 }
@@ -206,11 +216,19 @@ func TestStationTitles(t *testing.T) {
 		"ru/setup.bbt":  {"Руководство по установке"},
 		"ru/bbt.bbt":    {"Руководство по BBT"},
 		"ru/inside.bbt": {"Станция", "Разработка", "Выкладка", "Технологии", "Терминалы"},
+		"lt/docs.bbt":   {"Velour"},
+		"lt/setup.bbt":  {"Įdiegimo vadovas"},
+		"lt/bbt.bbt":    {"BBT vadovas"},
+		"lt/inside.bbt": {"Stotis", "Kūrimas", "Išleidimas", "Technologijos", "Terminalai"},
 	}
 	// The fragments have no front matter, so the test reads only the screens of a language.
-	files, err := filepath.Glob(filepath.Join("..", "..", "station", "screens", "[er][nu]", "*.bbt"))
-	if err != nil {
-		t.Fatal(err)
+	var files []string
+	for _, lang := range stationLangs {
+		f, err := filepath.Glob(filepath.Join("..", "..", "station", "screens", lang, "*.bbt"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		files = append(files, f...)
 	}
 	if len(files) == 0 {
 		t.Fatal("no screens of a language")

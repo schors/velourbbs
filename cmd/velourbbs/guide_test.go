@@ -73,7 +73,7 @@ var guideParts = map[string][]string{
 		"5-systemd.md", "README.md"},
 }
 
-var guideLangs = []string{"en", "ru"}
+var guideLangs = []string{"en", "ru", "lt"}
 
 // checkPartHeadings gives the problems of the level-1 headings of the guide part md
 // (bbt-guide, section 3.1). It finds the headings with the parser of the file view.

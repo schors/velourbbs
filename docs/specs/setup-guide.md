@@ -23,10 +23,11 @@ systemd limits the memory, the threads and the open files of the host process.
 |---|---|
 | `docs/guide/en/setup/` | The guide in English, in parts. It is the source. |
 | `docs/guide/ru/setup/` | The guide in Russian. It is a translation of the source. |
+| `docs/guide/lt/setup/` | The guide in Lithuanian. It is a translation of the source. |
 | `examples/deploy/velourbbs.service` | The systemd unit of section 4. |
 
 - The rules of [bbt-guide](bbt-guide.md), section 3, for a specification change,
-  for the two languages and for the parts (section 3.1) also apply to this guide.
+  for the languages and for the parts (section 3.1) also apply to this guide.
 - The parts of this guide: `README.md`, `1-program.md`, `2-bbs-directory.md`, `3-bbs-toml.md`,
   `4-commands.md`, `5-systemd.md`.
 - The guide in `<lang>` uses `examples/lamp/<lang>/`. It uses the default port 2323 only.

@@ -24,9 +24,11 @@ cp -r examples/lamp/ru/. /srv/velourbbs/
 | `screens/term.bbt` | Значения терминала. |
 | `screens/texts.bbt` | Список текстов читальни. |
 | `screens/reader.bbt` | Экран, который показывает текст из списка. |
+| `screens/log.bbt` | Журнал смотрителя: список заметок. |
 | `screens/goodbye.bbt` | Экран после конца сеанса. |
 | `content/lamp.md` | Текст в Markdown: короткая история ламп. |
 | `content/rules.txt` | Простой текст: правила станции. |
+| `content/log/` | Заметки журнала смотрителя, по одному файлу Markdown на заметку. |
 
 Как менять экраны, читай в [руководстве по BBT](../bbt/README.md).
 

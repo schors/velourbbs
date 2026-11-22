@@ -11,7 +11,7 @@ import (
 // velourbbs check gives no output, and the preview of each screen at 80x24 with 256 colours
 // equals its golden dump.
 func TestLamp(t *testing.T) {
-	for _, lang := range []string{"en", "ru"} {
+	for _, lang := range []string{"en", "ru", "lt"} {
 		fsys := os.DirFS(filepath.Join("..", "..", "examples", "lamp", lang))
 		var out, errOut bytes.Buffer
 		if status := run([]string{"check"}, t.TempDir(), fsys, &out, &errOut); out.Len() != 0 || errOut.Len() != 0 || status != 0 {

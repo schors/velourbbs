@@ -1,0 +1,56 @@
++++
+[[effect]]
+do = "sweep"
+at = [1, 3, 108, 1]
+peak = "g0"
+delay = 10
+delay_spread = 8
+every = 45
+spread = 20
+[[item]]
+key = "1"
+do = "gosub inside-read"
+args = { file = "inside/station.md", title = "Stotis" }
+[[item]]
+key = "2"
+do = "gosub inside-read"
+args = { file = "inside/development.md", title = "Kūrimas" }
+[[item]]
+key = "3"
+do = "gosub inside-read"
+args = { file = "inside/deploy.md", title = "Išleidimas" }
+[[item]]
+key = "4"
+do = "gosub inside-read"
+args = { file = "inside/tech.md", title = "Technologijos" }
+[[item]]
+key = "5"
+do = "gosub inside-read"
+args = { file = "inside/terminals.md", title = "Terminalai" }
+[[item]]
+key = "ESC"
+do = "back"
++++
+
+  {!hi}V E L O U R{!}      {!dim}Dokumentacija{!}    {!white}Sandara{!}
+  {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
+
+{#if term.rows >= 43}
+
+{/if}
+  {!ameth}■{!gold}  Sandara{!}
+
+  {!gold}1{!}  {!ameth}■{!}  {!ctl}Stotis{!} {!frame}{~.}{!} {!dim}Ekranai, tema, trys kalbos, testai{!}  
+  {!gold}2{!}  {!ameth}■{!}  {!ctl}Kūrimas{!} {!frame}{~.}{!} {!dim}DI modeliai, vartai ir peržiūros{!}  
+  {!gold}3{!}  {!ameth}■{!}  {!ctl}Išleidimas{!} {!frame}{~.}{!} {!dim}Žyma, surinkimas ir paleidimas serveryje{!}  
+  {!gold}4{!}  {!ameth}■{!}  {!ctl}Technologijos{!} {!frame}{~.}{!} {!dim}Go, savas telnet, efektai ir ANSI menas{!}  
+  {!gold}5{!}  {!ameth}■{!}  {!ctl}Terminalai{!} {!frame}{~.}{!} {!dim}Klientai, UTF-8 ir spalvos{!}  
+
+  {!dim}Pirminis kodas{!}  {!ctl}github.com/schors/velourbbs{!}
+{~}
+  {!frame}{~─}{!}  
+  {!hi}1 2 3 4 5{!} {!ctl}Atidaryti{!}    {!hi}Esc{!} {!ctl}Į meniu{!}{~}{!dim}{clock}{!}  
+
+{#if term.rows >= 25}
+
+{/if}
