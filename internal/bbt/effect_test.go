@@ -134,6 +134,12 @@ func TestEffectErrors(t *testing.T) {
 		// delay_spread and times.
 		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `delay = 1`, `delay_spread = 1.5`)},
 			[]string{`screens/s.bbt:7:16: effect 1: delay_spread: delay - delay_spread is -0.5, must be at least 0`}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `delay = 0.5`, `delay_spread = 1e20`)},
+			[]string{`screens/s.bbt:7:16: effect 1: delay_spread: delay - delay_spread is -1e+20, must be at least 0`}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `delay_spread = inf`)},
+			[]string{`screens/s.bbt:6:16: effect 1: delay_spread: delay - delay_spread is -Inf, must be at least 0`}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `spread = 1e20`)},
+			[]string{`screens/s.bbt:6:10: effect 1: spread: every - spread is -1e+20, must be at least 0.05`}},
 		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `delay_spread = -1`)},
 			[]string{`screens/s.bbt:6:16: effect 1: delay_spread: -1, must be at least 0`}},
 		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `times = 0`)},

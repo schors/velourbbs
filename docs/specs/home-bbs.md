@@ -96,7 +96,7 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   with 256 colours with its golden file `cmd/velourbbs/testdata/station/<screen>-<size>-256.dump`.
   `<screen>` is a common screen, `<lang>-<name>` with `--set session.lang=<lang>`,
   or `main-ambiguous`: `main` with `--set term.ambiguous=2`.
-- The test compares the output of `velourbbs preview main` with `--keys +1s,+500ms,+1s,+1500ms`
+- The test compares the output of `velourbbs preview main` with `--keys +750ms,+250ms,+500ms,+1500ms`
   at 80x24 and at 132x43 with 256 colours with its golden file
   `cmd/velourbbs/testdata/station/main-sweep-<size>-256.dump`. It shows the sweep over the logotype.
 - The test has no other cases.

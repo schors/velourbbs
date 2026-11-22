@@ -262,6 +262,15 @@ var defaultEvery = map[screen.EffectKind]float64{
 // seconds gives the duration of s seconds.
 func seconds(s float64) time.Duration { return time.Duration(math.Round(s * float64(time.Second))) }
 
+// difference gives a - b in seconds, exact to the nanosecond as the durations of the times.
+// b can be too large for a time.Duration: then it gives the float difference.
+func difference(a, b float64) float64 {
+	if b > maxEvery {
+		return a - b
+	}
+	return (seconds(a) - seconds(b)).Seconds()
+}
+
 // parseTimes parses the keys delay, delay_spread, every, spread and times (live-screen, sections 6.1 and 6.3).
 func (p *effectParser) parseTimes(e *screen.Effect) {
 	d := p.d
@@ -274,8 +283,8 @@ func (p *effectParser) parseTimes(e *screen.Effect) {
 	if d.DelaySpread != nil {
 		var ds float64
 		if p.number("delay_spread", d.DelaySpread, &ds, 0, math.Inf(1)) {
-			if delayOK && seconds(delay) < seconds(ds) {
-				p.fail("delay_spread", "delay - delay_spread is %g, must be at least 0", (seconds(delay) - seconds(ds)).Seconds())
+			if delayOK && ds > delay {
+				p.fail("delay_spread", "delay - delay_spread is %g, must be at least 0", difference(delay, ds))
 			}
 			e.DelaySpread = seconds(ds)
 		}
@@ -310,8 +319,8 @@ func (p *effectParser) parseTimes(e *screen.Effect) {
 		case !hasEvery:
 			p.fail("spread", "a sweep without every has no spread")
 			return
-		case everyOK && seconds(every)-seconds(spread) < seconds(minEvery):
-			p.fail("spread", "every - spread is %g, must be at least %g", (seconds(every) - seconds(spread)).Seconds(), minEvery)
+		case everyOK && difference(every, spread) < minEvery:
+			p.fail("spread", "every - spread is %g, must be at least %g", difference(every, spread), minEvery)
 			return
 		}
 	}

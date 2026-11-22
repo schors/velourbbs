@@ -76,7 +76,8 @@ Full rules: [live-screen](../../../specs/live-screen.md), section 6.2.
 - `every - spread` must be at least 0.05. `delay - delay_spread` must be at least 0.
 - Each point of an array of points takes its own random delay. Example: `delay = 2`
   and `delay_spread = 1` start each point after 1–3 seconds plus one interval.
-- Example: `times = 3` gives three changes. After them, the cells stay as they are.
+- Example: `times = 3` gives three changes. After them, the effect makes no new change:
+  a `twinkle` or a `candle` keeps its last change, and the events of the other effects end as usual.
 - The changes are random. Each session has its own random values.
 
 Full rules: [live-screen](../../../specs/live-screen.md), section 6.3.
