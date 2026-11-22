@@ -42,7 +42,7 @@ The screens of this book and the ANSI files show the same text. Change both toge
 1. **Air instead of frames.** No boxes, no double lines. Structure comes from empty rows, one hairline and a shared left edge.
 2. **Gold marks, grey reads.** Gold is kept for the name, the rule under a title, list markers and hot keys. Running text is warm grey.
 3. **One gem per section.** Each section owns one jewel colour, shown only as a small `■`. It is the only colour outside gold and grey.
-4. **One column on a fixed edge.** Content hangs from column 8 at 80 and column 14 at 132. A wide screen adds a card beside the list; it never makes the reading line longer.
+4. **One column on a fixed edge.** Content hangs from column 8 at 80 and column 14 at 132. The column is 64 cells wide at 80 and 104 at 132, for reading too. A wider terminal centers the column. A catalog at 132 puts a card beside the list.
 5. **Keys where the hand expects them.** The bottom row: paging on the left, `B` before `Пробел`; actions flush right. `Esc` always says where it leads.
 6. **Four modes, one design.** Hierarchy is built from brightness first and hue second, so a screen still reads in the greys of the 16-colour mode and in mono.
 
@@ -261,7 +261,7 @@ Rows are the same on every section screen, so the header, the page number and th
 | Columns | 80 | 132 |
 |---|---|---|
 | Left edge (counted from 0) | 8 | 14 |
-| Reading column | 64 | 70 |
+| Reading column | 64 | 104 |
 | Catalogs | 64; the lead of the selection in a field above the footer | 104: list 44, gap 8, card 52 |
 | Menu and its signature line | 64 | 104 |
 | Selection mark | 2 left of the edge | 2 left of the edge |
@@ -1012,7 +1012,6 @@ The engine cannot show each element of this book yet. A screen of the home stati
 | The lead of the selection | none yet |
 | The empty row between the entries of a list at 132 | none yet. A list line gives one row for each entry ([list-view](../specs/list-view.md), section 5). |
 | The card at 132 | none yet |
-| The reading screen at 132 | none yet. A file screen has one `margin` for each width ([file-view](../specs/file-view.md), section 3). |
 | The table of contents | [file-view](https://github.com/schors/velourbbs/issues/7) idea |
 | The syntax colours | [file-view](https://github.com/schors/velourbbs/issues/7) idea |
 | The mono mode | none yet ([telnet-term](../specs/telnet-term.md), section 13) |
