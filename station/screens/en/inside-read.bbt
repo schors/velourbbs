@@ -30,10 +30,10 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Documentation{!}    {!white}Inside{!}    {!dim}About the station{!}
+  {!hi}V E L O U R{!}      {!dim}Documentation{!}   {!white}Development{!}   {!dim}About the station{!}
   {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
 
-  {!ameth}■{!gold}  Inside  ∙  {arg.title}{!}
+  {!ameth}■{!gold}  Development  ∙  {arg.title}{!}
 
   {!dim}{file.minutes} min read{!}
 

@@ -206,21 +206,21 @@ var readItem = regexp.MustCompile(`"gosub (inside-)?read"`)
 
 // TestStationTitles checks the title of each item and select that opens a reading screen,
 // in their order (home-bbs, section 3): the name of the guide, Velour for the features text,
-// or the name of the text of the section Inside.
+// or the name of the text of the section Development.
 func TestStationTitles(t *testing.T) {
 	want := map[string][]string{
 		"en/docs.bbt":   {"Velour"},
 		"en/setup.bbt":  {"Setup guide"},
 		"en/bbt.bbt":    {"BBT guide"},
-		"en/inside.bbt": {"Station", "Development", "Deploy", "Technology", "Terminals"},
+		"en/inside.bbt": {"Go and libraries", "Connection", "Telnet", "Terminal detection", "Output and input", "Screens", "Texts and art", "Data", "Deploy", "Process"},
 		"ru/docs.bbt":   {"Velour"},
 		"ru/setup.bbt":  {"Руководство по установке"},
 		"ru/bbt.bbt":    {"Руководство по BBT"},
-		"ru/inside.bbt": {"Станция", "Разработка", "Выкладка", "Технологии", "Терминалы"},
+		"ru/inside.bbt": {"Go и библиотеки", "Подключение", "Telnet", "Распознавание терминала", "Вывод и ввод", "Экраны", "Тексты и арт", "Данные", "Выкладка", "Процесс"},
 		"lt/docs.bbt":   {"Velour"},
 		"lt/setup.bbt":  {"Įdiegimo vadovas"},
 		"lt/bbt.bbt":    {"BBT vadovas"},
-		"lt/inside.bbt": {"Stotis", "Kūrimas", "Išleidimas", "Technologijos", "Terminalai"},
+		"lt/inside.bbt": {"Go ir bibliotekos", "Prisijungimas", "Telnet", "Terminalo atpažinimas", "Išvestis ir įvestis", "Ekranai", "Tekstai ir menas", "Duomenys", "Išleidimas", "Procesas"},
 	}
 	// The fragments have no front matter, so the test reads only the screens of a language.
 	var files []string

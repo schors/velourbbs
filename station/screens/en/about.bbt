@@ -20,7 +20,7 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Documentation{!}    {!dim}Inside{!}    {!white}About the station{!}
+  {!hi}V E L O U R{!}      {!dim}Documentation{!}   {!dim}Development{!}   {!white}About the station{!}
   {!gold}───────────{!frame}{~─}{!} {!gold}■{!}  
 
 {#if term.rows >= 43}

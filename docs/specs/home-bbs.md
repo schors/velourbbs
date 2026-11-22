@@ -21,7 +21,7 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 | `station/data/` | The directory of the data file. Not in git. The deploy makes it a symlink ([release-deploy](release-deploy.md), section 4.5). |
 | `station/screens/` | The common screens, `screens.toml` and the screens of each language in `<lang>/`. |
 | `station/content/<lang>/features.md` | The features text (section 4). |
-| `station/content/<lang>/inside/` | The texts of the section Inside (section 4). |
+| `station/content/<lang>/inside/` | The texts of the section Development (section 4). |
 | `station/content/<lang>/guide` | A relative symlink to `../../../docs/guide/<lang>`. It keeps one copy of the guides. |
 | `cmd/velourbbs/testdata/station/` | The golden cell dumps of section 5. |
 
@@ -48,8 +48,9 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   So, counted from 1, the kicker is at row 5 at 80x24 and 80x25 and at row 6 at 132x43.
   The keys are at row 23 at 80x24 and 80x25 and at row 41 at 132x43.
 - The menus have the sections "Документация" / "Documentation" / "Dokumentacija"
-  and "Устройство" / "Inside" / "Sandara",
-  and the screen `about`. The gem of Documentation is `emer`, of Inside `ameth`, of `about` `gold`.
+  and "Разработка" / "Development" / "Kūrimas", and the screen `about`.
+  The screens `inside` and `inside-read` are the screens of Development.
+  The gem of Documentation is `emer`, of Development `ameth`, of `about` `gold`.
 - Each screen of a language has the header of the brandbook, section 2.
   The header names the three items of the menu: the two sections and `about`
   ("О станции" / "About the station" / "Apie stotį"). On a section screen and on `about`,
@@ -81,9 +82,9 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   as one file through the symlink. It does not copy the parts.
 - The lists of guide parts use the provider `files`, so `README.md` is the first row.
   The footer hairline of a list shows its page when the list has more than one page.
-- The reading screen `read` of Documentation and `inside-read` of Inside show
+- The reading screen `read` of Documentation and `inside-read` of Development show
   the argument `title` in their kicker: the name of the guide, `Velour` for the features text,
-  or the name of the text of Inside.
+  or the name of the text of Development.
 - The screen `about` shows the repository address, the session and BBS fields
   and each `term.*` value that the probe detects. `session.online`, `bbs.sessions`
   and `bbs.uptime` are live fields ([live-screen](live-screen.md), section 3). `term.type` and `term.name` are
@@ -94,22 +95,31 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - The theme gives the colours of the brandbook in each colour depth. The style names are
   the role names of the brandbook. The ground covers the whole terminal: `fill = "spaces"`.
 
-## 4. Features text and Inside texts
+## 4. Features text and Development texts
 
 - `content/<lang>/features.md` lists what the engine can do now, in short paragraphs.
   It names no feature that is not in a specification of `docs/specs/`.
 - A `dev` issue that adds or changes a feature that a user or a sysop sees updates
   this file in each language.
-- `content/<lang>/inside/` tells how the station is made and why: `station.md` (the files,
-  the screens and the tests of the station), `development.md` (the development flow),
-  `deploy.md` (the release and the deploy, [release-deploy](release-deploy.md)),
-  `tech.md` (the libraries, the own code and why, the data file, the live fields, the effects and the art)
-  and `terminals.md` (the clients, the detection, the charset now and why, and the plans).
-  `station.md`, `development.md`, `tech.md` and the menu of Inside give the link to the repository.
-  Each fact comes from the repository. A plan comes from a decision of the operator in an issue.
+- `content/<lang>/inside/` tells how Velour works and why, in the order of a session.
+  The menu gives the texts with the keys `1`–`9` and `0`:
+  `go.md` (the language, the libraries and the own code, [host-language](host-language.md)),
+  `connect.md` (the listener, the PROXY protocol and the limits),
+  `telnet.md` (the options and the parser), `probe.md` (the terminal queries and the terminal values),
+  `output.md` (the output of pages and updates, and the key decoder),
+  `screens.md` (the BBT format, the theme, the live screen, the languages and the check),
+  `texts.md` (the Markdown view and the art import), `data.md` (the data file),
+  `deploy.md` (the release and the deploy, [release-deploy](release-deploy.md))
+  and `process.md` (the development flow and the station tests).
+- Each text except `go.md` has the sections "What it does", "How", "What it gets" and "Limits",
+  in the language of the text. In "How", each protocol and format has the bytes
+  that Velour sends and gets, and a link to its standard.
+- `go.md`, `process.md` and the menu of Development give the link to the repository.
+  Each fact comes from the repository or from a linked standard.
+  A plan comes from a decision of the operator in an issue.
   The texts name no host, address or port.
 - A change of the station, of `docs/dev-flow/` or of the deploy that makes a fact
-  of an Inside text wrong updates the text in each language.
+  of a Development text wrong updates the text in each language.
 
 ## 5. Acceptance
 

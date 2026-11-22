@@ -18,46 +18,71 @@ spread = 20
 [[item]]
 key = "1"
 do = "gosub inside-read"
-args = { file = "inside/station.md", title = "Station" }
+args = { file = "inside/go.md", title = "Go and libraries" }
 [[item]]
 key = "2"
 do = "gosub inside-read"
-args = { file = "inside/development.md", title = "Development" }
+args = { file = "inside/connect.md", title = "Connection" }
 [[item]]
 key = "3"
 do = "gosub inside-read"
-args = { file = "inside/deploy.md", title = "Deploy" }
+args = { file = "inside/telnet.md", title = "Telnet" }
 [[item]]
 key = "4"
 do = "gosub inside-read"
-args = { file = "inside/tech.md", title = "Technology" }
+args = { file = "inside/probe.md", title = "Terminal detection" }
 [[item]]
 key = "5"
 do = "gosub inside-read"
-args = { file = "inside/terminals.md", title = "Terminals" }
+args = { file = "inside/output.md", title = "Output and input" }
+[[item]]
+key = "6"
+do = "gosub inside-read"
+args = { file = "inside/screens.md", title = "Screens" }
+[[item]]
+key = "7"
+do = "gosub inside-read"
+args = { file = "inside/texts.md", title = "Texts and art" }
+[[item]]
+key = "8"
+do = "gosub inside-read"
+args = { file = "inside/data.md", title = "Data" }
+[[item]]
+key = "9"
+do = "gosub inside-read"
+args = { file = "inside/deploy.md", title = "Deploy" }
+[[item]]
+key = "0"
+do = "gosub inside-read"
+args = { file = "inside/process.md", title = "Process" }
 [[item]]
 key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Documentation{!}    {!white}Inside{!}    {!dim}About the station{!}
+  {!hi}V E L O U R{!}      {!dim}Documentation{!}   {!white}Development{!}   {!dim}About the station{!}
   {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
 
 {#if term.rows >= 43}
 
 {/if}
-  {!ameth}■{!gold}  Inside{!}
+  {!ameth}■{!gold}  Development{!}
 
-  {!gold}1{!}  {!ameth}■{!}  {!ctl}Station{!} {!frame}{~.}{!} {!dim}Screens, theme, three languages, tests{!}  
-  {!gold}2{!}  {!ameth}■{!}  {!ctl}Development{!} {!frame}{~.}{!} {!dim}AI models, gates and reviews{!}  
-  {!gold}3{!}  {!ameth}■{!}  {!ctl}Deploy{!} {!frame}{~.}{!} {!dim}Tag, build and start on the host{!}  
-  {!gold}4{!}  {!ameth}■{!}  {!ctl}Technology{!} {!frame}{~.}{!} {!dim}Go, own telnet, effects and art{!}  
-  {!gold}5{!}  {!ameth}■{!}  {!ctl}Terminals{!} {!frame}{~.}{!} {!dim}Clients, UTF-8 and colours{!}  
+  {!gold}1{!}  {!ameth}■{!}  {!ctl}Go and libraries{!} {!frame}{~.}{!} {!dim}Why Go, own code and why{!}  
+  {!gold}2{!}  {!ameth}■{!}  {!ctl}Connection{!} {!frame}{~.}{!} {!dim}Port, PROXY protocol and limits{!}  
+  {!gold}3{!}  {!ameth}■{!}  {!ctl}Telnet{!} {!frame}{~.}{!} {!dim}Options, size and terminal type{!}  
+  {!gold}4{!}  {!ameth}■{!}  {!ctl}Terminal detection{!} {!frame}{~.}{!} {!dim}Queries, replies and decisions{!}  
+  {!gold}5{!}  {!ameth}■{!}  {!ctl}Output and input{!} {!frame}{~.}{!} {!dim}Cells, styles, frames and keys{!}  
+  {!gold}6{!}  {!ameth}■{!}  {!ctl}Screens{!} {!frame}{~.}{!} {!dim}BBT, theme, live screen, languages{!}  
+  {!gold}7{!}  {!ameth}■{!}  {!ctl}Texts and art{!} {!frame}{~.}{!} {!dim}Markdown and ANSI art import{!}  
+  {!gold}8{!}  {!ameth}■{!}  {!ctl}Data{!} {!frame}{~.}{!} {!dim}JSON Lines and the file write{!}  
+  {!gold}9{!}  {!ameth}■{!}  {!ctl}Deploy{!} {!frame}{~.}{!} {!dim}Tag, build and start on the host{!}  
+  {!gold}0{!}  {!ameth}■{!}  {!ctl}Process{!} {!frame}{~.}{!} {!dim}AI models, gates, reviews and tests{!}  
 
   {!dim}Source{!}  {!ctl}github.com/schors/velourbbs{!}
 {~}
 {>_foot}
-  {!hi}1 2 3 4 5{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To sections{!}{~}{!dim}{clock}{!}  
+  {!hi}0-9{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To sections{!}{~}{!dim}{clock}{!}  
 
 {#if term.rows >= 25}
 

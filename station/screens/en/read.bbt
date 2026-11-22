@@ -30,7 +30,7 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!white}Documentation{!}    {!dim}Inside{!}    {!dim}About the station{!}
+  {!hi}V E L O U R{!}      {!white}Documentation{!}   {!dim}Development{!}   {!dim}About the station{!}
   {!gold}───────────{!frame}{~─}{!} {!emer}■{!}  
 
   {!emer}■{!gold}  Documentation  ∙  {arg.title}{!}

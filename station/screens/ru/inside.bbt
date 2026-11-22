@@ -18,46 +18,71 @@ spread = 20
 [[item]]
 key = "1"
 do = "gosub inside-read"
-args = { file = "inside/station.md", title = "Станция" }
+args = { file = "inside/go.md", title = "Go и библиотеки" }
 [[item]]
 key = "2"
 do = "gosub inside-read"
-args = { file = "inside/development.md", title = "Разработка" }
+args = { file = "inside/connect.md", title = "Подключение" }
 [[item]]
 key = "3"
 do = "gosub inside-read"
-args = { file = "inside/deploy.md", title = "Выкладка" }
+args = { file = "inside/telnet.md", title = "Telnet" }
 [[item]]
 key = "4"
 do = "gosub inside-read"
-args = { file = "inside/tech.md", title = "Технологии" }
+args = { file = "inside/probe.md", title = "Распознавание терминала" }
 [[item]]
 key = "5"
 do = "gosub inside-read"
-args = { file = "inside/terminals.md", title = "Терминалы" }
+args = { file = "inside/output.md", title = "Вывод и ввод" }
+[[item]]
+key = "6"
+do = "gosub inside-read"
+args = { file = "inside/screens.md", title = "Экраны" }
+[[item]]
+key = "7"
+do = "gosub inside-read"
+args = { file = "inside/texts.md", title = "Тексты и арт" }
+[[item]]
+key = "8"
+do = "gosub inside-read"
+args = { file = "inside/data.md", title = "Данные" }
+[[item]]
+key = "9"
+do = "gosub inside-read"
+args = { file = "inside/deploy.md", title = "Выкладка" }
+[[item]]
+key = "0"
+do = "gosub inside-read"
+args = { file = "inside/process.md", title = "Процесс" }
 [[item]]
 key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Документация{!}    {!white}Устройство{!}    {!dim}О станции{!}
+  {!hi}V E L O U R{!}      {!dim}Документация{!}    {!white}Разработка{!}    {!dim}О станции{!}
   {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
 
 {#if term.rows >= 43}
 
 {/if}
-  {!ameth}■{!gold}  Устройство{!}
+  {!ameth}■{!gold}  Разработка{!}
 
-  {!gold}1{!}  {!ameth}■{!}  {!ctl}Станция{!} {!frame}{~.}{!} {!dim}Экраны, тема, три языка и тесты{!}  
-  {!gold}2{!}  {!ameth}■{!}  {!ctl}Разработка{!} {!frame}{~.}{!} {!dim}AI-модели, гейты и ревью{!}  
-  {!gold}3{!}  {!ameth}■{!}  {!ctl}Выкладка{!} {!frame}{~.}{!} {!dim}Тег, сборка и запуск на хосте{!}  
-  {!gold}4{!}  {!ameth}■{!}  {!ctl}Технологии{!} {!frame}{~.}{!} {!dim}Go, свой telnet, эффекты и арт{!}  
-  {!gold}5{!}  {!ameth}■{!}  {!ctl}Терминалы{!} {!frame}{~.}{!} {!dim}Клиенты, UTF-8 и цвета{!}  
+  {!gold}1{!}  {!ameth}■{!}  {!ctl}Go и библиотеки{!} {!frame}{~.}{!} {!dim}Почему Go, что своё и почему{!}  
+  {!gold}2{!}  {!ameth}■{!}  {!ctl}Подключение{!} {!frame}{~.}{!} {!dim}Порт, PROXY protocol и лимиты{!}  
+  {!gold}3{!}  {!ameth}■{!}  {!ctl}Telnet{!} {!frame}{~.}{!} {!dim}Опции, размер и тип терминала{!}  
+  {!gold}4{!}  {!ameth}■{!}  {!ctl}Распознавание терминала{!} {!frame}{~.}{!} {!dim}Запросы, ответы и решения{!}  
+  {!gold}5{!}  {!ameth}■{!}  {!ctl}Вывод и ввод{!} {!frame}{~.}{!} {!dim}Клетки, стили, кадры и клавиши{!}  
+  {!gold}6{!}  {!ameth}■{!}  {!ctl}Экраны{!} {!frame}{~.}{!} {!dim}BBT, тема, живой экран и языки{!}  
+  {!gold}7{!}  {!ameth}■{!}  {!ctl}Тексты и арт{!} {!frame}{~.}{!} {!dim}Markdown и импорт ANSI-арта{!}  
+  {!gold}8{!}  {!ameth}■{!}  {!ctl}Данные{!} {!frame}{~.}{!} {!dim}JSON Lines и запись файла{!}  
+  {!gold}9{!}  {!ameth}■{!}  {!ctl}Выкладка{!} {!frame}{~.}{!} {!dim}Тег, сборка и запуск на хосте{!}  
+  {!gold}0{!}  {!ameth}■{!}  {!ctl}Процесс{!} {!frame}{~.}{!} {!dim}AI-модели, гейты, ревью и тесты{!}  
 
   {!dim}Исходники{!}  {!ctl}github.com/schors/velourbbs{!}
 {~}
 {>_foot}
-  {!hi}1 2 3 4 5{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К разделам{!}{~}{!dim}{clock}{!}  
+  {!hi}0-9{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К разделам{!}{~}{!dim}{clock}{!}  
 
 {#if term.rows >= 25}
 

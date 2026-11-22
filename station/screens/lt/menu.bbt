@@ -24,7 +24,7 @@ key = "Q"
 do = "logoff"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Dokumentacija    Sandara    Apie stotį{!}
+  {!hi}V E L O U R{!}      {!dim}Dokumentacija    Kūrimas    Apie stotį{!}
   {!gold}───────────{!frame}{~─}{!} {!gold}B B S{!}  
 
 {#if term.rows >= 43}
@@ -34,7 +34,7 @@ do = "logoff"
 
   {!gold}01{!} {!emer}■{!}  {!ctl}Dokumentacija{!} {!frame}{~.}{!} {!dim}Velour vadovai ir galimybės{!}  
 
-  {!gold}02{!} {!ameth}■{!}  {!ctl}Sandara{!} {!frame}{~.}{!} {!dim}Kaip sukurta stotis ir kodėl{!}  
+  {!gold}02{!} {!ameth}■{!}  {!ctl}Kūrimas{!} {!frame}{~.}{!} {!dim}Kaip veikia Velour ir kodėl{!}  
 
   {!gold}03{!} {!gold}■{!}  {!ctl}Apie stotį{!} {!frame}{~.}{!} {!dim}Šiek tiek apie stotį{!}  
 {~}
