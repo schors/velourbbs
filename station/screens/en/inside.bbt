@@ -1,7 +1,15 @@
 +++
 [[effect]]
 do = "sweep"
-at = [1, 3, 108, 1]
+at = [1, 2, 108, 2]
+peak = "g0"
+delay = 10
+delay_spread = 8
+every = 45
+spread = 20
+[[effect]]
+do = "sweep"
+in = "_foot"
 peak = "g0"
 delay = 10
 delay_spread = 8
@@ -32,7 +40,7 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Documentation{!}    {!white}Inside{!}
+  {!hi}V E L O U R{!}      {!dim}Documentation{!}    {!white}Inside{!}    {!dim}About the station{!}
   {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
 
 {#if term.rows >= 43}
@@ -48,8 +56,8 @@ do = "back"
 
   {!dim}Source{!}  {!ctl}github.com/schors/velourbbs{!}
 {~}
-  {!frame}{~─}{!}  
-  {!hi}1 2 3 4 5{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To menu{!}{~}{!dim}{clock}{!}  
+{>_foot}
+  {!hi}1 2 3 4 5{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To sections{!}{~}{!dim}{clock}{!}  
 
 {#if term.rows >= 25}
 

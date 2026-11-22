@@ -4,7 +4,15 @@ rows = 16
 select = { do = "gosub read", args = { file = "{row.path}", title = "Руководство по BBT" } }
 [[effect]]
 do = "sweep"
-at = [1, 3, 108, 1]
+at = [1, 2, 108, 2]
+peak = "g0"
+delay = 10
+delay_spread = 8
+every = 45
+spread = 20
+[[effect]]
+do = "sweep"
+in = "_foot-list"
 peak = "g0"
 delay = 10
 delay_spread = 8
@@ -15,7 +23,7 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!white}Документация{!}    {!dim}Устройство{!}
+  {!hi}V E L O U R{!}      {!white}Документация{!}    {!dim}Устройство{!}    {!dim}О станции{!}
   {!gold}───────────{!frame}{~─}{!} {!emer}■{!}  
 
 {#if term.rows >= 43}
@@ -25,7 +33,7 @@ do = "back"
 
 {#each}{#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
 {~}
-  {!frame}{#if list.pages == 1}{~─}{#else}{~─}{!dim}   {list.page}/{list.pages}   {!frame}{~─}{/if}{!}  
+{>_foot-list}
   {!hi}Enter{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К документации{!}{~}{!dim}{clock}{!}  
 
 {#if term.rows >= 25}

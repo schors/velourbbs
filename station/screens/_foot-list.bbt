@@ -1,0 +1,1 @@
+  {!frame}{#if list.pages == 1}{~─}{#else}{~─}{!dim}   {list.page}/{list.pages}   {!frame}{~─}{/if}{!}  

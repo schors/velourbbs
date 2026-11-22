@@ -1,7 +1,7 @@
 +++
 [[effect]]
 do = "sweep"
-at = [1, 3, 108, 1]
+at = [1, 2, 108, 2]
 peak = "g0"
 delay = 10
 delay_spread = 8
@@ -24,13 +24,13 @@ key = "Q"
 do = "logoff"
 +++
 
-  {!hi}V E L O U R{!}      {!dim}Документация    Устройство{!}
+  {!hi}V E L O U R{!}      {!dim}Документация    Устройство    О станции{!}
   {!gold}───────────{!frame}{~─}{!} {!gold}B B S{!}  
 
 {#if term.rows >= 43}
 
 {/if}
-  {!gold}■  Меню{!}
+  {!gold}■  Разделы{!}
 
   {!gold}01{!} {!emer}■{!}  {!ctl}Документация{!} {!frame}{~.}{!} {!dim}Руководства и возможности Velour{!}  
 

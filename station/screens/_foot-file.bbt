@@ -1,0 +1,1 @@
+  {!frame}{#if file.pages == 1}{~─}{#else}{~─}{!dim}   {file.page}/{file.pages}   {!frame}{~─}{/if}{!}  

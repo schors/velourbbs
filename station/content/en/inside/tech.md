@@ -43,8 +43,8 @@ the time online, the open sessions and the uptime of the station change in the s
 
 Effects animate parts of the screen. There are six: stars twinkle, stars appear and go,
 a candle flickers, a letter glints, a light runs along a row, lightning strikes.
-This station uses the running light, `sweep`: it runs over the logotype at the entry
-and over the line under the header of the menu.
+This station uses the running light, `sweep`: it runs over the logotype at the entry,
+over the header and its line, and over the line above the keys.
 Velour sends only the changed parts of the screen to the terminal, and the frames are at least 50 ms apart.
 
 ## Art
