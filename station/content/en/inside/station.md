@@ -25,10 +25,10 @@ The brandbook gives the look of the station: gold lettering, bronze hairlines,
 empty cells and no frames. The theme turns the roles of the brandbook into colours
 for truecolor, 256 and 16 colours.
 
-## Two languages
+## Three languages
 
-One BBS directory holds both languages. The entry screen asks for the language
-and opens the menu in it. The screens of the two languages have the same menu items.
+One BBS directory holds all three languages: Russian, English and Lithuanian. The entry screen asks for the language
+and opens the menu in it. The screens of all languages have the same menu items.
 A test checks this.
 
 ## Texts

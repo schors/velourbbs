@@ -41,13 +41,14 @@ cd examples/lamp/en
 
 In another terminal, connect with `telnet localhost 2323`. The terminal needs the UTF-8 charset.
 
-The directory `station/` is the home station of Velour: the BBS of the project, in Russian and English.
+The directory `station/` is the home station of Velour: the BBS of the project, in Russian, English and Lithuanian.
 
 ## Documentation
 
 - [Setup guide](docs/guide/en/setup/README.md): install, check and run a BBS under systemd.
 - [BBT guide](docs/guide/en/bbt/README.md): write the screens. Its example BBS is in [`examples/lamp/`](examples/lamp/).
 - The guides in Russian: [setup](docs/guide/ru/setup/README.md), [BBT](docs/guide/ru/bbt/README.md).
+- The guides in Lithuanian: [setup](docs/guide/lt/setup/README.md), [BBT](docs/guide/lt/bbt/README.md).
 - [Brandbook](docs/brand/brandbook.md): the visual system of the home station.
 - [Specifications](docs/specs/): the full rules.
 

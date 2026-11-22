@@ -18,6 +18,7 @@ func TestDictionaries(t *testing.T) {
 func TestText(t *testing.T) {
 	for _, tt := range []struct{ lang, want string }{
 		{"ru", "-- Дальше --"},
+		{"lt", "-- Toliau --"},
 		{"en", "-- More --"},
 		{"de", "-- More --"},
 	} {

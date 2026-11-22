@@ -427,7 +427,7 @@ Kicker, title, meta, the opening lines with what was cut, the last comment, one 
 
 ## 7. Copy
 
-Screen text is in Russian or in English. Addresses and the station name stay as they are. Short lines, sentence case, no full stop after menu items and keys. The station does not invent facts: ports, hosts, dates and schedules come from the sysop or stay out.
+Screen text is in Russian, English or Lithuanian. Addresses and the station name stay as they are. Short lines, sentence case, no full stop after menu items and keys. The station does not invent facts: ports, hosts, dates and schedules come from the sysop or stay out.
 
 ### Russian
 
@@ -456,6 +456,20 @@ Screen text is in Russian or in English. Addresses and the station name stay as 
 | Dates in words | `14 November`; in lists `14 Nov, 13:30` | `11/14` |
 | Meta joined by a dot | `3 min read  ∙  #design` | `3 min. \| #design` |
 | Headings in sentence case | `What came next` | `What Came Next` |
+
+### Lithuanian
+
+| Rule | Write | Not |
+|---|---|---|
+| The visitor is "jūs", lower case | `Laiškai, skirti asmeniškai jums.` | `Laiškai Tau` |
+| Straight quotes, a hyphen, three dots | `"Toliau" - ir taip toliau...` | `„Toliau“ – ir taip toliau…` |
+| Each diacritic in place | `Įeiti`, `Išeiti`, `Į sąrašą` | `Ieiti`, `Iseiti`, `I sarasa` |
+| Key, then a verb or a place | `Enter Skaityti`, `Esc Į sąrašą` | `[Enter] - skaitymas`, `ESC: atgal` |
+| Esc names where it goes | `Esc Į meniu`, `Esc Į sąrašą` | `Esc Išeiti` |
+| Numbers agree with words; zero is a phrase | `1 komentaras`, `3 komentarai`, `10 komentarų`, `komentarų nėra` | `komentarai: 0` |
+| Dates in words | `lapkričio 14 d.`; in lists `lapkr. 14, 13:30` | `11.14` |
+| Meta joined by a dot | `3 min skaitymo  ∙  #dizainas` | `3 min. \| #dizainas` |
+| Headings in sentence case | `Kas atėjo vėliau` | `Kas Atėjo Vėliau` |
 
 ## 8. Screens
 

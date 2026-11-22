@@ -40,7 +40,7 @@ do = "back"
 {/if}
   {!ameth}■{!gold}  Inside{!}
 
-  {!gold}1{!}  {!ameth}■{!}  {!ctl}Station{!} {!frame}{~.}{!} {!dim}Screens, theme, two languages, tests{!}  
+  {!gold}1{!}  {!ameth}■{!}  {!ctl}Station{!} {!frame}{~.}{!} {!dim}Screens, theme, three languages, tests{!}  
   {!gold}2{!}  {!ameth}■{!}  {!ctl}Development{!} {!frame}{~.}{!} {!dim}AI models, gates and reviews{!}  
   {!gold}3{!}  {!ameth}■{!}  {!ctl}Deploy{!} {!frame}{~.}{!} {!dim}Tag, build and start on the host{!}  
   {!gold}4{!}  {!ameth}■{!}  {!ctl}Technology{!} {!frame}{~.}{!} {!dim}Go, own telnet, effects and art{!}  

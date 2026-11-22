@@ -22,7 +22,7 @@ So one screen looks right at each colour depth.
 
 Velour writes text only in UTF-8. UTF-8 has Cyrillic, Latin,
 the lines and the blocks of art at once. An 8-bit charset has only 256 characters, and each has its own set.
-For example, CP437 has no Cyrillic. With one charset, two languages live on one station,
+For example, CP437 has no Cyrillic and no Lithuanian letters. With one charset, three languages live on one station,
 and the screens, the texts and the art have one form.
 
 Velour checks the charset so: it prints the letter `â` and asks where the cursor is.

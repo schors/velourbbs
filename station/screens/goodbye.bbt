@@ -1,5 +1,5 @@
 {~}
-  {!dim}До встречи  ∙  See you{!}
+  {!dim}До встречи  ∙  See you  ∙  Iki pasimatymo{!}
 
 {#if term.cols >= 132 and term.rows >= 43}
 {>_logo-132}
@@ -9,6 +9,7 @@
 
   {!ruby}■{!} {!sapph}■{!} {!emer}■{!} {!ameth}■{!}  Вечер, текст и немного золота
            Evening, text and a little gold
+           Vakaras, tekstas ir truputis aukso
 
            {!dim}https://github.com/schors/velourbbs{!}
 {~}
