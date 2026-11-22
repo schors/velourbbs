@@ -35,8 +35,8 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - A screen of a language stays in its language: no item names a language
   (`lang`, `goto <lang>/`, `gosub <lang>/`), and no file argument has a language directory.
 - The texts follow the copy rules of the brandbook, section 7, for their language.
-- Each screen except a file screen has one layout for 80 and 132 columns and for 24 and 43 rows.
-  `[screen]` has `width = [68, 108]`, `align = "center"` and `gutter = 6`.
+- Each screen has one layout for 80 and 132 columns. Each screen except a file screen
+  also has one layout for 24 and 43 rows. `[screen]` has `width = [68, 108]`, `align = "center"` and `gutter = 6`.
   A source line starts with 2 spaces, and a row with a stretch token ends with 2 spaces.
   So the column is 8 to 71 at 80 columns and 14 to 117 at 132, counted from 0,
   as in the grid of the brandbook, section 5.
@@ -71,8 +71,8 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - Each screen with a header ends its key row with `{clock}` in `dim`, flush with the right edge
   of the column. On a file screen, `Esc` stays at the right: 4 spaces before the clock.
   `main` has no clock: its key row has no space for it at 80 columns.
-- A file screen has `width = [68, 68]`, `align = "left"` and `margin = [2, 2]`.
-  So its column is 8 to 71 at each width: the brandbook has no reading screen at 132 yet.
+- A file screen has `margin = [2, 2]`. So its text column is 8 to 71 at 80 columns
+  and 14 to 117 at 132.
 - With `term.ambiguous` 2, `main` shows a hint in each language in place of the greeting:
   the screens break, and the setting for one cell in the common terminals.
   The hint follows the layout rules above. Each row of the hint fits 80 columns

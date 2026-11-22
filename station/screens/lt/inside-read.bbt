@@ -1,8 +1,6 @@
 +++
 file = "{arg.file}"
 margin = [2, 2]
-width = [68, 68]
-align = "left"
 [[effect]]
 do = "sweep"
 at = [1, 2, 108, 2]
