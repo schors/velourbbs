@@ -16,7 +16,7 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!white}Документация{!}
+  {!hi}V E L O U R{!}      {!white}Документация{!}    {!dim}Устройство{!}
   {!gold}───────────{!frame}{~─}{!} {!emer}■{!}  
 
   {!emer}■{!gold}  Документация  ∙  {arg.title}{!}

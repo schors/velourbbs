@@ -1,7 +1,8 @@
 # Home BBS
 
 This specification defines the home BBS of Velour: the station that shows the product,
-its guides and its features. The files of `station/` define its screens and texts.
+its guides, its features and how the station is made.
+The files of `station/` define its screens and texts.
 Related parts: [brandbook](../brand/brandbook.md), [session-language](session-language.md)
 and [example-style](example-style.md).
 
@@ -20,6 +21,7 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 | `station/data/` | The directory of the data file. Not in git. The deploy makes it a symlink ([release-deploy](release-deploy.md), section 4.5). |
 | `station/screens/` | The common screens, `screens.toml` and the screens of each language in `<lang>/`. |
 | `station/content/<lang>/features.md` | The features text (section 4). |
+| `station/content/<lang>/inside/` | The texts of the section Inside (section 4). |
 | `station/content/<lang>/guide` | A relative symlink to `../../../docs/guide/<lang>`. It keeps one copy of the guides. |
 | `cmd/velourbbs/testdata/station/` | The golden cell dumps of section 5. |
 
@@ -44,6 +46,10 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   On each screen with keys, a block with `term.rows >= 25` gives the empty row below the keys.
   So, counted from 1, the kicker is at row 5 at 80x24 and 80x25 and at row 6 at 132x43.
   The keys are at row 23 at 80x24 and 80x25 and at row 41 at 132x43.
+- The menus have the sections "Документация" / "Documentation" and "Устройство" / "Inside",
+  and the screen `about`. The gem of Documentation is `emer`, of Inside `ameth`, of `about` `gold`.
+- The header of a section screen names both sections, as in the brandbook, section 2:
+  the current section in `white`, the other `dim`. The header of `about` has both sections `dim`.
 - The logotype is `_logo-132` with `term.cols >= 132 and term.rows >= 43`, else `_logo-80`.
 - `main` and the menus have one `sweep` with `peak = "g0"` for each logotype fragment
   ([live-screen](live-screen.md), section 6.8). It has no `at`: the light runs over the letters
@@ -58,8 +64,9 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   as one file through the symlink. It does not copy the parts.
 - The lists of guide parts use the provider `files`, so `README.md` is the first row.
   The footer hairline of a list shows its page when the list has more than one page.
-- The reading screen shows the argument `title` in its kicker: the name of the guide,
-  or `Velour` for the features text.
+- The reading screen `read` of Documentation and `inside-read` of Inside show
+  the argument `title` in their kicker: the name of the guide, `Velour` for the features text,
+  or the name of the text of Inside.
 - The screen `about` shows the repository address, the session and BBS fields
   and each `term.*` value that the probe detects. `term.type` and `term.name` are
   fixed-width fields of 36 cells, so each of their rows fits the column of 64 cells
@@ -69,12 +76,18 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - The theme gives the colours of the brandbook in each colour depth. The style names are
   the role names of the brandbook. The ground covers the whole terminal: `fill = "spaces"`.
 
-## 4. Features text
+## 4. Features text and Inside texts
 
 - `content/<lang>/features.md` lists what the engine can do now, in short paragraphs.
   It names no feature that is not in a specification of `docs/specs/`.
 - A `dev` issue that adds or changes a feature that a user or a sysop sees updates
   this file in both languages.
+- `content/<lang>/inside/` tells how the station is made and why: `station.md` (the files,
+  the screens and the tests of the station), `development.md` (the development flow)
+  and `deploy.md` (the release and the deploy, [release-deploy](release-deploy.md)).
+  Each fact comes from the repository. The texts name no host, address or port.
+- A change of the station, of `docs/dev-flow/` or of the deploy that makes a fact
+  of an Inside text wrong updates the text in both languages.
 
 ## 5. Acceptance
 

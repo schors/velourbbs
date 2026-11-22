@@ -1,0 +1,36 @@
++++
+[[item]]
+key = "1"
+do = "gosub inside-read"
+args = { file = "inside/station.md", title = "Station" }
+[[item]]
+key = "2"
+do = "gosub inside-read"
+args = { file = "inside/development.md", title = "Development" }
+[[item]]
+key = "3"
+do = "gosub inside-read"
+args = { file = "inside/deploy.md", title = "Deploy" }
+[[item]]
+key = "ESC"
+do = "back"
++++
+
+  {!hi}V E L O U R{!}      {!dim}Documentation{!}    {!white}Inside{!}
+  {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
+
+{#if term.rows >= 43}
+
+{/if}
+  {!ameth}■{!gold}  Inside{!}
+
+  {!gold}1{!}  {!ameth}■{!}  {!ctl}Station{!} {!frame}{~.}{!} {!dim}Screens, theme, two languages, tests{!}  
+  {!gold}2{!}  {!ameth}■{!}  {!ctl}Development{!} {!frame}{~.}{!} {!dim}AI models, gates and reviews{!}  
+  {!gold}3{!}  {!ameth}■{!}  {!ctl}Deploy{!} {!frame}{~.}{!} {!dim}Tag, build and start on the host{!}  
+{~}
+  {!frame}{~─}{!}  
+  {!hi}1 2 3{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To menu{!}
+
+{#if term.rows >= 25}
+
+{/if}

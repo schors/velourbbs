@@ -12,6 +12,9 @@ key = "1"
 do = "gosub docs"
 [[item]]
 key = "2"
+do = "gosub inside"
+[[item]]
+key = "3"
 do = "gosub about"
 [[item]]
 key = "ESC"
@@ -31,9 +34,11 @@ do = "logoff"
 
   {!gold}01{!} {!emer}■{!}  {!ctl}Documentation{!} {!frame}{~.}{!} {!dim}Guides and features of Velour{!}  
 
-  {!gold}02{!} {!gold}■{!}  {!ctl}About the station{!} {!frame}{~.}{!} {!dim}A little about the station{!}  
+  {!gold}02{!} {!ameth}■{!}  {!ctl}Inside{!} {!frame}{~.}{!} {!dim}How the station is made and why{!}  
+
+  {!gold}03{!} {!gold}■{!}  {!ctl}About the station{!} {!frame}{~.}{!} {!dim}A little about the station{!}  
 {~}
-  {!hi}1 2{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To entry{!}    {!hi}Q{!} {!ctl}Quit{!}{~}{!dim}{clock}{!}  
+  {!hi}1 2 3{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To entry{!}    {!hi}Q{!} {!ctl}Quit{!}{~}{!dim}{clock}{!}  
 
 {#if term.rows >= 25}
 

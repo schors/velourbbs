@@ -1,0 +1,32 @@
++++
+file = "{arg.file}"
+margin = [2, 2]
+width = [68, 68]
+align = "left"
+[[item]]
+key = "B"
+do = "page prev"
+when = "file.page > 1"
+[[item]]
+key = "SPACE"
+do = "page next"
+when = "not file.last"
+[[item]]
+key = "ESC"
+do = "back"
++++
+
+  {!hi}V E L O U R{!}      {!dim}Документация{!}    {!white}Устройство{!}
+  {!gold}───────────{!frame}{~─}{!} {!ameth}■{!}  
+
+  {!ameth}■{!gold}  Устройство  ∙  {arg.title}{!}
+
+  {!dim}{file.minutes} мин чтения{!}
+
+{>file}
+  {!frame}{#if file.pages == 1}{~─}{#else}{~─}{!dim}   {file.page}/{file.pages}   {!frame}{~─}{/if}{!}  
+  {#if item.B}{!hi}B{!} {!ctl}Назад{!}    {/if}{#if item.SPACE}{!hi}Пробел{!} {!ctl}Дальше{!}{#else}             {/if}{#if not item.B}           {/if}{~}{!hi}Esc{!} {!ctl}К списку{!}  
+
+{#if term.rows >= 25}
+
+{/if}
