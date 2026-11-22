@@ -13,7 +13,6 @@ Septintą valandą linijoje vienu metu buvo net trys svečiai. Tai tikras rekord
 tokiai mažai stočiai. Jie daug nekalbėjo. Kiekvienas iš jų perskaitė
 po tekstą ir paliko žurnale trumpą žodį. Vienas parašė „čia šilta“.
 Kitas parašė tik vieną mažą žvaigždutę, ir daugiau nieko.
-Man atrodo, kad tai buvo pats gražiausias įrašas per visą vakarą.
 
 Vėliau sniegas liovėsi, ir virš stogų patekėjo mėnulis.
 Išviriau sau arbatos ir skaičiau senus šio žurnalo užrašus, pradedant pirmąja naktimi.

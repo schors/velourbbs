@@ -49,7 +49,7 @@ net kai tu nesi prisijungęs:
 sudo loginctl enable-linger "$USER"
 ```
 
-Šaltinio kodo saugykloje paleisk:
+Pirminio kodo saugykloje paleisk:
 
 ```
 mkdir -p ~/.config/systemd/user

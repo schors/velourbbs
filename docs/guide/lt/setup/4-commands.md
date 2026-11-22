@@ -104,6 +104,6 @@ Visos taisyklės: [telnet-term](../../../specs/telnet-term.md), 10 skyrius.
 
 1. Kataloge `/srv/velourbbs` paleisk `velourbbs serve`. Ji įrašo eilutę `listen`.
 2. Prijunk telnet klientą prie serverio, prievadas 2323, pavyzdžiui, `telnet localhost 2323`.
-   Klientas parodo ekraną `main`: galvutę „Lempa“ ir meniu `A R T G`.
+   Klientas parodo ekraną `main`: galvutę „Lempa“ ir meniu `A R L T G`.
    Paspausk `G`, kad baigtum seansą.
 3. Sustabdyk serverį klavišais Ctrl+C. 5 skyrius naudoja prievadą 2323.

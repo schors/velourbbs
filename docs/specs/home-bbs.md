@@ -47,13 +47,14 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   On each screen with keys, a block with `term.rows >= 25` gives the empty row below the keys.
   So, counted from 1, the kicker is at row 5 at 80x24 and 80x25 and at row 6 at 132x43.
   The keys are at row 23 at 80x24 and 80x25 and at row 41 at 132x43.
-- The menus have the sections "Документация" / "Documentation" and "Устройство" / "Inside",
+- The menus have the sections "Документация" / "Documentation" / "Dokumentacija"
+  and "Устройство" / "Inside" / "Sandara",
   and the screen `about`. The gem of Documentation is `emer`, of Inside `ameth`, of `about` `gold`.
 - Each screen of a language has the header of the brandbook, section 2.
   The header of a section screen names both sections: the current section in `white`,
   the other `dim`. The header of the menu and of `about` has both sections `dim`.
   The signature line of the menu ends in `B B S`, of `about` in the gem `gold`.
-- The menu has the kicker "Меню" / "Menu" in `gold` above its items.
+- The menu has the kicker "Меню" / "Menu" / "Meniu" in `gold` above its items.
 - The common screens have the logotype: `_logo-132` with `term.cols >= 132 and term.rows >= 43`,
   else `_logo-80`. `main` has one `sweep` with `peak = "g0"` for each logotype fragment
   ([live-screen](live-screen.md), section 6.8). The sweep has no `at`: the light runs over the letters
@@ -68,7 +69,7 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - With `term.ambiguous` 2, `main` shows a hint in each language in place of the greeting:
   the screens break, and the setting for one cell in the common terminals.
   The hint follows the layout rules above. Each row of the hint fits 80 columns
-  also when each Cyrillic letter takes two cells.
+  also when each character of East Asian width A, Cyrillic included, takes two cells.
 - The guides and the features text are texts. The station shows each part of a guide
   as one file through the symlink. It does not copy the parts.
 - The lists of guide parts use the provider `files`, so `README.md` is the first row.

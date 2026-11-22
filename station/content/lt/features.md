@@ -17,7 +17,7 @@ Naujas terminalo dydis įsigalioja nuo kito ekrano.
 Ekranai - tai sistemos operatoriaus tekstiniai failai BBT formatu. Faile yra tekstas, stiliai, laukai ir sąlygos.
 Vienas ekranas gali turėti skirtingus pavidalus siauram ir plačiam terminalui.
 
-Eilutė gali išsitempti per visą ekrano plotį: taškų linijos, skiriamosios linijos ir centruoti laukai.
+Eilutė gali išsitempti per visą ekrano plotį: taškų linijos, plonos linijos ir centruoti laukai.
 Tarpo eilutė laiko paskutines eilutes kiekvieno terminalo apačioje.
 Ekranas gali augti kartu su terminalu ir palikti tuščius stulpelius abiejuose šonuose.
 

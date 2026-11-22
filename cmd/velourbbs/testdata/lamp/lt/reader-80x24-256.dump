@@ -59,15 +59,15 @@ page 2 80x24 fill spaces
 |                                                                                |
 |       Stiklinis gaubtas                                                        |
 |                                                                                |
-|       1780-aisiais Aimé Argand uždėjo stiklinį gaubtą ant apvalaus dagčio.     |
-|       Oras ėjo iš apačios, ir liepsna tapo daug ryškesnė. Po                   |
+|       XVIII a. 9-ajame dešimtmetyje Aimé Argand uždėjo stiklinį gaubtą ant     |
+|       apvalaus dagčio. Oras ėjo iš apačios, ir liepsna tapo daug ryškesnė. Po  |
 |       septyniasdešimties metų žibalinė lempa[1] atkeliavo į kiekvienus namus.  |
 |                                                                                |
 |       Lempa           Kuras              Nuo                                   |
-|       ──────────────────────────────────────────────────                       |
+|       ─────────────────────────────────────────────────────────────            |
 |       Molinė lempa    alyvuogių aliejus  prieš 5000 metų                       |
-|       Argand lempa    banginių taukai    1780-ųjų                              |
-|       Žibalinė lempa  žibalas            1850-ųjų                              |
+|       Argand lempa    banginių taukai    XVIII a. 9-ojo dešimtmečio            |
+|       Žibalinė lempa  žibalas            XIX a. 6-ojo dešimtmečio              |
 |                                                                                |
 |  ─────────────────────────────────── 2/3 ────────────────────────────────────  |
 |                                                                                |
@@ -85,11 +85,11 @@ styles
 9: 1-7 223/235, 8-24 216/235, 25-80 223/235
 10: 1-80 223/235
 11: 1-80 223/235
-12: 1-44 223/235, 45-57 230/235 bold, 58-80 223/235
+12: 1-61 223/235, 62-74 230/235 bold, 75-80 223/235
 13: 1-31 223/235, 32-45 180/235 underline, 46-48 137/235, 49-80 223/235
 14: 1-80 223/235
-15: 1-7 223/235, 8-57 230/235 bold, 58-80 223/235
-16: 1-7 223/235, 8-57 95/235, 58-80 223/235
+15: 1-7 223/235, 8-68 230/235 bold, 69-80 223/235
+16: 1-7 223/235, 8-68 95/235, 69-80 223/235
 17: 1-80 223/235
 18: 1-80 223/235
 19: 1-80 223/235

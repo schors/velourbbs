@@ -104,6 +104,6 @@ Full rules: [telnet-term](../../../specs/telnet-term.md), section 10.
 
 1. In `/srv/velourbbs`, run `velourbbs serve`. It writes the `listen` line.
 2. Connect a telnet client to the host, port 2323, for example `telnet localhost 2323`.
-   The client shows the screen `main`: the header "Lamp" and the menu `A R T G`.
+   The client shows the screen `main`: the header "Lamp" and the menu `A R L T G`.
    Press `G` to end the session.
 3. Stop the server with Ctrl+C. Section 5 uses port 2323.

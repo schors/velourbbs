@@ -280,11 +280,11 @@ Stilius gali turėti atributą `blink`, bet terminalai jį rodo skirtingai:
 
 | Terminalas | `blink` |
 |---|---|
-| PuTTY | Pagal nutylėjimą išjungtas. Vietoj mirksėjimo rodo ryškų foną. |
+| PuTTY | Išjungtas pagal numatytuosius nustatymus. Vietoj mirksėjimo rodo ryškų foną. |
 | Tera Term | Nemirksi. Rodo mirksėjimo spalvą. |
 | Windows Terminal | Mirksi. Visi langeliai mirksi kartu. |
 | xterm | Mirksi, jei versija palaiko mirksėjimą. Kitaip – paryškintas. |
-| iTerm2 | Pagal nutylėjimą išjungtas. |
+| iTerm2 | Išjungtas pagal numatytuosius nustatymus. |
 | Ghostty | Nemirksi. |
 | tmux | Perduoda atributą išoriniam terminalui. |
 

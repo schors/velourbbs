@@ -375,7 +375,7 @@ Tūkstančius metų lempa skleidė mažą, *ramią* šviesą.
 
 ## Stiklinis gaubtas
 
-1780-aisiais Aimé Argand uždėjo stiklinį gaubtą ant apvalaus dagčio.
+XVIII a. 9-ajame dešimtmetyje Aimé Argand uždėjo stiklinį gaubtą ant apvalaus dagčio.
 Oras ėjo iš apačios, ir liepsna tapo **daug ryškesnė**.
 Po septyniasdešimties metų [žibalinė lempa](https://lt.wikipedia.org/wiki/Žibalinė_lempa)
 atkeliavo į kiekvienus namus.
@@ -383,8 +383,8 @@ atkeliavo į kiekvienus namus.
 | Lempa | Kuras | Nuo |
 |---|---|---|
 | Molinė lempa | alyvuogių aliejus | prieš 5000 metų |
-| Argand lempa | banginių taukai | 1780-ųjų |
-| Žibalinė lempa | žibalas | 1850-ųjų |
+| Argand lempa | banginių taukai | XVIII a. 9-ojo dešimtmečio |
+| Žibalinė lempa | žibalas | XIX a. 6-ojo dešimtmečio |
 
 ---
 
@@ -402,15 +402,15 @@ Prisitrauk kėdę. Šviesa dega.
 ```text
        Stiklinis gaubtas
 
-       1780-aisiais Aimé Argand uždėjo stiklinį gaubtą ant apvalaus dagčio.
-       Oras ėjo iš apačios, ir liepsna tapo daug ryškesnė. Po
+       XVIII a. 9-ajame dešimtmetyje Aimé Argand uždėjo stiklinį gaubtą ant
+       apvalaus dagčio. Oras ėjo iš apačios, ir liepsna tapo daug ryškesnė. Po
        septyniasdešimties metų žibalinė lempa[1] atkeliavo į kiekvienus namus.
 
        Lempa           Kuras              Nuo
-       ──────────────────────────────────────────────────
+       ─────────────────────────────────────────────────────────────
        Molinė lempa    alyvuogių aliejus  prieš 5000 metų
-       Argand lempa    banginių taukai    1780-ųjų
-       Žibalinė lempa  žibalas            1850-ųjų
+       Argand lempa    banginių taukai    XVIII a. 9-ojo dešimtmečio
+       Žibalinė lempa  žibalas            XIX a. 6-ojo dešimtmečio
 ```
 
 3 puslapis, failo sritis:

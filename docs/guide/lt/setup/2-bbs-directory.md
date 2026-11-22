@@ -3,7 +3,7 @@
 „BBS katalogas“ laiko vienos BBS failus. Šis vadovas naudoja `/srv/velourbbs`.
 Jis priklauso tavo naudotojui. BBS taip pat veikia tavo naudotojo vardu (5 skyrius):
 ji skaito failus ir rašo savo duomenų failą į šį katalogą.
-Sukurk katalogą ir nukopijuok į jį BBS pavyzdį „Lempa“. Šaltinio kodo saugykloje paleisk:
+Sukurk katalogą ir nukopijuok į jį BBS pavyzdį „Lempa“. Pirminio kodo saugykloje paleisk:
 
 ```
 sudo install -d -o "$USER" -g "$(id -gn)" /srv/velourbbs
