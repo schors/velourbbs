@@ -24,9 +24,11 @@ The files of Lamp:
 | `screens/term.bbt` | The values of the terminal. |
 | `screens/texts.bbt` | The list of the texts of the reading room. |
 | `screens/reader.bbt` | The screen that shows a text of the list. |
+| `screens/log.bbt` | The keeper's log: the list of the notes. |
 | `screens/goodbye.bbt` | The screen after the end of the session. |
 | `content/lamp.md` | A text in Markdown: a short history of the lamps. |
 | `content/rules.txt` | A plain text: the rules of the station. |
+| `content/log/` | The notes of the keeper's log, one Markdown file for each note. |
 
 To change the screens, read the [BBT guide](../bbt/README.md).
 

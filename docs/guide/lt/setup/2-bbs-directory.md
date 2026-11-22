@@ -24,9 +24,11 @@ Redaguok failus savo naudotojo vardu. Nenaudok `sudo` BBS katalogo failams.
 | `screens/term.bbt` | Terminalo reikšmės. |
 | `screens/texts.bbt` | Skaityklos tekstų sąrašas. |
 | `screens/reader.bbt` | Ekranas, kuris rodo sąrašo tekstą. |
+| `screens/log.bbt` | Prižiūrėtojo žurnalas: užrašų sąrašas. |
 | `screens/goodbye.bbt` | Ekranas po seanso pabaigos. |
 | `content/lamp.md` | Markdown tekstas: trumpa lempų istorija. |
 | `content/rules.txt` | Paprastas tekstas: stoties taisyklės. |
+| `content/log/` | Prižiūrėtojo žurnalo užrašai, po vieną Markdown failą kiekvienam užrašui. |
 
 Kaip keisti ekranus, skaityk [BBT vadove](../bbt/README.md).
 
