@@ -86,6 +86,15 @@ func TestStation(t *testing.T) {
 			t.Errorf("main-sweep %s: stderr %q, status %d", size, errOut.String(), status)
 		}
 		golden(t, filepath.Join("testdata", "station", "main-sweep-"+size+"-256.dump"), out.String())
+		// The sweep over the signature line of the header: the band, the glint at B B S, and the end.
+		out.Reset()
+		errOut.Reset()
+		args = []string{"preview", "menu", "--size", size, "--set", "term.colors=256", "--set", "session.lang=ru",
+			"--keys", "+14750ms,+500ms,+1500ms"}
+		if status := run(args, t.TempDir(), fsys, &out, &errOut); errOut.Len() != 0 || status != 0 {
+			t.Errorf("ru-menu-sweep %s: stderr %q, status %d", size, errOut.String(), status)
+		}
+		golden(t, filepath.Join("testdata", "station", "ru-menu-sweep-"+size+"-256.dump"), out.String())
 	}
 }
 

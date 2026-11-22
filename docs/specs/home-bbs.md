@@ -42,18 +42,26 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   as in the grid of the brandbook, section 5.
 - Stretch tokens give the rules, the dot leaders and the right edge of the key rows.
   A spacer line above the footer takes the free rows ([bbt-format](bbt-format.md), section 6.6).
-- On a section screen, a block with `term.rows >= 43` gives the empty row above the kicker.
+- On each screen with a header except a file screen, a block with `term.rows >= 43`
+  gives the empty row above the kicker.
   On each screen with keys, a block with `term.rows >= 25` gives the empty row below the keys.
   So, counted from 1, the kicker is at row 5 at 80x24 and 80x25 and at row 6 at 132x43.
   The keys are at row 23 at 80x24 and 80x25 and at row 41 at 132x43.
 - The menus have the sections "Документация" / "Documentation" and "Устройство" / "Inside",
   and the screen `about`. The gem of Documentation is `emer`, of Inside `ameth`, of `about` `gold`.
-- The header of a section screen names both sections, as in the brandbook, section 2:
-  the current section in `white`, the other `dim`. The header of `about` has both sections `dim`.
-- The logotype is `_logo-132` with `term.cols >= 132 and term.rows >= 43`, else `_logo-80`.
-- `main` and the menus have one `sweep` with `peak = "g0"` for each logotype fragment
-  ([live-screen](live-screen.md), section 6.8). It has no `at`: the light runs over the letters
-  and the signature line, as the brandbook gives in section 2.
+- Each screen except `main` has the header of the brandbook, section 2.
+  The header of a section screen names both sections: the current section in `white`,
+  the other `dim`. The header of the menu and of `about` has both sections `dim`.
+  The signature line of the menu ends in `B B S`, of `about` in the gem `gold`.
+- The menu has the kicker "Меню" / "Menu" in `gold` above its items.
+- `main` has the logotype: `_logo-132` with `term.cols >= 132 and term.rows >= 43`, else `_logo-80`.
+  It has one `sweep` with `peak = "g0"` for each logotype fragment ([live-screen](live-screen.md),
+  section 6.8). The sweep has no `at`: the light runs over the letters and the signature line.
+- Each screen with a header has one `sweep` with `peak = "g0"` over the signature line:
+  `at = [1, 3, 108, 1]`, `delay = 10`, `delay_spread = 8`, `every = 45` and `spread = 20`.
+- Each screen with a header ends its key row with `{clock}` in `dim`, flush with the right edge
+  of the column. On a file screen, `Esc` stays at the right: 4 spaces before the clock.
+  `main` has no clock: its key row has no space for it at 80 columns.
 - A file screen has `width = [68, 68]`, `align = "left"` and `margin = [2, 2]`.
   So its column is 8 to 71 at each width: the brandbook has no reading screen at 132 yet.
 - With `term.ambiguous` 2, `main` shows a hint in both languages in place of the greeting:
@@ -99,6 +107,9 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - The test compares the output of `velourbbs preview main` with `--keys +750ms,+250ms,+500ms,+1500ms`
   at 80x24 and at 132x43 with 256 colours with its golden file
   `cmd/velourbbs/testdata/station/main-sweep-<size>-256.dump`. It shows the sweep over the logotype.
+- The test compares the output of `velourbbs preview menu --set session.lang=ru`
+  with `--keys +14750ms,+500ms,+1500ms` at 80x24 and at 132x43 with 256 colours with its golden file
+  `cmd/velourbbs/testdata/station/ru-menu-sweep-<size>-256.dump`. It shows the sweep over the signature line.
 - The test has no other cases.
 - The station tests use a guide fixture in place of `content/<lang>/guide`.
   An edit of `docs/guide/` does not change their result.
