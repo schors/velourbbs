@@ -50,6 +50,7 @@ Atviri seansai parodo paleidimo iš naujo ekraną ir užsidaro.
 - Grąžinimas - ankstesnės versijos vykdymo pakartojimas GitHub Actions. GitHub tai leidžia 30 dienų.
   Vėliau - revert `main` šakoje ir nauja žyma.
 - Po duomenų failo migracijos ankstesnė versija nepraeis patikros.
-  Tada reikia grąžinti tos versijos failo kopiją.
+  Tada reikia sustabdyti `velourbbs.socket` ir `velourbbs.service`, grąžinti tos versijos
+  failo kopiją ir pakartoti vykdymą.
 - Tas, kas gali įkelti žymą `v*`, gali pakeisti ir užduotį. Rašyti į saugyklą
   gali tik prižiūrėtojai.

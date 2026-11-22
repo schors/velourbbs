@@ -47,7 +47,7 @@ Apart from the Go standard library, Velour has three direct dependencies:
 - PROXY protocol. `go-proxyproto` has an API of version 0.x, and its 2026 releases
   changed the default behaviour. The own receiver of versions 1 and 2 has about 200 lines.
 - Terminal output. `tcell` draws the whole screen as an application, and Velour shows
-  pages with a "More" row. Also, `tcell` does not query the terminal at connect.
+  pages with a "Next" row. Also, `tcell` does not query the terminal at connection.
 - ANSI art. The server needs only SGR styles, and the import about 15 commands.
   The full terminal parser `charmbracelet/x/ansi` is a large dependency.
 - Screen conditions. Their grammar has 7 rules. `expr` would add arithmetic

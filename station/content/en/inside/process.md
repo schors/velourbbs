@@ -24,7 +24,7 @@ This section of the station was rewritten in one `one-shot` task.
 
 A gate is a stop where the work waits for the answer of the operator.
 At the first gate, the model shows the plan and asks questions, and the operator chooses.
-The model writes the accepted plan to the issue. So a human makes the decision, and before the code.
+The model writes the accepted plan to the issue. So a human makes the decision, before any code is written.
 The second gate is the pull request. A maintainer accepts it or writes comments.
 
 ### Specification first

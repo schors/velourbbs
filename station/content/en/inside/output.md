@@ -5,7 +5,7 @@
 Velour draws the screen in memory as a grid of cells and sends the terminal the bytes for this grid.
 In the other direction, it turns the bytes from the terminal into keys.
 
-## How: output
+## How
 
 ### Cells
 
@@ -13,7 +13,7 @@ A cell holds one grapheme and a style. A grapheme is what a person sees as one s
 a letter with an accent, a flag, an emoji of several code points
 ([UAX #29](https://www.unicode.org/reports/tr29/)). The width of a grapheme is 0, 1 or 2 cells,
 by [Unicode 17](https://www.unicode.org/versions/Unicode17.0.0/).
-The characters of width Ambiguous, Cyrillic and lines, take one cell.
+The characters of width Ambiguous (Cyrillic and lines) take one cell.
 
 ### Page
 
@@ -23,10 +23,15 @@ Velour sends each page in one write:
    ([mode 2026](https://contour-terminal.org/vt-extensions/synchronized-output/)).
    The terminal collects the output and shows the page at once, not row by row.
    A terminal without this mode ignores it.
-2. `ESC[0m ESC[2J`: reset the style and clear the screen.
+2. `ESC[0m ESC[2J`: reset the style and clear the screen. With `fill = "erase"`, the style
+   `normal` comes in place of `ESC[0m`: the terminal clears the screen in the background of the theme.
 3. For each row: `ESC[<row>;1H`, then the cells of the row.
    There are no line ends, so the terminal does not scroll.
+   The exception is in the part "Complex graphemes".
 4. `ESC[0m ESC[?2026l`: reset the style and end synchronized output.
+
+The cursor position, the screen clear and the styles are commands of ECMA-48
+([ECMA-48](https://ecma-international.org/publications-and-standards/standards/ecma-48/)).
 
 ### Styles
 
@@ -44,6 +49,8 @@ Terminals count the width of a grapheme of several code points in different ways
 For example, `❤️` with VS16 takes one cell in PuTTY, xterm, Tera Term and VTE.
 So after such a grapheme, Velour prints a space and puts the cursor in its place:
 `ESC[<row>;<column>H`. The next cells go to their columns at each width.
+But a grapheme that the terminal draws wider can pass the right edge and wrap.
+On the last row, such a wrap scrolls the page.
 
 ### Update
 
@@ -57,7 +64,7 @@ does not draw the page again, but sends only the changed runs:
 
 Frames come at most once in 50 ms. When nothing changed, Velour sends nothing.
 
-## How: input
+### Input
 
 The bytes from the client go through four steps:
 
@@ -68,9 +75,10 @@ The bytes from the client go through four steps:
 4. The key decoder.
 
 The key decoder knows the sequences of the arrows, Home, End, PgUp, PgDn, Del and F1-F12
-in the forms of xterm, VT and the Linux console. After ESC, it waits 150 ms for the next byte.
-When no byte comes, this is the key Esc. Inside a sequence, it waits up to 1 second for each byte:
-so a reply that arrives in two parts does not become keys.
+in the forms of xterm, VT and the Linux console. After ESC and after the byte that starts
+a sequence (`[`, `O`, `]`, `P`, `_`), it waits 150 ms for the next byte. Then it waits
+up to 1 second for each byte. When no byte comes after ESC, this is the key Esc. After a longer pause,
+the started sequence goes away: so a reply that arrives in parts does not become keys.
 It drops OSC, DCS and APC strings as a whole: a late probe reply does not become keys either.
 
 In the line input, Velour turns on bracketed paste: `ESC[?2004h`

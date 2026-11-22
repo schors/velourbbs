@@ -3,7 +3,7 @@
 ## What it does
 
 Velour accepts a TCP connection, finds the address of the guest and checks the limits.
-Only then telnet starts.
+Only then does telnet start.
 
 ## How
 
@@ -28,11 +28,11 @@ Velour reads the header only from the addresses of the list `proxy` in `bbs.toml
 
 HAProxy, nginx, Traefik and stunnel send the header.
 
-### Limits
+### Connection limits
 
 - `max_conns`: the connections of the whole server.
 - `max_conns_per_addr`: the open connections from one address.
-- `max_connects_per_min`: the connects from one address in 60 seconds.
+- `max_connects_per_min`: the connection attempts from one address in 60 seconds.
   Velour counts them in steps of 1 second and keeps up to 10000 addresses.
 
 One address is one IPv4 address or one IPv6 /64 network.
@@ -53,7 +53,7 @@ A close with unread input makes TCP send a reset, and the client can lose the la
 
 ## Limits
 
-- The PROXY header and the terminal probe must end within `probe_timeout` from the connect.
+- The PROXY header and the terminal probe must end within `probe_timeout` from the connection.
 - An invalid or missing header closes the connection with no reply.
 - The proxy must send the header at once. Velour writes first, so a proxy
   that waits for client data does not work. AWS NLB does this by default.

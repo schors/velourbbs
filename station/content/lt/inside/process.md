@@ -24,10 +24,10 @@ Kiekvienas darbas yra GitHub issue. Issue tipas nurodo jo kelią:
 
 Vartai - sustojimas, kai darbas laukia operatoriaus atsakymo.
 Pirmuose vartuose modelis parodo planą ir užduoda klausimus, o operatorius renkasi.
-Priimtą planą modelis įrašo į issue. Taip sprendimą priima žmogus, ir prieš kodą.
+Priimtą planą modelis įrašo į issue. Taip sprendimą priima žmogus, dar prieš rašant kodą.
 Antrieji vartai - pull request. Prižiūrėtojas jį priima arba rašo pastabas.
 
-### Pirma specifikacija
+### Pirmiausia specifikacija
 
 Programos taisyklės yra `docs/specs/`. Jei kodas skiriasi nuo specifikacijos,
 specifikacija keičiama tame pačiame komite. Taip kiekviena taisyklė turi vieną apibrėžimą.
@@ -45,7 +45,7 @@ Be to, testas fiksuoja bėgančią šviesą ir gyvų laukų tiksėjimą kadras p
 ### Peržiūros
 
 Kiekvieną pull request skaito DI peržiūrėtojai. Kiekvienas turi savo poziciją: ką tikrinti
-ir iš kokio požiūrio. Visus atsiliepimus modelis paskelbia pull request prieš pirmą pataisą.
+ir kokiu požiūriu. Visus atsiliepimus modelis paskelbia pull request prieš pirmą pataisą.
 Kiekvienoje atsiliepimo gijoje jis atsako: pataisyta ar ne ir kodėl.
 
 ## Ką gauna

@@ -5,7 +5,9 @@
 Velour rodo Markdown tekstus ir ANSI meną. Tekstus ji skaito tokius, kokie yra.
 Meną sistemos operatorius vieną kartą paverčia serverio formatu komanda `velourbbs art import`.
 
-## Kaip: tekstai
+## Kaip
+
+### Tekstai
 
 Markdown skaito biblioteka `goldmark`: CommonMark 0.31.2
 ([specifikacija](https://spec.commonmark.org/0.31.2/)) ir GFM lenteles
@@ -19,10 +21,10 @@ Ji duoda dokumento medį be HTML, o Velour išdėsto jį langeliais:
 Tekstas dalijamas į puslapius pagal terminalo aukštį: `Tarpas` verčia pirmyn, `B` - atgal.
 Skaitymo laikas - žodžių skaičius, padalytas iš 200.
 
-Vadovai yra saugyklos `docs/guide/`. Stotis mato juos per simbolinę nuorodą
+Vadovai yra saugyklos kataloge `docs/guide/`. Stotis mato juos per simbolinę nuorodą
 ir jų nekopijuoja. Todėl vadovas stotyje ir GitHub - tas pats failas.
 
-## Kaip: menas
+### Menas
 
 ANSI meną piešia Moebius 1.0.29, icy_draw 0.6.2 ir PabloDraw 3.3.14-beta.
 Paprastai jie rašo `.ans` failą CP437 koduote su SAUCE įrašu pabaigoje: tai 128 baitai
@@ -41,8 +43,8 @@ ir niekada neskaito CP437. Ekranas įterpia meną tarp teksto: `{>logo.ans}`.
 - Tekstą, kuris atrodo vienodai esant 80 ir 132 stulpeliams ir bet kokiam spalvų gyliui.
 - Meną, kurį serveris išveda kaip įprastus langelius: jis gali stovėti šalia teksto,
   o efektai gali atgaivinti jo žvaigždes ir žvakes.
-- VGA meno spalvas Velour siunčia RGB, jei terminalo paletė ne VGA.
-  Taip menas išlaiko dailininko spalvas.
+- Jei terminalo paletė ne VGA, Velour paverčia meno VGA spalvas RGB
+  prieš spalvų suvedimą. Taip truecolor ir 256 spalvų terminaluose menas išlaiko dailininko spalvas.
 
 ## Ribos
 

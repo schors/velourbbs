@@ -28,7 +28,7 @@ Velour skaito antraštę tik iš adresų, esančių `bbs.toml` sąraše `proxy`.
 
 Antraštę siunčia HAProxy, nginx, Traefik ir stunnel.
 
-### Ribos
+### Ryšių ribos
 
 - `max_conns` - viso serverio ryšių skaičius.
 - `max_conns_per_addr` - atviri ryšiai iš vieno adreso.

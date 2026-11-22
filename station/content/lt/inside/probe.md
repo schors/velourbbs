@@ -20,12 +20,15 @@ Tada Velour vienu rašymu siunčia užklausas tokia tvarka:
    DECRQSS SGR, `ESC P $ q m ESC \`
    ([DECRQSS](https://vt100.net/docs/vt510-rm/DECRQSS.html),
    atsakymas [DECRPSS](https://vt100.net/docs/vt510-rm/DECRPSS.html)).
-   Tada atstato spalvą: `ESC[0m`.
-4. Programos pavadinimas: XTVERSION, `ESC[>0q`.
-5. Antriniai atributai: DA2, `ESC[>c`.
+   Atsakymas - `ESC P 1 $ r <parametrai> m ESC \` arba `ESC P 0 $ r ESC \` į neteisingą užklausą.
+   Tada Velour atstato spalvą: `ESC[0m`.
+4. Programos pavadinimas: XTVERSION, `ESC[>0q`. Atsakymas - `ESC P >| <tekstas> ESC \`.
+5. Antriniai atributai: DA2, `ESC[>c`. Atsakymas - `ESC[> <skaičiai> c`.
 6. Teksto ir fono spalvos: OSC 10 ir OSC 11 su `?`, pavyzdžiui `ESC]11;?ESC \`.
-7. Paletė: OSC 4 su `?`, atskira užklausa kiekvienam numeriui: 0-15, 256 ir 258.
-8. Pirminiai atributai: DA1, `ESC[c`.
+   Atsakymas - `ESC]11;rgb:<r>/<g>/<b>`, pabaigoje `ESC \` arba BEL.
+7. Paletė: `ESC]4;<n>;?ESC \`, atskira užklausa kiekvienam numeriui: 0-15, 256 ir 258.
+   Atsakymas - `ESC]4;<n>;rgb:<r>/<g>/<b>`, pabaigoje `ESC \` arba BEL.
+8. Pirminiai atributai: DA1, `ESC[c`. Atsakymas - `ESC[? <skaičiai> c`.
 9. Eilutės trynimas: `CR ESC[K`. Jis pašalina užklausą, kurią terminalas išspausdino kaip tekstą.
 
 4-8 užklausas aprašo xterm žinynas
@@ -64,7 +67,8 @@ Pirma tinkanti taisyklė duoda `term.colors`:
 1. DECRQSS atsakymas turi spalvą 1, 2, 3: terminalas išsaugojo RGB. Tai truecolor.
    Terminalas, kuris RGB suveda į paletę, atsako numeriu: Tera Term siunčia `0;30`.
 2. DA2 atsakymas yra iš PuTTY (`0;136;0`) arba iš tmux (pirmas skaičius `84`). Jie rodo RGB,
-   bet į DECRQSS neatsako. Tai truecolor.
+   bet neduoda DECRQSS atsakymo su RGB: PuTTY tyli, tmux 3.6 ir naujesnės versijos siunčia
+   atsakymą apie neteisingą užklausą. Tai truecolor.
 3. `term.type` baigiasi `-direct` arba turi `truecolor` ar `24bit`: truecolor.
 4. `term.type` turi `256color`: 256 spalvos.
 5. `term.type` yra `ansi`, `vt100`, `xterm-color` ar kitas pavadinimas, kur 16 spalvų tikra: 16.
@@ -82,8 +86,9 @@ kaip kitus atributus, pavyzdžiui `5` kaip mirksėjimą.
 - Fonas šviesus, jei jo santykinis skaistis didesnis nei 0,5. Formulė - iš WCAG 2.2
   ([relative luminance](https://www.w3.org/TR/WCAG22/#dfn-relative-luminance)).
   Tema `auto` tada ima šviesias spalvas.
-- Paletė 0-15 iš OSC 4. Jei ji nesutampa su VGA, meno spalvos siunčiamos RGB.
-  Taip menas išlaiko dailininko spalvas.
+- Paletė 0-15 iš OSC 4. Jei ji nesutampa su VGA, Velour paverčia meno VGA spalvas
+  jų RGB ir tik tada suveda į terminalo spalvų gylį.
+  Taip truecolor ir 256 spalvų terminaluose menas išlaiko dailininko, o ne paletės spalvas.
 
 Visus atsakymus Velour rašo viena žurnalo eilute. Pagal juos spalvų taisykles galima patikslinti.
 

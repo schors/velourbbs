@@ -50,6 +50,7 @@ Open sessions show the restart screen and close.
 - A rollback is a re-run of the earlier version in GitHub Actions. GitHub allows it for 30 days.
   Later, a revert in `main` and a new tag.
 - After a migration of the data file, the earlier version fails the check.
-  Then restore the copy of the file of that version.
+  Then stop `velourbbs.socket` and `velourbbs.service`, restore the copy of the file
+  of that version and re-run.
 - A person who can push a tag `v*` can also change the job. Only the maintainers
   can write to the repository.

@@ -3,7 +3,7 @@
 ## What it does
 
 Velour keeps the data of the station in one text file. The SysOp reads and edits it
-in a text editor.
+in a text editor while the BBS is stopped.
 
 ## How
 
@@ -11,12 +11,13 @@ The file is JSON Lines ([jsonlines.org](https://jsonlines.org/)): UTF-8, one rec
 one JSON object on a line. The first line is the header with the format version:
 
 ```
-{"format":"velourbbs-store","version":2}
+{"format":"velourbbs-store","version":1}
 ```
 
-Each next record has a kind, the field `kind`. The code defines each kind: its fields, checks and the limit
-of the number of records. When there are more records than the limit, the oldest go.
-A time is RFC 3339 in UTC, with seconds.
+Each following line is a record with its kind in the field `kind`. The code defines each kind:
+its fields, checks and the limit of the number of records. When there are more records than the limit, the oldest go.
+A time is [RFC 3339](https://www.rfc-editor.org/rfc/rfc3339) in UTC, with seconds.
+Version 1 has no kinds yet: the features of the station will add them.
 
 Velour keeps all records in memory. Each change writes the whole file:
 
@@ -29,14 +30,15 @@ Velour keeps all records in memory. Each change writes the whole file:
 
 - After a crash on Linux or macOS, the file has the records before the change or after it, not a mix.
 - An error before the rename keeps the old file and the old records.
-- Each change of the format increases the version. Migrations change an old file to the new version
-  at the read. An error shows the line of the file.
+- Each change of the format increases the version. Migrations convert an old file to the new version
+  on read. An error shows the line of the file.
 
 ## Limits
 
 - The file is at most 16 MB, because all of it is in memory.
 - One file has one `velourbbs serve`. The file is not locked.
 - An edit of the file while the server runs goes away at the next write.
+  So make the copy and the edit while the BBS is stopped.
 - An older Velour does not read a file of a newer version. Before a deploy with a migration,
   make a copy of the file.
 - On Windows, Go does not make the rename atomic, and it fails

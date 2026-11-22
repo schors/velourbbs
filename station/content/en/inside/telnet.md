@@ -10,7 +10,7 @@ Telnet sends commands inside the data stream. A command starts with the byte IAC
 ([RFC 854](https://www.rfc-editor.org/rfc/rfc854)). The commands
 `WILL`, `WONT`, `DO` and `DONT` turn options on and off. The data of an option goes between `IAC SB` and `IAC SE`.
 
-Directly after the connect, Velour sends in one write:
+Directly after the connection, Velour sends in one write:
 
 - `WILL ECHO` ([RFC 857](https://www.rfc-editor.org/rfc/rfc857)).
   The server echoes, and the client stops its own echo of the input.

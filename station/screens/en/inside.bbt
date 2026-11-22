@@ -68,7 +68,7 @@ do = "back"
 {/if}
   {!ameth}■{!gold}  Development{!}
 
-  {!gold}1{!}  {!ameth}■{!}  {!ctl}Go and libraries{!} {!frame}{~.}{!} {!dim}Why Go, what is own code and why{!}  
+  {!gold}1{!}  {!ameth}■{!}  {!ctl}Go and libraries{!} {!frame}{~.}{!} {!dim}Why Go, own code and why{!}  
   {!gold}2{!}  {!ameth}■{!}  {!ctl}Connection{!} {!frame}{~.}{!} {!dim}Port, PROXY protocol and limits{!}  
   {!gold}3{!}  {!ameth}■{!}  {!ctl}Telnet{!} {!frame}{~.}{!} {!dim}Options, size and terminal type{!}  
   {!gold}4{!}  {!ameth}■{!}  {!ctl}Terminal detection{!} {!frame}{~.}{!} {!dim}Queries, replies and decisions{!}  

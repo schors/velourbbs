@@ -37,7 +37,7 @@ finds a type error before the start.
 ### Theme
 
 `screens.toml` maps the role names of the brandbook to styles. The tables `[theme.16]` and `[theme.256]`
-give other colours for 16 and 256 colours, `[theme.light]` for a light background.
+give other colours for terminals with 16 and 256 colours, `[theme.light]` for a light background.
 With `theme = "auto"`, Velour selects the light theme by the background colour from the terminal probe.
 
 ### Live screen
@@ -69,7 +69,7 @@ the line and the column. An unknown TOML key is also an error with its place.
 
 One page for one terminal. An example is the screen "About the station":
 it shows the size, the type, the program name, the colours, the background and the width of Cyrillic
-that Velour found at connect.
+that Velour found at connection.
 
 ## Limits
 

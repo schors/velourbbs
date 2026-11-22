@@ -5,7 +5,9 @@
 Velour shows texts in Markdown and ANSI art. It reads the texts as they are.
 The SysOp converts art once to the form of the server with the command `velourbbs art import`.
 
-## How: texts
+## How
+
+### Texts
 
 The library `goldmark` reads Markdown: CommonMark 0.31.2
 ([specification](https://spec.commonmark.org/0.31.2/)) and the GFM tables
@@ -22,7 +24,7 @@ The reading time is the number of words divided by 200.
 The guides are in `docs/guide/` of the repository. The station sees them through a symlink
 and does not copy them. So a guide on the station and on GitHub is one and the same file.
 
-## How: art
+### Art
 
 ANSI art is drawn in Moebius 1.0.29, icy_draw 0.6.2 and PabloDraw 3.3.14-beta.
 Usually they write an `.ans` file in CP437 with a SAUCE record at the end: 128 bytes
@@ -41,8 +43,8 @@ and never reads CP437. A screen inserts art among the text: `{>logo.ans}`.
 - A text that looks the same at 80 and at 132 columns and in each colour depth.
 - Art that the server outputs as usual cells: it can stand next to text,
   and effects can animate its stars and candles.
-- Velour sends the VGA colours of art as RGB when the palette of the terminal is not VGA.
-  So art keeps the colours of its artist.
+- When the palette of the terminal is not VGA, Velour changes the VGA colours of art to RGB
+  before the colour reduction. So in truecolor and in 256 colours, art keeps the colours of its artist.
 
 ## Limits
 

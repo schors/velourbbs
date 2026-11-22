@@ -20,12 +20,15 @@ Then Velour sends the queries in one write, in this order:
    DECRQSS for SGR, `ESC P $ q m ESC \`
    ([DECRQSS](https://vt100.net/docs/vt510-rm/DECRQSS.html),
    reply [DECRPSS](https://vt100.net/docs/vt510-rm/DECRPSS.html)).
-   Then it resets the colour: `ESC[0m`.
-4. Program name: XTVERSION, `ESC[>0q`.
-5. Secondary attributes: DA2, `ESC[>c`.
+   The reply is `ESC P 1 $ r <parameters> m ESC \`, or `ESC P 0 $ r ESC \` for an invalid query.
+   Then Velour resets the colour: `ESC[0m`.
+4. Program name: XTVERSION, `ESC[>0q`. The reply is `ESC P >| <text> ESC \`.
+5. Secondary attributes: DA2, `ESC[>c`. The reply is `ESC[> <numbers> c`.
 6. Text and background colours: OSC 10 and OSC 11 with `?`, for example `ESC]11;?ESC \`.
-7. Palette: OSC 4 with `?`, one query for each number: 0-15, 256 and 258.
-8. Primary attributes: DA1, `ESC[c`.
+   The reply is `ESC]11;rgb:<r>/<g>/<b>`, with `ESC \` or BEL at the end.
+7. Palette: `ESC]4;<n>;?ESC \`, one query for each number: 0-15, 256 and 258.
+   The reply is `ESC]4;<n>;rgb:<r>/<g>/<b>`, with `ESC \` or BEL at the end.
+8. Primary attributes: DA1, `ESC[c`. The reply is `ESC[? <numbers> c`.
 9. Line erase: `CR ESC[K`. It removes a query that the terminal printed as text.
 
 The xterm reference describes queries 4-8
@@ -42,7 +45,7 @@ Velour waits for it or for 1 second of silence.
 In UTF-8, the letter `â` takes one cell, and the cursor goes to column 2.
 In an 8-bit charset, the two bytes are two characters, and the cursor goes to column 3.
 Then Velour prints an explanation in English on how to turn on UTF-8 and closes the connection.
-With no reply, Velour takes UTF-8.
+With no reply, Velour assumes UTF-8.
 
 Why the letter `â`: by Unicode its width is N, narrow also in a CJK terminal
 ([UAX #11](https://www.unicode.org/reports/tr11/)). Its bytes are printable characters
@@ -64,13 +67,14 @@ The first rule that matches gives `term.colors`:
 1. The DECRQSS reply has the colour 1, 2, 3: the terminal kept RGB. This is truecolor.
    A terminal that maps RGB to its palette answers with a number: Tera Term sends `0;30`.
 2. The DA2 reply is from PuTTY (`0;136;0`) or from tmux (first number `84`). They show RGB
-   but do not answer DECRQSS. This is truecolor.
+   but give no DECRQSS reply with RGB: PuTTY sends nothing, tmux 3.6 and later sends the reply
+   for an invalid query. This is truecolor.
 3. `term.type` ends with `-direct` or has `truecolor` or `24bit`: truecolor.
 4. `term.type` has `256color`: 256 colours.
 5. `term.type` is `ansi`, `vt100`, `xterm-color` or another name where 16 colours are certain: 16.
-6. Each other type: 256.
+6. Any other type: 256.
 
-Rule 5 has only certain names: a terminal without 256 colours reads `38;5;n`
+Rule 5 lists only names that surely have 16 colours: a terminal without 256 colours reads `38;5;n`
 as other attributes, for example `5` as blink.
 
 ### Name and background
@@ -82,8 +86,9 @@ as other attributes, for example `5` as blink.
 - The background is light when its relative luminance is more than 0.5. The formula is from WCAG 2.2
   ([relative luminance](https://www.w3.org/TR/WCAG22/#dfn-relative-luminance)).
   The theme `auto` then takes the light colours.
-- The palette 0-15 comes from OSC 4. When it differs from VGA, the colours of art go as RGB.
-  So art keeps the colours of its artist.
+- The palette 0-15 comes from OSC 4. When it differs from VGA, Velour changes the VGA colours of art
+  to their RGB and only then reduces them to the colour depth of the terminal.
+  So in truecolor and in 256 colours, art keeps the colours of its artist, not of the palette.
 
 Velour writes all replies in one line of the log. With them, the colour rules can be tuned.
 

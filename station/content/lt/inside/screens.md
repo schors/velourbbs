@@ -37,7 +37,7 @@ randa tipo klaidą prieš paleidimą.
 ### Tema
 
 `screens.toml` paverčia prekės ženklo knygos vaidmenų pavadinimus stiliais. Lentelės `[theme.16]` ir `[theme.256]`
-duoda kitas spalvas 16 ir 256 spalvų, `[theme.light]` - šviesiam fonui.
+duoda kitas spalvas 16 ir 256 spalvų terminalams, `[theme.light]` - šviesiam fonui.
 Su `theme = "auto"` Velour pasirenka šviesią temą pagal fono spalvą iš terminalo apklausos.
 
 ### Gyvas ekranas

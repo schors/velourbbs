@@ -68,7 +68,7 @@ do = "back"
 {/if}
   {!ameth}■{!gold}  Kūrimas{!}
 
-  {!gold}1{!}  {!ameth}■{!}  {!ctl}Go ir bibliotekos{!} {!frame}{~.}{!} {!dim}Kodėl Go, kas savo kodas ir kodėl{!}  
+  {!gold}1{!}  {!ameth}■{!}  {!ctl}Go ir bibliotekos{!} {!frame}{~.}{!} {!dim}Kodėl Go, savas kodas ir kodėl{!}  
   {!gold}2{!}  {!ameth}■{!}  {!ctl}Prisijungimas{!} {!frame}{~.}{!} {!dim}Prievadas, PROXY protocol ir ribos{!}  
   {!gold}3{!}  {!ameth}■{!}  {!ctl}Telnet{!} {!frame}{~.}{!} {!dim}Parinktys, dydis ir terminalo tipas{!}  
   {!gold}4{!}  {!ameth}■{!}  {!ctl}Terminalo atpažinimas{!} {!frame}{~.}{!} {!dim}Užklausos, atsakymai ir sprendimai{!}  

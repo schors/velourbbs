@@ -5,7 +5,7 @@
 Velour piešia ekraną atmintyje kaip langelių tinklelį, o terminalui siunčia baitus šiam tinkleliui.
 Kita kryptimi ji paverčia baitus iš terminalo klavišais.
 
-## Kaip: išvestis
+## Kaip
 
 ### Langeliai
 
@@ -13,7 +13,7 @@ Langelis saugo vieną grafemą ir stilių. Grafema - tai, ką žmogus mato kaip 
 raidė su kirčiu, vėliava, jaustukas iš kelių kodų
 ([UAX #29](https://www.unicode.org/reports/tr29/)). Grafemos plotis - 0, 1 arba 2 langeliai,
 pagal [Unicode 17](https://www.unicode.org/versions/Unicode17.0.0/).
-Ambiguous pločio simboliai, kirilica ir linijos, užima vieną langelį.
+Ambiguous pločio simboliai (kirilica ir linijos) užima vieną langelį.
 
 ### Puslapis
 
@@ -23,16 +23,21 @@ Kiekvieną puslapį Velour siunčia vienu rašymu:
    ([mode 2026](https://contour-terminal.org/vt-extensions/synchronized-output/)).
    Terminalas kaupia išvestį ir parodo puslapį iš karto, ne eilutę po eilutės.
    Terminalas be šio režimo jį praleidžia.
-2. `ESC[0m ESC[2J` - stiliaus atstatymas ir ekrano išvalymas.
+2. `ESC[0m ESC[2J` - stiliaus atstatymas ir ekrano išvalymas. Su `fill = "erase"` vietoj `ESC[0m`
+   eina stilius `normal`: terminalas išvalo ekraną temos fonu.
 3. Kiekvienai eilutei: `ESC[<eilutė>;1H`, tada eilutės langeliai.
    Eilučių pabaigų nėra, todėl terminalas neslenka ekrano.
+   Išimtis aprašyta dalyje "Sudėtingos grafemos".
 4. `ESC[0m ESC[?2026l` - stiliaus atstatymas ir sinchroninės išvesties pabaiga.
+
+Žymeklio vieta, ekrano išvalymas ir stiliai yra ECMA-48 komandos
+([ECMA-48](https://ecma-international.org/publications-and-standards/standards/ecma-48/)).
 
 ### Stiliai
 
 Prieš langelį su nauju stiliumi Velour siunčia SGR: `ESC[0;<parametrai>m`.
-Parametrai: `1` paryškintas, `4` pabrauktas, `5` mirksėjimas; `30`-`37` ir `90`-`97` 16 spalvų,
-`38;5;n` 256 spalvoms, `38;2;r;g;b` RGB. Fonas - tie patys skaičiai, 10 didesni: `40`, `48;5;n`.
+Parametrai: `1` paryškintas, `4` pabrauktas, `5` mirksėjimas; `30`-`37` ir `90`-`97` 16 spalvų režimui,
+`38;5;n` 256 spalvoms, `38;2;r;g;b` RGB spalvoms. Fonas - tie patys skaičiai, 10 didesni: `40`, `48;5;n`.
 
 Spalvą, kurios terminalas neturi, Velour pakeičia artimiausia: su mažiausiu
 RGB atstumo kvadratu. 256 spalvos - xterm paletė, 16 spalvų - VGA spalvos.
@@ -44,6 +49,8 @@ Terminalai skirtingai skaičiuoja grafemos iš kelių kodų plotį.
 Pavyzdžiui, `❤️` su VS16 PuTTY, xterm, Tera Term ir VTE užima vieną langelį.
 Todėl po tokios grafemos Velour išspausdina tarpą ir pastato žymeklį į reikiamą vietą:
 `ESC[<eilutė>;<stulpelis>H`. Kiti langeliai atsistoja į savo stulpelius esant bet kokiam pločiui.
+Bet grafema, kurią terminalas piešia platesnę, gali peržengti dešinį kraštą ir persikelti.
+Paskutinėje eilutėje toks perkėlimas paslenka puslapį.
 
 ### Atnaujinimas
 
@@ -57,7 +64,7 @@ nepiešia puslapio iš naujo, o siunčia tik pakeistas atkarpas:
 
 Kadrai eina ne dažniau kaip kas 50 ms. Jei niekas nepasikeitė, Velour nieko nesiunčia.
 
-## Kaip: įvestis
+### Įvestis
 
 Baitai iš kliento eina per keturis žingsnius:
 
@@ -68,9 +75,10 @@ Baitai iš kliento eina per keturis žingsnius:
 4. Klavišų dekoderis.
 
 Klavišų dekoderis žino rodyklių, Home, End, PgUp, PgDn, Del ir F1-F12 sekas
-xterm, VT ir Linux konsolės pavidalais. Po ESC jis laukia kito baito 150 ms.
-Jei baito nėra, tai klavišas Esc. Sekos viduje jis kiekvieno baito laukia iki 1 sekundės:
-taip atsakymas, atėjęs dviem dalimis, netampa klavišais.
+xterm, VT ir Linux konsolės pavidalais. Po ESC ir po baito, kuris pradeda seką
+(`[`, `O`, `]`, `P`, `_`), jis laukia kito baito 150 ms. Toliau jis kiekvieno baito laukia
+iki 1 sekundės. Jei po ESC baito nėra, tai klavišas Esc. Po ilgesnės pauzės pradėta seka
+dingsta: taip atsakymas, atėjęs dalimis, netampa klavišais.
 OSC, DCS ir APC eilutes jis atmeta visas: pavėlavęs apklausos atsakymas irgi netampa klavišais.
 
 Įvesties eilutėje Velour įjungia bracketed paste: `ESC[?2004h`
