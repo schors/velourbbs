@@ -37,6 +37,8 @@ builds the binaries, creates a GitHub Release and deploys the home BBS to the ho
   must be an ancestor of `refs/remotes/origin/main^{commit}` (`git merge-base --is-ancestor`).
   Else the job fails, with no release and no deploy. The job uses only full ref names:
   a tag named `origin/main` must not replace the branch.
+- The tag must be annotated (`git cat-file -t` gives `tag`): its annotation gives
+  the release text (section 3.3). Else the job fails.
 - The job checks the settings of section 4.1 before the build.
 - A pre-release tag (`v0.1.0-rc.1`) gives a GitHub pre-release. It also deploys.
 - The workflow has the permission `contents: write` and no other permission.
@@ -67,7 +69,9 @@ builds the binaries, creates a GitHub Release and deploys the home BBS to the ho
   the built commit. Else the job fails with no release: someone moved the tag during the run.
 - The job creates the release with `gh release create <tag> --verify-tag`,
   with `--prerelease` for a pre-release tag, and the assets.
-- The release notes come from `--generate-notes`.
+- The release text is the annotation of the tag with no signature (`%(contents)`
+  without `%(contents:signature)` of `git for-each-ref`). `--notes-file` gives it,
+  and `--generate-notes` adds the list of the merged PRs below it.
 - When the release of the tag exists, the job does not change it. A re-run (section 4.7)
   then builds and deploys again.
 

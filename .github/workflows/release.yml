@@ -40,6 +40,10 @@ jobs:
       - name: Check the tag against main
         run: |
           git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if [[ $(git cat-file -t "refs/tags/$TAG") != tag ]]; then
+            echo "::error::The tag is not annotated: its annotation gives the release text"
+            exit 1
+          fi
           commit=$(git rev-parse --verify "refs/tags/$TAG^{commit}")
           if ! git merge-base --is-ancestor "$commit" "refs/remotes/origin/main^{commit}"; then
             echo "::error::The commit of the tag is not in main"
@@ -130,7 +134,13 @@ jobs:
             echo "::error::The remote tag $TAG moved during the run"
             exit 1
           fi
-          flags=(--verify-tag --generate-notes)
+          # The release text is the annotation of the tag with no signature, then the list of the PRs.
+          ref="refs/tags/$TAG"
+          text=$(git for-each-ref --format='%(contents)' "$ref")
+          sig=$(git for-each-ref --format='%(contents:signature)' "$ref")
+          notes=$(printf '%s' "${text%"$sig"}")
+          printf '%s\n' "$notes" > "$RUNNER_TEMP/notes.md"
+          flags=(--verify-tag --notes-file "$RUNNER_TEMP/notes.md" --generate-notes)
           if [[ $TAG == *-* ]]; then flags+=(--prerelease); fi
           gh release create "$TAG" "${flags[@]}" "$RUNNER_TEMP"/dist/*
 
