@@ -365,7 +365,7 @@ content/gold.md:1:1: front matter: no end line "+++"
   `lines`, `numbers` and `margin`, and `--keys` with each `page` action.
 - A test covers each error of section 7.
 - A test shows a content file through a symlink to a directory outside the BBS directory.
-- The BBT guide in English and Russian does not name `args` and `{arg.*}` as not in the MVP
+- The BBT guide in each language does not name `args` and `{arg.*}` as not in the MVP
   ([bbt-guide](bbt-guide.md), section 3).
 
 ## 12. Not in this specification
