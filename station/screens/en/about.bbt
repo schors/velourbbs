@@ -25,10 +25,10 @@ do = "back"
 
   {!dim}Source code{!}         https://github.com/schors/velourbbs
   {!dim}Your address{!}        {session.ip}
-  {!dim}Time online{!}         {session.online}
+  {!dim}Time online{!}         {session.online live}
   {!dim}Velour version{!}      {bbs.version}
-  {!dim}Open sessions{!}       {bbs.sessions}
-  {!dim}Station uptime{!}      {bbs.uptime}
+  {!dim}Open sessions{!}       {bbs.sessions live}
+  {!dim}Station uptime{!}      {bbs.uptime live}
 
   {!dim}Terminal{!}            {term.cols}x{term.rows}, {term.type                         }
   {!dim}Program{!}             {#if term.name == ""}no reply{#else}{term.name                         }{/if}

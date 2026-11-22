@@ -95,6 +95,17 @@ func TestStation(t *testing.T) {
 			t.Errorf("ru-menu-sweep %s: stderr %q, status %d", size, errOut.String(), status)
 		}
 		golden(t, filepath.Join("testdata", "station", "ru-menu-sweep-"+size+"-256.dump"), out.String())
+		// The fields of about that change while the page is shown tick with the clock.
+		for _, lang := range []string{"ru", "en"} {
+			out.Reset()
+			errOut.Reset()
+			args = []string{"preview", "about", "--size", size, "--set", "term.colors=256", "--set", "session.lang=" + lang,
+				"--keys", "+2s"}
+			if status := run(args, t.TempDir(), fsys, &out, &errOut); errOut.Len() != 0 || status != 0 {
+				t.Errorf("%s-about-live %s: stderr %q, status %d", lang, size, errOut.String(), status)
+			}
+			golden(t, filepath.Join("testdata", "station", lang+"-about-live-"+size+"-256.dump"), out.String())
+		}
 	}
 }
 

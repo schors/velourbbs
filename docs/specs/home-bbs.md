@@ -77,7 +77,8 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
   the argument `title` in their kicker: the name of the guide, `Velour` for the features text,
   or the name of the text of Inside.
 - The screen `about` shows the repository address, the session and BBS fields
-  and each `term.*` value that the probe detects. `term.type` and `term.name` are
+  and each `term.*` value that the probe detects. `session.online`, `bbs.sessions`
+  and `bbs.uptime` are live fields ([live-screen](live-screen.md), section 3). `term.type` and `term.name` are
   fixed-width fields of 36 cells, so each of their rows fits the column of 64 cells
   and the screen fits 24 rows.
 - The station facts (the SysOp name, the address, the port) come from the operator.
@@ -111,6 +112,9 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - The test compares the output of `velourbbs preview menu --set session.lang=ru`
   with `--keys +14750ms,+500ms,+1500ms` at 80x24 and at 132x43 with 256 colours with its golden file
   `cmd/velourbbs/testdata/station/ru-menu-sweep-<size>-256.dump`. It shows the sweep over the signature line.
+- The test compares the output of `velourbbs preview about --set session.lang=<lang>` with `--keys +2s`
+  for `ru` and `en` at 80x24 and at 132x43 with 256 colours with its golden file
+  `cmd/velourbbs/testdata/station/<lang>-about-live-<size>-256.dump`. It shows the ticks of the live fields.
 - The test has no other cases.
 - The station tests use a guide fixture in place of `content/<lang>/guide`.
   An edit of `docs/guide/` does not change their result.
