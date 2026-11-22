@@ -162,8 +162,10 @@ Each effect has these keys:
 | `in` | string | None: the page. | The name of an art insert, `<name>.ans`, or of a fragment, `_<name>` (section 6.2). |
 | `at` | array | None: the whole art, the fragment rows or the grid. | A point, a rectangle or an array of points (section 6.2). |
 | `delay` | number, seconds | `0` | 0–3600. |
+| `delay_spread` | number, seconds | `0` | 0 or more. |
 | `every` | number, seconds | Of the effect (sections 6.4–6.9). | 0.05–3600. |
 | `spread` | number, seconds | Half of `every`, except `sweep`. | 0 or more. |
+| `times` | integer | None: no end. | 1–10000. |
 
 The tables of sections 6.4–6.9 give the other keys of each effect.
 
@@ -179,6 +181,7 @@ The tables of sections 6.4–6.9 give the other keys of each effect.
 - A missing or unknown `do`, or a key that the effect does not have.
 - A value outside its range, an invalid grapheme string or an invalid colour value.
 - A written `spread` with `every - spread < 0.05`, and `spread` of a `sweep` without `every`.
+- A written `delay_spread` with `delay - delay_spread < 0`, and `times` of a `sweep` without `every`.
 - An `at` that is not a point, a rectangle or an array of 1–64 points; a coordinate 0;
   a width or a height less than 1. The coordinates are integers.
 - `at` of the kind that the effect does not take (sections 6.4–6.9).
@@ -220,10 +223,12 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
 ### 6.3. Events
 
 - An effect has "events" in each place. An event starts at a time and can run for a time.
-- The first event starts at the show time plus `delay` plus d. Each next event starts at the start
-  of the event before plus d. d is `every` plus a random value from `-spread` to `spread`,
-  with the same chance for each value. An effect without `every` (a `sweep`) has one event
-  at the show time plus `delay`.
+- The first event starts at the show time plus `delay` plus a random value from `-delay_spread`
+  to `delay_spread`, plus d. Each next event starts at the start of the event before plus d.
+  d is `every` plus a random value from `-spread` to `spread`. Each random value has the same chance
+  for each value in its range. A spread of 0 takes no random value. A `sweep` has no d before its first event.
+- Each place has `times` events, then no event. Without `times`, the events have no end.
+  An effect without `every` (a `sweep`) has one event.
 - The events of one place can overlap. On a cell of two events, the event that started later wins.
   At the end of an event, its cells show the other events or the cell before the effect.
 - An event that finds no cell changes nothing and takes no random values.
@@ -237,8 +242,9 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
 - Each session has its own random source: the generator PCG of the Go package `math/rand/v2`
   with a random seed. `velourbbs preview` takes a fixed seed (section 7).
 - The events take the random values in the order of their starts: at one time, the earlier effect first,
-  then the earlier place. At the show, each effect in order takes the values of the show, then the d
-  of the first event of each place. An event takes its values, then the d of the next event.
+  then the earlier place. At the show, each effect in order takes the values of the show, then for each place
+  the value of `delay_spread` and the d of the first event. An event takes its values, then the d
+  of the next event. The last event takes no d.
 
 The "mix" of a cell with a colour P at an amount a, from 0 to 1, gives the foreground
 `C + (P - C) × a` for each RGB channel, rounded to the nearest integer. C is the foreground of the cell:
@@ -339,17 +345,18 @@ A bright spot runs from left to right over the cells of the place that are not s
   The amount of the cell is the larger amount of the band and of the glint.
 - The event runs until the centre stops and the last glint ends.
   A lit cell is a cell of the event (section 6.3) only while its amount is more than 0.
-- Without `every`, the effect has one event.
+- Without `every`, the effect has one event. With `every`, the first event starts with no d (section 6.3).
 
 | Key | Type | Default | Range |
 |---|---|---|---|
 | `at` | — | None. | A rectangle. |
 | `delay` | number, seconds | `0.5` | Section 6.1. |
 | `every` | number, seconds | None: one event. | Section 6.1. |
+| `times` | integer | None: no end. Only with `every`: else an error. | Section 6.1. |
 | `spread` | number, seconds | `0`. Only with `every`: else an error. | Section 6.1. |
 | `peak`, `time` | — | As `glint`. | As `glint`. |
 | `width` | integer, cells | `3` | 1–20. |
-| `speed` | number, columns each second | `40` | 1–1000. |
+| `speed` | number, columns each second | `80` | 1–1000. |
 
 ### 6.9. `lightning`
 

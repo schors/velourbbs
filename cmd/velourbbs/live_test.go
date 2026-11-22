@@ -99,7 +99,7 @@ func TestClockValues(t *testing.T) {
 // on the last row of the page with delay 1, which shows from the show.
 // glint: a point on the page with an RGB peak; an array of points in the art with a theme style as peak;
 // a rectangle of the art. The dump shows the grid of the last frame before the end of a wait.
-// sweep: the whole art once, from 0.5 s; a rectangle on the last row of the page with every.
+// sweep: the whole art once, from 0.5 s; a rectangle on the last row of the page with every, from its delay.
 // sparkle: a point on a space of the page; an array of points in the art with over and colors;
 // a rectangle of the art with count 3.
 // lightning: the whole grid with ASCII chars, on empty cells only; the whole art with over and a theme style as peak.

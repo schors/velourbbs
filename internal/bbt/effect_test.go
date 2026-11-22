@@ -21,8 +21,8 @@ func TestEffects(t *testing.T) {
 		"s.bbt": front("{>a.ans}",
 			`[[effect]]`, `do = "twinkle"`, `in = "a.ans"`, `at = [[1, 1], [-1, -2]]`, `chars = "*+"`, `colors = ["14", "title"]`,
 			`[[effect]]`, `do = "candle"`, `at = [1, -1, 3, 1]`, `chars = "^"`, `colors = ["#ff8800"]`, `delay = 1`, `every = 0.5`, `spread = 0.1`, `share = 1`,
-			`[[effect]]`, `do = "sweep"`, `every = 10`,
-			`[[effect]]`, `do = "lightning"`, `at = [1, 1, 10, 5]`, `over = true`,
+			`[[effect]]`, `do = "sweep"`, `every = 10`, `times = 3`,
+			`[[effect]]`, `do = "lightning"`, `at = [1, 1, 10, 5]`, `over = true`, `delay = 2`, `delay_spread = 2`,
 			`[[effect]]`, `do = "sparkle"`, `chars = "."`, `count = 3`, `time = 1`,
 			`[[effect]]`, `do = "glint"`, `peak = "prompt"`),
 		"a.ans": sauceArt("abc\nd", 10),
@@ -32,9 +32,9 @@ func TestEffects(t *testing.T) {
 			Every: time.Second, Spread: time.Second / 2, Chars: []string{"*", "+"}, Colors: []string{"14", "title"}, Share: 0.1},
 		{Do: screen.Candle, At: screen.At{Kind: screen.AtRect, Points: []screen.Point{{Col: 1, Row: -1}}, Width: 3, Height: 1},
 			Delay: time.Second, Every: time.Second / 2, Spread: 100 * time.Millisecond, Chars: []string{"^"}, Colors: []string{"#ff8800"}, Share: 1},
-		{Do: screen.Sweep, Delay: time.Second / 2, Every: 10 * time.Second, Peak: "#ffffff", Time: 600 * time.Millisecond, Width: 3, Speed: 40},
+		{Do: screen.Sweep, Delay: time.Second / 2, Every: 10 * time.Second, Times: 3, Peak: "#ffffff", Time: 600 * time.Millisecond, Width: 3, Speed: 80},
 		{Do: screen.Lightning, At: screen.At{Kind: screen.AtRect, Points: []screen.Point{{Col: 1, Row: 1}}, Width: 10, Height: 5},
-			Every: 30 * time.Second, Spread: 15 * time.Second, Chars: []string{"╲", "│", "╱"}, Peak: "#ffffff", Over: true, Time: 300 * time.Millisecond},
+			Delay: 2 * time.Second, DelaySpread: 2 * time.Second, Every: 30 * time.Second, Spread: 15 * time.Second, Chars: []string{"╲", "│", "╱"}, Peak: "#ffffff", Over: true, Time: 300 * time.Millisecond},
 		{Do: screen.Sparkle, Every: time.Second, Spread: time.Second / 2, Chars: []string{"."}, Count: 3, Time: time.Second},
 		{Do: screen.Glint, Every: 3 * time.Second, Spread: 1500 * time.Millisecond, Peak: "prompt", Time: 600 * time.Millisecond},
 	}
@@ -43,8 +43,8 @@ func TestEffects(t *testing.T) {
 	}
 	// A sweep without every has one event.
 	screens = mustLoad(t, map[string]string{"s.bbt": front("", `effect = [{ do = "sweep", at = [1, 1, 2, 2] }]`)})
-	if e := screens["s"].Effects[0]; e.Every != 0 || e.Spread != 0 {
-		t.Errorf("sweep: every %v, spread %v; want 0, 0", e.Every, e.Spread)
+	if e := screens["s"].Effects[0]; e.Every != 0 || e.Spread != 0 || e.Times != 1 {
+		t.Errorf("sweep: every %v, spread %v, times %d; want 0, 0, 1", e.Every, e.Spread, e.Times)
 	}
 }
 
@@ -131,6 +131,23 @@ func TestEffectErrors(t *testing.T) {
 			[]string{`screens/s.bbt:7:10: effect 1: spread: every - spread is 0.04, must be at least 0.05`}},
 		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "sweep"`, `spread = 0`)},
 			[]string{`screens/s.bbt:4:10: effect 1: spread: a sweep without every has no spread`}},
+		// delay_spread and times.
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `delay = 1`, `delay_spread = 1.5`)},
+			[]string{`screens/s.bbt:7:16: effect 1: delay_spread: delay - delay_spread is -0.5, must be at least 0`}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `delay = 0.5`, `delay_spread = 1e20`)},
+			[]string{`screens/s.bbt:7:16: effect 1: delay_spread: delay - delay_spread is -1e+20, must be at least 0`}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `delay_spread = inf`)},
+			[]string{`screens/s.bbt:6:16: effect 1: delay_spread: delay - delay_spread is -Inf, must be at least 0`}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `spread = 1e20`)},
+			[]string{`screens/s.bbt:6:10: effect 1: spread: every - spread is -1e+20, must be at least 0.05`}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `delay_spread = -1`)},
+			[]string{`screens/s.bbt:6:16: effect 1: delay_spread: -1, must be at least 0`}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `times = 0`)},
+			[]string{`screens/s.bbt:6:9: effect 1: times: 0, must be 1–10000`}},
+		{map[string]string{"s.bbt": tw(`at = [1, 1]`, `times = 10001`)},
+			[]string{`screens/s.bbt:6:9: effect 1: times: 10001, must be 1–10000`}},
+		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "sweep"`, `times = 2`)},
+			[]string{`screens/s.bbt:4:9: effect 1: times: a sweep without every has one event`}},
 		// at.
 		{map[string]string{"s.bbt": tw()}, []string{`screens/s.bbt:2:1: effect 1: at is missing`}},
 		{map[string]string{"s.bbt": tw(`at = [1, 2, 3]`)},

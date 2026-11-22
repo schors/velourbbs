@@ -228,6 +228,51 @@ func TestEvents(t *testing.T) {
 	}
 }
 
+// eventTimes gives the start times of the events of the screen s on the page p up to the time end.
+func eventTimes(t *testing.T, s *screen.Screen, p screen.Page, end time.Duration) []time.Duration {
+	t.Helper()
+	l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(1, 2)))
+	grid := p.Grid()
+	var out []time.Duration
+	for {
+		d, ok := l.Next()
+		if !ok || d > end {
+			return out
+		}
+		out = append(out, d)
+		l.Cells(d, grid)
+	}
+}
+
+// A place has times events, and no event after them (live-screen, section 6.3).
+func TestTimes(t *testing.T) {
+	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"candle\"\nchars = \"^'\"\ncolors = [\"flame\"]\nat = [1, 1]\n" +
+		"every = 0.5\nspread = 0\ntimes = 2\n+++\nx"}
+	s, p := page(t, files, 40, 24)
+	if got, want := eventTimes(t, s, p, time.Hour), []time.Duration{500 * time.Millisecond, time.Second}; !slices.Equal(got, want) {
+		t.Errorf("event times %v, want %v", got, want)
+	}
+}
+
+// The first event starts at the delay plus a random value from -delay_spread to delay_spread,
+// and each place takes its own value. The first run of a sweep starts at the delay,
+// the next runs every after the start of the run before (live-screen, sections 6.3 and 6.8).
+func TestFirstEvent(t *testing.T) {
+	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"candle\"\nchars = \"^\"\ncolors = [\"flame\"]\nat = [[1, 1], [2, 1]]\n" +
+		"every = 10\nspread = 0\ndelay = 2\ndelay_spread = 1\ntimes = 1\n+++\nxx"}
+	s, p := page(t, files, 40, 24)
+	got := eventTimes(t, s, p, time.Hour)
+	if len(got) != 2 || got[0] == got[1] || got[0] < 11*time.Second || got[1] > 13*time.Second {
+		t.Errorf("event times %v, want two different times in 11–13 s", got)
+	}
+	files = map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"sweep\"\ndelay = 0.3\nevery = 2\ntimes = 2\nspeed = 1000\n+++\nx"}
+	s, p = page(t, files, 40, 24)
+	if got := eventTimes(t, s, p, time.Hour); len(got) == 0 || got[0] != 300*time.Millisecond ||
+		!slices.Contains(got, 2300*time.Millisecond) || got[len(got)-1] > 3*time.Second {
+		t.Errorf("sweep event times %v, want runs at 0.3 s and 2.3 s", got)
+	}
+}
+
 // The layer draws over the current base: after a new base (a cursor move), a drawn cell takes
 // the background of the new cell, and a cell that is now a slot or a part of a wide grapheme
 // is not drawn (live-screen, sections 4, 6.2 and 6.3).
