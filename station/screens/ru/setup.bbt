@@ -7,18 +7,18 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!white}Тексты{!}
+  {!hi}V E L O U R{!}      {!white}Документация{!}
   {!gold}───────────{!frame}{~─}{!} {!emer}■{!}  
 
 {#if term.rows >= 43}
 
 {/if}
-  {!emer}■{!gold}  Тексты{!}
+  {!emer}■{!gold}  Документация{!}
 
 {#each}{#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
 {~}
   {!frame}{#if list.pages == 1}{~─}{#else}{~─}{!dim}   {list.page}/{list.pages}   {!frame}{~─}{/if}{!}  
-  {!hi}Enter{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К текстам{!}
+  {!hi}Enter{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}К документации{!}
 
 {#if term.rows >= 25}
 

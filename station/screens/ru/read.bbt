@@ -16,10 +16,10 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!white}Тексты{!}
+  {!hi}V E L O U R{!}      {!white}Документация{!}
   {!gold}───────────{!frame}{~─}{!} {!emer}■{!}  
 
-  {!emer}■{!gold}  Тексты  ∙  {arg.title}{!}
+  {!emer}■{!gold}  Документация  ∙  {arg.title}{!}
 
   {!dim}{file.minutes} мин чтения{!}
 

@@ -7,18 +7,18 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!white}Texts{!}
+  {!hi}V E L O U R{!}      {!white}Documentation{!}
   {!gold}───────────{!frame}{~─}{!} {!emer}■{!}  
 
 {#if term.rows >= 43}
 
 {/if}
-  {!emer}■{!gold}  Texts{!}
+  {!emer}■{!gold}  Documentation{!}
 
 {#each}{#if row.selected}{!hi}∙{#else} {/if} {!emer}■{!}  {#if row.selected}{!pick}{#else}{!ctl}{/if}{row.title}{/each}
 {~}
   {!frame}{#if list.pages == 1}{~─}{#else}{~─}{!dim}   {list.page}/{list.pages}   {!frame}{~─}{/if}{!}  
-  {!hi}Enter{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To texts{!}
+  {!hi}Enter{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To documentation{!}
 
 {#if term.rows >= 25}
 
