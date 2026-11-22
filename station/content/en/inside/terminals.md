@@ -27,7 +27,8 @@ and the screens, the texts and the art have one form.
 
 Velour checks the charset so: it prints the letter `â` and asks where the cursor is.
 In UTF-8, the cursor moves by one cell, in an 8-bit charset by two.
-If the terminal is not in UTF-8, Velour tells how to change the charset and closes the connection.
+If the cursor moved by two cells, Velour tells how to change the charset
+and closes the connection. If the terminal does not reply, Velour takes UTF-8.
 
 ## What does not work everywhere
 

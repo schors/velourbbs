@@ -6,7 +6,7 @@ draws the screens and keeps the data. The source is open:
 
 ## Libraries
 
-Apart from the Go standard library, Velour takes only three:
+Apart from the Go standard library, Velour has only three direct dependencies:
 
 - `go-toml` reads the settings and the screens. It gives the line and the column
   of an unknown key, so `velourbbs check` shows the place of the error.
@@ -23,14 +23,14 @@ Velour does the rest itself, and each decision has a reason:
   changed the default behaviour. The own receiver of versions 1 and 2 has about 200 lines.
 - Terminal output. `tcell` draws the full screen at once, but Velour shows pages
   with a More row. Also, `tcell` does not detect the terminal at connect.
-- The ANSI art parser. The program needs only the colours, and the import about 15 sequences.
+- The ANSI art parser. The program needs only the SGR styles, and the import about 15 sequences.
   A full terminal parser is a large dependency.
 - The conditions of the screens. Their grammar has 7 rules. An expression language
   would add arithmetic and functions that the format excludes.
 
 ## Data
 
-The data of the station is in one JSON file. The sysop reads and edits it in a text editor.
+The data of the station is in one JSON Lines text file: one record on each line. The sysop reads and edits it in a text editor.
 Velour does not take SQLite: its file needs a separate program to read,
 and SQLite adds 6 MB to the program.
 
@@ -45,7 +45,7 @@ Effects animate parts of the screen. There are six: stars twinkle, stars appear 
 a candle flickers, a letter glints, a light runs along a row, lightning strikes.
 This station uses the running light, `sweep`: it runs over the logotype at the entry
 and over the line under the header of the menu.
-Velour sends only the changed cells to the terminal, and the frames are at least 50 ms apart.
+Velour sends only the changed parts of the screen to the terminal, and the frames are at least 50 ms apart.
 
 ## Art
 
