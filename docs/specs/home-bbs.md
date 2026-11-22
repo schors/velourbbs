@@ -112,6 +112,9 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - The test compares the output of `velourbbs preview menu --set session.lang=ru`
   with `--keys +14750ms,+500ms,+1500ms` at 80x24 and at 132x43 with 256 colours with its golden file
   `cmd/velourbbs/testdata/station/ru-menu-sweep-<size>-256.dump`. It shows the sweep over the signature line.
+- The test compares the output of `velourbbs preview about --set session.lang=<lang>` with `--keys +2s`
+  for `ru` and `en` at 80x24 and at 132x43 with 256 colours with its golden file
+  `cmd/velourbbs/testdata/station/<lang>-about-live-<size>-256.dump`. It shows the ticks of the live fields.
 - The test has no other cases.
 - The station tests use a guide fixture in place of `content/<lang>/guide`.
   An edit of `docs/guide/` does not change their result.
