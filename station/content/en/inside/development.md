@@ -2,6 +2,7 @@
 
 Velour is written mostly with AI. The AI models write the specifications, the code
 and the guides. A human operator controls the work and makes the decisions.
+All the work is open: the issues, the pull requests and the reviews are in [github.com/schors/velourbbs](https://github.com/schors/velourbbs).
 
 ## Issues
 

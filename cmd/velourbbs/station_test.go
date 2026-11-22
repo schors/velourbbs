@@ -201,11 +201,11 @@ func TestStationTitles(t *testing.T) {
 		"en/docs.bbt":   {"Velour"},
 		"en/setup.bbt":  {"Setup guide"},
 		"en/bbt.bbt":    {"BBT guide"},
-		"en/inside.bbt": {"Station", "Development", "Deploy"},
+		"en/inside.bbt": {"Station", "Development", "Deploy", "Technology", "Terminals"},
 		"ru/docs.bbt":   {"Velour"},
 		"ru/setup.bbt":  {"Руководство по установке"},
 		"ru/bbt.bbt":    {"Руководство по BBT"},
-		"ru/inside.bbt": {"Станция", "Разработка", "Выкладка"},
+		"ru/inside.bbt": {"Станция", "Разработка", "Выкладка", "Технологии", "Терминалы"},
 	}
 	// The fragments have no front matter, so the test reads only the screens of a language.
 	files, err := filepath.Glob(filepath.Join("..", "..", "station", "screens", "[er][nu]", "*.bbt"))

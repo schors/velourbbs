@@ -20,6 +20,14 @@ key = "3"
 do = "gosub inside-read"
 args = { file = "inside/deploy.md", title = "Deploy" }
 [[item]]
+key = "4"
+do = "gosub inside-read"
+args = { file = "inside/tech.md", title = "Technology" }
+[[item]]
+key = "5"
+do = "gosub inside-read"
+args = { file = "inside/terminals.md", title = "Terminals" }
+[[item]]
 key = "ESC"
 do = "back"
 +++
@@ -35,9 +43,13 @@ do = "back"
   {!gold}1{!}  {!ameth}■{!}  {!ctl}Station{!} {!frame}{~.}{!} {!dim}Screens, theme, two languages, tests{!}  
   {!gold}2{!}  {!ameth}■{!}  {!ctl}Development{!} {!frame}{~.}{!} {!dim}AI models, gates and reviews{!}  
   {!gold}3{!}  {!ameth}■{!}  {!ctl}Deploy{!} {!frame}{~.}{!} {!dim}Tag, build and start on the host{!}  
+  {!gold}4{!}  {!ameth}■{!}  {!ctl}Technology{!} {!frame}{~.}{!} {!dim}Go, own telnet, effects and art{!}  
+  {!gold}5{!}  {!ameth}■{!}  {!ctl}Terminals{!} {!frame}{~.}{!} {!dim}Clients, UTF-8 and colours{!}  
+
+  {!dim}Source{!}  {!ctl}github.com/schors/velourbbs{!}
 {~}
   {!frame}{~─}{!}  
-  {!hi}1 2 3{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To menu{!}{~}{!dim}{clock}{!}  
+  {!hi}1 2 3 4 5{!} {!ctl}Open{!}    {!hi}Esc{!} {!ctl}To menu{!}{~}{!dim}{clock}{!}  
 
 {#if term.rows >= 25}
 

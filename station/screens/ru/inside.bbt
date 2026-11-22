@@ -20,6 +20,14 @@ key = "3"
 do = "gosub inside-read"
 args = { file = "inside/deploy.md", title = "Выкладка" }
 [[item]]
+key = "4"
+do = "gosub inside-read"
+args = { file = "inside/tech.md", title = "Технологии" }
+[[item]]
+key = "5"
+do = "gosub inside-read"
+args = { file = "inside/terminals.md", title = "Терминалы" }
+[[item]]
 key = "ESC"
 do = "back"
 +++
@@ -35,9 +43,13 @@ do = "back"
   {!gold}1{!}  {!ameth}■{!}  {!ctl}Станция{!} {!frame}{~.}{!} {!dim}Экраны, тема, два языка и тесты{!}  
   {!gold}2{!}  {!ameth}■{!}  {!ctl}Разработка{!} {!frame}{~.}{!} {!dim}AI-модели, гейты и ревью{!}  
   {!gold}3{!}  {!ameth}■{!}  {!ctl}Выкладка{!} {!frame}{~.}{!} {!dim}Тег, сборка и запуск на хосте{!}  
+  {!gold}4{!}  {!ameth}■{!}  {!ctl}Технологии{!} {!frame}{~.}{!} {!dim}Go, свой telnet, эффекты и арт{!}  
+  {!gold}5{!}  {!ameth}■{!}  {!ctl}Терминалы{!} {!frame}{~.}{!} {!dim}Клиенты, UTF-8 и цвета{!}  
+
+  {!dim}Исходники{!}  {!ctl}github.com/schors/velourbbs{!}
 {~}
   {!frame}{~─}{!}  
-  {!hi}1 2 3{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}В меню{!}{~}{!dim}{clock}{!}  
+  {!hi}1 2 3 4 5{!} {!ctl}Открыть{!}    {!hi}Esc{!} {!ctl}В меню{!}{~}{!dim}{clock}{!}  
 
 {#if term.rows >= 25}
 

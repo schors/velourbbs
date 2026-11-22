@@ -6,7 +6,8 @@ So the station is the site of the product and its live example.
 
 ## Files
 
-The whole station is the directory `station/` in the Velour repository. It has no code,
+The whole station is the directory `station/` in the Velour repository:
+[github.com/schors/velourbbs](https://github.com/schors/velourbbs). It has no code,
 only the files of the sysop:
 
 - `bbs.toml` - the name of the BBS and the path of the data file;

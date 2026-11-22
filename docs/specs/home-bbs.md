@@ -93,9 +93,13 @@ Lamp stays the example BBS of the guides ([example-style](example-style.md)).
 - A `dev` issue that adds or changes a feature that a user or a sysop sees updates
   this file in both languages.
 - `content/<lang>/inside/` tells how the station is made and why: `station.md` (the files,
-  the screens and the tests of the station), `development.md` (the development flow)
-  and `deploy.md` (the release and the deploy, [release-deploy](release-deploy.md)).
-  Each fact comes from the repository. The texts name no host, address or port.
+  the screens and the tests of the station), `development.md` (the development flow),
+  `deploy.md` (the release and the deploy, [release-deploy](release-deploy.md)),
+  `tech.md` (the libraries, the own code and why, the data file, the live fields, the effects and the art)
+  and `terminals.md` (the clients, the detection, the charset now and why, and the plans).
+  `station.md`, `development.md`, `tech.md` and the menu of Inside give the link to the repository.
+  Each fact comes from the repository. A plan comes from a decision of the operator in an issue.
+  The texts name no host, address or port.
 - A change of the station, of `docs/dev-flow/` or of the deploy that makes a fact
   of an Inside text wrong updates the text in both languages.
 

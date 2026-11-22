@@ -2,6 +2,7 @@
 
 Velour пишут в основном AI-модели. Модели пишут спецификации, код и руководства.
 Человек-оператор управляет работой и принимает решения.
+Вся работа открыта: issues, pull request и ревью лежат в [github.com/schors/velourbbs](https://github.com/schors/velourbbs).
 
 ## Задачи
 
