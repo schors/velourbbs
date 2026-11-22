@@ -1,0 +1,26 @@
++++
+[[item]]
+key = "1"
+do = "gosub reader"
+args = { file = "lamp.md" }
+[[item]]
+key = "2"
+do = "gosub reader"
+args = { file = "rules.txt" }
+[[item]]
+key = "ESC"
+do = "back"
++++
+{>_head}
+       Stoties tekstai.
+       Išsirink ir skaityk prie lempos.
+
+
+         {!key}1{!}   Kaip buvo uždegamos lempos {!line}{~.}{!} {!dim}trumpa istorija{!}  
+
+         {!key}2{!}   Stoties taisyklės {!line}{~.}{!} {!dim}perskaityk vieną kartą{!}  
+{~}
+  {!line}{~─}{!}  
+
+    {!key}1 2{!}  {!dim}pasirinkti{!}   {!key}Esc{!}  {!dim}atgal{!}
+

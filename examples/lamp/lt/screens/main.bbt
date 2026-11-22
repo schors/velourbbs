@@ -1,0 +1,37 @@
++++
+[[item]]
+key = "A"
+do = "gosub about"
+[[item]]
+key = "R"
+do = "gosub texts"
+[[item]]
+key = "L"
+do = "gosub log"
+[[item]]
+key = "T"
+do = "gosub term"
+[[item]]
+key = "G"
+do = "logoff"
++++
+{>_head}
+       Labas vakaras. Čia tylu ir šilta.
+       Prisitrauk kėdę prie lempos.
+
+         {!key}A{!}   Apie mus {!line}{~.}{!} {!dim}kas mes esame{!}  
+
+         {!key}R{!}   Skaitykla {!line}{~.}{!} {!dim}istorijos prie lempos{!}  
+
+         {!key}L{!}   Prižiūrėtojo žurnalas {!line}{~.}{!} {!dim}naktų užrašai{!}  
+
+         {!key}T{!}   Tavo terminalas {!line}{~.}{!} {!dim}dydis ir spalvos{!}  
+
+         {!key}G{!}   Iki pasimatymo {!line}{~.}{!} {!dim}lempa palauks{!}  
+{~}
+       {!dim}Šviesa dega iki ryto.{!}
+
+  {!line}{~─}{!}  
+
+    {!key}A R L T G{!}  {!dim}pasirinkti{!}
+

@@ -1,0 +1,26 @@
++++
+data = { from = "files", args = { dir = "log" } }
+rows = 5
+select = { do = "gosub reader", args = { file = "{row.path}" } }
+[[item]]
+key = "SPACE"
+do = "page next"
+when = "not list.last"
+[[item]]
+key = "B"
+do = "page prev"
+when = "list.page > 1"
+[[item]]
+key = "ESC"
+do = "back"
++++
+{>_head}
+       {!title}Prižiūrėtojo žurnalas{!}
+       {!dim}naktų užrašai  ∙  psl. {list.page}/{list.pages}{!}
+
+{#each}{#if row.selected}       {!orn}☼{!} {#else}         {/if}{!dim}{row.num}{!}   {#if row.selected}{!title}{/if}{row.title                             }{!dim}{row.minutes} min{/each}
+{~}
+  {!line}{~─}{!}  
+
+    {!key}↑↓{!}  {!dim}pasirinkti{!}   {!key}Enter{!}  {!dim}skaityti{!}   {#if item.SPACE}{!key}Space{!}  {!dim}toliau{!}   {/if}{#if item.B}{!key}B{!}  {!dim}ankst.{!}   {/if}{!key}Esc{!}  {!dim}atgal{!}
+
