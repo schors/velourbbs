@@ -14,13 +14,13 @@ key = "ESC"
 do = "back"
 +++
 
-  {!hi}V E L O U R{!}      {!white}Тексты{!}
+  {!hi}V E L O U R{!}      {!white}Документация{!}
   {!gold}───────────{!frame}{~─}{!} {!emer}■{!}  
 
 {#if term.rows >= 43}
 
 {/if}
-  {!emer}■{!gold}  Тексты{!}
+  {!emer}■{!gold}  Документация{!}
 
   {!dim}Руководства{!}
   {!gold}1{!}  {!emer}■{!}  {!ctl}Установка{!} {!frame}{~.}{!} {!dim}Программа, каталог BBS, systemd{!}  

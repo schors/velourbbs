@@ -58,7 +58,7 @@ func TestStation(t *testing.T) {
 	}
 	for _, size := range []string{"80x24", "132x43"} {
 		for _, screen := range []string{"main", "main-ambiguous", "goodbye", "shutdown", "ru-menu", "en-menu", "ru-about", "en-about",
-			"ru-texts", "en-texts", "ru-setup", "en-setup", "ru-bbt", "en-bbt", "ru-read", "en-read"} {
+			"ru-docs", "en-docs", "ru-setup", "en-setup", "ru-bbt", "en-bbt", "ru-read", "en-read"} {
 			out.Reset()
 			errOut.Reset()
 			args := []string{"preview", screen, "--size", size, "--set", "term.colors=256"}
@@ -173,8 +173,8 @@ func TestStationItems(t *testing.T) {
 // (home-bbs, section 3): the name of the guide, or Velour for the features text.
 func TestStationTitles(t *testing.T) {
 	want := map[string]string{
-		"en/texts.bbt": "Velour", "en/setup.bbt": "Setup guide", "en/bbt.bbt": "BBT guide",
-		"ru/texts.bbt": "Velour", "ru/setup.bbt": "Руководство по установке", "ru/bbt.bbt": "Руководство по BBT",
+		"en/docs.bbt": "Velour", "en/setup.bbt": "Setup guide", "en/bbt.bbt": "BBT guide",
+		"ru/docs.bbt": "Velour", "ru/setup.bbt": "Руководство по установке", "ru/bbt.bbt": "Руководство по BBT",
 	}
 	// The fragments have no front matter, so the test reads only the screens of a language.
 	files, err := filepath.Glob(filepath.Join("..", "..", "station", "screens", "[er][nu]", "*.bbt"))

@@ -1,6 +1,6 @@
 # Velour BBS
 
-![The entry screen of the Velour home station in a 132-column terminal, truecolor](docs/brand/station-main.svg)
+![The entry screen of the Velour home station in a 132-column terminal, truecolor, with the sweep of light over the logotype](docs/brand/station-main.svg)
 
 Velour is a BBS program. Guests connect by telnet. The sysop writes the screens
 as text files and the program shows them in the terminal of the guest.

@@ -9,7 +9,7 @@ in = "_logo-132"
 peak = "g0"
 [[item]]
 key = "1"
-do = "gosub texts"
+do = "gosub docs"
 [[item]]
 key = "2"
 do = "gosub about"
@@ -29,7 +29,7 @@ do = "logoff"
 {>_logo-80}
 {/if}
 
-  {!gold}01{!} {!emer}■{!}  {!ctl}Texts{!} {!frame}{~.}{!} {!dim}Guides and features of Velour{!}  
+  {!gold}01{!} {!emer}■{!}  {!ctl}Documentation{!} {!frame}{~.}{!} {!dim}Guides and features of Velour{!}  
 
   {!gold}02{!} {!gold}■{!}  {!ctl}About the station{!} {!frame}{~.}{!} {!dim}A little about the station{!}  
 {~}
