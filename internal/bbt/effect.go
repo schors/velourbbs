@@ -18,21 +18,23 @@ const MaxEffects = 16
 // effectDoc is the plain decode of one [[effect]] table: the keys of all effects.
 // The decode of the document checks their types. A nil pointer is a key that is not set.
 type effectDoc struct {
-	Do     *string   `toml:"do"`
-	In     *string   `toml:"in"`
-	At     any       `toml:"at"`
-	Delay  *float64  `toml:"delay"`
-	Every  *float64  `toml:"every"`
-	Spread *float64  `toml:"spread"`
-	Chars  *string   `toml:"chars"`
-	Colors *[]string `toml:"colors"`
-	Peak   *string   `toml:"peak"`
-	Share  *float64  `toml:"share"`
-	Over   *bool     `toml:"over"`
-	Count  *int64    `toml:"count"`
-	Time   *float64  `toml:"time"`
-	Width  *int64    `toml:"width"`
-	Speed  *float64  `toml:"speed"`
+	Do          *string   `toml:"do"`
+	In          *string   `toml:"in"`
+	At          any       `toml:"at"`
+	Delay       *float64  `toml:"delay"`
+	DelaySpread *float64  `toml:"delay_spread"`
+	Every       *float64  `toml:"every"`
+	Spread      *float64  `toml:"spread"`
+	Times       *int64    `toml:"times"`
+	Chars       *string   `toml:"chars"`
+	Colors      *[]string `toml:"colors"`
+	Peak        *string   `toml:"peak"`
+	Share       *float64  `toml:"share"`
+	Over        *bool     `toml:"over"`
+	Count       *int64    `toml:"count"`
+	Time        *float64  `toml:"time"`
+	Width       *int64    `toml:"width"`
+	Speed       *float64  `toml:"speed"`
 }
 
 // keys gives the keys that the table sets, in the order of effectDoc.
@@ -53,8 +55,8 @@ var effectKinds = map[string]screen.EffectKind{
 	"glint": screen.Glint, "sweep": screen.Sweep, "lightning": screen.Lightning,
 }
 
-// effectKeys gives the keys of each effect after the keys of all effects: do, in, at, delay, every
-// and spread (live-screen, sections 6.4–6.9).
+// effectKeys gives the keys of each effect after the keys of all effects: do, in, at, delay,
+// delay_spread, every, spread and times (live-screen, sections 6.4–6.9).
 var effectKeys = map[screen.EffectKind][]string{
 	screen.Twinkle:   {"chars", "colors", "share"},
 	screen.Sparkle:   {"chars", "colors", "over", "count", "time"},
@@ -65,7 +67,7 @@ var effectKeys = map[screen.EffectKind][]string{
 }
 
 // commonKeys is the keys of each effect.
-var commonKeys = []string{"do", "in", "at", "delay", "every", "spread"}
+var commonKeys = []string{"do", "in", "at", "delay", "delay_spread", "every", "spread", "times"}
 
 // The limits of the keys of live-screen, section 6.1.
 const (
@@ -249,6 +251,7 @@ const (
 	maxDelay = 3600
 	minEvery = 0.05
 	maxEvery = 3600
+	maxTimes = 10000
 )
 
 // The default every of each effect, in seconds (live-screen, sections 6.4–6.9). A sweep has none.
@@ -259,15 +262,24 @@ var defaultEvery = map[screen.EffectKind]float64{
 // seconds gives the duration of s seconds.
 func seconds(s float64) time.Duration { return time.Duration(math.Round(s * float64(time.Second))) }
 
-// parseTimes parses the keys delay, every and spread (live-screen, sections 6.1 and 6.3).
+// parseTimes parses the keys delay, delay_spread, every, spread and times (live-screen, sections 6.1 and 6.3).
 func (p *effectParser) parseTimes(e *screen.Effect) {
 	d := p.d
 	delay := 0.0
 	if e.Do == screen.Sweep {
 		delay = 0.5
 	}
-	p.number("delay", d.Delay, &delay, 0, maxDelay)
+	delayOK := p.number("delay", d.Delay, &delay, 0, maxDelay)
 	e.Delay = seconds(delay)
+	if d.DelaySpread != nil {
+		var ds float64
+		if p.number("delay_spread", d.DelaySpread, &ds, 0, math.Inf(1)) {
+			if delayOK && seconds(delay) < seconds(ds) {
+				p.fail("delay_spread", "delay - delay_spread is %g, must be at least 0", (seconds(delay) - seconds(ds)).Seconds())
+			}
+			e.DelaySpread = seconds(ds)
+		}
+	}
 	every, hasEvery := defaultEvery[e.Do]
 	everyOK := true
 	if d.Every != nil {
@@ -276,6 +288,15 @@ func (p *effectParser) parseTimes(e *screen.Effect) {
 	}
 	if hasEvery {
 		e.Every = seconds(every)
+	} else {
+		e.Times = 1 // a sweep without every has one event
+	}
+	if d.Times != nil {
+		if !hasEvery {
+			p.fail("times", "a sweep without every has one event")
+		} else {
+			p.integer("times", d.Times, &e.Times, 1, maxTimes)
+		}
 	}
 	spread := every / 2
 	if e.Do == screen.Sweep {
@@ -366,7 +387,7 @@ func (p *effectParser) parseKeys(e *screen.Effect) {
 		}
 	}
 	if e.Do == screen.Sweep {
-		e.Width, e.Speed = 3, 40
+		e.Width, e.Speed = 3, 80
 		p.integer("width", d.Width, &e.Width, 1, maxWidth)
 		p.number("speed", d.Speed, &e.Speed, minSpeed, maxSpeed)
 	}

@@ -98,7 +98,8 @@ type place struct {
 	cells []int // the cells in the place; an event takes random cells by a partial shuffle
 	point bool  // a point: each event takes its cell
 	next  time.Duration
-	done  bool // the place has no next event: the one event of a sweep without every started
+	n     int  // the events that started
+	done  bool // the place has no next event: its times events started
 }
 
 // New gives the layer of the effects effs on the base page p at the show (live-screen, section 6).
@@ -119,7 +120,10 @@ func New(effs []screen.Effect, p screen.Page, theme map[string]screen.Style, rng
 		r.places = places(e, p, grid)
 		l.show(len(l.fx)-1, grid)
 		for _, pl := range r.places {
-			pl.next = e.Delay + l.every(e)
+			pl.next = e.Delay + l.spread(e.DelaySpread)
+			if e.Do != screen.Sweep { // the first run of a sweep starts at the delay
+				pl.next += l.every(e)
+			}
 		}
 	}
 	return l
@@ -165,12 +169,16 @@ func (l *Layer) show(i int, grid []screen.Row) {
 }
 
 // every gives the time from an event to the next: every plus a random value from -spread to spread
-// (section 6.3). Without spread, it takes no random value.
-func (l *Layer) every(e screen.Effect) time.Duration {
-	if e.Spread == 0 {
-		return e.Every
+// (section 6.3).
+func (l *Layer) every(e screen.Effect) time.Duration { return e.Every + l.spread(e.Spread) }
+
+// spread gives a random value from -s to s, each value with the same chance (section 6.3).
+// When s is 0, it takes no random value.
+func (l *Layer) spread(s time.Duration) time.Duration {
+	if s == 0 {
+		return 0
 	}
-	return e.Every + time.Duration(l.rng.Int64N(int64(2*e.Spread)+1)) - e.Spread
+	return time.Duration(l.rng.Int64N(int64(2*s)+1)) - s
 }
 
 // step is the time between two frames while an event of a glint or a sweep runs (live-screen, section 5).
@@ -231,7 +239,8 @@ func (l *Layer) Cells(t time.Duration, base []screen.Row) []screen.GridCell {
 		}
 		l.expire(pl.next)
 		l.event(i, pl, base)
-		if l.fx[i].e.Every == 0 { // a sweep without every has one event
+		pl.n++
+		if e := l.fx[i].e; e.Times > 0 && pl.n >= e.Times {
 			pl.done = true
 			continue
 		}

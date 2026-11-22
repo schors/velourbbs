@@ -64,14 +64,19 @@ Full rules: [live-screen](../../../specs/live-screen.md), section 6.2.
 | Key | Default | Value |
 |---|---|---|
 | `delay` | `0` | The seconds before the timing starts: 0–3600. |
+| `delay_spread` | `0` | A random part of `delay`: the delay is `delay` plus or minus up to `delay_spread`. |
 | `every` | Of the effect. | The seconds between two changes: 0.05–3600. |
 | `spread` | Half of `every`. | A random part of `every`: each time is `every` plus or minus up to `spread`. |
+| `times` | None: no end. | The number of changes: 1–10000. Then the effect stops. |
 
 - A value is a number of seconds, for example `0.5`.
 - The first change comes `delay` plus one interval after the show.
   Example: `delay = 1` and `every = 1` with `spread = 0` give the first change after 2 seconds.
 - With `spread = 0`, each change comes exactly `every` seconds after the change before.
-- `every - spread` must be at least 0.05.
+- `every - spread` must be at least 0.05. `delay - delay_spread` must be at least 0.
+- Each point of an array of points takes its own random delay. Example: `delay = 2`
+  and `delay_spread = 1` start each point after 1–3 seconds plus one interval.
+- Example: `times = 3` gives three changes. After them, the cells stay as they are.
 - The changes are random. Each session has its own random values.
 
 Full rules: [live-screen](../../../specs/live-screen.md), section 6.3.
@@ -175,20 +180,23 @@ A bright spot runs from left to right over the characters of the place.
 |---|---|---|
 | `at` | None: the whole art or page. | A rectangle. |
 | `delay` | `0.5` | The seconds before the timing starts, as in the other effects. |
-| `every` | None: one run. | The seconds between two runs. |
+| `every` | None: one run. | The seconds from the start of a run to the start of the next run. |
 | `spread` | `0` | Only with `every`. |
+| `times` | None: no end. | The number of runs. Only with `every`. |
 | `peak` | `#ffffff` | As in `glint`. |
 | `time` | `0.6` | The seconds of the glint at the end of each row. |
 | `width` | `3` | The half width of the spot in cells: 1–20. |
-| `speed` | `40` | The columns each second: 1–1000. |
+| `speed` | `80` | The columns each second: 1–1000. |
 
 - The spot runs over all rows of the place at the same time. Over several rows,
   it is a band.
 - A space does not become bright. So the band shows the shape of the characters.
 - When the spot comes to the last character of a row, that character glints for `time` seconds.
-- Without `every`, the band runs once, `delay` seconds after the show.
-- With `every`, the timing is as in the other effects: the first run comes `delay` plus one interval
-  after the show. Example: `delay = 0.5` and `every = 2` give the first run after 2.5 seconds.
+- The first run comes `delay` seconds after the show, with `delay_spread` as in the other effects.
+- Without `every`, the band runs once.
+- With `every`, the next runs come `every` seconds after the start of the run before.
+  Without `times`, the runs have no end.
+  Example: `delay = 1`, `every = 5` and `times = 3` give runs after 1, 6 and 11 seconds.
 
 Full rules: [live-screen](../../../specs/live-screen.md), sections 6.7 and 6.8.
 
@@ -293,7 +301,7 @@ do = "logoff"
 - `velourbbs preview main` gives the screen of task 9: the preview shows the screen
   before the effects.
 - `velourbbs preview main --keys +1s` shows the screen after one second: the stars, the sparks,
-  the flames and the band of the sweep in the middle of the lamp.
+  the flames and the last glints of the sweep at the right edge of the lamp.
   `+1s,+1s` shows it after one second and after two seconds.
   The random values of the preview are the same at each run.
 - Run `velourbbs serve`. PuTTY shows the light that shimmers, the stars, the sparks, the flames,
