@@ -35,6 +35,7 @@ type effectDoc struct {
 	Time        *float64  `toml:"time"`
 	Width       *int64    `toml:"width"`
 	Speed       *float64  `toml:"speed"`
+	Shape       *string   `toml:"shape"`
 }
 
 // keys gives the keys that the table sets, in the order of effectDoc.
@@ -63,7 +64,7 @@ var effectKeys = map[screen.EffectKind][]string{
 	screen.Candle:    {"chars", "colors", "share"},
 	screen.Glint:     {"peak", "time"},
 	screen.Sweep:     {"peak", "time", "width", "speed"},
-	screen.Lightning: {"chars", "peak", "over", "time"},
+	screen.Lightning: {"shape", "chars", "peak", "over", "time"},
 }
 
 // commonKeys is the keys of each effect.
@@ -346,7 +347,13 @@ func (p *effectParser) parseKeys(e *screen.Effect) {
 		p.chars(e, "")
 		p.colors(e, e.Do == screen.Candle)
 	case screen.Lightning:
-		p.chars(e, "╲│╱")
+		p.shape(e)
+		switch {
+		case e.Shape != screen.ShapeSquare:
+			p.chars(e, "╲│╱")
+		case d.Chars != nil:
+			p.fail("chars", "a square bolt has no chars")
+		}
 	}
 	switch e.Do {
 	case screen.Twinkle, screen.Candle:
@@ -400,6 +407,21 @@ func (p *effectParser) parseKeys(e *screen.Effect) {
 		p.integer("width", d.Width, &e.Width, 1, maxWidth)
 		p.number("speed", d.Speed, &e.Speed, minSpeed, maxSpeed)
 	}
+}
+
+// shapes maps a value of the key shape of a lightning to its shape.
+var shapes = map[string]screen.Shape{"both": screen.ShapeBoth, "slant": screen.ShapeSlant, "square": screen.ShapeSquare}
+
+// shape parses the key shape of a lightning (live-screen, section 6.9). The default is both.
+func (p *effectParser) shape(e *screen.Effect) {
+	if p.d.Shape == nil {
+		return
+	}
+	s, ok := shapes[*p.d.Shape]
+	if !ok {
+		p.fail("shape", "%q, must be slant, square or both", *p.d.Shape)
+	}
+	e.Shape = s
 }
 
 // chars parses the key chars: a grapheme string (live-screen, section 6.1). def is the default;

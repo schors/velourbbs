@@ -203,24 +203,40 @@ Visos taisyklės: [live-screen](../../../specs/live-screen.md), 6.7 ir 6.8 skyri
 
 ## Efektas `lightning`
 
-Žaibas: žaibo kirtis, kuris trumpam blyksteli.
+Žaibas: žaibo kirtis, kuris trumpam blyksteli vieną, du ar tris kartus.
 
 | Raktas | Numatytoji reikšmė | Reikšmė |
 |---|---|---|
 | `at` | Nėra: visas menas ar puslapis. | Stačiakampis. |
-| `chars` | `╲│╱` | 3 simboliai: žingsniai žemyn į dešinę, tiesiai žemyn ir žemyn į kairę. |
+| `shape` | `both` | `slant`: žaibas iš įstrižų žingsnių. `square`: žaibas iš rėmelio linijų ir kampų. `both`: kiekvienas žaibas atsitiktinai ima vieną iš dviejų formų. |
+| `chars` | `╲│╱` | 3 `slant` simboliai: žingsniai žemyn į dešinę, tiesiai žemyn ir žemyn į kairę. `square` žaibas neturi `chars`. |
 | `peak` | `#ffffff` | Žaibo spalva: stilius arba temos stiliaus pavadinimas. |
 | `over` | `false` | `true`: žaibas gali uždengti bet kurį langelį. |
-| `time` | `0.3` | Sekundės, kiek žaibas rodomas: 0.05–10. |
+| `time` | `0.3` | Sekundės, kiek rodomas paskutinis blyksnis: 0.05–10. |
 | `every` | `30` | |
 
-- Žaibas prasideda atsitiktiniame stačiakampio viršutinės eilutės stulpelyje. Jis eina žemyn
-  iki apatinės stačiakampio pusės ar toliau, atsitiktiniais žingsniais į kairę ir į dešinę.
-  Jis turi 1–3 šakas.
+- Kiekvienas žaibas užima atsitiktinę stačiakampio dalį: nuo ketvirtadalio jo pločio ir aukščio iki viso stačiakampio.
+  Todėl vienas žaibas mažas ir vienoje vietoje, o kitas platus.
+- Žaibas prasideda atsitiktiniame savo dalies viršutinės eilutės stulpelyje. Jis eina žemyn
+  iki apatinės dalies pusės ar toliau, atsitiktiniais žingsniais į kairę ir į dešinę.
+  Kuo didesnis žaibas, tuo daugiau ir ilgesnių šakų jis turi.
+- `square` žaibas eina žemyn horizontaliomis atkarpomis ir kampais, kaip senajame BBS mene:
+
+  ```
+     │
+     └──┐
+        └─┬───┐
+          │   └─┐
+         ┌┘     └┐
+  ```
+
+- Žaibas blyksteli vieną, du ar tris kartus. Kiekvienas blyksnis prieš paskutinį rodomas 0,1 sekundės,
+  po jo 0,1 sekundės pauzė. Paskutinis blyksnis rodomas `time` sekundžių.
 - Su `over = false` žaibas piešia tik tuščiuose langeliuose: menas ir tekstas jį uždengia.
   Su `over = true` jis uždengia bet kurį vietos langelį.
 - Žaibas išlaiko kiekvieno langelio foną. Jis neturi paryškinimo ir jokių kitų atributų.
-- ASCII simboliams rašyk `chars = "\\|/"`: TOML kalboje `\\` yra vienas `\`.
+- ASCII simboliams rašyk `chars = "\\|/"`: TOML kalboje `\\` yra vienas `\`. `square` linijos
+  yra bet kuriame terminalo šrifte.
 
 Pavyzdys: žaibas danguje virš teksto, maždaug kas 20 sekundžių, puslapyje su 80 stulpelių:
 

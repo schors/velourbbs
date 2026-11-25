@@ -203,24 +203,40 @@ Full rules: [live-screen](../../../specs/live-screen.md), sections 6.7 and 6.8.
 
 ## The effect `lightning`
 
-A bolt that flashes for a short time.
+A bolt that flashes for a short time, one to three times.
 
 | Key | Default | Value |
 |---|---|---|
 | `at` | None: the whole art or page. | A rectangle. |
-| `chars` | `╲│╱` | 3 characters: the steps down to the right, straight down and down to the left. |
+| `shape` | `both` | `slant`: a bolt of diagonal steps. `square`: a bolt of box lines and corners. `both`: each bolt takes one of the two at random. |
+| `chars` | `╲│╱` | 3 characters of `slant`: the steps down to the right, straight down and down to the left. A `square` bolt has no `chars`. |
 | `peak` | `#ffffff` | The colour of the bolt: a style or the name of a theme style. |
 | `over` | `false` | `true`: the bolt can cover each cell. |
-| `time` | `0.3` | The seconds that a bolt shows: 0.05–10. |
+| `time` | `0.3` | The seconds that the last flash shows: 0.05–10. |
 | `every` | `30` | |
 
-- The bolt starts at a random column of the top row of the rectangle. It goes down
-  to the bottom half of the rectangle or further, with random steps to the left and to the right.
-  It has 1–3 branches.
+- Each bolt takes a random part of the rectangle: from a quarter of its width and height to the whole rectangle.
+  So one bolt is small and in one spot, the next bolt is wide.
+- The bolt starts at a random column of the top row of its part. It goes down
+  to the bottom half of the part or further, with random steps to the left and to the right.
+  A bigger bolt has more and longer branches.
+- A `square` bolt goes down with horizontal runs and corners, as in old BBS art:
+
+  ```
+     │
+     └──┐
+        └─┬───┐
+          │   └─┐
+         ┌┘     └┐
+  ```
+
+- A bolt flashes one, two or three times. Each flash before the last shows for 0.1 seconds,
+  then a pause of 0.1 seconds. The last flash shows for `time`.
 - With `over = false`, the bolt draws only on empty cells: the art and the text cover it.
   With `over = true`, it covers each cell of the place.
 - A bolt keeps the background of each cell. It has no bold and no other attributes.
-- For ASCII characters, write `chars = "\\|/"`: in TOML, `\\` is one `\`.
+- For ASCII characters, write `chars = "\\|/"`: in TOML, `\\` is one `\`. The lines of `square` show
+  in each terminal font.
 
 Example: a bolt in the sky above the text, about each 20 seconds, on a page with 80 columns:
 

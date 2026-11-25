@@ -24,7 +24,8 @@ func TestEffects(t *testing.T) {
 			`[[effect]]`, `do = "sweep"`, `every = 10`, `times = 3`,
 			`[[effect]]`, `do = "lightning"`, `at = [1, 1, 10, 5]`, `over = true`, `delay = 2`, `delay_spread = 2`,
 			`[[effect]]`, `do = "sparkle"`, `chars = "."`, `count = 3`, `time = 1`,
-			`[[effect]]`, `do = "glint"`, `peak = "prompt"`),
+			`[[effect]]`, `do = "glint"`, `peak = "prompt"`,
+			`[[effect]]`, `do = "lightning"`, `shape = "square"`),
 		"a.ans": sauceArt("abc\nd", 10),
 	})
 	want := []screen.Effect{
@@ -37,6 +38,7 @@ func TestEffects(t *testing.T) {
 			Delay: 2 * time.Second, DelaySpread: 2 * time.Second, Every: 30 * time.Second, Spread: 15 * time.Second, Chars: []string{"╲", "│", "╱"}, Peak: "#ffffff", Over: true, Time: 300 * time.Millisecond},
 		{Do: screen.Sparkle, Every: time.Second, Spread: time.Second / 2, Chars: []string{"."}, Count: 3, Time: time.Second},
 		{Do: screen.Glint, Every: 3 * time.Second, Spread: 1500 * time.Millisecond, Peak: "prompt", Time: 600 * time.Millisecond},
+		{Do: screen.Lightning, Every: 30 * time.Second, Spread: 15 * time.Second, Peak: "#ffffff", Time: 300 * time.Millisecond, Shape: screen.ShapeSquare},
 	}
 	if got := screens["s"].Effects; !reflect.DeepEqual(got, want) {
 		t.Errorf("effects:\n got %+v\nwant %+v", got, want)
@@ -113,6 +115,13 @@ func TestEffectErrors(t *testing.T) {
 			[]string{`screens/s.bbt:4:9: effect 1: chars: has 0 graphemes, must have 1–32`}},
 		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "lightning"`, `chars = "|/"`)},
 			[]string{`screens/s.bbt:4:9: effect 1: chars: has 2 graphemes, must have 3`}},
+		// shape of a lightning, and chars of a square bolt.
+		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "lightning"`, `shape = "round"`)},
+			[]string{`screens/s.bbt:4:9: effect 1: shape: "round", must be slant, square or both`}},
+		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "lightning"`, `shape = "square"`, `chars = "\\|/"`)},
+			[]string{`screens/s.bbt:5:9: effect 1: chars: a square bolt has no chars`}},
+		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "sweep"`, `shape = "slant"`)},
+			[]string{`screens/s.bbt:4:1: effect 1: shape: sweep has no key shape`}},
 		{map[string]string{"s.bbt": front("", `[[effect]]`, `do = "sparkle"`)},
 			[]string{`screens/s.bbt:2:1: effect 1: chars is missing`}},
 		// An invalid colour value.

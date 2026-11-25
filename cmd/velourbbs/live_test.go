@@ -102,7 +102,8 @@ func TestClockValues(t *testing.T) {
 // sweep: the whole art once, from 0.5 s; a rectangle on the last row of the page with every, from its delay.
 // sparkle: a point on a space of the page; an array of points in the art with over and colors;
 // a rectangle of the art with count 3.
-// lightning: the whole grid with ASCII chars, on empty cells only; the whole art with over and a theme style as peak.
+// lightning: a slant bolt on the whole grid with ASCII chars; a square bolt in the art with a theme style as peak,
+// on empty cells only, with a gap between two flashes.
 // fragment: in of a fragment below a text row: a twinkle at the first cell and at the last cell of the fragment rows,
 // then a sweep over all fragment rows once.
 func TestEffects(t *testing.T) {
@@ -116,7 +117,7 @@ func TestEffects(t *testing.T) {
 		{"glint", "+1250ms,+1s,+1s"},
 		{"sweep", "+1s,+500ms,+1s"},
 		{"sparkle", "+1s,+1s,+1s"},
-		{"lightning", "+1100ms,+1s,+1s"},
+		{"lightning", "+1050ms,+500ms,+100ms,+100ms"},
 		{"fragment", "+1s,+500ms,+1s"},
 	} {
 		out, errOut, status := runIn(t, "effects", "preview", tt.name, "--size", "40x10", "--keys", tt.keys)

@@ -112,7 +112,8 @@ layout = '"' { any character except '"' and '}' } '"'
 - Directly after the show, the host makes a frame at the show time: it sends the layer of the time 0.
   A cell dump of the show in `velourbbs preview` is the base (section 7).
 - The host makes a frame at each tick and at each time when the layer changes: the start of an event
-  of an effect, each 50 ms while an event of a `glint` or a `sweep` runs, and the end of an event (section 6).
+  of an effect, each 50 ms while an event of a `glint` or a `sweep` runs, the start and the end
+  of each flash of a `lightning`, and the end of an event (section 6).
 - Two frames are at least 50 ms apart. A frame that comes earlier waits until 50 ms after the frame before.
   The update of a cursor move (section 4) is not a frame: it answers a key at once.
   A frame takes the layer and the base at its own time. So after a slow write, the next frame
@@ -182,6 +183,7 @@ The tables of sections 6.4–6.9 give the other keys of each effect.
 - A value outside its range, an invalid grapheme string or an invalid colour value.
 - A written `spread` with `every - spread < 0.05`, and `spread` of a `sweep` without `every`.
 - A written `delay_spread` with `delay - delay_spread < 0`, and `times` of a `sweep` without `every`.
+- `chars` of a `lightning` with `shape = "square"`.
 - An `at` that is not a point, a rectangle or an array of 1–64 points; a coordinate 0;
   a width or a height less than 1. The coordinates are integers.
 - `at` of the kind that the effect does not take (sections 6.4–6.9).
@@ -360,36 +362,96 @@ A bright spot runs from left to right over the cells of the place that are not s
 
 ### 6.9. `lightning`
 
-Each event draws a bolt in the place for `time`.
+Each event draws a bolt in the place and flashes it 1–3 times. The bolt has a shape:
+`slant` (diagonal steps) or `square` (lines and corners of box drawing).
 
-- The bolt runs in the rectangle of the place (section 6.2). A cell of the bolt that is not in the place
-  is not drawn.
-- The main bolt starts at a random column of the first row of the rectangle. It goes down one row
-  at each step, with a random column step of -1, 0 or +1, for a random count of rows from h / 2,
-  rounded down, but at least 1, to h. h is the height of the rectangle. A step out of the rectangle is a step 0.
-- The bolt has 1–3 branches, a random count. A branch starts at a random cell of the main bolt
-  below its first row. Its first cell is in the next row. It goes down with one column step, -1 or +1 at random,
-  for 2–6 rows, a random count. A step out of the rectangle ends the branch.
-  A main bolt of one row, or a branch without a cell in the next row, gives no branch.
-- Where two parts cross, the later part wins: the branches come after the main bolt, in their order.
+- The shape: the shape of `shape`. With `shape = "both"`, a random shape, each with the same chance.
+- The "area" of the event is a random rectangle in the rectangle of the place (section 6.2).
+  q is a random integer from 25 to 100. The area has h = max(1, round(H × q / 100)) rows
+  and w = max(1, round(W × q / 100)) columns. H and W are the height and the width of the rectangle
+  of the place. The first row of the area is a random row from the first row of the rectangle
+  to the row H - h below it. The first column is a random column, by the same rule.
+- The bolt has parts: the main part, then its branches. Each part goes down in the area,
+  one row at each step. A cell of the bolt that is not in the place is not drawn.
+- The main part starts at a random column of the first row of the area. It has a random count of rows
+  from max(1, h / 2 rounded down) to h.
+- The bolt has a random count of branches, from 1 to max(3, h / 2 rounded down). A branch starts
+  at a random cell of the parts before it, in the order of their cells. Its first row is the row
+  below this cell. It has a random count of rows from 2 to max(6, h / 2 rounded down).
+  A part ends at the last row of the area.
+- An event takes its random values in this order: the shape (only with `both`), q, the first row
+  and the first column of the area, the main part, the count of branches, each branch in order,
+  the count of flashes.
+- A part takes its random values in this order: its start, its count of rows, its direction,
+  then the values of each row in the order of the rows.
+
+A `slant` part:
+
+- A step to the next row has a column step of -1, 0 or +1. The main part takes a random step at each row but the last.
+  A step out of the area is a step 0.
+- A branch takes one random step, -1 or +1, for all its rows. A step out of the area ends the branch. A branch without a cell gives nothing.
 - The grapheme of a cell shows the step to the next row: `chars` has the graphemes
   of the steps +1, 0 and -1. The last cell of a part has the grapheme of the step 0.
+- Where two parts cross, the later part wins.
+
+A `square` part:
+
+- R = max(1, round(2 × w / h)).
+- A branch starts only at a cell without a down connection and above the last row of the area.
+  Without such a cell, the bolt has no more branches.
+- A part has a direction, -1 or +1: a random direction at its start.
+- A branch first drops from its start cell to its first row.
+- In each row after the first, a random value with a chance of 1/4 reverses the direction.
+- Then, in each row, a part at the edge of the area in its direction reverses it.
+- In each row, the part draws a run: from the current cell, a random count of cells from 0 to R
+  in the direction. A run stops at the edge of the area.
+- Then the part drops: the cell below the last cell of the run is the current cell of the next row.
+  The last row of a part has no drop.
+- A part ends before a cell of an earlier part: a run or a drop does not go into it.
+- Each cell has connections: up, down, left and right. A run connects each two neighbour cells.
+  A drop connects the two cells. The first cell of the main part connects up.
+  A start cell of a branch takes the connection of the branch.
+- The grapheme of a cell comes from its connections:
+
+| Connections | Grapheme |
+|---|---|
+| up and down; up only; down only | `│` |
+| left and right; left only; right only | `─` |
+| down and right | `┌` |
+| down and left | `┐` |
+| up and right | `└` |
+| up and left | `┘` |
+| up, down and right | `├` |
+| up, down and left | `┤` |
+| left, right and down | `┬` |
+| left, right and up | `┴` |
+| all four | `┼` |
+
+The flashes:
+
+- The event takes a random count of flashes, 1–3, after the bolt.
+- Each flash before the last shows the bolt for 0.1 seconds, then nothing for 0.1 seconds.
+  The last flash shows the bolt for `time`. Each flash shows the same cells.
+
+The cells:
+
 - With `over = false`, the bolt draws only on empty cells: the art, the text and the fields cover it.
   With `over = true`, it draws on each cell of the place.
-- A drawn cell has the grapheme of the step, the foreground of `peak`, the background of the cell
+- A drawn cell has the grapheme of its part, the foreground of `peak`, the background of the cell
   and no attributes.
 
 | Key | Type | Default | Range |
 |---|---|---|---|
 | `at` | — | None. | A rectangle. |
-| `chars` | string | `╲│╱` | A grapheme string of 3 graphemes. |
+| `shape` | string | `both` | `slant`, `square` or `both`. |
+| `chars` | string | `╲│╱` | A grapheme string of 3 graphemes. Not with `shape = "square"`: an error. |
 | `peak` | string | `#ffffff` | A colour value. |
 | `over` | boolean | `false` | — |
 | `time` | number, seconds | `0.3` | 0.05–10. |
 | `every` | number, seconds | `30` | Section 6.1. |
 
-- `╲`, `│` and `╱` are East Asian Ambiguous. The layout already uses 1 cell for them
-  ([telnet-term](telnet-term.md), section 6). `chars = "\\|/"` gives ASCII.
+- `╲`, `│`, `╱` and the graphemes of `square` are East Asian Ambiguous. The layout already uses 1 cell
+  for them ([telnet-term](telnet-term.md), section 6). `chars = "\\|/"` gives ASCII for `slant`.
 
 ## 7. `velourbbs preview`
 
