@@ -6,8 +6,8 @@ import (
 )
 
 // The random counts of a lightning cover their ranges in an area of h rows (live-screen, section 6.9):
-// the main part has h/2–h rows, at least 1; a bolt has 1–max(3, h/2) branches; a branch has
-// 2–max(6, h/2) rows. The area is from a quarter of the rectangle to the whole and stays in it.
+// each of k flashes adds 1–max(1, max(3, h/2)/k) branches; a branch has 2–max(6, h/2) rows.
+// The area has all rows of the rectangle and from a quarter of its width to the whole, and stays in it.
 func TestLightningCounts(t *testing.T) {
 	l := &Layer{rng: rand.New(rand.NewPCG(1, 2))}
 	span := func(f func() int) (lo, hi int) {
@@ -19,30 +19,25 @@ func TestLightningCounts(t *testing.T) {
 		return lo, hi
 	}
 	for _, h := range []int{1, 4, 14, 40} {
-		for _, tt := range []struct {
-			name   string
-			f      func(int) int
-			lo, hi int
-		}{
-			{"main rows", l.mainRows, max(1, h/2), h},
-			{"branches", l.branches, 1, max(3, h/2)},
-			{"branch rows", l.branchRows, 2, max(6, h/2)},
-		} {
-			if lo, hi := span(func() int { return tt.f(h) }); lo != tt.lo || hi != tt.hi {
-				t.Errorf("h %d: %s %d–%d, want %d–%d", h, tt.name, lo, hi, tt.lo, tt.hi)
+		for k := 1; k <= 3; k++ {
+			if lo, hi := span(func() int { return l.branches(h, k) }); lo != 1 || hi != max(1, max(3, h/2)/k) {
+				t.Errorf("h %d, %d flashes: branches %d–%d, want 1–%d", h, k, lo, hi, max(1, max(3, h/2)/k))
 			}
+		}
+		if lo, hi := span(func() int { return l.branchRows(h) }); lo != 2 || hi != max(6, h/2) {
+			t.Errorf("h %d: branch rows %d–%d, want 2–%d", h, lo, hi, max(6, h/2))
 		}
 	}
 	b := rect{col: 3, row: 2, width: 40, height: 20}
 	minW, maxW := 1<<30, 0
 	for range 2000 {
 		a := l.area(b)
-		if a.col < b.col || a.row < b.row || a.col+a.width > b.col+b.width || a.row+a.height > b.row+b.height {
-			t.Fatalf("area %+v is not in %+v", a, b)
+		if a.row != b.row || a.height != b.height || a.col < b.col || a.col+a.width > b.col+b.width {
+			t.Fatalf("area %+v is not all rows of %+v", a, b)
 		}
-		fits := false // the size is q % of the size of b, rounded, for a q from 25 to 100
+		fits := false // the width is q % of the width of b, rounded, for a q from 25 to 100
 		for q := 25; q <= 100; q++ {
-			fits = fits || a.width == (b.width*q+50)/100 && a.height == (b.height*q+50)/100
+			fits = fits || a.width == (b.width*q+50)/100
 		}
 		if !fits {
 			t.Fatalf("area %+v has no q of %+v", a, b)
