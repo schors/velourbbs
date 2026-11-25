@@ -379,12 +379,15 @@ Each event draws a bolt in the place and flashes it 1–3 times. The bolt has a 
   at a random cell of the parts before it, in the order of their cells. Its first row is the row
   below this cell. It has a random count of rows from 2 to max(6, h / 2 rounded down).
   A part ends at the last row of the area.
+- An event takes its random values in this order: the shape (only with `both`), q, the first row
+  and the first column of the area, the main part, the count of branches, each branch in order,
+  the count of flashes.
 - A part takes its random values in this order: its start, its count of rows, its direction,
   then the values of each row in the order of the rows.
 
 A `slant` part:
 
-- A step to the next row has a column step of -1, 0 or +1. The main part takes a random step at each row.
+- A step to the next row has a column step of -1, 0 or +1. The main part takes a random step at each row but the last.
   A step out of the area is a step 0.
 - A branch takes one random step, -1 or +1, for all its rows. A step out of the area ends the branch. A branch without a cell gives nothing.
 - The grapheme of a cell shows the step to the next row: `chars` has the graphemes
@@ -399,7 +402,7 @@ A `square` part:
 - A part has a direction, -1 or +1: a random direction at its start.
 - A branch first drops from its start cell to its first row.
 - In each row after the first, a random value with a chance of 1/4 reverses the direction.
-  Then a part at the edge of the area in its direction reverses it.
+- Then, in each row, a part at the edge of the area in its direction reverses it.
 - In each row, the part draws a run: from the current cell, a random count of cells from 0 to R
   in the direction. A run stops at the edge of the area.
 - Then the part drops: the cell below the last cell of the run is the current cell of the next row.

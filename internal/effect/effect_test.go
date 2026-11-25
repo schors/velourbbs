@@ -486,7 +486,7 @@ func TestLightning(t *testing.T) {
 }
 
 // An event flashes the same bolt 1–3 times: each flash before the last shows for 0.1 s, then nothing
-// for 0.1 s; the last flash shows for time. In a gap, the layer changes next at the start of the next flash
+// for 0.1 s; the last flash shows for time. The layer changes next at each start and each end of a flash
 // (live-screen, sections 5 and 6.9).
 func TestLightningFlashes(t *testing.T) {
 	s, p := page(t, map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"lightning\"\nover = true\nevery = 1\nspread = 0\ntime = 0.5\n+++\n"}, 40, 24)
@@ -499,26 +499,38 @@ func TestLightningFlashes(t *testing.T) {
 		if bolt == "[]" {
 			t.Fatalf("seed %d: no bolt", seed)
 		}
-		k := 1
-		for k < 3 && len(l.Cells(time.Second+time.Duration(k)*200*ms-50*ms, grid)) == 0 {
-			if next, ok := l.Next(); !ok || next != time.Second+time.Duration(k)*200*ms {
-				t.Errorf("seed %d: in gap %d, next is %v, %v", seed, k, next, ok)
+		// The times of the changes up to the next event at 2 s, and the state after each change.
+		got := []string{"1s on"}
+		for {
+			next, ok := l.Next()
+			if !ok || next >= 2*time.Second {
+				break
 			}
-			k++
+			state := "off"
+			if c := fmt.Sprint(l.Cells(next, grid)); c == bolt {
+				state = "on"
+			} else if c != "[]" {
+				t.Fatalf("seed %d: at %v got %v, want the bolt or nothing", seed, next, c)
+			}
+			got = append(got, fmt.Sprintf("%v %s", next, state))
+		}
+		k := len(got) / 2 // each flash is on, then off
+		var want []string
+		for j := range k {
+			on := time.Second + time.Duration(j)*200*ms
+			want = append(want, fmt.Sprintf("%v on", on))
+			if j < k-1 {
+				want = append(want, fmt.Sprintf("%v off", on+100*ms))
+			} else {
+				want = append(want, fmt.Sprintf("%v off", on+500*ms))
+			}
+		}
+		if !slices.Equal(got, want) {
+			t.Errorf("seed %d: got %q, want %q", seed, got, want)
 		}
 		seen[k] = true
-		last := time.Second + time.Duration(k-1)*200*ms
-		for _, tt := range []struct {
-			at time.Duration
-			on bool
-		}{{last, true}, {last + 450*ms, true}, {last + 500*ms, false}} {
-			got := l.Cells(tt.at, grid)
-			if on := len(got) > 0; on != tt.on || on && fmt.Sprint(got) != bolt {
-				t.Errorf("seed %d, %d flashes: at %v got %v, want the bolt %v", seed, k, tt.at, got, tt.on)
-			}
-		}
 	}
-	if len(seen) != 3 {
+	if len(seen) != 3 || !seen[1] || !seen[2] || !seen[3] {
 		t.Errorf("flash counts: got %v, want 1, 2 and 3", seen)
 	}
 }

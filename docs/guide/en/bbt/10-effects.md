@@ -215,7 +215,7 @@ A bolt that flashes for a short time, one to three times.
 | `time` | `0.3` | The seconds that the last flash shows: 0.05–10. |
 | `every` | `30` | |
 
-- Each bolt takes a random part of the rectangle: from a quarter of its size to the whole rectangle.
+- Each bolt takes a random part of the rectangle: from a quarter of its width and height to the whole rectangle.
   So one bolt is small and in one spot, the next bolt is wide.
 - The bolt starts at a random column of the top row of its part. It goes down
   to the bottom half of the part or further, with random steps to the left and to the right.

@@ -215,7 +215,7 @@ Visos taisyklės: [live-screen](../../../specs/live-screen.md), 6.7 ir 6.8 skyri
 | `time` | `0.3` | Sekundės, kiek rodomas paskutinis blyksnis: 0.05–10. |
 | `every` | `30` | |
 
-- Kiekvienas žaibas užima atsitiktinę stačiakampio dalį: nuo ketvirtadalio jo dydžio iki viso stačiakampio.
+- Kiekvienas žaibas užima atsitiktinę stačiakampio dalį: nuo ketvirtadalio jo pločio ir aukščio iki viso stačiakampio.
   Todėl vienas žaibas mažas ir vienoje vietoje, o kitas platus.
 - Žaibas prasideda atsitiktiniame savo dalies viršutinės eilutės stulpelyje. Jis eina žemyn
   iki apatinės dalies pusės ar toliau, atsitiktiniais žingsniais į kairę ir į dešinę.
