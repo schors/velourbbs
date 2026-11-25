@@ -217,11 +217,12 @@ A bolt that flashes for a short time, one to three times.
 | `time` | `0.3` | The seconds that the last flash shows: 0.05–10. |
 | `every` | `30` | |
 
-- Each bolt takes a random part of the rectangle: from a quarter of its width and height to the whole rectangle.
-  So one bolt is small and in one spot, the next bolt is wide.
-- The bolt starts at a random column of the top row of its part. It goes down
-  to the bottom half of the part or further, with random steps to the left and to the right.
-  A bigger bolt has more and longer branches.
+- Each bolt goes through the whole height of the rectangle, from the top row to the bottom row.
+  It takes a random part of the width: from a quarter of the width to the whole width.
+  So one bolt is narrow, the next bolt is wide.
+- The bolt starts at a random column of the top row. It goes down to the bottom row,
+  with random steps to the left and to the right. Its branches have a random length.
+  Most of them end before the bottom row.
 - A `square` bolt goes down with horizontal runs and corners, as in old BBS art:
 
   ```
@@ -234,6 +235,8 @@ A bolt that flashes for a short time, one to three times.
 
 - A bolt flashes one, two or three times. Each flash before the last shows for 0.1 seconds,
   then a pause of 0.1 seconds. The last flash shows for `time`.
+- Each next flash keeps the bolt and adds new branches in other places. So the bolt spreads
+  across the sky from flash to flash.
 - With `over = false`, the bolt draws only on empty cells: the art and the text cover it.
   With `over = true`, it covers each cell of the place.
 - A bolt keeps the background of each cell. It has no bold and no other attributes.

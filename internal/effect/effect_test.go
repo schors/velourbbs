@@ -487,53 +487,77 @@ func TestLightning(t *testing.T) {
 	}
 }
 
-// An event flashes the same bolt 1–3 times: each flash before the last shows for 0.1 s, then nothing
-// for 0.1 s; the last flash shows for time. The layer changes next at each start and each end of a flash
-// (live-screen, sections 5 and 6.9).
+// An event flashes 1–3 times: each flash before the last shows for 0.1 s, then nothing for 0.1 s;
+// the last flash shows for time. Each later flash has the cells of the flash before it and new cells
+// of its branches. The main part goes from the top row to the bottom row. The layer changes next
+// at each start and each end of a flash (live-screen, sections 5 and 6.9).
 func TestLightningFlashes(t *testing.T) {
-	s, p := page(t, map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"lightning\"\nover = true\nevery = 1\nspread = 0\ntime = 0.5\n+++\n"}, 40, 24)
 	ms := time.Millisecond
-	seen := map[int]bool{}
-	for seed := uint64(1); seed <= 30; seed++ {
-		l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(seed, 2)))
-		grid := p.Grid()
-		bolt := fmt.Sprint(l.Cells(time.Second, grid))
-		if bolt == "[]" {
-			t.Fatalf("seed %d: no bolt", seed)
-		}
-		// The times of the changes up to the next event at 2 s, and the state after each change.
-		got := []string{"1s on"}
-		for {
-			next, ok := l.Next()
-			if !ok || next >= 2*time.Second {
-				break
+	for _, shape := range []string{"slant", "square"} {
+		s, p := page(t, map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"lightning\"\nshape = \"" + shape +
+			"\"\nover = true\nevery = 1\nspread = 0\ntime = 0.5\n+++\n"}, 40, 24)
+		seen, grow, later := map[int]bool{}, 0, 0
+		for seed := uint64(1); seed <= 30; seed++ {
+			l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(seed, 2)))
+			grid := p.Grid()
+			// The cells of a flash by their row and column, and its rows.
+			flash := func(at time.Duration) (map[[2]int]bool, map[int]bool) {
+				cells, rows := map[[2]int]bool{}, map[int]bool{}
+				for _, c := range l.Cells(at, grid) {
+					cells[[2]int{c.Row, c.Col}] = true
+					rows[c.Row] = true
+				}
+				return cells, rows
 			}
-			state := "off"
-			if c := fmt.Sprint(l.Cells(next, grid)); c == bolt {
-				state = "on"
-			} else if c != "[]" {
-				t.Fatalf("seed %d: at %v got %v, want the bolt or nothing", seed, next, c)
+			last, rows := flash(time.Second)
+			if len(rows) != 24 {
+				t.Fatalf("%s seed %d: the first flash has %d rows, want 24", shape, seed, len(rows))
 			}
-			got = append(got, fmt.Sprintf("%v %s", next, state))
-		}
-		k := len(got) / 2 // each flash is on, then off
-		var want []string
-		for j := range k {
-			on := time.Second + time.Duration(j)*200*ms
-			want = append(want, fmt.Sprintf("%v on", on))
-			if j < k-1 {
-				want = append(want, fmt.Sprintf("%v off", on+100*ms))
-			} else {
-				want = append(want, fmt.Sprintf("%v off", on+500*ms))
+			// The times of the changes up to the next event at 2 s, and the state after each change.
+			got := []string{"1s on"}
+			for {
+				next, ok := l.Next()
+				if !ok || next >= 2*time.Second {
+					break
+				}
+				state := "off"
+				if cells, _ := flash(next); len(cells) > 0 {
+					state = "on"
+					for c := range last {
+						if !cells[c] {
+							t.Fatalf("%s seed %d: at %v the cell %v of the flash before is not drawn", shape, seed, next, c)
+						}
+					}
+					if len(cells) > len(last) {
+						grow++
+					}
+					last = cells
+				}
+				got = append(got, fmt.Sprintf("%v %s", next, state))
 			}
+			k := len(got) / 2 // each flash is on, then off
+			var want []string
+			for j := range k {
+				on := time.Second + time.Duration(j)*200*ms
+				want = append(want, fmt.Sprintf("%v on", on))
+				if j < k-1 {
+					want = append(want, fmt.Sprintf("%v off", on+100*ms))
+				} else {
+					want = append(want, fmt.Sprintf("%v off", on+500*ms))
+				}
+			}
+			if !slices.Equal(got, want) {
+				t.Errorf("%s seed %d: got %q, want %q", shape, seed, got, want)
+			}
+			seen[k] = true
+			later += k - 1
 		}
-		if !slices.Equal(got, want) {
-			t.Errorf("seed %d: got %q, want %q", seed, got, want)
+		if len(seen) != 3 || !seen[1] || !seen[2] || !seen[3] {
+			t.Errorf("%s flash counts: got %v, want 1, 2 and 3", shape, seen)
 		}
-		seen[k] = true
-	}
-	if len(seen) != 3 || !seen[1] || !seen[2] || !seen[3] {
-		t.Errorf("flash counts: got %v, want 1, 2 and 3", seen)
+		if grow != later || later == 0 {
+			t.Errorf("%s: %d of %d later flashes have new cells, want all", shape, grow, later)
+		}
 	}
 }
 

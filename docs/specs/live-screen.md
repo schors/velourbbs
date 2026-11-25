@@ -362,26 +362,28 @@ A bright spot runs from left to right over the cells of the place that are not s
 
 ### 6.9. `lightning`
 
-Each event draws a bolt in the place and flashes it 1–3 times. The bolt has a shape:
-`slant` (diagonal steps) or `square` (lines and corners of box drawing).
+Each event draws a bolt in the place and flashes it 1–3 times. Each flash adds new branches to the bolt.
+The bolt has a shape: `slant` (diagonal steps) or `square` (lines and corners of box drawing).
 
 - The shape: the shape of `shape`. With `shape = "both"`, a random shape, each with the same chance.
 - The "area" of the event is a random rectangle in the rectangle of the place (section 6.2).
-  q is a random integer from 25 to 100. The area has h = max(1, round(H × q / 100)) rows
-  and w = max(1, round(W × q / 100)) columns. H and W are the height and the width of the rectangle
-  of the place. The first row of the area is a random row from the first row of the rectangle
-  to the row H - h below it. The first column is a random column, by the same rule.
+  It has all h rows of the rectangle. q is a random integer from 25 to 100. The area has
+  w = max(1, round(W × q / 100)) columns. W is the width of the rectangle of the place.
+  The first column of the area is a random column from the first column of the rectangle
+  to the column W - w to the right of it.
 - The bolt has parts: the main part, then its branches. Each part goes down in the area,
   one row at each step. A cell of the bolt that is not in the place is not drawn.
-- The main part starts at a random column of the first row of the area. It has a random count of rows
-  from max(1, h / 2 rounded down) to h.
-- The bolt has a random count of branches, from 1 to max(3, h / 2 rounded down). A branch starts
+- The main part starts at a random column of the first row of the area. It has h rows.
+- The event has k flashes: a random count from 1 to 3. Each flash adds a random count of branches
+  from 1 to max(1, max(3, h / 2 rounded down) / k rounded down). A branch starts
   at a random cell of the parts before it, in the order of their cells. Its first row is the row
   below this cell. It has a random count of rows from 2 to max(6, h / 2 rounded down).
   A part ends at the last row of the area.
-- An event takes its random values in this order: the shape (only with `both`), q, the first row
-  and the first column of the area, the main part, the count of branches, each branch in order,
-  the count of flashes.
+- A branch with no new cell is not drawn. The flash then draws a new random branch in its place,
+  up to 10 draws for each branch.
+- An event takes its random values in this order: the shape (only with `both`), q, the first column
+  of the area, the count of flashes, the main part, then for each flash its count of branches
+  and each draw of a branch in order.
 - A part takes its random values in this order: its start, its count of rows, its direction,
   then the values of each row in the order of the rows.
 
@@ -389,7 +391,7 @@ A `slant` part:
 
 - A step to the next row has a column step of -1, 0 or +1. The main part takes a random step at each row but the last.
   A step out of the area is a step 0.
-- A branch takes one random step, -1 or +1, for all its rows. A step out of the area ends the branch. A branch without a cell gives nothing.
+- A branch takes one random step, -1 or +1, for all its rows. A step out of the area ends the branch.
 - The grapheme of a cell shows the step to the next row: `chars` has the graphemes
   of the steps +1, 0 and -1. The last cell of a part has the grapheme of the step 0.
 - Where two parts cross, the later part wins.
@@ -429,9 +431,10 @@ A `square` part:
 
 The flashes:
 
-- The event takes a random count of flashes, 1–3, after the bolt.
-- Each flash before the last shows the bolt for 0.1 seconds, then nothing for 0.1 seconds.
-  The last flash shows the bolt for `time`. Each flash shows the same cells.
+- A flash shows the main part, its own branches and the branches of the flashes before it.
+  The graphemes of the cells are the graphemes after its branches.
+- Each flash before the last shows for 0.1 seconds, then nothing for 0.1 seconds.
+  The last flash shows for `time`.
 
 The cells:
 

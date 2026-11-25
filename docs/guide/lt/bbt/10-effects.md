@@ -217,11 +217,12 @@ Visos taisyklės: [live-screen](../../../specs/live-screen.md), 6.7 ir 6.8 skyri
 | `time` | `0.3` | Sekundės, kiek rodomas paskutinis blyksnis: 0.05–10. |
 | `every` | `30` | |
 
-- Kiekvienas žaibas užima atsitiktinę stačiakampio dalį: nuo ketvirtadalio jo pločio ir aukščio iki viso stačiakampio.
-  Todėl vienas žaibas mažas ir vienoje vietoje, o kitas platus.
-- Žaibas prasideda atsitiktiniame savo dalies viršutinės eilutės stulpelyje. Jis eina žemyn
-  iki apatinės dalies pusės ar toliau, atsitiktiniais žingsniais į kairę ir į dešinę.
-  Kuo didesnis žaibas, tuo daugiau ir ilgesnių šakų jis turi.
+- Kiekvienas žaibas eina per visą stačiakampio aukštį, nuo viršutinės eilutės iki apatinės.
+  Jis užima atsitiktinę pločio dalį: nuo ketvirtadalio pločio iki viso pločio.
+  Todėl vienas žaibas siauras, o kitas platus.
+- Žaibas prasideda atsitiktiniame viršutinės eilutės stulpelyje. Jis eina žemyn iki apatinės eilutės,
+  atsitiktiniais žingsniais į kairę ir į dešinę. Jo šakų ilgis atsitiktinis.
+  Dauguma šakų baigiasi aukščiau apatinės eilutės.
 - `square` žaibas eina žemyn horizontaliomis atkarpomis ir kampais, kaip senajame BBS mene:
 
   ```
@@ -234,6 +235,8 @@ Visos taisyklės: [live-screen](../../../specs/live-screen.md), 6.7 ir 6.8 skyri
 
 - Žaibas blyksteli vieną, du ar tris kartus. Kiekvienas blyksnis prieš paskutinį rodomas 0,1 sekundės,
   po jo 0,1 sekundės pauzė. Paskutinis blyksnis rodomas `time` sekundžių.
+- Kiekvienas kitas blyksnis išlaiko žaibą ir prideda naujų šakų kitose vietose.
+  Taip žaibas nuo blyksnio iki blyksnio plinta per dangų.
 - Su `over = false` žaibas piešia tik tuščiuose langeliuose: menas ir tekstas jį uždengia.
   Su `over = true` jis uždengia bet kurį vietos langelį.
 - Žaibas išlaiko kiekvieno langelio foną. Jis neturi paryškinimo ir jokių kitų atributų.
