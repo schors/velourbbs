@@ -226,9 +226,9 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
 
 - An effect has "events" in each place. An event starts at a time and can run for a time.
 - The first event starts at the show time plus `delay` plus a random value from `-delay_spread`
-  to `delay_spread`, plus d. Each next event starts at the start of the event before plus d.
+  to `delay_spread`. Each next event starts at the start of the event before plus d.
   d is `every` plus a random value from `-spread` to `spread`. Each random value has the same chance
-  for each value in its range. A spread of 0 takes no random value. A `sweep` has no d before its first event.
+  for each value in its range. A spread of 0 takes no random value.
 - Each place has `times` events, then no event. Without `times`, the events have no end.
   An effect without `every` (a `sweep`) has one event.
 - The events of one place can overlap. On a cell of two events, the event that started later wins.
@@ -245,7 +245,7 @@ The message starts with `effect <n>: `, the 1-based number of the effect.
   with a random seed. `velourbbs preview` takes a fixed seed (section 7).
 - The events take the random values in the order of their starts: at one time, the earlier effect first,
   then the earlier place. At the show, each effect in order takes the values of the show, then for each place
-  the value of `delay_spread` and the d of the first event. An event takes its values, then the d
+  the value of `delay_spread`. An event takes its values, then the d
   of the next event. The last event takes no d.
 
 The "mix" of a cell with a colour P at an amount a, from 0 to 1, gives the foreground
@@ -347,7 +347,7 @@ A bright spot runs from left to right over the cells of the place that are not s
   The amount of the cell is the larger amount of the band and of the glint.
 - The event runs until the centre stops and the last glint ends.
   A lit cell is a cell of the event (section 6.3) only while its amount is more than 0.
-- Without `every`, the effect has one event. With `every`, the first event starts with no d (section 6.3).
+- Without `every`, the effect has one event.
 
 | Key | Type | Default | Range |
 |---|---|---|---|

@@ -63,7 +63,8 @@ func TestLiveTicks(t *testing.T) {
 		}},
 	}
 	// A page with effects: a frame at the show and at each event (live-screen, section 5).
-	// The candle events come each 0.2 s; with the ticks, a frame waits 50 ms after the frame before.
+	// The first events come at the show; then the candle events come each 0.2 s and the twinkle
+	// events each 0.3 s. With the ticks, a frame waits 50 ms after the frame before.
 	effects := `+++
 [[effect]]
 do = "candle"
@@ -96,12 +97,12 @@ do = "logoff"
 		want  []string
 	}{
 		{"effects", 0, 10, effects + "X a\n", []string{"+700ms", "G"}, []string{
-			"page: X a", "frame 05.000: ^ a", "frame 05.200: ^ a", "frame 05.300: ^ b", "frame 05.400: ^ b",
-			"frame 05.600: ^ a", "wait +700ms", "page: Bye",
+			"page: X a", "frame 05.000: ^ b", "frame 05.200: ^ b", "frame 05.300: ^ a", "frame 05.400: ^ a",
+			"frame 05.600: ^ b", "wait +700ms", "page: Bye",
 		}},
 		{"effects and ticks", 900 * time.Millisecond, 10, effects + "X a {bbs.time live}\n", []string{"+300ms"}, []string{
-			"page: X a 15:04:05", "frame 05.900: ^ a 15:04:05", "frame 06.000: ^ a 15:04:06", "frame 06.100: ^ a 15:04:06",
-			"frame 06.200: ^ b 15:04:06", "wait +300ms",
+			"page: X a 15:04:05", "frame 05.900: ^ b 15:04:05", "frame 06.000: ^ b 15:04:06", "frame 06.100: ^ b 15:04:06",
+			"frame 06.200: ^ a 15:04:06", "wait +300ms",
 		}},
 	}...)
 	for _, tc := range tests {
