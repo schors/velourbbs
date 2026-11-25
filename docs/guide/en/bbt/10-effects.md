@@ -73,6 +73,7 @@ Full rules: [live-screen](../../../specs/live-screen.md), section 6.2.
 - The first change comes `delay` seconds after the show. With `delay = 0`, it comes at the show.
   Example: `delay = 1` and `every = 1` with `spread = 0` give changes after 1, 2 and 3 seconds.
 - To make the first change wait one interval, set `delay = every` and `delay_spread = spread`.
+  Without a written `spread`, use half of `every`.
 - With `spread = 0`, each change comes exactly `every` seconds after the change before.
 - `every - spread` must be at least 0.05. `delay - delay_spread` must be at least 0.
 - Each point of an array of points takes its own random delay. Example: `delay = 2`

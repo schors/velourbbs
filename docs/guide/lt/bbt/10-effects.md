@@ -72,7 +72,8 @@ Visos taisyklės: [live-screen](../../../specs/live-screen.md), 6.2 skyrius.
 - Reikšmė yra sekundžių skaičius, pavyzdžiui, `0.5`.
 - Pirmasis pakeitimas ateina praėjus `delay` sekundžių po parodymo. Su `delay = 0` jis ateina parodymo metu.
   Pavyzdys: `delay = 1` ir `every = 1` su `spread = 0` duoda pakeitimus po 1, 2 ir 3 sekundžių.
-- Kad pirmasis pakeitimas lauktų vieno tarpo, nustatykite `delay = every` ir `delay_spread = spread`.
+- Kad pirmasis pakeitimas lauktų vieno tarpo, nustatyk `delay = every` ir `delay_spread = spread`.
+  Jei `spread` neparašytas, imk pusę `every`.
 - Su `spread = 0` kiekvienas pakeitimas ateina lygiai po `every` sekundžių po ankstesniojo.
 - `every - spread` turi būti ne mažiau kaip 0.05. `delay - delay_spread` turi būti ne mažiau kaip 0.
 - Kiekvienas taškų masyvo taškas gauna savo atsitiktinę delsą. Pavyzdys: `delay = 2`

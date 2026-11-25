@@ -301,7 +301,7 @@ func TestTwinkleStars(t *testing.T) {
 		"[[effect]]\ndo = \"twinkle\"\nchars = \"bc\"\nat = [1, 1]\ndelay = 100\n" +
 		"[[effect]]\ndo = \"twinkle\"\nchars = \"xy\"\nat = [2, 1, 3, 1]\n+++\nabcd"}
 	s, p := page(t, files, 40, 24)
-	if got, want := cells(s, p, 5*time.Second), "0:0 b 1/0; 0:0 b 1/0"; got != want {
+	if got, want := cells(s, p, 6*time.Second), "0:0 b 2/0; 0:0 b 1/0"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 	files["s.bbt"] = "+++\n[[effect]]\ndo = \"twinkle\"\nchars = \"xy\"\nat = [1, 1, 3, 1]\n+++\nabc"
