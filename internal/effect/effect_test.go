@@ -443,7 +443,8 @@ func TestSparkle(t *testing.T) {
 // of one column, each step is a step 0 and no branch has a cell (live-screen, section 6.9).
 func TestLightning(t *testing.T) {
 	// Column 2 has x on the rows 1 and 3 and spaces on the rows 2 and 4.
-	front := "+++\n[[effect]]\ndo = \"lightning\"\nchars = \"\\\\|/\"\npeak = \"15\"\nat = [2, 1, 1, 4]\nevery = 1\nspread = 0\ntime = 0.5\n"
+	front := "+++\n[[effect]]\ndo = \"lightning\"\nshape = \"slant\"\nchars = \"\\\\|/\"\npeak = \"15\"\n" +
+		"at = [2, 1, 1, 4]\nevery = 1\nspread = 0\ntime = 0.5\n"
 	layer := func(over string, at time.Duration) []string {
 		s, p := page(t, map[string]string{"s.bbt": front + "over = " + over + "\n+++\nax\na\nax\na"}, 40, 24)
 		l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(1, 2)))
@@ -457,25 +458,150 @@ func TestLightning(t *testing.T) {
 		}
 		return out
 	}
-	// The main bolt runs from the first row for 2–4 rows, the same rows with each value of over.
+	// The main part runs down from the first row of the area, the same rows with each value of over.
 	all := layer("true", time.Second)
-	if len(all) < 2 || len(all) > 4 {
-		t.Fatalf("over = true: got %q, want 2–4 cells", all)
+	if len(all) == 0 {
+		t.Fatal("over = true: no cell")
 	}
 	var empty []string
 	for k, c := range all {
-		if want := fmt.Sprintf("%d:1 | 15/0", k); c != want {
-			t.Errorf("over = true: cell %d is %q, want %q", k, c, want)
+		var row int
+		if _, err := fmt.Sscanf(c, "%d:", &row); err != nil {
+			t.Fatal(err)
 		}
-		if k%2 == 1 {
+		if want := fmt.Sprintf("%d:1 | 15/0", row); c != want || k > 0 && !strings.HasPrefix(all[k-1], fmt.Sprintf("%d:", row-1)) {
+			t.Errorf("over = true: cell %d is %q, want %q below the cell before", k, c, want)
+		}
+		if row%2 == 1 {
 			empty = append(empty, c)
 		}
 	}
 	if got := layer("false", time.Second); !slices.Equal(got, empty) {
 		t.Errorf("over = false: got %q, want %q", got, empty)
 	}
-	if got := layer("true", 1500*time.Millisecond); got != nil {
+	// The last flash ends at 1 + 0.4 + 0.5 s at the latest.
+	if got := layer("true", 1950*time.Millisecond); got != nil {
 		t.Errorf("after time: got %q", got)
+	}
+}
+
+// An event flashes the same bolt 1–3 times: each flash before the last shows for 0.1 s, then nothing
+// for 0.1 s; the last flash shows for time. In a gap, the layer changes next at the start of the next flash
+// (live-screen, sections 5 and 6.9).
+func TestLightningFlashes(t *testing.T) {
+	s, p := page(t, map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"lightning\"\nover = true\nevery = 1\nspread = 0\ntime = 0.5\n+++\n"}, 40, 24)
+	ms := time.Millisecond
+	seen := map[int]bool{}
+	for seed := uint64(1); seed <= 30; seed++ {
+		l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(seed, 2)))
+		grid := p.Grid()
+		bolt := fmt.Sprint(l.Cells(time.Second, grid))
+		if bolt == "[]" {
+			t.Fatalf("seed %d: no bolt", seed)
+		}
+		k := 1
+		for k < 3 && len(l.Cells(time.Second+time.Duration(k)*200*ms-50*ms, grid)) == 0 {
+			if next, ok := l.Next(); !ok || next != time.Second+time.Duration(k)*200*ms {
+				t.Errorf("seed %d: in gap %d, next is %v, %v", seed, k, next, ok)
+			}
+			k++
+		}
+		seen[k] = true
+		last := time.Second + time.Duration(k-1)*200*ms
+		for _, tt := range []struct {
+			at time.Duration
+			on bool
+		}{{last, true}, {last + 450*ms, true}, {last + 500*ms, false}} {
+			got := l.Cells(tt.at, grid)
+			if on := len(got) > 0; on != tt.on || on && fmt.Sprint(got) != bolt {
+				t.Errorf("seed %d, %d flashes: at %v got %v, want the bolt %v", seed, k, tt.at, got, tt.on)
+			}
+		}
+	}
+	if len(seen) != 3 {
+		t.Errorf("flash counts: got %v, want 1, 2 and 3", seen)
+	}
+}
+
+// The connections of each grapheme of a square bolt: up, down, left, right. │ and ─ can also have
+// one connection only (live-screen, section 6.9).
+var boxConn = map[string][4]bool{
+	"│": {true, true, false, false}, "─": {false, false, true, true},
+	"┌": {false, true, false, true}, "┐": {false, true, true, false}, "└": {true, false, false, true}, "┘": {true, false, true, false},
+	"├": {true, true, false, true}, "┤": {true, true, true, false}, "┬": {false, true, true, true}, "┴": {true, false, true, true},
+	"┼": {true, true, true, true},
+}
+
+// A square bolt has the graphemes of its connections: each connection of a corner or a junction goes
+// to a cell of the bolt with the opposite connection. All cells are in the rectangle. The areas of
+// the events differ in size. shape = "both" gives both shapes (live-screen, section 6.9).
+func TestLightningSquare(t *testing.T) {
+	load := func(shape string) (*screen.Screen, screen.Page) {
+		return page(t, map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"lightning\"\nshape = \"" + shape +
+			"\"\nat = [3, 2, 30, 16]\nover = true\nevery = 1\nspread = 0\n+++\n"}, 40, 24)
+	}
+	s, p := load("square")
+	sizes := map[int]bool{}
+	for seed := uint64(1); seed <= 20; seed++ {
+		l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(seed, 2)))
+		got := map[[2]int]string{}
+		for _, c := range l.Cells(time.Second, p.Grid()) {
+			if c.Row < 1 || c.Row >= 17 || c.Col < 2 || c.Col >= 32 {
+				t.Errorf("seed %d: cell %d:%d is outside the rectangle", seed, c.Row, c.Col)
+			}
+			got[[2]int{c.Row, c.Col}] = c.Cell.Grapheme
+		}
+		sizes[len(got)] = true
+		other := func(g string, k int) bool { // g has the connection k, or is a line that can end there
+			cn, ok := boxConn[g]
+			return ok && (cn[k] || g == "│" && k < 2 || g == "─" && k >= 2)
+		}
+		top, sky := 99, 0 // the first row of the bolt, and the cells with an up connection to no cell
+		for at, g := range got {
+			cn, ok := boxConn[g]
+			if !ok {
+				t.Fatalf("seed %d: cell %v has %q", seed, at, g)
+			}
+			top = min(top, at[0])
+			if g == "│" || g == "─" {
+				continue
+			}
+			for k, d := range [4][2]int{{-1, 0}, {1, 0}, {0, -1}, {0, 1}} {
+				nb, in := got[[2]int{at[0] + d[0], at[1] + d[1]}]
+				switch {
+				case !cn[k] || in && other(nb, k^1):
+				case k == 0 && !in: // the first cell of the main part connects up
+					sky++
+				default:
+					t.Errorf("seed %d: cell %v %q has no neighbour for connection %d", seed, at, g, k)
+				}
+			}
+		}
+		for at, g := range got {
+			if at[0] > top && boxConn[g][0] && g != "│" && got[[2]int{at[0] - 1, at[1]}] == "" {
+				t.Errorf("seed %d: cell %v %q below the first row connects up to no cell", seed, at, g)
+			}
+		}
+		if sky > 1 {
+			t.Errorf("seed %d: %d cells connect up to no cell", seed, sky)
+		}
+	}
+	if len(sizes) < 5 {
+		t.Errorf("bolt sizes: got %v, want 5 different sizes or more", sizes)
+	}
+	s, p = load("both")
+	shapes := map[bool]bool{}
+	for seed := uint64(1); seed <= 20; seed++ {
+		l := effect.New(s.Effects, p, theme, rand.New(rand.NewPCG(seed, 2)))
+		square := false
+		for _, c := range l.Cells(time.Second, p.Grid()) {
+			_, box := boxConn[c.Cell.Grapheme]
+			square = square || box && c.Cell.Grapheme != "│"
+		}
+		shapes[square] = true
+	}
+	if len(shapes) != 2 {
+		t.Errorf("shape both: got only square = %v", shapes)
 	}
 }
 

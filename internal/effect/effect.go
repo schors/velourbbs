@@ -59,12 +59,13 @@ func (m mark) on(v screen.Cell) screen.Cell {
 	return v
 }
 
-// flash is an event of a sparkle or a lightning that shows (live-screen, sections 6.5 and 6.9):
-// its drawn cells until its end from the show. The cells do not change while the event shows.
+// flash is an event of a sparkle or a flash of a lightning (live-screen, sections 6.5 and 6.9):
+// its drawn cells from its start to its end from the show. The cells do not change while it shows.
+// The flashes of one lightning share their marks.
 type flash struct {
-	end   time.Duration
-	marks map[int]mark
-	order []int // the keys of marks in the order of their first draw
+	start, end time.Duration
+	marks      map[int]mark
+	order      []int // the keys of marks in the order of their first draw
 }
 
 // put draws the cell c of the flash. A later draw on the same cell wins.
@@ -202,7 +203,11 @@ func (l *Layer) Next() (time.Duration, bool) {
 			at(min(rn.end, l.now+step))
 		}
 		for _, f := range r.shows {
-			at(f.end)
+			if f.start > l.now {
+				at(f.start)
+			} else {
+				at(f.end)
+			}
 		}
 	}
 	return next, ok
@@ -237,6 +242,7 @@ func (l *Layer) Cells(t time.Duration, base []screen.Row) []screen.GridCell {
 		if pl == nil || pl.next > t {
 			break
 		}
+		l.now = pl.next // the flashes that show at the start of the event
 		l.expire(pl.next)
 		l.event(i, pl, base)
 		pl.n++
@@ -251,7 +257,7 @@ func (l *Layer) Cells(t time.Duration, base []screen.Row) []screen.GridCell {
 	var out []screen.GridCell
 	for i, r := range l.fx {
 		r.light(t)
-		for _, c := range slices.Concat(r.order, r.litOrd, r.shown()) {
+		for _, c := range slices.Concat(r.order, r.litOrd, r.shown(t)) {
 			row, col := c/l.cols, c%l.cols
 			if !free(base[row], col) { // a new base can have a slot or a wide grapheme here
 				continue
@@ -273,7 +279,7 @@ func (l *Layer) apply(r *runner, c int, v screen.Cell) screen.Cell {
 		v = m.on(v)
 	}
 	for _, f := range r.shows { // the event that started later wins
-		if m, ok := f.marks[c]; ok {
+		if m, ok := f.marks[c]; ok && f.start <= l.now {
 			v = m.on(v)
 		}
 	}
@@ -283,12 +289,15 @@ func (l *Layer) apply(r *runner, c int, v screen.Cell) screen.Cell {
 	return v
 }
 
-// shown gives the cells of the events of a sparkle or a lightning that show, each once,
+// shown gives the cells of the events of a sparkle or a lightning that show at the time now, each once,
 // in the order of the events and of their cells.
-func (r *runner) shown() []int {
+func (r *runner) shown(now time.Duration) []int {
 	var out []int
 	seen := map[int]bool{}
 	for _, f := range r.shows {
+		if f.start > now {
+			continue
+		}
 		for _, c := range f.order {
 			if !seen[c] {
 				seen[c] = true
@@ -365,7 +374,7 @@ func (l *Layer) canDraw(i, c int, grid []screen.Row) bool {
 func (l *Layer) sparkle(i int, pl *place, grid []screen.Row) {
 	r := l.fx[i]
 	starred := map[int]bool{}
-	for _, c := range r.shown() {
+	for _, c := range r.shown(l.now) {
 		starred[c] = true
 	}
 	var cells []int
@@ -381,7 +390,7 @@ func (l *Layer) sparkle(i int, pl *place, grid []screen.Row) {
 	if !pl.point {
 		n = min(r.e.Count, len(cells))
 	}
-	f := &flash{end: pl.next + r.e.Time, marks: map[int]mark{}}
+	f := &flash{start: pl.next, end: pl.next + r.e.Time, marks: map[int]mark{}}
 	for k := range n { // a partial shuffle: the random cells of one event are different cells
 		if !pl.point {
 			j := k + l.rng.IntN(len(cells)-k)
@@ -392,9 +401,15 @@ func (l *Layer) sparkle(i int, pl *place, grid []screen.Row) {
 	r.shows = append(r.shows, f)
 }
 
-// lightning starts an event of a lightning of the effect i in the place pl (section 6.9): the main bolt
-// and its branches in the rectangle of the place. The grapheme of a cell shows the step to the next row:
-// chars has the graphemes of the steps +1, 0 and -1. The last cell of a part has the grapheme of the step 0.
+// The flashes of a lightning before the last (live-screen, section 6.9): each shows the bolt for flashOn,
+// then nothing for flashOff.
+const (
+	flashOn  = 100 * time.Millisecond
+	flashOff = 100 * time.Millisecond
+)
+
+// lightning starts an event of a lightning of the effect i in the place pl (section 6.9): a bolt
+// of a random shape in a random area of the rectangle of the place, and 1–3 flashes of the bolt.
 func (l *Layer) lightning(i int, pl *place, grid []screen.Row) {
 	r := l.fx[i]
 	can := func(c int) bool {
@@ -404,47 +419,192 @@ func (l *Layer) lightning(i int, pl *place, grid []screen.Row) {
 	if !slices.ContainsFunc(pl.cells, can) {
 		return
 	}
-	b := pl.rect
-	f := &flash{end: pl.next + r.e.Time, marks: map[int]mark{}}
-	// part draws a part of the bolt from the row: cols are its columns, one for each row.
+	shape := r.e.Shape
+	if shape == screen.ShapeBoth {
+		shape = screen.ShapeSlant + screen.Shape(l.rng.IntN(2))
+	}
+	a := l.area(pl.rect)
+	marks, order := map[int]mark{}, []int(nil)
+	put := func(p pos, g string) {
+		c := p.row*l.cols + p.col
+		if !can(c) {
+			return
+		}
+		if _, ok := marks[c]; !ok {
+			order = append(order, c)
+		}
+		marks[c] = mark{g: g, fg: r.peak, ownFg: true, plain: true}
+	}
+	if shape == screen.ShapeSquare {
+		l.square(a, put)
+	} else {
+		l.slant(a, r.e.Chars, put)
+	}
+	k := 1 + l.rng.IntN(3)
+	for j := range k {
+		start := pl.next + time.Duration(j)*(flashOn+flashOff)
+		end := start + flashOn
+		if j == k-1 {
+			end = start + r.e.Time
+		}
+		r.shows = append(r.shows, &flash{start: start, end: end, marks: marks, order: order})
+	}
+}
+
+// pos is a cell of the grid: its row and its column.
+type pos struct{ row, col int }
+
+// area gives the random area of an event of a lightning in the rectangle b (section 6.9): q is a random
+// integer from 25 to 100, the size is q % of the size of b, rounded, but at least 1, at a random position.
+func (l *Layer) area(b rect) rect {
+	q := 25 + l.rng.IntN(76)
+	h, w := max(1, (b.height*q+50)/100), max(1, (b.width*q+50)/100)
+	return rect{row: b.row + l.rng.IntN(b.height-h+1), col: b.col + l.rng.IntN(b.width-w+1), height: h, width: w}
+}
+
+// branches gives the random count of the branches of a bolt in an area of h rows (section 6.9).
+func (l *Layer) branches(h int) int { return 1 + l.rng.IntN(max(3, h/2)) }
+
+// branchRows gives the random count of the rows of a branch below its start in an area of h rows.
+func (l *Layer) branchRows(h int) int { return 2 + l.rng.IntN(max(6, h/2)-1) }
+
+// mainRows gives the random count of the rows of the main part in an area of h rows.
+func (l *Layer) mainRows(h int) int {
+	lo := max(1, h/2)
+	return lo + l.rng.IntN(h-lo+1)
+}
+
+// slant draws a slant bolt in the area a with put (section 6.9). The grapheme of a cell shows the step
+// to the next row: chars has the graphemes of the steps +1, 0 and -1. The last cell of a part has
+// the grapheme of the step 0. A later part wins.
+func (l *Layer) slant(a rect, chars []string, put func(pos, string)) {
+	var cells []pos // the cells of the parts, in order
 	part := func(row int, cols []int) {
 		for k, col := range cols {
 			s := 0
 			if k+1 < len(cols) {
 				s = cols[k+1] - col
 			}
-			if c := (row+k)*l.cols + col; can(c) {
-				f.put(c, mark{g: r.e.Chars[1-s], fg: r.peak, ownFg: true, plain: true})
-			}
+			put(pos{row + k, col}, chars[1-s])
+			cells = append(cells, pos{row + k, col})
 		}
 	}
-	inside := func(col int) bool { return col >= b.col && col < b.col+b.width }
-	lo := max(1, b.height/2)
-	bolt := []int{b.col + l.rng.IntN(b.width)}
-	for range lo + l.rng.IntN(b.height-lo+1) - 1 {
-		col := bolt[len(bolt)-1]
-		if s := l.rng.IntN(3) - 1; inside(col + s) { // a step out of the rectangle is a step 0
+	inside := func(col int) bool { return col >= a.col && col < a.col+a.width }
+	main := []int{a.col + l.rng.IntN(a.width)}
+	for range l.mainRows(a.height) - 1 {
+		col := main[len(main)-1]
+		if s := l.rng.IntN(3) - 1; inside(col + s) { // a step out of the area is a step 0
 			col += s
 		}
-		bolt = append(bolt, col)
+		main = append(main, col)
 	}
-	part(b.row, bolt)
-	if len(bolt) > 1 {
-		for range 1 + l.rng.IntN(3) {
-			k := 1 + l.rng.IntN(len(bolt)-1)
-			dir := 2*l.rng.IntN(2) - 1
-			var cols []int
-			for m := range 2 + l.rng.IntN(5) {
-				col := bolt[k] + (m+1)*dir
-				if k+m+1 >= b.height || !inside(col) { // a step out of the rectangle ends the branch
+	part(a.row, main)
+	for range l.branches(a.height) {
+		st := cells[l.rng.IntN(len(cells))]
+		n := l.branchRows(a.height)
+		dir := 2*l.rng.IntN(2) - 1
+		var cols []int
+		for m := range n {
+			col := st.col + (m+1)*dir
+			if st.row+m+1 >= a.row+a.height || !inside(col) { // a step out of the area ends the branch
+				break
+			}
+			cols = append(cols, col)
+		}
+		part(st.row+1, cols)
+	}
+}
+
+// The connections of a cell of a square bolt.
+const (
+	up uint8 = 1 << iota
+	down
+	left
+	right
+)
+
+// boxes gives the grapheme of each set of connections (section 6.9).
+var boxes = [16]string{
+	up: "│", down: "│", up | down: "│",
+	left: "─", right: "─", left | right: "─",
+	down | right: "┌", down | left: "┐", up | right: "└", up | left: "┘",
+	up | down | right: "├", up | down | left: "┤", left | right | down: "┬", left | right | up: "┴",
+	up | down | left | right: "┼",
+}
+
+// square draws a square bolt in the area a with put (section 6.9): each part draws a run in each row
+// and drops to the next row. A part ends before a cell of the bolt. A cell takes
+// the connections of all parts.
+func (l *Layer) square(a rect, put func(pos, string)) {
+	reach := max(1, int(math.Floor(2*float64(a.width)/float64(a.height)+0.5))) // R
+	conn := map[pos]uint8{}
+	var cells []pos // the cells of the parts, in the order of their first connection
+	// link connects the cell p by pb to its neighbour q by qb. When q is a cell of the bolt,
+	// it connects nothing and reports false.
+	link := func(p pos, pb uint8, q pos, qb uint8) bool {
+		if _, hit := conn[q]; hit {
+			return false
+		}
+		conn[p] |= pb
+		conn[q] = qb
+		cells = append(cells, q)
+		return true
+	}
+	inside := func(col int) bool { return col >= a.col && col < a.col+a.width }
+	// walk draws a part from the cell p for rows rows. A branch drops to its first row.
+	walk := func(p pos, rows int, branch bool) {
+		dir := 2*l.rng.IntN(2) - 1
+		for k := range rows {
+			if (branch || k > 0) && !link(p, down, pos{p.row + 1, p.col}, up) {
+				return
+			}
+			if branch || k > 0 {
+				p.row++
+			}
+			if k > 0 && l.rng.IntN(4) == 0 {
+				dir = -dir
+			}
+			if !inside(p.col + dir) { // a part at the edge of the area turns
+				dir = -dir
+			}
+			for range l.rng.IntN(reach + 1) {
+				q := pos{p.row, p.col + dir}
+				if !inside(q.col) { // a run stops at the edge of the area
 					break
 				}
-				cols = append(cols, col)
+				pb, qb := right, left
+				if dir < 0 {
+					pb, qb = left, right
+				}
+				if !link(p, pb, q, qb) {
+					return
+				}
+				p = q
 			}
-			part(b.row+k+1, cols)
 		}
 	}
-	r.shows = append(r.shows, f)
+	first := pos{a.row, a.col + l.rng.IntN(a.width)}
+	rows := l.mainRows(a.height)
+	conn[first] = up
+	cells = append(cells, first)
+	walk(first, rows, false)
+	for range l.branches(a.height) {
+		var starts []pos // the cells without a down connection above the last row of the area
+		for _, p := range cells {
+			if conn[p]&down == 0 && p.row < a.row+a.height-1 {
+				starts = append(starts, p)
+			}
+		}
+		if len(starts) == 0 {
+			break
+		}
+		st := starts[l.rng.IntN(len(starts))]
+		n := l.branchRows(a.height)
+		walk(st, min(n, a.row+a.height-1-st.row), true)
+	}
+	for _, p := range cells {
+		put(p, boxes[conn[p]])
+	}
 }
 
 // glint starts a glint of the effect i in the place pl (section 6.7): one random cell of the cells

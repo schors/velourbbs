@@ -38,6 +38,16 @@ type At struct {
 	Width, Height int
 }
 
+// Shape is the key shape of a lightning (live-screen, section 6.9).
+type Shape uint8
+
+// The values of shape. ShapeBoth is the default: each event takes a random shape.
+const (
+	ShapeBoth Shape = iota
+	ShapeSlant
+	ShapeSquare
+)
+
 // Effect is one [[effect]] table of the front matter (live-screen, section 6).
 // Each key holds its value or its default. Every is 0 for a sweep without every.
 // Times is the number of events of each place, 0 for no end; a sweep without every has 1.
@@ -57,6 +67,7 @@ type Effect struct {
 	Time               time.Duration
 	Width              int
 	Speed              float64
+	Shape              Shape
 }
 
 // ColourValue gives the colour of the colour value v in the session theme theme (live-screen, section 6.1):
