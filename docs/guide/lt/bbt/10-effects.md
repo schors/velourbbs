@@ -70,12 +70,13 @@ Visos taisyklės: [live-screen](../../../specs/live-screen.md), 6.2 skyrius.
 | `times` | Nėra: be pabaigos. | Pakeitimų skaičius: 1–10000. Tada efektas sustoja. |
 
 - Reikšmė yra sekundžių skaičius, pavyzdžiui, `0.5`.
-- Pirmasis pakeitimas ateina praėjus `delay` ir vienam tarpui po parodymo.
-  Pavyzdys: `delay = 1` ir `every = 1` su `spread = 0` duoda pirmąjį pakeitimą po 2 sekundžių.
+- Pirmasis pakeitimas ateina praėjus `delay` sekundžių po parodymo. Su `delay = 0` jis ateina parodymo metu.
+  Pavyzdys: `delay = 1` ir `every = 1` su `spread = 0` duoda pakeitimus po 1, 2 ir 3 sekundžių.
+- Kad pirmasis pakeitimas lauktų vieno tarpo, nustatykite `delay = every` ir `delay_spread = spread`.
 - Su `spread = 0` kiekvienas pakeitimas ateina lygiai po `every` sekundžių po ankstesniojo.
 - `every - spread` turi būti ne mažiau kaip 0.05. `delay - delay_spread` turi būti ne mažiau kaip 0.
 - Kiekvienas taškų masyvo taškas gauna savo atsitiktinę delsą. Pavyzdys: `delay = 2`
-  ir `delay_spread = 1` paleidžia kiekvieną tašką po 1–3 sekundžių ir dar vieno tarpo.
+  ir `delay_spread = 1` paleidžia kiekvieną tašką po 1–3 sekundžių.
 - Pavyzdys: `times = 3` duoda tris pakeitimus. Po jų efektas nedaro naujų pakeitimų:
   `twinkle` ar `candle` išlaiko savo paskutinį pakeitimą, o kitų efektų įvykiai baigiasi įprastai.
 - Pakeitimai atsitiktiniai. Kiekvienas seansas turi savo atsitiktines reikšmes.

@@ -121,10 +121,7 @@ func New(effs []screen.Effect, p screen.Page, theme map[string]screen.Style, rng
 		r.places = places(e, p, grid)
 		l.show(len(l.fx)-1, grid)
 		for _, pl := range r.places {
-			pl.next = e.Delay + l.spread(e.DelaySpread)
-			if e.Do != screen.Sweep { // the first run of a sweep starts at the delay
-				pl.next += l.every(e)
-			}
+			pl.next = e.Delay + l.spread(e.DelaySpread) // the first event starts at the delay
 		}
 	}
 	return l

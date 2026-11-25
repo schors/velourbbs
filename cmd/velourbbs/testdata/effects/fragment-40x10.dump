@@ -36,7 +36,7 @@ wait 500ms
 grid 40x10
 |@ Fragment                              |
 |+ E L O U R                             |
-|~~~~~~~~~~~                            +|
+|~~~~~~~~~~~                            *|
 |Q Back                                  |
 |                                        |
 |                                        |
@@ -59,7 +59,7 @@ wait 1s
 grid 40x10
 |@ Fragment                              |
 |* E L O U R                             |
-|~~~~~~~~~~~                            *|
+|~~~~~~~~~~~                            +|
 |Q Back                                  |
 |                                        |
 |                                        |

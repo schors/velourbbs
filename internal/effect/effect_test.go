@@ -196,8 +196,8 @@ func TestPlaceShown(t *testing.T) {
 	}
 }
 
-// The events start at the show time plus delay plus d: every plus a random value
-// from -spread to spread (live-screen, section 6.3).
+// The first event starts at the show time plus delay. Each next event starts d after the event before:
+// every plus a random value from -spread to spread (live-screen, section 6.3).
 func TestEvents(t *testing.T) {
 	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"candle\"\nchars = \"^'\"\ncolors = [\"flame\", \"9\"]\nat = [1, 1, 4, 1]\n" +
 		"every = 0.5\nspread = 0\ndelay = 1\n" +
@@ -217,9 +217,11 @@ func TestEvents(t *testing.T) {
 		times = append(times, d)
 		l.Cells(d, grid)
 	}
-	// The twinkle has spread 0.1: its first event is at 0.1–0.3 s. The candle has no spread: 1.5 s and 2 s.
-	if times[0] < 100*time.Millisecond || times[0] > 300*time.Millisecond ||
-		!slices.Contains(times, 1500*time.Millisecond) || !slices.Contains(times, 2*time.Second) {
+	// The twinkle has no delay: its first event is at 0 s, the second at 0.1–0.3 s.
+	// The candle has delay 1 and no spread: 1 s, 1.5 s and 2 s.
+	if times[0] != 0 || times[1] < 100*time.Millisecond || times[1] > 300*time.Millisecond ||
+		!slices.Contains(times, time.Second) || !slices.Contains(times, 1500*time.Millisecond) ||
+		!slices.Contains(times, 2*time.Second) {
 		t.Errorf("event times %v", times)
 	}
 	// The same seed gives the same layer.
@@ -249,21 +251,21 @@ func TestTimes(t *testing.T) {
 	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"candle\"\nchars = \"^'\"\ncolors = [\"flame\"]\nat = [1, 1]\n" +
 		"every = 0.5\nspread = 0\ntimes = 2\n+++\nx"}
 	s, p := page(t, files, 40, 24)
-	if got, want := eventTimes(t, s, p, time.Hour), []time.Duration{500 * time.Millisecond, time.Second}; !slices.Equal(got, want) {
+	if got, want := eventTimes(t, s, p, time.Hour), []time.Duration{0, 500 * time.Millisecond}; !slices.Equal(got, want) {
 		t.Errorf("event times %v, want %v", got, want)
 	}
 }
 
 // The first event starts at the delay plus a random value from -delay_spread to delay_spread,
-// and each place takes its own value. The first run of a sweep starts at the delay,
-// the next runs every after the start of the run before (live-screen, sections 6.3 and 6.8).
+// and each place takes its own value. A sweep starts its runs as the other effects
+// (live-screen, sections 6.3 and 6.8).
 func TestFirstEvent(t *testing.T) {
 	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"candle\"\nchars = \"^\"\ncolors = [\"flame\"]\nat = [[1, 1], [2, 1]]\n" +
 		"every = 10\nspread = 0\ndelay = 2\ndelay_spread = 1\ntimes = 1\n+++\nxx"}
 	s, p := page(t, files, 40, 24)
 	got := eventTimes(t, s, p, time.Hour)
-	if len(got) != 2 || got[0] == got[1] || got[0] < 11*time.Second || got[1] > 13*time.Second {
-		t.Errorf("event times %v, want two different times in 11–13 s", got)
+	if len(got) != 2 || got[0] == got[1] || got[0] < time.Second || got[1] > 3*time.Second {
+		t.Errorf("event times %v, want two different times in 1–3 s", got)
 	}
 	files = map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"sweep\"\ndelay = 0.3\nevery = 2\ntimes = 2\nspeed = 1000\n+++\nx"}
 	s, p = page(t, files, 40, 24)
@@ -299,7 +301,7 @@ func TestTwinkleStars(t *testing.T) {
 		"[[effect]]\ndo = \"twinkle\"\nchars = \"bc\"\nat = [1, 1]\ndelay = 100\n" +
 		"[[effect]]\ndo = \"twinkle\"\nchars = \"xy\"\nat = [2, 1, 3, 1]\n+++\nabcd"}
 	s, p := page(t, files, 40, 24)
-	if got, want := cells(s, p, 5*time.Second), "0:0 b 2/0; 0:0 b 1/0"; got != want {
+	if got, want := cells(s, p, 5*time.Second), "0:0 b 1/0; 0:0 b 1/0"; got != want {
 		t.Errorf("got %q, want %q", got, want)
 	}
 	files["s.bbt"] = "+++\n[[effect]]\ndo = \"twinkle\"\nchars = \"xy\"\nat = [1, 1, 3, 1]\n+++\nabc"
@@ -313,7 +315,7 @@ func TestTwinkleStars(t *testing.T) {
 // with peak at the amount 1 - t / time (live-screen, section 6.7). While the event runs,
 // the layer changes each 50 ms; it changes at the end of the event too.
 func TestGlint(t *testing.T) {
-	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"glint\"\nat = [1, 1, 3, 1]\nevery = 1\nspread = 0\ntime = 0.5\n+++\na b"}
+	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"glint\"\nat = [1, 1, 3, 1]\ndelay = 1\nevery = 1\nspread = 0\ntime = 0.5\n+++\na b"}
 	s, p := page(t, files, 40, 24)
 	for _, tt := range []struct {
 		t    time.Duration
@@ -408,7 +410,7 @@ func TestSweepNewBase(t *testing.T) {
 // of the place can. A star shows for time. A cell with a star of the effect cannot take another
 // (live-screen, section 6.5).
 func TestSparkle(t *testing.T) {
-	front := "+++\n[[effect]]\ndo = \"sparkle\"\nchars = \"*\"\nat = [1, 1, 4, 1]\nevery = 1\nspread = 0\ntime = 0.5\ncount = 4\n"
+	front := "+++\n[[effect]]\ndo = \"sparkle\"\nchars = \"*\"\nat = [1, 1, 4, 1]\ndelay = 1\nevery = 1\nspread = 0\ntime = 0.5\ncount = 4\n"
 	for _, tt := range []struct {
 		over string
 		t    time.Duration
@@ -426,7 +428,7 @@ func TestSparkle(t *testing.T) {
 	}
 	// Each second, one star of 2.5 s: the third event finds the two empty cells with a star.
 	// The fourth event at 4 s finds the cell of the first star free again.
-	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"sparkle\"\nchars = \"*\"\nat = [1, 1, 3, 1]\nevery = 1\nspread = 0\ntime = 2.5\n+++\na"}
+	files := map[string]string{"s.bbt": "+++\n[[effect]]\ndo = \"sparkle\"\nchars = \"*\"\nat = [1, 1, 3, 1]\ndelay = 1\nevery = 1\nspread = 0\ntime = 2.5\n+++\na"}
 	s, p := page(t, files, 40, 24)
 	for _, tt := range []struct {
 		t time.Duration

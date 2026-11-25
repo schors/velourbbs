@@ -70,12 +70,13 @@ Full rules: [live-screen](../../../specs/live-screen.md), section 6.2.
 | `times` | None: no end. | The number of changes: 1–10000. Then the effect stops. |
 
 - A value is a number of seconds, for example `0.5`.
-- The first change comes `delay` plus one interval after the show.
-  Example: `delay = 1` and `every = 1` with `spread = 0` give the first change after 2 seconds.
+- The first change comes `delay` seconds after the show. With `delay = 0`, it comes at the show.
+  Example: `delay = 1` and `every = 1` with `spread = 0` give changes after 1, 2 and 3 seconds.
+- To make the first change wait one interval, set `delay = every` and `delay_spread = spread`.
 - With `spread = 0`, each change comes exactly `every` seconds after the change before.
 - `every - spread` must be at least 0.05. `delay - delay_spread` must be at least 0.
 - Each point of an array of points takes its own random delay. Example: `delay = 2`
-  and `delay_spread = 1` start each point after 1–3 seconds plus one interval.
+  and `delay_spread = 1` start each point after 1–3 seconds.
 - Example: `times = 3` gives three changes. After them, the effect makes no new change:
   a `twinkle` or a `candle` keeps its last change, and the events of the other effects end as usual.
 - The changes are random. Each session has its own random values.
